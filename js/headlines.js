@@ -4,7 +4,7 @@
 //
 // All headlines come from the OFFICIAL standings (holes every foursome has finished).
 
-import { compute, fmtPts, fmtToPar, HOLES } from './scoring.js';
+import { compute, fmtPts, fmtToPar, posOf, HOLES } from './scoring.js';
 
 /** Thresholds — tune after Friday. */
 export const HEADLINE_CONFIG = {
@@ -68,7 +68,7 @@ function cfgFor(g) {
   return g.type === 'rotationPlusMinus' ? HEADLINE_CONFIG.plusMinus : HEADLINE_CONFIG.match;
 }
 
-/** Each team's standing value through hole h (points, or capped Plus/Minus). */
+/** Each team's standing value through play-order position h (points, or capped Plus/Minus). */
 function valuesAt(g, h) {
   const v = {};
   for (const t of g.teamIds) v[t] = 0;
@@ -76,7 +76,7 @@ function valuesAt(g, h) {
     for (const t of m.teams) {
       let pts = 0, raw = 0;
       for (const hh of m.holes) {
-        if (!hh.complete || hh.hole > h) continue;
+        if (!hh.complete || hh.pos > h) continue;
         pts += hh.points[t];
         raw += hh.margin[t];
       }
@@ -151,7 +151,7 @@ function atHole(snap, st, h, at) {
     const diffAt = (j) => {
       // x's lead in the matchup after hole j (points, or raw strokes for Plus/Minus)
       let d = 0;
-      for (const hh of m.holes) if (hh.complete && hh.hole <= j) d += isPM ? hh.margin[x] : hh.points[x] - hh.points[y];
+      for (const hh of m.holes) if (hh.complete && hh.pos <= j) d += isPM ? hh.margin[x] : hh.points[x] - hh.points[y];
       return d;
     };
     const dNow = diffAt(h), dPrev = diffAt(h - 1);
@@ -205,7 +205,7 @@ function atHole(snap, st, h, at) {
 
   // Streak: swept every point (Match Play) / lowest team score (Plus/Minus), N holes running.
   const swept = (t, j) => {
-    const slot = g.pointsByHole[j - 1];
+    const slot = g.pointsByHole[snap.order[j - 1] - 1]; // j is a play-order position
     if (!slot || slot.points[t] == null) return false;
     if (isPM) return g.teamIds.every((o) => o === t || (slot.total[o] != null && slot.total[t] < slot.total[o]));
     return slot.points[t] >= g.ncomp - 1e-9;
@@ -251,7 +251,8 @@ function markPrimary(list) {
 export function matchupAlert(snap, teamId, nextHole) {
   const g = snap.game;
   if (!g || g.type !== 'rotationMatch' || !teamId) return null;
-  const m = g.matches.find((mm) => mm.teams.includes(teamId) && nextHole >= mm.from && nextHole <= mm.to);
+  const pos = posOf(snap.settings, nextHole);
+  const m = g.matches.find((mm) => mm.teams.includes(teamId) && pos >= mm.from && pos <= mm.to);
   if (!m || m.final || m.clinchedBy) return null;
   const opp = m.teams[0] === teamId ? m.teams[1] : m.teams[0];
   const d = m.points[opp] - m.points[teamId]; // > 0 means we're behind

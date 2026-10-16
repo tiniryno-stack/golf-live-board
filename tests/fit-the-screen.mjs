@@ -4,6 +4,7 @@
 //   • anything scrolls sideways
 //   • the top bar or tab bar is ever off screen
 //   • the top of Board doesn't show the leader and your position without scrolling
+//   • Board → Players can't show all 8 players without scrolling (15/16 size and up)
 //   • a stepper is under 48px or a score tile under 64px
 //
 // Sizes are CSS px with Safari's toolbars showing (worst case). Run: npm run test:fit
@@ -86,6 +87,12 @@ async function check(page, size, screen, extra) {
       });
       if (!document.querySelectorAll('.tile').length) problems.push('no score tiles rendered');
     }
+    if (extra === 'board-players') {
+      const rows = [...document.querySelectorAll('.prow')];
+      const hidden = rows.filter((r) => !within(r, content)).length;
+      if (rows.length < 8) problems.push(`only ${rows.length} player rows`);
+      if (hidden) problems.push(`${hidden} of ${rows.length} player rows need scrolling`);
+    }
     if (extra === 'board') {
       const name = document.querySelector('.board-hero .leader-name');
       const you = document.querySelector('.board-hero .you');
@@ -147,6 +154,11 @@ for (const size of SIZES) {
     await go(`#/e/${r.code}/${tab}`);
     await check(page, size, tab[0].toUpperCase() + tab.slice(1), tab);
   }
+  await go(`#/e/${r.code}/board`);
+  await page.tap('[data-act="board-view"][data-v="players"]');
+  // All 8 players on one screen: required from iPhone 15/16 size up (SE / mini may scroll).
+  await check(page, size, 'Board players', w >= 393 ? 'board-players' : null);
+  await go(`#/e/${r.code}/host`);
   await page.tap('[data-act="host-tab"][data-v="players"]');
   await check(page, size, 'Host players');
   await page.tap('[data-act="host-tab"][data-v="activity"]');

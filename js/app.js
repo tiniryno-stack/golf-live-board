@@ -3,7 +3,8 @@
 // Render flow: Supabase ─realtime─► app state ─► scoring.compute() ─► snapshot ─► active screen render
 
 import * as db from './db.js';
-import { compute, nextHoleFor, sameFoursome, matchFor, HOLES } from './scoring.js';
+import { compute, nextHoleFor, currentHoleOf, sameFoursome, matchFor, playOrder, posOf, holeAt, HOLES } from './scoring.js';
+import { isDefaultTeamName } from './teams.js';
 import { replayHeadlines } from './headlines.js';
 import { esc, icon, initials, roundLink, copyText } from './ui.js';
 import * as fx from './screens/toasts.js';
@@ -68,7 +69,17 @@ app.myPlayer = () => (app.me && app.snapshot ? app.snapshot.playerById.get(app.m
 app.myName = () => app.myPlayer()?.name || null;
 app.myTeam = () => app.myPlayer()?.teamId || null;
 app.isOrganizer = () => !!app.adminPin;
-app.nextHole = () => (app.me && app.snapshot ? nextHoleFor(app.snapshot, app.me) : 1);
+/** The hole this phone should be on (play order); the last hole once its foursome is done. */
+app.nextHole = () => {
+  if (!app.snapshot) return 1;
+  const order = playOrder(app.snapshot.settings);
+  if (!app.me) return order[0];
+  return nextHoleFor(app.snapshot, app.me) ?? order[HOLES - 1];
+};
+app.foursomeDone = () => !!(app.me && app.snapshot && nextHoleFor(app.snapshot, app.me) == null);
+/** Is this player in my foursome on that hole? (their scores show live on my Enter) */
+app.inMyFoursome = (pid, hole) =>
+  !!(app.me && app.event && sameFoursome(app.event.roster, app.event.settings, app.me, pid, hole));
 
 /** May this phone write this player's score on this hole? (mirrors the server) */
 app.canEdit = (pid, hole) => {
@@ -258,6 +269,7 @@ app.claim = async (pid) => {
       app.ui.hole = null;
       render();
     }
+    setTimeout(maybeAskTeamName, 300);
     return;
   }
   if (res.error === 'taken') {
@@ -301,6 +313,41 @@ app.requestJoin = async (pid) => {
   }
   app.toast({ title: 'Couldn’t ask', sub: res.error, error: true });
 };
+
+/** Name my cart (either partner). Returns true when it stuck. */
+app.pickTeamName = async (name) => {
+  let res;
+  try {
+    res = await db.api.pickTeamName(app.code, name);
+  } catch (e) {
+    app.toast({ title: e?.code === 'PGRST202' ? 'Team names need the database update' : 'No signal', sub: 'Try again in a moment.', error: true });
+    return false;
+  }
+  if (res.ok) {
+    const t = app.event.roster.teams.find((x) => x.id === res.team);
+    if (t) t.name = res.name;
+    app.justPicked = Date.now();
+    setTimeout(() => (app.justPicked = 0), 4000);
+    recompute({ headlines: 'now' });
+    render();
+    app.toast({ title: `You\u2019re ${res.name}` });
+    return true;
+  }
+  if (res.error === 'taken') {
+    app.toast({ title: `${name} was just taken`, sub: 'Pick another one.', error: true });
+    await refetchAll();
+    return false;
+  }
+  app.toast({ title: 'Couldn\u2019t name the cart', sub: res.error, error: true });
+  return false;
+};
+
+/** Right after joining: if my cart still has its placeholder name, offer the picker. */
+function maybeAskTeamName() {
+  const t = app.myTeam() && app.snapshot?.teamById.get(app.myTeam());
+  if (t && isDefaultTeamName(t)) fx.showTeamPicker(app);
+}
+app.openTeamPicker = () => fx.showTeamPicker(app);
 
 app.leave = async () => {
   try {
@@ -351,8 +398,9 @@ app.relevantRequests = () => {
     if (!app.me) return false;
     const p = app.snapshot.playerById.get(r.player_id);
     if (!p) return false;
-    const gap = p.gross.findIndex((g) => g == null) + 1 || HOLES; // mirrors _join_approver
-    const holes = [gap, Math.max(1, gap - 1)];
+    const gap = currentHoleOf(app.snapshot, r.player_id); // mirrors _join_approver
+    const prev = holeAt(app.event.settings, Math.max(1, posOf(app.event.settings, gap) - 1));
+    const holes = [gap, prev];
     return holes.some((h) => sameFoursome(app.event.roster, app.event.settings, app.me, r.player_id, h));
   });
 };
@@ -625,17 +673,28 @@ function onRemoteScore(row) {
   recompute();
   render();
   const mine = row.updated_by && (row.updated_by === app.myName() || (row.updated_by === 'Organizer' && app.adminPin));
-  if (!mine && row.strokes != null) noteIncoming(row);
+  // Your own foursome's scores show up live on Enter — toasts are for the other foursome.
+  if (!mine && row.strokes != null && !app.inMyFoursome(row.player_id, row.hole)) noteIncoming(row);
 }
 
 function onRemoteEvent(row) {
   const recentlySaved = app.savingEvent && Date.now() - app.savingEvent < 4000;
-  const settingsChanged = ['course', 'roster', 'settings', 'name'].some((k) => JSON.stringify(row[k]) !== JSON.stringify(app.event[k]));
+  const before = app.event;
+  const renamed = (row.roster?.teams || []).filter((t) => {
+    const old = (before.roster?.teams || []).find((o) => o.id === t.id);
+    return old && old.name !== t.name;
+  }).map((t) => ({ from: (before.roster.teams.find((o) => o.id === t.id) || {}).name, to: t.name, id: t.id }));
+  const strip = (r) => JSON.stringify({ ...r?.roster, teams: (r?.roster?.teams || []).map((t) => t.id) });
+  const settingsChanged = ['course', 'settings', 'name'].some((k) => JSON.stringify(row[k]) !== JSON.stringify(before[k])) || strip(row) !== strip(before);
   app.event = { ...app.event, ...row };
   recompute({ headlines: 'now' });
   render();
   refetchAll();
   if (settingsChanged && !recentlySaved && !app.adminPin) app.toast({ title: 'The organizer updated the round', sub: 'Scores and standings are recomputed.' });
+  else if (renamed.length && !(renamed.length === 1 && renamed[0].id === app.myTeam() && app.justPicked)) {
+    app.toast({ title: renamed.map((r) => `${r.from} is now ${r.to}`).join(' · ') });
+  }
+  fx.renderPicker(app);
 }
 
 function onRemoteJoinRequest(row) {
@@ -649,6 +708,7 @@ function onRemoteJoinRequest(row) {
       app.closeSheet();
       app.toast({ title: `You’re in as ${app.myName()}`, sub: row.approved_by ? `${row.approved_by} let you in` : '' });
       app.go(app.tabHash('enter'));
+      setTimeout(maybeAskTeamName, 300);
     } else renderSheet();
   }
   if (row.status === 'approved' && row.player_id === app.me && !app.waiting) verifyMe();
@@ -676,7 +736,7 @@ function onRemoteNote(note) {
   }
   const p = app.snapshot.playerById.get(note.playerId);
   if (!p || !app.me || note.playerId === app.me) return;
-  const h = Math.min(HOLES, p.lastHole + 1);
+  const h = currentHoleOf(app.snapshot, note.playerId);
   if (!sameFoursome(app.event.roster, app.event.settings, app.me, note.playerId, h)) return;
   if (note.kind === 'join') app.toast({ title: `${p.name} joined` });
   if (note.kind === 'leave') app.toast({ title: `${p.name}’s phone left the round` });
@@ -863,6 +923,7 @@ function render(opts = {}) {
   renderSyncChip();
   renderSheet();
   fx.renderBanners(app);
+  if (fx.pickerOpen()) fx.renderPicker(app);
 }
 
 document.addEventListener('focusout', () => {
@@ -908,7 +969,9 @@ function renderTopbar(screen, inRound) {
       ? `<button class="name-chip" data-act="name-chip" aria-label="You are ${esc(p.name)}"><span class="avatar">${esc(initials(p.name))}</span><span class="ellipsis">${esc(p.name)}</span></button>`
       : `<button class="name-chip watching" data-act="name-chip"><span class="avatar">${icon('user', 16)}</span><span>Watching</span></button>`
     : '';
-  return `<button class="back" data-act="go" data-v="#/" aria-label="Home">${icon('back', 22)}<span class="ellipsis">${esc(name)}</span></button>${chip}${themeBtn}`;
+  // No back button inside a round: leaving is deliberate, through the ⋯ menu (or your name).
+  const menuBtn = app.event ? `<button class="icon-btn" data-act="round-menu" aria-label="Round menu">${icon('more')}</button>` : '';
+  return `${chip}<div class="round-title ellipsis">${esc(name)}</div>${themeBtn}${menuBtn}`;
 }
 
 function renderTabbar() {
@@ -958,8 +1021,9 @@ Object.assign(actions, {
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', next === 'light' ? '#0B0C0E' : '#000000');
     render();
   },
+  'round-menu': () => app.openSheet('menu', {}),
   'name-chip': () => {
-    if (app.me) app.openSheet('leave', {});
+    if (app.me) app.openSheet('menu', {});
     else {
       refreshClaimed();
       app.openSheet('who', {});

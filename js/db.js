@@ -193,6 +193,7 @@ export const api = {
   releasePlayer: (code, pin, playerId) => rpc('release_player', { p_code: code, p_admin_pin: pin, p_player_id: playerId }),
   auditLog: (code, pin) => rpc('get_audit_log', { p_code: code, p_admin_pin: pin }),
   resetRound: (code, pin) => rpc('reset_round', { p_code: code, p_admin_pin: pin }),
+  pickTeamName: (code, name) => rpc('pick_team_name', { p_code: code, p_device_id: deviceId, p_name: name }),
   deleteRound: (code, pin) => rpc('delete_round', { p_code: code, p_admin_pin: pin }),
   upsertScore: (code, playerId, hole, strokes) =>
     rpc('upsert_score', { p_code: code, p_device_id: deviceId, p_player_id: playerId, p_hole: hole, p_strokes: strokes }),

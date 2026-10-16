@@ -176,6 +176,7 @@ alter publication supabase_realtime add table scores, events, join_requests;
 | `get_audit_log(code, admin_pin)` | Organizer | Returns the round's activity log, newest first. |
 | `reset_round(code, admin_pin)` | Organizer | Clears every score (to null, so Realtime carries it) and keeps players, carts, settings and joined phones. For practice rounds. |
 | `delete_round(code, admin_pin)` | Organizer | Deletes the round and everything in it (scores, claims, PIN, requests, activity log). |
+| `pick_team_name(code, device_id, name)` | A phone that has claimed a player | Names that player's cart; refuses a name another cart already has (case-insensitive). |
 
 **Audit log:** every write function above also inserts one plain-English line into `audit_log`, so the log can't be skipped or edited from a phone. Examples:
 
@@ -261,7 +262,7 @@ Team names default to `Cart A`–`Cart D` until someone types a name (max 20 cha
    - **Batched per hole:** scores for the same group and hole arriving within ~4 seconds become one toast, e.g. `Group 2 · Hole 8 — Mike 4, Tyler 5, Sam 3, Jake 6`.
    - **Highlights get called out:** `Sam birdied 8`, `Fore Play took both points on 8`, `New leader: Shank Redemption`.
    - **Joins and leaves** toast to that player's foursome: `Andrew joined`, `Andrew's phone left the round`. Anyone hopping between names is visible to the people it affects.
-   - **Your own entries never toast.** At most one toast on screen; newer ones replace older ones.
+   - **Your own entries never toast, and neither do your current foursome's** (they update live on Enter). At most one toast on screen; newer ones replace older ones.
    - Lock-screen notifications while the app is closed need the site added to the home screen; that's in the V2 backlog.
 6. **Headlines** (the big moments, rules in 7.10): unlike toasts, these **stick**.
    - **While you're looking:** a headline banner stays at the top until you tap or swipe it away.
@@ -468,7 +469,7 @@ Examples (2 points per hole): down 4 with 2 holes left → win out to halve; dow
  │  #/e/TC7K2/enter  #/e/TC7K2/matches  #/e/TC7K2/board  …/card    │ …/host  │
  └─────────────────────────────────────────────────────────────────┴─────────┘
                                        (HOST) = separate round button, organizer's phone only
- Top bar (every tab): round name · your-name chip (tap → Leave round) · light/dark icon
+ Top bar (every tab): your-name chip · round name (label) · light/dark icon · ⋯ menu (share, Go to Home, Switch to watching). No back button inside a round.
  Sheets (slide-up overlays): who are you? · player detail
  Toasts: other players' scores and highlights · "let them in" requests
 ```
@@ -515,10 +516,11 @@ Players never see Setup: they open the link and tap their name. ("New round" on 
 ### 3. Enter *(default tab, where 90% of time is spent)*
 - **First open:** "Who are you?" sheet lists every player, grouped by cart. Tap yours and you're in. Taken names show "in use"; tapping one sends a "let them in" request to that player's current foursome. Skipping the sheet still lets you watch.
 - **Header:** `Hole 7 · Par 3 · Hcp 3 · Max: none` with ◀ ▶ arrows (swipe also works).
-- **Going back to fix a hole:** ◀ steps back through **your current matchup's holes** and they're fully editable right on Enter, no trip to the Card. Right after `Next hole →`, a toast shows `Hole 8 saved · Undo` for 5 seconds; Undo jumps straight back to hole 8. At the first hole of the matchup, ◀ shows a hint: "Earlier holes are on the Card." The Card is for older mismatches from a previous matchup.
+- **Going back to fix a hole:** ◀ steps back through **your current matchup's holes** and they're fully editable right on Enter, no trip to the Card. Right after `Next hole →`, a toast shows `Hole 8 saved · Undo` for 3 seconds; Undo jumps straight back to hole 8. At the first hole of the matchup, ◀ shows a hint: "Earlier holes are on the Card." The Card is for older mismatches from a previous matchup.
 - **Matchup banner:** this hole's matchup with team names + live status, e.g. `Rotation 2 · Hogan's Heroes vs Fore Play · +1`.
 - **Cart cards — the "enter you + your partner" mechanic:** players are grouped by team, **your cart on top** (known from the name you picked), the cart you're playing below (it changes at holes 7 and 13). Each card shows both partners side by side as two big score tiles, with the team's Low Ball / Low Total for the hole underneath, so entering your cart is two taps.
-- **Score tiles:** **first tap sets bogey**, then − / + to adjust (one tap down to par, two to birdie). + stops at the max hole score. A dot under the name for each handicap stroke on that hole. Long-press clears.
+- **Score tiles:** an empty tile shows a faint bogey. **Tapping the number sets bogey**; − / + step from that bogey (− = par, − − = birdie, + = double), so the first tap always moves the way you pressed. + stops at the max hole score. A dot under the name for each handicap stroke on that hole. Long-press clears.
+- **60/40:** your cart takes ~60% of the space and the cart you're playing ~40% (smaller, quieter, still editable).
 - **Next hole:** once all four players have posted, a full-width `Next hole →` button lights up at the bottom (thumb zone). No auto-advance, so nobody gets skipped mid-correction. Tapping it may first show a full-screen **Lock in** or **Close it out** card (7.10), or **Switch it up** after the last hole of a matchup.
 - **Swap card:** after the last hole of a rotation is posted, `Next hole →` opens a short **Switch it up** screen: the rotation result (`Hogan's Heroes 7½ – Shank Redemption 4½`), who's next (`Holes 7–12 vs Fore Play · Tyler + Jake`), and "One cart waits, one moves up." Continue → hole 7 with the new foursome.
 - Footer: 18-dot strip of completed holes · sync chip.
@@ -698,8 +700,18 @@ Golf-specific rules:
 - Layout → high-yield info never under a scroll (Enter fits entirely, top/tab bars pinned); long pages like leaderboards may scroll; no sideways scroll; portrait only
 
 - Practice rounds → organizer can Reset (clear all scores, keep everything else) or Delete a round from Host (added Oct 16 for test runs before the real round)
+- Playtest changes (Oct 16) → see 13a: start on 1 or 10, carts pick team names, jersey colors, team bars, compact player board, 60/40 Enter, blank-tile −/+ steps from bogey, no back button in a round
 
 Still open: nothing blocking. Design direction (section 9) is final.
+
+## 13a. Changes from the Oct 16 playtest (built)
+
+- **Start on hole 1 or 10** (`settings.startHole`, Setup → Course and Host → Rules). Rotations are play-order positions, so starting on 10 the matchups are holes 10–15, 16–18 + 1–3, 4–9; the official line, swap cards, alerts, foursome editing rights (`_same_foursome`) and let-them-in all follow play order. Screens always show real hole numbers.
+- **Team names by the carts:** after joining, an unnamed cart gets a full-screen "Name your cart" card with six quick names (Bulbasaur, Charmander, Squirtle, Chikorita, Cyndaquil, Totodile). Either partner can pick; a name another cart has is greyed out and refused by `pick_team_name` (locks the round row). Tap your cart's name on Enter to change it. The organizer can still type names in Setup (team names now sit at the top of the Teams step) or Host.
+- **Jerseys:** your own cart is always green on your phone; every other cart has a fixed away color that's the same for everyone — A orange, B blue, C pink, D violet (no red: red means double bogey). Used on Enter, Matches (counters, tug-of-war, pips), Board, Card and Who are you.
+- **Board → Teams:** each team gets a bar in its jersey color — solid = official points, hatched = provisional; Plus/Minus bars grow left/right from even. **Board → Players:** one compact line per player (rank · to par · name + team · thru · total) so all 8 fit on a 15/16 without scrolling; headlines show on the Teams view.
+- **Home:** recent rounds are tappable cards with **Open**; "Run it back as a new round" is a small secondary link.
+- **Practice rounds:** organizer Reset scores / Delete round (see 5.1).
 
 ## 13. V2 backlog (running list)
 

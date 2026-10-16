@@ -22,13 +22,51 @@ export const DEFAULT_SETTINGS = {
   maxHoleScore: 'doublePar',
   par3NoMax: false,
   rotationMode: 'swap',
+  startHole: 1, // 1 = front nine first; 10 = start on the back nine
   rotation: DEFAULT_ROTATION,
 };
 
 export function normalizeSettings(s) {
   const out = { ...DEFAULT_SETTINGS, ...(s || {}) };
   if (!Array.isArray(out.rotation) || !out.rotation.length) out.rotation = DEFAULT_ROTATION;
+  out.startHole = Number(out.startHole) === 10 ? 10 : 1;
   return out;
+}
+
+// ───────────────────────────────────────────── play order
+// Rotations are written in PLAY ORDER positions (1–6 = the first six holes played).
+// Starting on 10: positions 1–9 are holes 10–18, positions 10–18 are holes 1–9.
+// Screens always show real hole numbers.
+
+/** Holes in the order they're played. */
+export function playOrder(settings) {
+  const start = normalizeSettings(settings).startHole;
+  return Array.from({ length: HOLES }, (_, i) => ((start - 1 + i) % HOLES) + 1);
+}
+
+/** 1-based position of a hole in play order. */
+export function posOf(settings, hole) {
+  const start = normalizeSettings(settings).startHole;
+  return ((hole - start + HOLES) % HOLES) + 1;
+}
+
+/** Hole number at a 1-based play-order position. */
+export function holeAt(settings, pos) {
+  const start = normalizeSettings(settings).startHole;
+  return ((start - 1 + pos - 1) % HOLES) + 1;
+}
+
+/** "Holes 10–15" or "Holes 16–18, 1–3" for a run of play-order positions. */
+export function holesLabel(settings, fromPos, toPos) {
+  const holes = [];
+  for (let p = fromPos; p <= toPos; p++) holes.push(holeAt(settings, p));
+  const runs = [];
+  for (const h of holes) {
+    const last = runs[runs.length - 1];
+    if (last && h === last[1] + 1) last[1] = h;
+    else runs.push([h, h]);
+  }
+  return `Holes ${runs.map(([a, b]) => (a === b ? `${a}` : `${a}–${b}`)).join(', ')}`;
 }
 
 // ───────────────────────────────────────────── formatting
@@ -120,15 +158,20 @@ export function componentsFor(method, a, b) {
 
 export function rotationIndexFor(settings, hole) {
   const st = normalizeSettings(settings);
-  return st.rotation.findIndex((r) => hole >= r.holes[0] && hole <= r.holes[1]);
+  const p = posOf(st, hole);
+  return st.rotation.findIndex((r) => p >= r.holes[0] && p <= r.holes[1]);
 }
 
+/** The rotation a hole belongs to. from/to are play-order positions; label uses real holes. */
 export function rotationFor(settings, hole) {
   const st = normalizeSettings(settings);
   const i = rotationIndexFor(st, hole);
   if (i < 0) return null;
   const r = st.rotation[i];
-  return { index: i + 1, from: r.holes[0], to: r.holes[1], matches: r.matches };
+  return {
+    index: i + 1, from: r.holes[0], to: r.holes[1], matches: r.matches,
+    firstHole: holeAt(st, r.holes[0]), lastHole: holeAt(st, r.holes[1]), label: holesLabel(st, r.holes[0], r.holes[1]),
+  };
 }
 
 /** The team this team plays on a hole, from the rotation. */
@@ -276,8 +319,10 @@ export function compute(event, scores) {
     game = computeGame(settings, teams, teamById, holes);
     holeComplete = game.holeComplete;
   }
+  // Official line: how many holes, in play order, every foursome has finished.
   let officialThrough = 0;
-  while (officialThrough < HOLES && holeComplete[officialThrough]) officialThrough++;
+  while (officialThrough < HOLES && holeComplete[holeAt(settings, officialThrough + 1) - 1]) officialThrough++;
+  const officialHole = officialThrough ? holeAt(settings, officialThrough) : 0;
   if (game) finishGame(game, settings, teams, officialThrough);
 
   const anyPosted = players.some((p) => p.thru > 0);
@@ -286,7 +331,8 @@ export function compute(event, scores) {
   return {
     course, roster, settings, holes, parTotal: parFront + parBack, parFront, parBack,
     players, playerById, hasStrokes, teams, teamById, game,
-    holeComplete, officialThrough, anyPosted, roundComplete,
+    holeComplete, officialThrough, officialHole, anyPosted, roundComplete,
+    order: playOrder(settings),
   };
 }
 
@@ -296,14 +342,15 @@ function computeGame(settings, teams, teamById, holes) {
   const type = settings.game; // rotationMatch | rotationPlusMinus
   const cap = settings.plusMinusCap == null || settings.plusMinusCap === '' ? null : Number(settings.plusMinusCap);
   const rotations = settings.rotation.map((r, ri) => {
-    const from = r.holes[0], to = r.holes[1];
+    const from = r.holes[0], to = r.holes[1]; // play-order positions
     const matches = r.matches.map(([x, y], mi) => {
       const tx = teamById.get(x), ty = teamById.get(y);
       const hs = [];
       const points = { [x]: 0, [y]: 0 };
       let raw = 0; // strokes margin from x's view (y total − x total)
       let played = 0;
-      for (let h = from; h <= to; h++) {
+      for (let pos = from; pos <= to; pos++) {
+        const h = holeAt(settings, pos);
         const cx = tx.comps[h - 1], cy = ty.comps[h - 1];
         if (cx && cy) {
           const p = { [x]: 0, [y]: 0 };
@@ -316,9 +363,9 @@ function computeGame(settings, teams, teamById, holes) {
           }
           points[x] += p[x]; points[y] += p[y];
           raw += m; played++;
-          hs.push({ hole: h, complete: true, comps: { [x]: cx, [y]: cy }, points: p, margin: { [x]: m, [y]: -m } });
+          hs.push({ hole: h, pos, complete: true, comps: { [x]: cx, [y]: cy }, points: p, margin: { [x]: m, [y]: -m } });
         } else {
-          hs.push({ hole: h, complete: false, comps: { [x]: cx, [y]: cy }, points: null, margin: null });
+          hs.push({ hole: h, pos, complete: false, comps: { [x]: cx, [y]: cy }, points: null, margin: null });
         }
       }
       const total = to - from + 1;
@@ -335,18 +382,20 @@ function computeGame(settings, teams, teamById, holes) {
       }
       return {
         id: `r${ri + 1}m${mi + 1}`, rotation: ri + 1, from, to, teams: [x, y], holes: hs,
+        firstHole: holeAt(settings, from), lastHole: holeAt(settings, to), label: holesLabel(settings, from, to),
         points, margin: { [x]: capped, [y]: -capped }, rawMargin: { [x]: raw, [y]: -raw },
         played, total, left, final, clinchedBy, result,
       };
     });
-    return { index: ri + 1, from, to, matches };
+    return { index: ri + 1, from, to, matches, label: holesLabel(settings, from, to) };
   });
   const matches = rotations.flatMap((r) => r.matches);
 
   const holeComplete = holes.map((h) => {
-    const r = rotations.find((rr) => h.n >= rr.from && h.n <= rr.to);
+    const pos = posOf(settings, h.n);
+    const r = rotations.find((rr) => pos >= rr.from && pos <= rr.to);
     if (!r) return false;
-    return r.matches.every((m) => m.holes[h.n - m.from].complete);
+    return r.matches.every((m) => m.holes[pos - m.from].complete);
   });
 
   // Per-hole points / margins, by team, for complete matchup holes.
@@ -371,7 +420,7 @@ function pmThrough(game, teamId, through) {
   for (const m of game.matches) {
     if (!m.teams.includes(teamId)) continue;
     let raw = 0;
-    for (const hh of m.holes) if (hh.complete && hh.hole <= through) raw += hh.margin[teamId];
+    for (const hh of m.holes) if (hh.complete && hh.pos <= through) raw += hh.margin[teamId];
     total += game.cap != null ? Math.max(-game.cap, Math.min(game.cap, raw)) : raw;
   }
   return total;
@@ -381,7 +430,7 @@ function pointsThrough(game, teamId, through) {
   let total = 0;
   for (const m of game.matches) {
     if (!m.teams.includes(teamId)) continue;
-    for (const hh of m.holes) if (hh.complete && hh.hole <= through) total += hh.points[teamId];
+    for (const hh of m.holes) if (hh.complete && hh.pos <= through) total += hh.points[teamId];
   }
   return total;
 }
@@ -417,8 +466,9 @@ function finishGame(game, settings, teams, officialThrough) {
   });
   game.standings = rankStandings(game, rows, true);
   game.liveStandings = rankStandings(game, rows.map((r) => ({ ...r })), false);
-  game.provisionalHoles = [];
-  for (let h = officialThrough + 1; h <= HOLES; h++) {
+  game.provisionalHoles = []; // real hole numbers past the official line that already have points
+  for (let pos = officialThrough + 1; pos <= HOLES; pos++) {
+    const h = holeAt(settings, pos);
     if (game.pointsByHole[h - 1]) game.provisionalHoles.push(h);
   }
 }
@@ -481,20 +531,29 @@ export function teamLeaderboard(snapshot, mode = 'net') {
   });
 }
 
-/** The first hole this player's foursome hasn't fully posted (19 = done). */
+/** The first hole (play order) this player's foursome hasn't fully posted; null when they're done. */
 export function nextHoleFor(snapshot, pid) {
-  for (let h = 1; h <= HOLES; h++) {
+  for (const h of playOrder(snapshot.settings)) {
     const ids = foursomeFor(snapshot.roster, snapshot.settings, pid, h);
-    if (!ids.length) return 1;
+    if (!ids.length) return holeAt(snapshot.settings, 1);
     if (ids.some((id) => snapshot.playerById.get(id)?.gross[h - 1] == null)) return h;
   }
-  return HOLES + 1;
+  return null;
+}
+
+/** The first hole (play order) this player hasn't posted, else their last hole. */
+export function currentHoleOf(snapshot, pid) {
+  const p = snapshot.playerById.get(pid);
+  const order = playOrder(snapshot.settings);
+  if (!p) return order[0];
+  return order.find((h) => p.gross[h - 1] == null) ?? order[HOLES - 1];
 }
 
 /** The match a team is in on a hole. */
 export function matchFor(snapshot, teamId, hole) {
   if (!snapshot.game || !teamId) return null;
-  return snapshot.game.matches.find((m) => m.teams.includes(teamId) && hole >= m.from && hole <= m.to) || null;
+  const pos = posOf(snapshot.settings, hole);
+  return snapshot.game.matches.find((m) => m.teams.includes(teamId) && pos >= m.from && pos <= m.to) || null;
 }
 
 // ───────────────────────────────────────────── season (V1-lite)

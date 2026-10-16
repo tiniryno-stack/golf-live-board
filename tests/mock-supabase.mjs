@@ -10,7 +10,7 @@ import { readFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
-import { sameFoursome } from '../js/scoring.js';
+import { sameFoursome, playOrder } from '../js/scoring.js';
 import { COURSES } from '../js/courses.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -36,9 +36,10 @@ export function createBackend() {
     const c = claimOf(e, dev);
     if (!c) return null;
     const posted = new Set(t.scores.filter((s) => s.event_id === e.id && s.player_id === pid && s.strokes != null).map((s) => s.hole));
-    let gap = 18;
-    for (let h = 1; h <= 18; h++) if (!posted.has(h)) { gap = h; break; }
-    for (const h of [gap, Math.max(gap - 1, 1)]) {
+    const order = playOrder(e.settings);
+    let gi = order.findIndex((h) => !posted.has(h));
+    if (gi < 0) gi = 17;
+    for (const h of [order[gi], order[Math.max(gi - 1, 0)]]) {
       if (sameFoursome(e.roster, e.settings, c.player_id, pid, h)) return pname(e, c.player_id);
     }
     return null;
@@ -191,6 +192,25 @@ export function createBackend() {
       t.claims = t.claims.filter((c) => !(c.event_id === e.id && c.player_id === p_player_id));
       if (before !== t.claims.length) log(e, 'Organizer', `Freed up ${pname(e, p_player_id)}'s spot`);
       return { ok: true, released: before !== t.claims.length };
+    },
+    pick_team_name({ p_code, p_device_id, p_name }) {
+      const e = ev(p_code);
+      if (!e) return no('not_found');
+      const name = String(p_name || '').trim().slice(0, 20);
+      if (!name) return no('name_required');
+      const c = claimOf(e, p_device_id);
+      if (!c) return no('not_claimed');
+      const team = player(e, c.player_id)?.teamId;
+      if (!team) return no('no_team');
+      const other = e.roster.teams.find((x) => x.id !== team && x.name.trim().toLowerCase() === name.toLowerCase());
+      if (other) return no('taken', { team: other.id });
+      const t = e.roster.teams.find((x) => x.id === team);
+      if (t.name === name) return { ok: true, team, name, unchanged: true };
+      const was = t.name;
+      e.roster = { ...e.roster, teams: e.roster.teams.map((x) => (x.id === team ? { ...x, name } : x)) };
+      e.updated_at = now();
+      log(e, pname(e, c.player_id), `Named the cart ${name} (was ${was})`);
+      return { ok: true, team, name };
     },
     reset_round({ p_code, p_admin_pin }) {
       const e = ev(p_code);

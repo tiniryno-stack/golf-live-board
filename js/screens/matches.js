@@ -3,20 +3,27 @@
 // pips; the other matchup collapsed below.
 
 import { esc, seg, reducedMotion } from '../ui.js';
-import { fmtPts, fmtSigned, rotationIndexFor, HOLES } from '../scoring.js';
+import { fmtPts, fmtSigned, rotationIndexFor, holeAt, HOLES } from '../scoring.js';
+import { teamColor } from '../teams.js';
 
 const lastFill = new Map(); // matchId → { l, r } previous points, for the slide-in
 
 function pickRotation(app) {
   const snap = app.snapshot;
   if (app.ui.matchesRot != null) return app.ui.matchesRot;
-  const hole = app.me ? Math.min(app.nextHole(), HOLES) : Math.max(1, Math.min(HOLES, snap.officialThrough + 1));
+  const hole = app.me ? app.nextHole() : holeAt(snap.settings, Math.min(HOLES, snap.officialThrough + 1));
   return Math.max(0, rotationIndexFor(snap.settings, hole));
 }
 
 function sides(app, m) {
   const mine = app.myTeam();
   return m.teams.includes(mine) ? [mine, m.teams.find((t) => t !== mine)] : [m.teams[0], m.teams[1]];
+}
+
+/** CSS vars for the two jerseys: left = your cart (green) when it's yours. */
+function jerseys(app, left, right) {
+  const mine = app.myTeam();
+  return `--lc:${teamColor(mine, left)};--rc:${teamColor(mine, right)}`;
 }
 
 function tug(app, m, L, R, big) {
@@ -85,7 +92,7 @@ function teamSide(app, t, align) {
   const snap = app.snapshot;
   const team = snap.teamById.get(t);
   const names = team.playerIds.map((id) => snap.playerById.get(id).name).join(' + ');
-  return `<div class="mh-side ${align}"><div class="mh-name ellipsis">${esc(team.name)}</div><div class="mh-players ellipsis">${esc(names)}</div>`;
+  return `<div class="mh-side ${align}"><div class="mh-name ellipsis" style="color:${teamColor(app.myTeam(), t)}">${esc(team.name)}</div><div class="mh-players ellipsis">${esc(names)}</div>`;
 }
 
 export default {
@@ -115,7 +122,7 @@ export default {
         const [l, r] = sides(app, m);
         const [a, b] = counters(app, m, l);
         const open = app.ui.expandedMatch;
-        return `<div class="card" style="margin:0 0 12px">
+        return `<div class="card" style="margin:0 0 12px;${jerseys(app, l, r)}">
           <button class="mini-match" data-act="match-expand">
             <div class="spread"><span class="row-title ellipsis">${esc(snap.teamById.get(l).name)} <span class="vs">vs</span> ${esc(snap.teamById.get(r).name)}</span>
             <span class="mono" style="font-weight:700;white-space:nowrap">${esc(a)} – ${esc(b)}</span></div>
@@ -127,20 +134,20 @@ export default {
       })
       .join('');
 
-    return `<div class="hero match-hero">
+    return `<div class="hero match-hero" style="${jerseys(app, left, right)}">
         ${seg('matches-rot', g.rotations.map((r, i) => [String(i), `Rot ${i + 1}`]), String(ri))}
-        <div class="meta" style="text-align:center;margin:10px 0 4px">Holes ${rot.from}–${rot.to}${hero.final ? ' · final' : ''}</div>
+        <div class="meta" style="text-align:center;margin:10px 0 4px">${esc(rot.label)}${hero.final ? ' · final' : ''}</div>
         <div class="mh-teams">
-          ${teamSide(app, left, 'left')}<div class="mh-count num${left === mine ? ' good' : ''}">${esc(cl)}</div></div>
+          ${teamSide(app, left, 'left')}<div class="mh-count num" style="color:var(--lc)">${esc(cl)}</div></div>
           <div class="mh-mid">vs</div>
-          ${teamSide(app, right, 'right')}<div class="mh-count num">${esc(cr)}</div></div>
+          ${teamSide(app, right, 'right')}<div class="mh-count num" style="color:var(--rc)">${esc(cr)}</div></div>
         </div>
         ${isPM ? '' : tug(app, hero, hero.points[left], hero.points[right], true)}
         <div class="mh-status">${esc(statusLine(app, hero, left, right))}${isPM || hero.final || hero.clinchedBy ? '' : ` <span class="clinch">· ${fmtPts(n / 2 + unit)} clinches</span>`}</div>
       </div>
       <div class="sheet">
         <div class="micro" style="margin:0 0 8px">${g.ncomp > 1 ? 'Low Ball · Low Total by hole' : 'By hole'} · tap a hole</div>
-        ${holeStrip(app, hero, left)}
+        <div style="${jerseys(app, left, right)}">${holeStrip(app, hero, left)}</div>
         ${other.length ? `<div class="micro" style="margin:4px 0 8px">The other matchup</div>${otherHtml}` : ''}
       </div>`;
   },

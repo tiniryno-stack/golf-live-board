@@ -6,6 +6,8 @@
 //   5. Clear-the-browser rejoin: a fresh phone asks to be Andrew, Sam lets them in,
 //      the old phone drops to watch-only
 //   6. Organizer resets the round (scores cleared, phones stay joined), then deletes it
+//   7. Back-nine start + unnamed carts: name picker (taken names greyed), − / + on a blank
+//      tile, your cart ~60% of Enter, toasts only for the other foursome
 // Realtime isn't mocked, so "the other phone sees it" is driven by a refetch —
 // the same path the app uses when a phone comes back from the lock screen.
 // Run: npm run test:smoke
@@ -206,7 +208,59 @@ ok((await C.page.textContent('#content')).includes('Round deleted'), 'Sam\u2019s
 const recentC = await app(C.page, () => JSON.parse(localStorage.getItem('glb.recent') || '[]').map((x) => x.code));
 ok(!recentC.includes(r.code), 'and drops it from Sam\u2019s recent rounds');
 
-const errors = [A, C, A2].flatMap((p) => p.page.errors);
+// 7. A back-nine round with unnamed carts: name picker, − / + from a blank tile, toast filter
+const r2 = seedRound(be, { extra: { startHole: 10 } });
+r2.event.roster.teams.forEach((t) => (t.name = `Cart ${t.id}`));
+const link2 = `${srv.origin}/#/e/${r2.code}`;
+const P = await phone('Andrew (round 2)');
+const Q = await phone('Sam (round 2)');
+for (const [ph, nm] of [[P, 'Andrew'], [Q, 'Sam']]) {
+  await ph.page.goto(link2);
+  await ph.page.waitForSelector('.who-btn', { timeout: 8000 });
+  await ph.page.locator('.who-btn', { hasText: nm }).first().tap();
+  await ph.page.waitForTimeout(800);
+}
+ok(/name your cart/i.test(await P.page.textContent('#overlay')), 'unnamed cart: \u201cName your cart\u201d card after joining');
+await P.page.tap('[data-act="team-pick"][data-v="Charmander"]');
+await P.page.waitForTimeout(500);
+ok(r2.event.roster.teams.find((t) => t.id === 'A').name === 'Charmander', 'Andrew\u2019s cart is now Charmander on the server');
+await refetch(Q.page);
+await Q.page.waitForTimeout(300);
+ok(await Q.page.isDisabled('[data-act="team-pick"][data-v="Charmander"]'), 'Sam sees Charmander taken');
+await Q.page.tap('[data-act="team-pick"][data-v="Squirtle"]');
+await Q.page.waitForTimeout(500);
+ok(r2.event.roster.teams.find((t) => t.id === 'C').name === 'Squirtle', 'Sam\u2019s cart is Squirtle');
+const taken = be.rpc.pick_team_name({ p_code: r2.code, p_device_id: await app(Q.page, () => JSON.parse(localStorage.getItem('glb.device'))), p_name: 'charmander' });
+ok(taken.error === 'taken', 'the server refuses a name another cart has (any capitals)');
+ok((await P.page.textContent('.hole-title')) === 'Hole 10', 'starting on 10: Enter opens on Hole 10');
+await P.page.tap('[data-act="tile-step"][data-pid="p1"][data-d="-1"]');
+await P.page.tap('[data-act="tile-step"][data-pid="p2"][data-d="1"]');
+await P.page.waitForTimeout(900);
+const par10 = r2.event.course.par[9];
+const s1 = be.tables.scores.find((x) => x.event_id === r2.id && x.player_id === 'p1' && x.hole === 10);
+const s2 = be.tables.scores.find((x) => x.event_id === r2.id && x.player_id === 'p2' && x.hole === 10);
+ok(s1?.strokes === par10, `\u2212 on a blank tile = par (${s1?.strokes} on a par ${par10})`);
+ok(s2?.strokes === par10 + 2, `+ on a blank tile = double bogey (${s2?.strokes})`);
+const cartRatio = await P.page.evaluate(() => {
+  const [a, b] = [...document.querySelectorAll('.cart')].map((c) => c.getBoundingClientRect().height);
+  return a / (a + b);
+});
+ok(cartRatio > 0.54 && cartRatio < 0.66, `your cart gets ~60% of the space (${Math.round(cartRatio * 100)}%)`);
+await P.page.evaluate(() => { document.getElementById('toasts').innerHTML = ''; });
+const t0 = Date.now();
+const push = async (pid, by, i) => {
+  const row = { event_id: r2.id, player_id: pid, hole: 10, strokes: 4, updated_by: by, updated_at: new Date(t0 + i).toISOString() };
+  be.tables.scores.push(row);
+  await P.page.evaluate((row) => window.__glb._remote.score(row), row);
+};
+await push('p3', 'Mike', 1); // Mike plays with Andrew on 10
+await P.page.waitForTimeout(1900);
+ok(!(await toastText(P.page)), 'no toast for a score in your own foursome');
+await push('p7', 'Chris', 2); // Chris is in the other foursome
+await P.page.waitForTimeout(1900);
+ok((await toastText(P.page)).includes('Chris 4'), 'toast for the other foursome\u2019s score');
+
+const errors = [A, C, A2, P, Q].flatMap((p) => p.page.errors);
 ok(errors.length === 0, `no page errors${errors.length ? `: ${errors.join('; ')}` : ''}`);
 
 await browser.close();

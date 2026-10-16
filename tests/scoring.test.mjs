@@ -311,3 +311,54 @@ test('7.9 season: unfinished matchups do not count', () => {
   assert.equal(season.players.every((p) => p.games === 0), true);
   assert.equal(season.pairs.length, 0);
 });
+
+// ───────────────────────────────────────────── starting on the back nine
+
+import { playOrder, posOf, holeAt, holesLabel, currentHoleOf } from '../js/scoring.js';
+
+test('start on 10: play order, positions and labels', () => {
+  const st = { startHole: 10 };
+  assert.deepEqual(playOrder(st), [10, 11, 12, 13, 14, 15, 16, 17, 18, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+  assert.equal(posOf(st, 10), 1);
+  assert.equal(posOf(st, 1), 10);
+  assert.equal(holeAt(st, 7), 16);
+  assert.equal(holesLabel(st, 1, 6), 'Holes 10–15');
+  assert.equal(holesLabel(st, 7, 12), 'Holes 16–18, 1–3');
+  assert.equal(holesLabel(st, 13, 18), 'Holes 4–9');
+  assert.deepEqual(playOrder({}), Array.from({ length: 18 }, (_, i) => i + 1));
+});
+
+test('start on 10: matchups follow play order (10–15, 16–3, 4–9)', () => {
+  const ev = makeEvent({ startHole: 10 });
+  assert.equal(sameFoursome(ev.roster, ev.settings, 'a1', 'b1', 12), true); // rot 1: A v B
+  assert.equal(sameFoursome(ev.roster, ev.settings, 'a1', 'c1', 12), false);
+  assert.equal(sameFoursome(ev.roster, ev.settings, 'a1', 'c1', 16), true); // rot 2: A v C
+  assert.equal(sameFoursome(ev.roster, ev.settings, 'a1', 'c1', 2), true);
+  assert.equal(sameFoursome(ev.roster, ev.settings, 'a1', 'd1', 4), true); // rot 3: A v D
+  assert.equal(sameFoursome(ev.roster, ev.settings, 'a1', 'c1', 4), false);
+  const snap = compute(ev, []);
+  assert.deepEqual(snap.game.matches[0].holes.map((h) => h.hole), [10, 11, 12, 13, 14, 15]);
+  assert.equal(snap.game.matches[2].label, 'Holes 16–18, 1–3');
+  assert.equal(nextHoleFor(snap, 'a1'), 10);
+  assert.equal(currentHoleOf(snap, 'a1'), 10);
+});
+
+test('start on 10: official line runs 10 → 18 → 1, holes 1–9 come last', () => {
+  const ev = makeEvent({ startHole: 10 });
+  const sb = scorebook();
+  for (const h of [10, 11, 12, 13, 14, 15, 16, 17, 18]) postAll(sb, h, ['a', 'b', 'c', 'd']);
+  sb.post(1, { a1: 3, a2: 3, c1: 5, c2: 5 }); // A/C's foursome is a hole ahead, on 1
+  const snap = compute(ev, sb.rows());
+  assert.equal(snap.officialThrough, 9);
+  assert.equal(snap.officialHole, 18);
+  assert.deepEqual(snap.game.provisionalHoles, [1]);
+  assert.equal(nextHoleFor(snap, 'a1'), 2);
+  assert.equal(nextHoleFor(snap, 'b1'), 1);
+  // all 18 in → round complete, nextHoleFor is null
+  postAll(sb, 1, ['b', 'd']);
+  for (let h = 2; h <= 9; h++) postAll(sb, h, ['a', 'b', 'c', 'd']);
+  const done = compute(ev, sb.rows());
+  assert.equal(done.roundComplete, true);
+  assert.equal(done.officialHole, 9);
+  assert.equal(nextHoleFor(done, 'a1'), null);
+});

@@ -203,3 +203,29 @@ test('alerts are Match Play only', () => {
   hole(sb, 1, { a: 'lose', b: 'win' });
   assert.equal(matchupAlert(compute(ev, sb.rows()), 'A', 2), null);
 });
+
+// ───────────────────────────────────────────── starting on the back nine
+
+test('start on 10: lead change still waits for the trailing foursome (hole 16 = 2nd matchup)', () => {
+  const ev = makeEvent({ startHole: 10 });
+  const sb = scorebook();
+  hole(sb, 10, { a: 'lose', b: 'win', c: 'even', d: 'even' });
+  for (const h of [11, 12, 13, 14, 15]) hole(sb, h, { a: 'even', b: 'even', c: 'even', d: 'even' });
+  hole(sb, 16, { b: 'lose', d: 'win' }); // B v D foursome first
+  assert.equal(replayHeadlines(ev, sb.rows()).filter((h) => h.type === 'leadChange').length, 0);
+  hole(sb, 16, { a: 'even', c: 'even' });
+  const lc = replayHeadlines(ev, sb.rows()).filter((h) => h.type === 'leadChange');
+  assert.equal(lc.length, 1);
+  assert.equal(lc[0].text, 'Bogey Boys takes the lead');
+});
+
+test('start on 10: Lock in uses the matchup played 10–15', () => {
+  const ev = makeEvent({ startHole: 10 });
+  const sb = scorebook();
+  hole(sb, 10, { a: 'lose', b: 'win' });
+  hole(sb, 11, { a: 'lose', b: 'win' });
+  hole(sb, 12, { a: 'even', b: 'even' });
+  hole(sb, 13, { a: 'even', b: 'even' }); // A 2, B 6, two holes left (14, 15)
+  const a = matchupAlert(compute(ev, sb.rows()), 'A', 14);
+  assert.equal(a.text, 'Lock in — win out to halve: you need all 4 points left');
+});

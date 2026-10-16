@@ -118,13 +118,25 @@ returns text language sql immutable set search_path = public as $$
     p_team)
 $$;
 
+-- Play order: rotations are written as positions (1–6 = first six holes played).
+-- settings.startHole = 10 means holes 10–18 are positions 1–9, holes 1–9 are 10–18.
+create or replace function public._play_pos(p_settings jsonb, p_hole int)
+returns int language sql immutable set search_path = public as $$
+  select ((p_hole - case when coalesce(p_settings->>'startHole', '1') = '10' then 10 else 1 end + 18) % 18) + 1
+$$;
+
+create or replace function public._hole_at(p_settings jsonb, p_pos int)
+returns int language sql immutable set search_path = public as $$
+  select ((case when coalesce(p_settings->>'startHole', '1') = '10' then 10 else 1 end - 1 + p_pos - 1) % 18) + 1
+$$;
+
 -- Is player B in player A's foursome on this hole? (section 7.1)
 -- Swap mode: your cart + the cart you're playing on that hole's rotation.
 -- Fixed mode (or no teams): same group all day.
 create or replace function public._same_foursome(p_roster jsonb, p_settings jsonb, p_a text, p_b text, p_hole int)
 returns boolean language plpgsql immutable set search_path = public as $$
 declare
-  a jsonb; b jsonb; rot jsonb; m jsonb;
+  a jsonb; b jsonb; rot jsonb; m jsonb; v_pos int := public._play_pos(p_settings, p_hole);
 begin
   if p_a = p_b then return true; end if;
   a := public._player(p_roster, p_a);
@@ -135,7 +147,7 @@ begin
      and jsonb_typeof(p_settings->'rotation') = 'array' then
     if a->>'teamId' = b->>'teamId' then return true; end if;
     for rot in select * from jsonb_array_elements(p_settings->'rotation') loop
-      if p_hole between (rot->'holes'->>0)::int and (rot->'holes'->>1)::int then
+      if v_pos between (rot->'holes'->>0)::int and (rot->'holes'->>1)::int then
         for m in select * from jsonb_array_elements(rot->'matches') loop
           if m ? (a->>'teamId') and m ? (b->>'teamId') then return true; end if;
         end loop;
@@ -334,8 +346,8 @@ begin
 end $$;
 
 -- Shared check for approve/deny: organizer PIN, or a phone in that player's current foursome.
--- "Current" = the first hole they haven't posted (what Enter shows them), or the hole before it
--- (so both foursomes can answer while carts swap at 7 and 13). The organizer is the backup.
+-- "Current" = the first hole (play order) they haven't posted — what Enter shows them — or the
+-- hole before it (so both foursomes can answer while carts swap). The organizer is the backup.
 create or replace function public._join_approver(e public.events, p_player_id text, p_device_id uuid, p_admin_pin text)
 returns text language plpgsql security definer set search_path = public as $$
 declare v_pid text; v_gap int;
@@ -343,11 +355,12 @@ begin
   if p_admin_pin is not null and public._admin_ok(e.id, p_admin_pin) then return 'Organizer'; end if;
   select player_id into v_pid from public.claims where event_id = e.id and device_id = p_device_id;
   if v_pid is null then return null; end if;
-  select coalesce(min(g), 18) into v_gap from generate_series(1, 18) g
+  select coalesce(min(pos), 18) into v_gap from generate_series(1, 18) pos
    where not exists (select 1 from public.scores s
-                      where s.event_id = e.id and s.player_id = p_player_id and s.hole = g and s.strokes is not null);
-  if public._same_foursome(e.roster, e.settings, v_pid, p_player_id, v_gap)
-     or public._same_foursome(e.roster, e.settings, v_pid, p_player_id, greatest(v_gap - 1, 1)) then
+                      where s.event_id = e.id and s.player_id = p_player_id
+                        and s.hole = public._hole_at(e.settings, pos) and s.strokes is not null);
+  if public._same_foursome(e.roster, e.settings, v_pid, p_player_id, public._hole_at(e.settings, v_gap))
+     or public._same_foursome(e.roster, e.settings, v_pid, p_player_id, public._hole_at(e.settings, greatest(v_gap - 1, 1))) then
     return public._player_name(e.roster, v_pid);
   end if;
   return null;
@@ -590,10 +603,40 @@ begin
   return jsonb_build_object('ok', true);
 end $$;
 
+-- A joined phone names its own cart (either partner). First come, first served:
+-- a name another cart already has is refused. Locks the round row so two carts
+-- tapping the same name at once can't both get it.
+create or replace function public.pick_team_name(p_code text, p_device_id uuid, p_name text)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare e public.events; v_pid text; v_team text; v_name text := left(trim(coalesce(p_name, '')), 20); v_old text; v_by text;
+begin
+  select * into e from public.events where code = upper(trim(p_code)) for update;
+  if e.id is null then return jsonb_build_object('ok', false, 'error', 'not_found'); end if;
+  if v_name = '' then return jsonb_build_object('ok', false, 'error', 'name_required'); end if;
+  select player_id into v_pid from public.claims where event_id = e.id and device_id = p_device_id;
+  if v_pid is null then return jsonb_build_object('ok', false, 'error', 'not_claimed'); end if;
+  v_team := public._player(e.roster, v_pid)->>'teamId';
+  if v_team is null then return jsonb_build_object('ok', false, 'error', 'no_team'); end if;
+  select t->>'id' into v_by from jsonb_array_elements(coalesce(e.roster->'teams', '[]'::jsonb)) t
+   where t->>'id' <> v_team and lower(trim(t->>'name')) = lower(v_name) limit 1;
+  if v_by is not null then return jsonb_build_object('ok', false, 'error', 'taken', 'team', v_by); end if;
+  v_old := public._team_name(e.roster, v_team);
+  if v_old = v_name then return jsonb_build_object('ok', true, 'team', v_team, 'name', v_name, 'unchanged', true); end if;
+  update public.events
+     set roster = jsonb_set(roster, '{teams}', (
+           select jsonb_agg(case when t->>'id' = v_team then jsonb_set(t, '{name}', to_jsonb(v_name)) else t end order by ord)
+             from jsonb_array_elements(roster->'teams') with ordinality as x(t, ord))),
+         updated_at = now()
+   where id = e.id;
+  perform public._log(e.id, public._player_name(e.roster, v_pid), 'Named the cart ' || v_name || ' (was ' || v_old || ')');
+  return jsonb_build_object('ok', true, 'team', v_team, 'name', v_name);
+end $$;
+
 -- ─────────────────────────────────────────────────────────────── function permissions
 
 revoke execute on function
   public._player(jsonb, text), public._player_name(jsonb, text), public._team_name(jsonb, text),
+  public._play_pos(jsonb, int), public._hole_at(jsonb, int),
   public._same_foursome(jsonb, jsonb, text, text, int), public._event(text), public._admin_ok(uuid, text),
   public._log(uuid, text, text), public._fmt(text), public._setting_label(text), public._last_hole(uuid, text),
   public._join_approver(public.events, text, uuid, text),
@@ -616,7 +659,8 @@ grant execute on function
   public.release_player(text, text, text),
   public.get_audit_log(text, text),
   public.reset_round(text, text),
-  public.delete_round(text, text)
+  public.delete_round(text, text),
+  public.pick_team_name(text, uuid, text)
   to anon, authenticated;
 
 -- ─────────────────────────────────────────────────────────────── realtime

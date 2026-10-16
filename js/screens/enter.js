@@ -1,14 +1,17 @@
-// enter.js — the default tab. Compact hero (hole + matchup), two cart cards
-// (your cart on top), first tap = bogey, − / + to adjust, long-press clears,
-// ◀ back through the current matchup + Undo, Next hole → (Switch it up,
-// Lock in / Close it out). Must fit an iPhone SE with no scrolling.
+// enter.js — the default tab. Compact hero (hole + matchup), your cart big on top
+// (~60%) and the cart you're playing smaller below (~40%). An empty tile shows a
+// faint bogey: tap it for bogey, or − / + to step from bogey (− = par, − − = birdie).
+// Long-press clears. ◀ back through the current matchup + Undo, Next hole →
+// (Switch it up, Lock in / Close it out). Holes follow play order (start on 1 or 10).
+// Must fit an iPhone SE with no scrolling.
 
 import { esc, icon, scoreClass } from '../ui.js';
 import {
   maxHoleScore, maxLabel, rotationFor, rotationIndexFor, foursomeFor, matchFor, componentNames,
-  fmtPts, fmtSigned, HOLES,
+  fmtPts, fmtSigned, playOrder, posOf, holeAt, HOLES,
 } from '../scoring.js';
 import { matchupAlert } from '../headlines.js';
+import { teamColor, isDefaultTeamName } from '../teams.js';
 import { local } from '../db.js';
 
 /** "+2 thru 4" / "All square" from this team's side of its current matchup. */
@@ -21,8 +24,9 @@ export function matchStatus(snap, m, teamId) {
   return m.final ? `${s} · final` : `${s} thru ${m.played}`;
 }
 
+/** Furthest hole you can step forward to: the next one your foursome hasn't finished. */
 function holeLimit(app) {
-  return Math.min(HOLES, app.nextHole());
+  return app.nextHole();
 }
 
 function currentHole(app) {
@@ -50,27 +54,33 @@ function tile(app, p, hole) {
   const editable = app.canEdit(p.id, hole);
   const max = maxHoleScore(snap.course, snap.settings, hole, p.dots[hole - 1]);
   const dots = p.dots[hole - 1] ? `<span class="dots" aria-label="${p.dots[hole - 1]} stroke">${'<i></i>'.repeat(p.dots[hole - 1])}</span>` : '';
+  // Empty tile: a faint bogey shows where − / + will start from.
+  const shown = g ?? Math.min(par + 1, max);
   const face = `<span class="who"><span class="ellipsis">${esc(p.name)}</span>${dots}</span>
-    <span class="score ${scoreClass(g, par)}">${g ?? 'Tap'}</span>`;
+    <span class="score ${g == null ? 'ghost' : scoreClass(g, par)}">${shown}</span>`;
   if (!editable) {
-    return `<div class="tile readonly${g == null ? ' empty' : ''}"><div class="face">${face}</div></div>`;
+    return `<div class="tile readonly${g == null ? ' empty' : ''}"><div class="face">${g == null ? face.replace(`>${shown}<`, '>–<') : face}</div></div>`;
   }
   return `<div class="tile${g == null ? ' empty' : ''}${p.id === app.me ? ' mine' : ''}">
     <button class="step" data-act="tile-step" data-pid="${esc(p.id)}" data-d="-1" ${g != null && g <= 1 ? 'disabled' : ''} aria-label="${esc(p.name)} one less">${icon('minus', 22)}</button>
-    <button class="face" data-act="tile-tap" data-hold="tile-clear" data-pid="${esc(p.id)}" aria-label="${esc(p.name)}: ${g ?? 'no score'}">${face}</button>
+    <button class="face" data-act="tile-tap" data-hold="tile-clear" data-pid="${esc(p.id)}" aria-label="${esc(p.name)}: ${g ?? 'no score yet'}">${face}</button>
     <button class="step" data-act="tile-step" data-pid="${esc(p.id)}" data-d="1" ${g != null && g >= max ? 'disabled' : ''} aria-label="${esc(p.name)} one more">${icon('plus', 22)}</button>
   </div>`;
 }
 
-function cartCard(app, cart, hole, first) {
+function cartCard(app, cart, hole, mine) {
   const snap = app.snapshot;
   const team = cart.teamId ? snap.teamById.get(cart.teamId) : null;
   const comps = team?.comps[hole - 1];
   const short = snap.settings.teamScore === 'bestBallAggregate' ? ['LB', 'LT'] : componentNames(snap.settings.teamScore);
   const lblt = team && comps ? short.map((n, i) => `${n} ${comps[i]}`).join(' · ') : team ? short.map((n) => `${n} –`).join(' · ') : '';
   const label = team ? team.name : cart.players.length > 2 ? 'Your group' : 'Your cart';
-  return `<section class="cart${first ? ' mine' : ''}">
-    <div class="cart-head"><span class="name ellipsis">${esc(label)}</span><span class="lblt">${esc(lblt)}</span></div>
+  const jersey = team ? teamColor(app.myTeam(), team.id) : '';
+  const name = mine && team
+    ? `<button class="name name-btn" data-act="team-picker" aria-label="Name your cart"><span class="ellipsis">${esc(label)}</span>${isDefaultTeamName(team) ? '<span class="pick">Name it</span>' : ''}</button>`
+    : `<span class="name ellipsis">${esc(label)}</span>`;
+  return `<section class="cart ${mine ? 'mine' : 'opp'}" ${jersey ? `style="--jersey:${jersey}"` : ''}>
+    <div class="cart-head">${name}<span class="lblt">${esc(lblt)}</span></div>
     <div class="tiles">${cart.players.map((p) => tile(app, p, hole)).join('')}</div>
   </section>`;
 }
@@ -94,11 +104,14 @@ export default {
   render(app) {
     const snap = app.snapshot;
     if (!app.myPlayer()) return watchView(app);
+    const st = snap.settings;
     const h = currentHole(app);
+    const pos = posOf(st, h);
     const hole = snap.holes[h - 1];
-    const limit = holeLimit(app);
+    const limitPos = posOf(st, holeLimit(app));
+    const lastHole = playOrder(st)[HOLES - 1];
     const myTeam = app.myTeam();
-    const rot = rotationFor(snap.settings, h);
+    const rot = rotationFor(st, h);
     let matchLine = '';
     if (snap.game && myTeam) {
       const m = matchFor(snap, myTeam, h);
@@ -107,28 +120,28 @@ export default {
         ? `<span class="teams">Rot ${m.rotation} · ${esc(snap.teamById.get(myTeam).name)} <span class="faint">vs</span> ${esc(opp.name)}</span><span class="status">${esc(matchStatus(snap, m, myTeam))}</span>`
         : '';
     } else if (rot) {
-      matchLine = `<span class="teams">Holes ${rot.from}–${rot.to}</span>`;
+      matchLine = `<span class="teams">${esc(rot.label)}</span>`;
     }
     const carts = cartsFor(app, h);
     const everyone = carts.flatMap((c) => c.players);
     const allPosted = everyone.length > 0 && everyone.every((p) => p.gross[h - 1] != null);
-    const dots = snap.holes
-      .map((x) => {
-        const ids = foursomeFor(snap.roster, snap.settings, app.me, x.n);
-        const done = ids.length && ids.every((id) => snap.playerById.get(id).gross[x.n - 1] != null);
-        return `<i class="${x.n === h ? 'here' : done ? 'done' : ''}"></i>`;
+    const dots = playOrder(st)
+      .map((n) => {
+        const ids = foursomeFor(snap.roster, st, app.me, n);
+        const done = ids.length && ids.every((id) => snap.playerById.get(id).gross[n - 1] != null);
+        return `<i class="${n === h ? 'here' : done ? 'done' : ''}"></i>`;
       })
       .join('');
-    const nextLabel = h >= HOLES ? 'Finish · see the Board →' : 'Next hole →';
+    const nextLabel = h === lastHole ? 'Finish · see the Board →' : 'Next hole →';
     return `<div class="enter">
       <div class="hero">
         <div class="hole-row">
           <button class="arrow" data-act="hole-prev" aria-label="Previous hole">${icon('back')}</button>
           <div class="hole-head">
             <div class="hole-title">Hole ${h}</div>
-            <div class="hole-meta">Par ${hole.par} · Hcp ${hole.si} · ${esc(maxLabel(snap.course, snap.settings, h))}</div>
+            <div class="hole-meta">Par ${hole.par} · Hcp ${hole.si} · ${esc(maxLabel(snap.course, st, h))}</div>
           </div>
-          <button class="arrow" data-act="hole-next" aria-label="Next hole" ${h >= limit ? 'disabled' : ''}>${icon('fwd')}</button>
+          <button class="arrow" data-act="hole-next" aria-label="Next hole" ${pos >= limitPos ? 'disabled' : ''}>${icon('fwd')}</button>
         </div>
         ${matchLine ? `<div class="matchup-line">${matchLine}</div>` : ''}
       </div>
@@ -143,7 +156,7 @@ export default {
   mount(root, app) {
     if (!app.myPlayer()) return;
     const first = root.querySelector('.tile.empty .face');
-    if (first) app.coach('tile', first, 'Tap once for bogey. Tap − for par, again for birdie.');
+    if (first) app.coach('tile', first, 'Tap once for bogey. Or tap − for par, − again for birdie.');
   },
 
   actions: {
@@ -156,13 +169,12 @@ export default {
     'tile-step': (el, ev, app) => {
       const pid = el.dataset.pid;
       const h = app.ui.hole;
+      const d = Number(el.dataset.d);
       const g = app.scoreOf(pid, h);
-      if (g == null) {
-        app.setScore(pid, h, bogey(app, pid, h));
-        return;
-      }
-      const v = Math.max(1, Math.min(maxFor(app, pid, h), g + Number(el.dataset.d)));
-      if (v !== g) app.setScore(pid, h, v);
+      // Empty tile: step from the bogey it's showing (− = par, + = double bogey).
+      const from = g ?? bogey(app, pid, h);
+      const v = Math.max(1, Math.min(maxFor(app, pid, h), from + d));
+      if (g == null || v !== g) app.setScore(pid, h, v);
     },
     'tile-clear': (el, ev, app) => {
       const pid = el.dataset.pid;
@@ -173,11 +185,13 @@ export default {
     },
     'hole-prev': (el, ev, app) => {
       if (!app.myPlayer()) return;
+      const st = app.snapshot.settings;
       const h = app.ui.hole;
-      const rot = rotationFor(app.snapshot.settings, h);
+      const pos = posOf(st, h);
+      const rot = rotationFor(st, h);
       const floor = app.snapshot.game && rot ? rot.from : 1;
-      if (h > floor) {
-        app.ui.hole = h - 1;
+      if (pos > floor) {
+        app.ui.hole = holeAt(st, pos - 1);
         app.render();
       } else {
         app.toast({ title: 'Earlier holes are on the Card', action: 'Open Card', onAction: () => app.go(app.tabHash('card')) });
@@ -185,13 +199,15 @@ export default {
     },
     'hole-next': (el, ev, app) => {
       if (!app.myPlayer()) return;
-      const h = app.ui.hole;
-      if (h < holeLimit(app)) {
-        app.ui.hole = h + 1;
+      const st = app.snapshot.settings;
+      const pos = posOf(st, app.ui.hole);
+      if (pos < posOf(st, holeLimit(app))) {
+        app.ui.hole = holeAt(st, pos + 1);
         app.render();
       }
     },
     'next-hole': (el, ev, app) => nextHole(app),
+    'team-picker': (el, ev, app) => app.openTeamPicker(),
   },
 };
 
@@ -207,7 +223,7 @@ function goHole(app, to, from) {
   app.ui.hole = to;
   app.render();
   app.toast({
-    title: `Hole ${from} saved`, action: 'Undo', ms: 5000,
+    title: `Hole ${from} saved`, action: 'Undo', ms: 3000,
     onAction: () => {
       app.ui.hole = from;
       app.render();
@@ -217,14 +233,16 @@ function goHole(app, to, from) {
 
 function nextHole(app) {
   const snap = app.snapshot;
+  const st = snap.settings;
   const h = app.ui.hole;
-  if (h >= HOLES) {
+  const pos = posOf(st, h);
+  if (pos >= HOLES) {
     app.go(app.tabHash('board'));
     return;
   }
-  const nh = h + 1;
+  const nh = holeAt(st, pos + 1);
   const myTeam = app.myTeam();
-  const crossing = snap.game && rotationIndexFor(snap.settings, h) !== rotationIndexFor(snap.settings, nh);
+  const crossing = snap.game && rotationIndexFor(st, h) !== rotationIndexFor(st, nh);
   if (crossing && myTeam) {
     const done = matchFor(snap, myTeam, h);
     const next = matchFor(snap, myTeam, nh);
@@ -240,9 +258,9 @@ function nextHole(app) {
     if (next) {
       const opp = next.teams[0] === myTeam ? next.teams[1] : next.teams[0];
       const players = snap.teamById.get(opp).playerIds.map((id) => snap.playerById.get(id).name).join(' + ');
-      sub = `Holes ${next.from}–${next.to} vs ${name(opp)} · ${players}`;
+      sub = `${next.label} vs ${name(opp)} · ${players}`;
     }
-    const swap = (snap.settings.rotationMode || 'swap') === 'swap';
+    const swap = (st.rotationMode || 'swap') === 'swap';
     app.showCard({
       kicker: 'Switch it up',
       big: done?.final ? `Rotation ${done.rotation} is in` : `On to rotation ${(done?.rotation || 0) + 1}`,

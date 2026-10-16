@@ -4,7 +4,8 @@
 
 import { esc, icon, seg, todayISO, prettyDate, copyText, roundLink } from '../ui.js';
 import { COURSES } from '../courses.js';
-import { DEFAULT_SETTINGS, DEFAULT_ROTATION } from '../scoring.js';
+import { DEFAULT_SETTINGS, DEFAULT_ROTATION, holesLabel } from '../scoring.js';
+import { TEAM_NAME_PICKS } from '../teams.js';
 import * as db from '../db.js';
 
 const STEPS = ['Course', 'Players', 'Teams', 'Matchups', 'Game', 'Save'];
@@ -138,7 +139,9 @@ const VIEWS = {
     </div>
     ${c ? `<div class="micro" style="margin:18px 0 8px">Tees</div>
       <div class="chips">${c.tees.map((t) => `<button class="chip" data-act="setup-tee" data-v="${esc(t.name)}" aria-pressed="${s.tee?.name === t.name}">${esc(t.name)} <span class="soft mono" style="font-size:12px">${t.yards}</span></button>`).join('')}</div>` : ''}
-    <div class="field" style="margin-top:18px"><label for="round-name">Round name</label>
+    <div class="field" style="margin-top:18px"><span class="label">First tee</span>${seg('setup-set', [['1', 'Hole 1'], ['10', 'Hole 10']], String(s.settings.startHole || 1), 'data-k="startHole"')}</div>
+    <p class="help">Starting on 10? Everything follows the order you play: 10 → 18, then 1 → 9.</p>
+    <div class="field"><label for="round-name">Round name</label>
       <input class="input" id="round-name" maxlength="60" value="${esc(s.name)}" placeholder="${esc(c ? `${c.shortName} · ${prettyDate(todayISO())}` : 'e.g. Twin Creeks · Fri')}" data-input="setup-name"></div>
     <p class="meta">Nothing is preselected, so nobody plays the wrong card. Check pars against the card on the first tee; the organizer can fix any hole mid-round.</p>`;
   },
@@ -163,16 +166,18 @@ const VIEWS = {
 
   Teams(s) {
     const counts = Object.fromEntries(TEAM_IDS.map((id) => [id, s.players.filter((p) => p.teamId === id).length]));
-    return `<p class="meta" style="margin:0 0 12px">Tap each player into a cart (one team per cart), then name the teams.</p>
-      <div style="margin:0 0 18px">${s.players.map((p, i) => `<div class="player-row">
+    return `<div class="micro" style="margin:0 0 8px">Team names</div>
+      <div class="name-grid">${TEAM_IDS.map((id) => `<label class="team-name-cell" style="--jersey:var(--t-${id})">
+          <span class="spread"><span class="cart-tag"><i class="jdot"></i>Cart ${id}</span><span class="mono ${counts[id] === 2 ? 'good' : 'soft'}" style="font-size:12px">${counts[id]}/2</span></span>
+          <input class="input" maxlength="20" placeholder="Cart ${id}" value="${esc(s.teams.find((t) => t.id === id).name)}" aria-label="Team name for cart ${id}" data-input="setup-teamname" data-v="${id}">
+          <span class="meta ellipsis">${esc(s.players.filter((p) => p.teamId === id).map((p) => p.name).join(' + ') || 'empty')}</span>
+        </label>`).join('')}</div>
+      <p class="help" style="margin:8px 0 18px">Optional. Leave a name blank and that cart picks its own when they join (${esc(TEAM_NAME_PICKS.slice(0, 3).join(', '))}…).</p>
+      <div class="micro" style="margin:0 0 4px">Who\u2019s in each cart</div>
+      <div style="margin:0 0 8px">${s.players.map((p, i) => `<div class="player-row">
           <span class="pname ellipsis">${esc(p.name)}</span>
           <div class="team-picks">${TEAM_IDS.map((id) => `<button data-act="setup-team" data-i="${i}" data-v="${id}" aria-pressed="${p.teamId === id}" aria-label="${esc(p.name)} to cart ${id}">${id}</button>`).join('')}</div>
-        </div>`).join('') || '<p class="meta">Add players first.</p>'}</div>
-      ${TEAM_IDS.map((id) => `<div class="team-card">
-        <div class="spread"><span class="row-title">Cart ${id}</span><span class="mono ${counts[id] === 2 ? 'good' : 'soft'}" style="font-size:13px">${counts[id]}/2</span></div>
-        <div class="meta">${esc(s.players.filter((p) => p.teamId === id).map((p) => p.name).join(' + ') || 'empty')}</div>
-        <input class="input" maxlength="20" placeholder="Cart ${id}" value="${esc(s.teams.find((t) => t.id === id).name)}" aria-label="Team name for cart ${id}" data-input="setup-teamname" data-v="${id}">
-      </div>`).join('')}`;
+        </div>`).join('') || '<p class="meta">Add players first.</p>'}</div>`;
   },
 
   Matchups(s) {
@@ -180,12 +185,12 @@ const VIEWS = {
     const full = hasFullTeams(s);
     const rot = s.rotation
       .map((r, i) => `<div class="rot-card">
-        <div class="micro" style="margin:0 0 4px">Rotation ${i + 1} · holes ${r.holes[0]}–${r.holes[1]}</div>
+        <div class="micro" style="margin:0 0 4px">Rotation ${i + 1} · ${esc(holesLabel(s.settings, r.holes[0], r.holes[1]).toLowerCase())}</div>
         ${r.matches.map((m) => `<div class="row-title" style="font-size:16px">${esc(teamName(s, m[0]))} <span class="vs">vs</span> ${esc(teamName(s, m[1]))}</div>`).join('')}
       </div>`)
       .join('');
     const groups = full
-      ? `<p class="meta">${swap ? 'Holes 1–6 foursomes' : 'Fixed foursomes'}: Group 1 = ${esc(s.rotation[0].matches[0].map((t) => teamName(s, t)).join(' + '))} · Group 2 = ${esc(s.rotation[0].matches[1].map((t) => teamName(s, t)).join(' + '))}</p>`
+      ? `<p class="meta">${swap ? `${holesLabel(s.settings, 1, 6)} foursomes` : 'Fixed foursomes'}: Group 1 = ${esc(s.rotation[0].matches[0].map((t) => teamName(s, t)).join(' + '))} · Group 2 = ${esc(s.rotation[0].matches[1].map((t) => teamName(s, t)).join(' + '))}</p>`
       : `<div class="micro" style="margin:12px 0 8px">Foursomes</div>${s.players.map((p, i) => `<div class="player-row"><span class="pname">${esc(p.name)}</span>
           <div class="team-picks" style="grid-template-columns:repeat(2,52px)">${['g1', 'g2'].map((g, gi) => `<button data-act="setup-group" data-i="${i}" data-v="${g}" aria-pressed="${(p.groupId || 'g1') === g}">G${gi + 1}</button>`).join('')}</div></div>`).join('')}`;
     return `<div class="stack" style="gap:10px;margin:0 0 14px">
@@ -223,6 +228,7 @@ const VIEWS = {
         <div class="micro">Course</div><div class="row-title" style="margin:2px 0 10px">${c ? esc(c.name) : '—'}${s.tee ? ` · ${esc(s.tee.name)}` : ''}</div>
         <div class="micro">Round</div><div style="margin:2px 0 10px">${esc(r?.name || s.name || '—')}</div>
         <div class="micro">Players</div><div style="margin:2px 0 10px">${s.players.length ? s.players.map((p) => `${esc(p.name)}${p.strokes !== '' && p.strokes != null ? ` <span class="soft">(${esc(p.strokes)})</span>` : ''}`).join(', ') : '—'}</div>
+        <div class="micro">First tee</div><div style="margin:2px 0 10px">Hole ${s.settings.startHole === 10 ? '10 (back nine first)' : '1'}</div>
         <div class="micro">Game</div><div style="margin:2px 0 0">${{ none: 'Scorecard only', rotationMatch: 'Rotation Match Play', rotationPlusMinus: 'Rotation Plus/Minus' }[s.settings.game]}${s.settings.rotationMode === 'swap' ? ' · carts swap' : ' · fixed foursomes'}</div>
       </div>
       <button class="btn primary big block" data-act="setup-save" ${issues.length || s.saving ? 'disabled' : ''}>${s.saving ? 'Saving…' : 'Save round'}</button>
@@ -389,6 +395,7 @@ export default {
       let v = el.dataset.v;
       if (k === 'halvedHolePoints') v = Number(v);
       if (k === 'plusMinusCap') v = v === '' ? null : Number(v);
+      if (k === 'startHole') v = Number(v);
       st[k] = v;
       persist(app.setup);
       app.render();

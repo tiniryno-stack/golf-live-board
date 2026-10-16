@@ -43,6 +43,7 @@ function rules(app, d) {
   const pm = st.game === 'rotationPlusMinus';
   const par = d.course.par, si = d.course.strokeIndex;
   return `<div class="field"><span class="label">Game</span>${seg('host-set', [['none', 'None'], ['rotationMatch', 'Match Play'], ['rotationPlusMinus', 'Plus/Minus']], st.game, 'data-k="game"')}</div>
+    <div class="field"><span class="label">First tee</span>${seg('host-set', [['1', 'Hole 1'], ['10', 'Hole 10']], String(st.startHole || 1), 'data-k="startHole"')}</div>
     <div class="field"><span class="label">Team score</span>${seg('host-set', [['bestBallAggregate', 'Low Ball/Total'], ['bestBall', 'Best ball'], ['aggregate', 'Aggregate']], st.teamScore, 'data-k="teamScore"')}</div>
     <div class="field"><span class="label">Max hole score</span>${seg('host-set', [['doublePar', 'Double par'], ['netDoubleBogey', 'Net dbl bogey'], ['none', 'None']], st.maxHoleScore, 'data-k="maxHoleScore"')}</div>
     <div class="chips" style="margin:0 0 16px">
@@ -168,6 +169,7 @@ export default {
       let v = el.dataset.v;
       if (k === 'halvedHolePoints') v = Number(v);
       if (k === 'plusMinusCap') v = v === '' ? null : Number(v);
+      if (k === 'startHole') v = Number(v);
       st[k] = v;
       touch(app);
       app.render();

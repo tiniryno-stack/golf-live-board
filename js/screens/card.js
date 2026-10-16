@@ -4,7 +4,8 @@
 // cell to see who entered it. The organizer can edit every cell.
 
 import { esc, icon, seg, scoreClass, clock } from '../ui.js';
-import { fmtToPar, foursomeTeams, HOLES } from '../scoring.js';
+import { fmtToPar, foursomeTeams } from '../scoring.js';
+import { teamColor } from '../teams.js';
 import { local } from '../db.js';
 
 function openState(app) {
@@ -58,13 +59,13 @@ function table(app, cart, from) {
 export default {
   render(app) {
     const snap = app.snapshot;
-    const next = app.me ? Math.min(app.nextHole(), HOLES) : Math.max(1, snap.officialThrough);
+    const next = app.me ? app.nextHole() : snap.officialHole || snap.order[0];
     const half = app.ui.cardHalf || (next > 9 ? 'back' : 'front');
     const from = half === 'back' ? 10 : 1;
     const list = carts(app);
     let first = [];
     if (app.me) {
-      const near = foursomeTeams(snap.roster, snap.settings, app.me, Math.min(app.nextHole(), HOLES));
+      const near = foursomeTeams(snap.roster, snap.settings, app.me, app.nextHole());
       first = list.filter((c) => near.includes(c.key) || c.players.some((p) => p.id === app.me));
     }
     const ordered = [...first, ...list.filter((c) => !first.includes(c))];
@@ -76,7 +77,7 @@ export default {
         const summary = `${esc(c.label)}`;
         return `<div class="cart-block${open ? '' : ' collapsed'}">
           <button class="cb-head" data-act="card-toggle" data-v="${esc(c.key)}" aria-expanded="${open}">
-            <span class="name ellipsis">${summary}</span>
+            ${c.team ? `<i class="jdot" style="--jersey:${teamColor(app.myTeam(), c.key)}"></i>` : ''}<span class="name ellipsis">${summary}</span>
             <span class="meta mono">thru ${s.thru} · ${s.thru ? fmtToPar(s.toPar) : '–'}</span>
             <span class="soft" style="transform:rotate(${open ? 90 : 0}deg);display:inline-flex">${icon('fwd', 16)}</span>
           </button>

@@ -3,6 +3,7 @@
 
 import { esc, icon, scoreClass, clock } from '../ui.js';
 import { fmtToPar, fmtPts, maxHoleScore, componentNames } from '../scoring.js';
+import { teamColor } from '../teams.js';
 
 let lastHtml = '';
 let closeTimer = null;
@@ -46,7 +47,7 @@ function playersByCart(app) {
   if (teams.length) {
     for (const t of teams) {
       const ps = snap.players.filter((p) => p.teamId === t.id);
-      if (ps.length) groups.push({ label: t.name, players: ps });
+      if (ps.length) groups.push({ label: t.name, players: ps, teamId: t.id });
     }
     const loose = snap.players.filter((p) => !p.teamId);
     if (loose.length) groups.push({ label: 'No cart', players: loose });
@@ -66,7 +67,7 @@ const BODIES = {
     if (!app.snapshot) return head('Who are you?');
     const groups = playersByCart(app)
       .map(
-        (g) => `<div class="who-group"><span class="micro">${esc(g.label)}</span><div class="who-grid">${g.players
+        (g) => `<div class="who-group"><span class="micro">${g.teamId ? `<i class="jdot" style="--jersey:${teamColor(null, g.teamId)};margin-right:6px"></i>` : ''}${esc(g.label)}</span><div class="who-grid">${g.players
           .map((p) => {
             const taken = app.claimed.has(p.id) && p.id !== app.me;
             return `<button class="who-btn${taken ? ' taken' : ''}" data-act="who-pick" data-v="${esc(p.id)}">
@@ -112,13 +113,29 @@ const BODIES = {
       <button class="btn ghost block" data-act="sheet-close">Watch while I wait</button>`;
   },
 
+  menu(app) {
+    const p = app.myPlayer();
+    const meta = [app.code, app.event?.course?.shortName || app.event?.course?.name].filter(Boolean).join(' · ');
+    return `${head(app.event?.name || 'Round')}
+      <p class="meta" style="margin:-4px 0 16px">${esc(meta)} · ${p ? `you\u2019re <b>${esc(p.name)}</b> on this phone` : 'watching on this phone'}</p>
+      <div class="stack">
+        ${p ? '' : '<button class="btn primary big block" data-act="menu-pick">Pick my name</button>'}
+        <button class="btn block" data-act="menu-share">${icon('share', 18)} Share round link</button>
+        <button class="btn ghost block" data-act="menu-home">${icon('home', 18)} Go to Home</button>
+        ${p ? '<button class="btn danger block" data-act="menu-leave">Switch to watching</button>' : ''}
+      </div>
+      <p class="meta" style="margin-top:12px">${p
+        ? `Go to Home keeps you as ${esc(p.name)}; open the round again from Recent rounds. Switch to watching frees your name so the right person can pick it.`
+        : 'Go to Home any time; the round stays in Recent rounds.'}</p>`;
+  },
+
   leave(app) {
     const name = app.myName() || '';
-    return `${head(name)}
-      <p class="soft" style="margin:0 0 16px">This phone enters scores as ${esc(name)}. Picked the wrong name? Leave the round, then pick the right one. You’ll be watch-only in between.</p>
+    return `${head('Switch to watching?')}
+      <p class="soft" style="margin:0 0 16px">${esc(name)} becomes open again and this phone watches. Picked the wrong name? This is how you fix it: switch to watching, then pick the right one.</p>
       <div class="stack">
-        <button class="btn danger big block" data-act="leave-confirm">Leave round</button>
-        <button class="btn ghost block" data-act="sheet-close">Cancel</button>
+        <button class="btn danger big block" data-act="leave-confirm">Switch to watching</button>
+        <button class="btn ghost block" data-act="round-menu">Cancel</button>
       </div>`;
   },
 
@@ -173,7 +190,7 @@ const BODIES = {
     const snap = app.snapshot;
     const m = snap?.game?.matches.find((x) => x.id === matchId);
     if (!m) return head(`Hole ${hole}`);
-    const hh = m.holes[hole - m.from];
+    const hh = m.holes.find((x) => x.hole === hole);
     const par = snap.holes[hole - 1].par;
     const names = componentNames(snap.settings.teamScore);
     const rows = m.teams
@@ -231,6 +248,19 @@ export const actions = {
     app.openSheet('who', {});
   },
   'leave-confirm': (el, ev, app) => app.leave(),
+  'menu-leave': (el, ev, app) => app.openSheet('leave', {}),
+  'menu-home': (el, ev, app) => {
+    app.closeSheet();
+    app.go('#/');
+  },
+  'menu-share': (el, ev, app) => {
+    app.closeSheet();
+    app.copyLink();
+  },
+  'menu-pick': (el, ev, app) => {
+    app.refreshClaimed();
+    app.openSheet('who', {});
+  },
   'edit-step': (el, ev, app) => {
     const { pid, hole } = app.sheet.props;
     app.setScore(pid, hole, editValue(app, Number(el.dataset.d)));

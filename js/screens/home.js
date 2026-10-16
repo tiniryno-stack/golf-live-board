@@ -10,14 +10,17 @@ export default {
     const rounds = recent.all();
     const crew = rounds.find((r) => r.crew_id)?.crew_id || null;
     const list = rounds.length
-      ? `<div class="list">${rounds
+      ? `<div class="stack" style="gap:10px">${rounds
         .map(
-          (r) => `<div class="row">
-            <button class="body" style="text-align:left;min-height:48px" data-act="go" data-v="#/e/${esc(r.code)}">
-              <div class="row-title ellipsis">${esc(r.name)}</div>
-              <div class="detail">${esc([r.course, prettyDate(r.played_on), r.code].filter(Boolean).join(' · '))}</div>
+          (r) => `<div class="round-card">
+            <button class="round-open" data-act="go" data-v="#/e/${esc(r.code)}" aria-label="Open ${esc(r.name)}">
+              <span class="body">
+                <span class="row-title ellipsis" style="display:block">${esc(r.name)}</span>
+                <span class="detail" style="display:block">${esc([r.course, prettyDate(r.played_on), r.code].filter(Boolean).join(' · '))}</span>
+              </span>
+              <span class="rejoin">Open ${icon('fwd', 16)}</span>
             </button>
-            <button class="btn small" data-act="go" data-v="#/setup/${esc(r.code)}">Run it back</button>
+            <button class="runback" data-act="go" data-v="#/setup/${esc(r.code)}">${icon('shuffle', 13)} Run it back as a new round</button>
           </div>`
         )
         .join('')}</div>`
