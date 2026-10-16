@@ -2,8 +2,9 @@
 // (~70%) and the cart you're playing below (~30%), greyed to one slim row of small
 // scores until you tap it; then it's 50/50 with theirs open and yours greyed (tap
 // yours to go back; any other hole opens on yours). An empty tile shows a
-// grey par: tap it for par, + for bogey, − for birdie. Next hole saves any tile left
-// blank as par (only if it's still empty on the server). Long-press clears. ◀ back through the current matchup + Undo, Next hole →
+// grey par. The first tap anywhere on an empty box (−, the number or +) is par; after
+// that − / + step (so bogey = tap, +). Next hole saves any box left blank as par (only
+// if it's still empty on the server). Long-press clears. ◀ back through the current matchup + Undo, Next hole →
 // (Switch it up, Lock in / Close it out). Holes follow play order (start on 1 or 10).
 // Must fit an iPhone SE with no scrolling.
 
@@ -55,11 +56,24 @@ function focusSide(app, hole, carts) {
   return carts.length > 1 && app.ui.enterFocus === hole ? 'opp' : 'mine';
 }
 
-function tile(app, p, hole, dim, mini) {
+/** Play-order position of the first hole your group hasn't finished (19 once you're done). */
+function frontierPos(app) {
+  return app.foursomeDone() ? HOLES + 1 : posOf(app.snapshot.settings, app.nextHole());
+}
+
+/** Holes two or more back open locked (view only) until you tap the box: no fat-fingered edits.
+ *  The hole you're on and the one you just finished stay editable. */
+function isLocked(app, h) {
+  if (app.ui.unlocked != null && app.ui.unlocked !== h) app.ui.unlocked = null; // left that hole: locked again
+  if (app.ui.unlocked === h) return false;
+  return posOf(app.snapshot.settings, h) < frontierPos(app) - 1;
+}
+
+function tile(app, p, hole, dim, mini, locked) {
   const snap = app.snapshot;
   const par = snap.holes[hole - 1].par;
   const g = p.gross[hole - 1];
-  const editable = !dim && app.canEdit(p.id, hole);
+  const editable = !dim && !locked && app.canEdit(p.id, hole);
   if (mini) {
     // Their cart, greyed: name + a small score on one line.
     return `<div class="tile readonly mini${g == null ? ' empty' : ''}"><div class="face" data-pid="${esc(p.id)}">
@@ -81,7 +95,7 @@ function tile(app, p, hole, dim, mini) {
   </div>`;
 }
 
-function cartCard(app, cart, hole, mine, dim) {
+function cartCard(app, cart, hole, mine, dim, locked) {
   const snap = app.snapshot;
   const team = cart.teamId ? snap.teamById.get(cart.teamId) : null;
   const comps = team?.comps[hole - 1];
@@ -89,18 +103,23 @@ function cartCard(app, cart, hole, mine, dim) {
   const lblt = team && comps ? short.map((n, i) => `${n} ${comps[i]}`).join(' · ') : team ? short.map((n) => `${n} –`).join(' · ') : '';
   const label = team ? team.name : cart.players.length > 2 ? 'Your group' : 'Your cart';
   const jersey = team ? teamColor(app.myTeam(), team.id) : '';
-  const name = mine && team && !dim
+  const name = mine && team && !dim && !locked
     ? `<button class="name name-btn" data-act="team-picker" aria-label="Name your cart"><span class="ellipsis">${esc(label)}</span>${isDefaultTeamName(team) ? '<span class="pick">Name it</span>' : ''}</button>`
     : `<span class="name ellipsis">${esc(label)}</span>`;
   // A greyed cart is one big tap target: the first tap only switches which cart is open.
   const side = mine ? 'mine' : 'opp';
+  // A locked (finished) hole: the whole card is the tap target that unlocks it for editing.
   const tap = dim
     ? ` data-act="cart-focus" data-enter="cart-focus" data-v="${side}" role="button" tabindex="0" aria-label="${mine ? 'Back to your cart' : `Enter scores for ${esc(label)}`}"`
-    : '';
-  const chip = dim ? `<span class="focus-chip">${mine ? 'Tap to go back' : 'Tap to enter'}</span>` : '';
-  return `<section class="cart ${side}${dim ? ' dim' : ' focus'}" ${jersey ? `style="--jersey:${jersey}"` : ''}${tap}>
+    : locked
+      ? ` data-act="hole-unlock" data-enter="hole-unlock" role="button" tabindex="0" aria-label="Edit hole ${hole}"`
+      : '';
+  const chip = dim
+    ? `<span class="focus-chip">${mine ? 'Tap to go back' : 'Tap to enter'}</span>`
+    : locked ? `<span class="focus-chip lock-chip">${icon('lock', 12)} Tap to edit</span>` : '';
+  return `<section class="cart ${side}${dim ? ' dim' : locked ? ' focus locked' : ' focus'}" ${jersey ? `style="--jersey:${jersey}"` : ''}${tap}>
     <div class="cart-head">${name}<span class="lblt">${esc(lblt)}</span>${chip}</div>
-    <div class="tiles">${cart.players.map((p) => tile(app, p, hole, dim, dim && !mine)).join('')}</div>
+    <div class="tiles">${cart.players.map((p) => tile(app, p, hole, dim, dim && !mine, locked)).join('')}</div>
   </section>`;
 }
 
@@ -143,6 +162,9 @@ export default {
     }
     const carts = cartsFor(app, h);
     const focus = focusSide(app, h, carts);
+    const locked = isLocked(app, h);
+    const cur = app.nextHole();
+    const done = app.foursomeDone();
     const everyone = carts.flatMap((c) => c.players);
     const dots = playOrder(st)
       .map((n) => {
@@ -155,22 +177,28 @@ export default {
     const blanks = everyone.filter((p) => p.gross[h - 1] == null && app.inMyFoursome(p.id, h)).length;
     const atPar = blanks ? ` · ${blanks} at par` : '';
     const nextLabel = h === lastHole ? `Finish${atPar} →` : `Next hole${atPar} →`;
+    // Looking back at a finished hole: the button takes you back to where you are.
+    const footBtn = pos >= frontierPos(app) - 1
+      ? `<button class="btn primary block next-btn" data-act="next-hole">${nextLabel}</button>`
+      : done
+        ? '<button class="btn primary block next-btn" data-act="tab" data-v="board">See the Board →</button>'
+        : `<button class="btn primary block next-btn" data-act="hole-current">Back to hole ${cur} →</button>`;
     return `<div class="enter">
       <div class="hero">
         <div class="hole-row">
-          <button class="arrow" data-act="hole-prev" aria-label="Previous hole">${icon('back')}</button>
-          <div class="hole-head">
-            <div class="hole-title">Hole ${h}</div>
-            <div class="hole-meta">Par ${hole.par} · Hcp ${hole.si} · ${esc(maxLabel(snap.course, st, h))}</div>
-          </div>
+          <button class="arrow" data-act="hole-prev" aria-label="Previous hole" ${pos <= 1 ? 'disabled' : ''}>${icon('back')}</button>
+          <button class="hole-head" data-act="hole-grid" aria-label="Hole ${h}: all holes">
+            <span class="hole-title">Hole ${h}<span class="grid-ico">${icon('grid', 15)}</span></span>
+            <span class="hole-meta">Par ${hole.par} · Hcp ${hole.si} · ${esc(maxLabel(snap.course, st, h))}</span>
+          </button>
           <button class="arrow" data-act="hole-next" aria-label="Next hole" ${pos >= limitPos ? 'disabled' : ''}>${icon('fwd')}</button>
         </div>
         ${matchLine ? `<div class="matchup-line">${matchLine}</div>` : ''}
       </div>
       <div class="sheet${focus === 'opp' ? ' even' : ''}">
-        ${carts.map((c, i) => cartCard(app, c, h, i === 0, carts.length > 1 && (i === 0) === (focus === 'opp'))).join('')}
+        ${carts.map((c, i) => cartCard(app, c, h, i === 0, carts.length > 1 && (i === 0) === (focus === 'opp'), locked)).join('')}
         <div class="enter-foot"><div class="holedots" aria-hidden="true">${dots}</div><span class="sync" data-sync>Synced</span></div>
-        <button class="btn primary block next-btn" data-act="next-hole">${nextLabel}</button>
+        ${footBtn}
       </div>
     </div>`;
   },
@@ -185,7 +213,7 @@ export default {
     if (mine && theirs && !mine.querySelector('.tile.empty') && theirs.querySelector('.tile.empty')) {
       app.coach('oppcart2', theirs, 'You can enter scores for the other cart in your group too. Tap their card to open it, then tap yours to come back.');
     } else if (first) {
-      app.coach('tile2', first, 'The grey number is par. Tap it for par, + for bogey, − for birdie. Leave it and Next hole counts it as par.');
+      app.coach('tile3', first, 'The grey number is par. Your first tap on the box makes it par, then + for bogey or − for birdie. Leave it and Next hole counts it as par.');
     }
   },
 
@@ -201,10 +229,13 @@ export default {
       const h = app.ui.hole;
       const d = Number(el.dataset.d);
       const g = app.scoreOf(pid, h);
-      // Empty tile: step from the par it's showing (− = birdie, + = bogey).
-      const from = g ?? parFor(app, pid, h);
-      const v = Math.max(1, Math.min(maxFor(app, pid, h), from + d));
-      if (g == null || v !== g) app.setScore(pid, h, v);
+      // First tap on an empty box is always par, whichever button: no accidental bogeys.
+      if (g == null) {
+        app.setScore(pid, h, parFor(app, pid, h));
+        return;
+      }
+      const v = Math.max(1, Math.min(maxFor(app, pid, h), g + d));
+      if (v !== g) app.setScore(pid, h, v);
     },
     'tile-clear': (el, ev, app) => {
       const pid = el.dataset.pid;
@@ -216,16 +247,20 @@ export default {
     'hole-prev': (el, ev, app) => {
       if (!app.myPlayer()) return;
       const st = app.snapshot.settings;
-      const h = app.ui.hole;
-      const pos = posOf(st, h);
-      const rot = rotationFor(st, h);
-      const floor = app.snapshot.game && rot ? rot.from : 1;
-      if (pos > floor) {
+      const pos = posOf(st, app.ui.hole);
+      if (pos > 1) {
         app.ui.hole = holeAt(st, pos - 1);
         app.render();
-      } else {
-        app.toast({ title: 'Earlier holes are on the Card', action: 'Open Card', onAction: () => app.go(app.tabHash('card')) });
       }
+    },
+    'hole-grid': (el, ev, app) => app.openSheet('holes', {}),
+    'hole-unlock': (el, ev, app) => {
+      app.ui.unlocked = app.ui.hole;
+      app.render();
+    },
+    'hole-current': (el, ev, app) => {
+      app.ui.hole = app.nextHole();
+      app.render();
     },
     'hole-next': (el, ev, app) => {
       if (!app.myPlayer()) return;
@@ -281,7 +316,9 @@ function nextHole(app) {
   const nh = holeAt(st, pos + 1);
   const myTeam = app.myTeam();
   const crossing = snap.game && rotationIndexFor(st, h) !== rotationIndexFor(st, nh);
-  if (crossing && myTeam) {
+  const switchKey = `glb.switch.${app.code}.${nh}`; // once per swap, even if you step back and come forward again
+  if (crossing && myTeam && !local.get(switchKey)) {
+    local.set(switchKey, true);
     const done = matchFor(snap, myTeam, h);
     const next = matchFor(snap, myTeam, nh);
     const name = (t) => snap.teamById.get(t)?.name || t;

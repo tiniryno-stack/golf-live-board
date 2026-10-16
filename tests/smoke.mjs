@@ -41,7 +41,7 @@ async function phone(name) {
   const ctx = await browser.newContext({ viewport: { width: 375, height: 548 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
   await attach(ctx, be, srv.origin);
   await ctx.addInitScript(() => {
-    for (const k of ['tile2', 'prov', 'oppcart2']) localStorage.setItem('glb.coach.' + k, 'true');
+    for (const k of ['tile3', 'prov', 'oppcart2']) localStorage.setItem('glb.coach.' + k, 'true');
   });
   const page = await ctx.newPage();
   page.errors = [];
@@ -312,8 +312,8 @@ if (tip) await P.page.tap('.coach');
 const par10 = r2.event.course.par[9];
 const s1 = be.tables.scores.find((x) => x.event_id === r2.id && x.player_id === 'p1' && x.hole === 10);
 const s2 = be.tables.scores.find((x) => x.event_id === r2.id && x.player_id === 'p2' && x.hole === 10);
-ok(s1?.strokes === par10 - 1, `\u2212 on a blank tile = birdie (${s1?.strokes} on a par ${par10})`);
-ok(s2?.strokes === par10 + 1, `+ on a blank tile = bogey (${s2?.strokes})`);
+ok(s1?.strokes === par10, `first tap on an empty box is par, even on \u2212 (${s1?.strokes} on a par ${par10})`);
+ok(s2?.strokes === par10, `\u2026and on + (${s2?.strokes})`);
 const cartRatio = await P.page.evaluate(() => {
   const [a, b] = [...document.querySelectorAll('.cart')].map((c) => c.getBoundingClientRect().height);
   return a / (a + b);
@@ -347,7 +347,7 @@ ok(!!(await P.page.$('.sheet.even .cart.mine.dim')) && Math.abs(even - 0.5) < 0.
 await P.page.tap('[data-act="tile-step"][data-pid="p4"][data-d="-1"]');
 await P.page.waitForTimeout(900);
 const s4 = be.tables.scores.find((x) => x.event_id === r2.id && x.player_id === 'p4' && x.hole === 10);
-ok(s4?.strokes === par10 - 1, `entered their score while open (${s4?.strokes})`);
+ok(s4?.strokes === par10, `entered their score while open (${s4?.strokes})`);
 await P.page.tap('.cart.mine.dim');
 await P.page.waitForTimeout(200);
 const back = await shares(P.page);
@@ -439,7 +439,7 @@ const F = await (async () => {
     localStorage.setItem('glb.me.' + code, '"p1"');
     localStorage.setItem('glb.who.' + code, 'true');
     localStorage.setItem('glb.brief.' + code, 'true');
-    for (const k of ['tile2', 'prov', 'oppcart2']) localStorage.setItem('glb.coach.' + k, 'true');
+    for (const k of ['tile3', 'prov', 'oppcart2']) localStorage.setItem('glb.coach.' + k, 'true');
   }, [r3.code, DEV3]);
   const page = await ctx.newPage();
   page.errors = [];
@@ -451,7 +451,10 @@ await F.page.waitForTimeout(900);
 const par1 = r3.event.course.par[0];
 const ghosts = await F.page.$$eval('.score.ghost', (els) => els.map((e) => e.textContent.trim()));
 ok(ghosts.length === 4 && ghosts.every((g) => g === String(par1)), `blank tiles show a grey par (${ghosts.join(', ')})`);
-await F.page.tap('[data-act="tile-step"][data-pid="p1"][data-d="1"]'); // Andrew: bogey
+await F.page.tap('[data-act="tile-step"][data-pid="p1"][data-d="1"]'); // Andrew: first tap = par…
+await F.page.waitForTimeout(150);
+ok((await F.page.evaluate(() => window.__glb.scoreOf('p1', 1))) === par1, 'first tap on + is par, not bogey');
+await F.page.tap('[data-act="tile-step"][data-pid="p1"][data-d="1"]'); // …second tap = bogey
 await F.page.waitForTimeout(800);
 ok(/Next hole · 3 at par/.test(await F.page.textContent('.next-btn')), `the button says what happens: “${(await F.page.textContent('.next-btn')).trim()}”`);
 be.tables.scores.push({ event_id: r3.id, player_id: 'p3', hole: 1, strokes: 7, updated_by: 'Mike', updated_at: new Date().toISOString() }); // Mike's 7 already on the server
@@ -462,6 +465,40 @@ ok(at('p1') === par1 + 1 && at('p2') === par1 && at('p4') === par1, `Next hole: 
 ok(at('p3') === 7, `Mike\u2019s 7 that was already on the server is not overwritten (${at('p3')})`);
 ok((await F.page.evaluate(() => window.__glb.scoreOf('p3', 1))) === 7, 'and Andrew\u2019s phone shows Mike\u2019s 7');
 ok((await F.page.textContent('.hole-title')) === 'Hole 2', 'on to hole 2');
+
+// 13. Hole grid + locked holes: look back at any hole; two or more back needs a tap to edit
+for (let i = 0; i < 2; i++) { await F.page.tap('.next-btn'); await F.page.waitForTimeout(700); await clearOverlays(F.page); }
+ok((await F.page.textContent('.hole-title')).startsWith('Hole 4'), 'Next with blanks twice \u2192 hole 4');
+await F.page.tap('[data-act="hole-prev"]');
+await F.page.waitForTimeout(200);
+ok(!(await F.page.$('.cart.locked')) && !!(await F.page.$('.cart.mine .step')) && /Next hole/.test(await F.page.textContent('.next-btn')), 'one hole back (3): still editable, Next hole');
+await F.page.tap('[data-act="hole-prev"]');
+await F.page.waitForTimeout(200);
+ok(!!(await F.page.$('.cart.mine.locked')) && !(await F.page.$('.cart.mine .step')) && /Back to hole 4/.test(await F.page.textContent('.next-btn')), 'two back (2): locked, no \u2212 / +, \u201cBack to hole 4\u201d');
+await F.page.tap('.cart.mine.locked .face[data-pid="p1"]');
+await F.page.waitForTimeout(200);
+ok(!!(await F.page.$('.cart.mine .step')) && !(await F.page.$('.cart.mine.locked')), 'tap the box \u2192 unlocked for editing');
+await F.page.tap('[data-act="tile-step"][data-pid="p1"][data-d="-1"]');
+await F.page.waitForTimeout(900);
+const par2 = r3.event.course.par[1];
+ok(be.tables.scores.find((x) => x.event_id === r3.id && x.player_id === 'p1' && x.hole === 2)?.strokes === par2 - 1, 'edit on the unlocked hole saves (birdie on 2)');
+await F.page.tap('[data-act="hole-grid"]');
+await F.page.waitForTimeout(400);
+const grid = await F.page.evaluate(() => ({
+  cells: document.querySelectorAll('#sheet .hg-cell').length,
+  now: document.querySelector('#sheet .hg-cell.now .hg-n')?.textContent,
+  ahead: document.querySelector('#sheet .hg-cell[data-v="5"]')?.disabled,
+  h1: document.querySelector('#sheet .hg-cell[data-v="1"] .score')?.className,
+  label: document.querySelector('#sheet .hg-label')?.textContent,
+}));
+ok(grid.cells === 18 && grid.now === '4' && grid.ahead === true, `tap the hole number \u2192 grid of 18, hole 4 is \u201cNow\u201d, can\u2019t jump ahead`);
+ok(/score b/.test(grid.h1 || '') && /Holes 1–6 · vs/.test(grid.label || ''), `grid shows your bogey on 1 and the matchup per row (${grid.label})`);
+await F.page.tap('#sheet .hg-cell[data-v="1"]');
+await F.page.waitForTimeout(300);
+ok((await F.page.textContent('.hole-title')).startsWith('Hole 1') && !!(await F.page.$('.cart.mine.locked')), 'tap hole 1 \u2192 Enter shows hole 1, locked');
+await F.page.tap('[data-act="hole-current"]');
+await F.page.waitForTimeout(200);
+ok((await F.page.textContent('.hole-title')).startsWith('Hole 4'), 'Back to hole 4');
 
 // 11. Never a blank screen
 const S = await (async () => {

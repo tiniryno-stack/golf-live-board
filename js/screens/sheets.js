@@ -2,7 +2,7 @@
 // leave round, player detail, edit a past score, hole detail, headline feed, confirm.
 
 import { esc, icon, scoreClass, clock } from '../ui.js';
-import { fmtToPar, fmtPts, fmtSigned, maxHoleScore, componentNames } from '../scoring.js';
+import { fmtToPar, fmtPts, fmtSigned, maxHoleScore, componentNames, posOf, holeAt, holesLabel, matchFor } from '../scoring.js';
 import { teamColor, headlineColor } from '../teams.js';
 
 let lastHtml = '';
@@ -168,6 +168,44 @@ const BODIES = {
       ${snap.hasStrokes ? '<p class="meta">Bottom row is net.</p>' : ''}`;
   },
 
+  holes(app) {
+    const snap = app.snapshot;
+    if (!snap) return head('Holes');
+    const st = snap.settings;
+    const cur = app.nextHole();
+    const done = app.foursomeDone();
+    const curPos = posOf(st, cur);
+    const here = app.ui.hole;
+    const me = app.myPlayer();
+    const mine = app.myTeam();
+    const groups = snap.game
+      ? snap.game.rotations.map((r) => ({ from: r.from, to: r.to }))
+      : [{ from: 1, to: 6 }, { from: 7, to: 12 }, { from: 13, to: 18 }];
+    const rows = groups
+      .map(({ from, to }) => {
+        const m = mine ? matchFor(snap, mine, holeAt(st, from)) : null;
+        const opp = m ? (m.teams[0] === mine ? m.teams[1] : m.teams[0]) : null;
+        const vs = opp ? ` · vs <span style="color:${teamColor(mine, opp)}">${esc(snap.teamById.get(opp)?.name || opp)}</span>` : '';
+        const cells = [];
+        for (let pos = from; pos <= to; pos++) {
+          const h = holeAt(st, pos);
+          const par = snap.holes[h - 1].par;
+          const g = me?.gross[h - 1];
+          const ahead = !done && pos > curPos;
+          const now = !done && pos === curPos;
+          const cls = [h === here ? 'here' : '', now ? 'now' : '', g != null ? 'done' : ''].filter(Boolean).join(' ');
+          const sub = g != null ? `<span class="score ${scoreClass(g, par)}">${g}</span>` : now ? 'Now' : `Par ${par}`;
+          cells.push(`<button class="hg-cell ${cls}" data-act="hole-go" data-v="${h}" ${ahead ? 'disabled' : ''} aria-label="Hole ${h}${g != null ? `, you ${g}` : ''}">
+            <span class="hg-n">${h}</span><span class="hg-s">${sub}</span></button>`);
+        }
+        return `<div class="hg-group"><div class="hg-label">${esc(holesLabel(st, from, to))}${vs}</div><div class="hg-row">${cells.join('')}</div></div>`;
+      })
+      .join('');
+    return `${head('Holes')}
+      <p class="meta" style="margin:-4px 0 14px">Tap a hole to look at it. Finished holes open locked: tap the box to edit.</p>
+      ${rows}`;
+  },
+
   team(app, { teamId }) {
     const snap = app.snapshot;
     const g = snap?.game;
@@ -299,6 +337,13 @@ export const actions = {
   'menu-home': (el, ev, app) => {
     app.closeSheet();
     app.go('#/');
+  },
+  'hole-go': (el, ev, app) => {
+    app.ui.hole = Number(el.dataset.v);
+    app.ui.unlocked = null;
+    app.closeSheet();
+    if (app.route.tab !== 'enter') app.go(app.tabHash('enter'));
+    else app.render();
   },
   'menu-brief': (el, ev, app) => {
     app.closeSheet();

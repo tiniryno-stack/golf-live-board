@@ -736,3 +736,33 @@ details.fold summary::-webkit-details-marker { display: none; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2.4s; } }
 .crash .crash-detail { margin-top: 14px; font-family: var(--mono); font-size: 12px; word-break: break-word; }
+
+/* Enter: tap the hole number for the grid; finished holes open locked */
+.hole-head { display: flex; flex-direction: column; align-items: center; border-radius: 14px; padding: 2px 6px; color: inherit; -webkit-tap-highlight-color: transparent; }
+.hole-head:active { background: rgba(255, 255, 255, .08); }
+.hole-head .hole-title { display: inline-flex; align-items: center; gap: 6px; }
+.hole-head .hole-meta { display: block; }
+.hole-head .grid-ico { display: inline-flex; color: var(--hero-soft); }
+.lock-chip { display: inline-flex; align-items: center; gap: 4px; }
+.cart.locked { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.cart.locked:active { background: var(--surface-2); }
+.hg-group { margin: 0 0 14px; }
+.hg-label { font-size: 13px; font-weight: 650; color: var(--ink-soft); margin: 0 0 6px; }
+.hg-row { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
+.hg-cell {
+  min-height: 60px; border-radius: 12px; background: var(--surface-2); display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 3px; -webkit-tap-highlight-color: transparent;
+}
+.hg-cell .hg-n { font-family: var(--mono); font-size: 17px; font-weight: 750; line-height: 1; }
+.hg-cell .hg-s { font-size: 11.5px; color: var(--ink-soft); min-height: 18px; display: flex; align-items: center; }
+.hg-cell .hg-s .score { font-size: 13px; color: var(--ink); width: 1.7em; height: 1.7em; min-width: 0; min-height: 0; }
+.hg-cell .hg-s .score.u::before { inset: 0; border-width: 1.5px; }
+.hg-cell .hg-s .score.b::before { inset: 1px; }
+.hg-cell .hg-s .score.d::before { inset: 2px; box-shadow: 0 0 0 1.5px var(--surface-2), 0 0 0 3px currentColor; }
+.hg-cell.here .hg-s .score.d::before { box-shadow: 0 0 0 1.5px var(--ink), 0 0 0 3px currentColor; }
+.hg-cell.now { box-shadow: inset 0 0 0 2px var(--good); }
+.hg-cell.now .hg-s { color: var(--good); font-weight: 700; }
+.hg-cell.here { background: var(--ink); color: var(--bg); }
+.hg-cell.here .hg-s, .hg-cell.here .hg-s .score { color: var(--bg); }
+.hg-cell:disabled { opacity: .35; }
+.hg-cell.here .hg-s .score.b::before { border-color: currentColor; }

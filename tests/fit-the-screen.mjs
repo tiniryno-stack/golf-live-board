@@ -139,7 +139,7 @@ for (const size of SIZES) {
     localStorage.setItem('glb.device', JSON.stringify(dev));
     localStorage.setItem('glb.who.' + code, 'true');
     localStorage.setItem('glb.seen.' + code, JSON.stringify({ last: Date.now(), ids: [] }));
-    for (const k of ['tile2', 'prov', 'oppcart2']) localStorage.setItem('glb.coach.' + k, 'true');
+    for (const k of ['tile3', 'prov', 'oppcart2']) localStorage.setItem('glb.coach.' + k, 'true');
     localStorage.setItem('glb.me.' + code, '"p1"');
     localStorage.setItem('glb.admin.' + code, JSON.stringify(pin));
   }, [r.code, DEV, r.admin_pin]);
@@ -172,12 +172,36 @@ for (const size of SIZES) {
   }
   await go(`#/e/${r.code}/enter`);
   await check(page, size, 'Enter', 'enter');
-  await page.evaluate(() => { window.__glb.ui.hole = 6; window.__glb.render(); });
+  await page.evaluate(() => { window.__glb.ui.hole = 6; window.__glb.ui.unlocked = 6; window.__glb.render(); }); // a past hole, unlocked for editing
   await check(page, size, 'Enter (hole 6)', 'enter');
   await page.tap('.cart.opp.dim');
   await check(page, size, 'Enter (their cart open, 50/50)', 'enter');
   await page.tap('.cart.mine.dim');
   if (!(await page.$('.cart.opp.dim'))) { failures.push(`${size[0]} · tap back`); rows.push([`${size[0]} · Enter tap back to yours`, 'FAIL: still 50/50']); }
+  // A finished hole two back: locked view still fits
+  await page.evaluate(() => { window.__glb.ui.hole = 1; window.__glb.render(); });
+  await check(page, size, 'Enter (hole 1, locked)', 'enter');
+  if (!(await page.$('.cart.mine.locked'))) { failures.push(`${size[0]} · locked`); rows.push([`${size[0]} · hole 1 locked`, 'FAIL: not locked']); }
+  // The hole grid
+  await page.evaluate(() => window.__glb.openSheet('holes', {}));
+  await page.waitForTimeout(450);
+  {
+    const res = await page.evaluate(() => {
+      const vw = window.innerWidth;
+      const cells = [...document.querySelectorAll('#sheet .hg-cell')];
+      const problems = [];
+      if (cells.length !== 18) problems.push(`${cells.length} cells`);
+      if (cells.some((c) => { const b = c.getBoundingClientRect(); return b.right > vw + 1 || b.left < -1; })) problems.push('cells off screen sideways');
+      if (cells.some((c) => c.getBoundingClientRect().height < 44)) problems.push('cells under 44px');
+      return problems;
+    });
+    rows.push([`${size[0]} · Hole grid`, res.length ? `FAIL: ${res.join('; ')}` : 'ok']);
+    if (res.length) failures.push(`${size[0]} · Hole grid`);
+    await page.screenshot({ path: `${OUT}${size[1]}x${size[2]}-hole-grid.png` });
+    await page.evaluate(() => window.__glb.closeSheet());
+    await page.waitForTimeout(300);
+  }
+  await page.evaluate(() => { window.__glb.ui.hole = null; window.__glb.render(); });
   // Today's game: both cards fit, swipe lands on page 2, Let's play closes it.
   await page.evaluate(() => window.__glb.openBrief());
   await page.waitForTimeout(400);
