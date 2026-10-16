@@ -3,7 +3,7 @@
 
 import { esc, icon, scoreClass, clock } from '../ui.js';
 import { fmtToPar, fmtPts, maxHoleScore, componentNames } from '../scoring.js';
-import { teamColor } from '../teams.js';
+import { teamColor, headlineColor } from '../teams.js';
 
 let lastHtml = '';
 let closeTimer = null;
@@ -210,7 +210,7 @@ const BODIES = {
     const list = app.headlines.slice().reverse();
     return `${head('Headlines')}
       ${list.length ? `<div class="headlines">${list
-        .map((h) => `<div class="headline"><span class="spark">${icon('spark', 16)}</span><span style="flex:1">${esc(h.text)}</span><span class="meta">${clock(h.at)}</span></div>`)
+        .map((h) => `<div class="headline" style="--jersey:${headlineColor(app.myTeam(), h)}"><span class="spark">${icon('spark', 16)}</span><span style="flex:1">${esc(h.text)}</span><span class="meta">${clock(h.at)}</span></div>`)
         .join('')}</div>` : '<p class="empty-state">No big moments yet. They show up once both foursomes have played a hole.</p>'}`;
   },
 

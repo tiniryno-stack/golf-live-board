@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { compute } from '../js/scoring.js';
-import { replayHeadlines, matchupAlert } from '../js/headlines.js';
+import { latestMoment, replayHeadlines, matchupAlert } from '../js/headlines.js';
 import { makeEvent, scorebook, COURSE } from './helpers.mjs';
 
 const par = (h) => COURSE.par[h - 1];
@@ -122,6 +122,15 @@ test('matchup comeback: down 3, draws level or goes ahead', () => {
   const mc = replayHeadlines(ev, sb.rows()).filter((h) => h.type === 'matchupComeback');
   assert.equal(mc.length, 1);
   assert.equal(mc[0].text, 'Shank Redemption erased a 3-point hole vs Hogan’s Heroes');
+  assert.equal(mc[0].hero, 'B', 'the comeback wears the jersey of the team that came back');
+  hole(sb, 5, { a: 'even', b: 'even', c: 'even', d: 'even' });
+  hole(sb, 6, { a: 'even', b: 'even', c: 'even', d: 'even' });
+  const fin = replayHeadlines(ev, sb.rows()).find((h) => h.type === 'matchupFinal' && h.teams.includes('A') && h.teams.includes('B'));
+  assert.match(fin.text, /^Shank Redemption beat Hogan’s Heroes/);
+  assert.equal(fin.hero, 'B', 'matchup final: the winner, even when listed second');
+  const halved = replayHeadlines(ev, sb.rows()).find((h) => h.type === 'matchupFinal' && h.teams.includes('C'));
+  assert.match(halved.text, /halved/);
+  assert.equal(halved.hero, null, 'a halved matchup has no hero');
 });
 
 test('round final names the winner', () => {
@@ -138,6 +147,12 @@ test('round final names the winner', () => {
   const fin = hl.find((h) => h.type === 'roundFinal');
   assert.equal(fin.text, 'Final: Hogan’s Heroes win the day with 36');
   assert.equal(fin.primary, true);
+  assert.equal(fin.hero, 'A');
+  // The newest moment: everything the last score produced, most important first.
+  const now = latestMoment(hl);
+  assert.equal(now[0].type, 'roundFinal');
+  assert.ok(now.length >= 2, `hole 18 also finishes a matchup (${now.map((h) => h.type).join(', ')})`);
+  assert.ok(now.every((h) => h.primary && h.at === fin.at));
 });
 
 test('replay is deterministic regardless of row order', () => {

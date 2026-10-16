@@ -265,7 +265,8 @@ Team names default to `Cart A`–`Cart D` until someone types a name (max 20 cha
    - **Your own entries never toast, and neither do your current foursome's** (they update live on Enter). At most one toast on screen; newer ones replace older ones.
    - Lock-screen notifications while the app is closed need the site added to the home screen; that's in the V2 backlog.
 6. **Headlines** (the big moments, rules in 7.10): unlike toasts, these **stick**.
-   - **While you're looking:** a headline banner stays at the top until you tap or swipe it away.
+   - **While you're looking:** a headline banner stays at the top until you tap or swipe it away. One at a time: when two land on the same score they show together for ~10 seconds, then it's back to one (the newest moment's most important).
+   - **Color:** a headline wears the jersey of the team on its positive end (took the lead, came back, clinched, won the matchup, on a streak): green when it's your cart, the away color otherwise; sun-yellow when nobody is (halved, tied final). Same colors on the banner, the Board strip, the full list and "While you were away".
    - **When you come back:** the phone remembers when you last looked. Next time the page opens or comes back from the lock screen (usually when you pull it out to enter your score), a **"While you were away"** card slides over the top of Enter (it overlays, so it never pushes the score tiles off screen) with up to 3 headlines since then, newest first. One tap dismisses it; "See all" opens the Board.
    - **Feed:** the top of Board → Today shows the latest headlines for everyone, across both tee times.
    - **How it stays in sync without storing anything:** every phone replays the round's scores in the order they were entered (`updated_at`) through `headlines.js`, so all phones produce the same headlines from the same data.
@@ -527,7 +528,7 @@ Players never see Setup: they open the link and tap their name. ("New round" on 
 - **"While you were away" overlay:** on return, up to 3 headlines slide over the top of the screen; one tap dismisses.
 
 ### 4. Board
-Today only. Headlines strip at the top (latest 2, tap for all), then segmented controls for **Teams | Players** and **Gross | Net**. Teams are ranked by **official** points with a provisional chip for points beyond the official line; footer reads e.g. `Official through 9 · hole 10 provisional`. Tap a row → player detail sheet. Share icon copies the round link.
+Today only. Headline at the top on the Teams view (the newest one, two for a few seconds when they land together; tap for all), then segmented controls for **Teams | Players** and **Gross | Net**. Teams are ranked by **official** points with a provisional chip for points beyond the official line; footer reads e.g. `Official through 9 · hole 10 provisional`. Tap a row → player detail sheet. Share icon copies the round link.
 - **After Round final:** a `Final` banner on top plus a **See season standings** button. That's the end-of-round moment to show the group.
 
 ### 5. Matches — the showpiece
@@ -711,6 +712,7 @@ Still open: nothing blocking. Design direction (section 9) is final.
 - **Jerseys:** your own cart is always green on your phone; every other cart has a fixed away color that's the same for everyone — A orange, B blue, C pink, D violet (no red: red means double bogey). Used on Enter, Matches (counters, tug-of-war, pips), Board, Card and Who are you.
 - **Board → Teams:** each team gets a bar in its jersey color — solid = official points, hatched = provisional; Plus/Minus bars grow left/right from even. **Board → Players:** one compact line per player (rank · to par · name + team · thru · total) so all 8 fit on a 15/16 without scrolling; headlines show on the Teams view.
 - **Enter, their cart greyed:** 60/40 with the other cart greyed; tap it for 50/50 to enter their scores, tap yours to go back (see section 3). **Card:** your cart is always the top block, then the cart you're playing.
+- **Headlines:** color-coded by the team on the positive end (yours green, others their away color); one at a time on the banner and Board, two only briefly when they land together (see 7.10 display).
 - **Home:** recent rounds are tappable cards with **Open**; "Run it back as a new round" is a small secondary link.
 - **Practice rounds:** organizer Reset scores / Delete round (see 5.1).
 

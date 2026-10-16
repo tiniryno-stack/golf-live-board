@@ -21,7 +21,9 @@ const time = (r) => Date.parse(r.updated_at) || 0;
 
 /**
  * Returns headlines oldest → newest:
- * { id, type, priority, teams, hole, text, at, primary }
+ * { id, type, priority, teams, hero, hole, text, at, primary }
+ * `hero` is the team on the positive end (took the lead, came back, clinched, won,
+ * on a streak) — the headline wears its jersey. null when nobody is (halved, tied final).
  */
 export function replayHeadlines(event, scores) {
   if (!compute(event, []).game) return [];
@@ -94,8 +96,8 @@ function ranked(vals) {
 const name = (snap, t) => snap.teamById.get(t)?.name || t;
 const fmtVal = (g, n) => (g.type === 'rotationPlusMinus' ? fmtToPar(n) : fmtPts(n));
 
-function mk(type, teams, hole, text, at) {
-  return { id: `${type}:${teams.join('-')}:${hole}`, type, priority: PRIORITY[type], teams, hole, text, at, primary: false };
+function mk(type, teams, hole, text, at, hero = teams[0]) {
+  return { id: `${type}:${teams.join('-')}:${hole}`, type, priority: PRIORITY[type], teams, hero: hero ?? null, hole, text, at, primary: false };
 }
 
 function leadChange(snap, st, vals, h, at) {
@@ -184,22 +186,24 @@ function atHole(snap, st, h, at) {
 
     // Matchup final
     if (h === m.to) {
-      let text;
+      let text, hero = null;
       if (isPM) {
         const cm = g.cap != null ? Math.max(-g.cap, Math.min(g.cap, dNow)) : dNow;
+        if (cm) hero = cm > 0 ? x : y;
         text = cm === 0
           ? `${name(snap, x)} and ${name(snap, y)} halved`
           : `${name(snap, cm > 0 ? x : y)} beat ${name(snap, cm > 0 ? y : x)} by ${Math.abs(cm)}`;
       } else {
         const px = m.holes.reduce((a, hh) => a + (hh.complete ? hh.points[x] : 0), 0);
         const py = m.holes.reduce((a, hh) => a + (hh.complete ? hh.points[y] : 0), 0);
+        if (px !== py) hero = px > py ? x : y;
         text = px === py
           ? `${name(snap, x)} and ${name(snap, y)} halved ${fmtPts(px)}–${fmtPts(py)}`
           : px > py
             ? `${name(snap, x)} beat ${name(snap, y)} ${fmtPts(px)}–${fmtPts(py)}`
             : `${name(snap, y)} beat ${name(snap, x)} ${fmtPts(py)}–${fmtPts(px)}`;
       }
-      produced.push(mk('matchupFinal', [x, y], m.id, text, at));
+      produced.push(mk('matchupFinal', [x, y], m.id, text, at, hero));
     }
   }
 
@@ -227,9 +231,21 @@ function atHole(snap, st, h, at) {
       top.length === 1
         ? `Final: ${name(snap, top[0].teamId)} win the day ${isPM ? 'at' : 'with'} ${v(top[0])}`
         : `Final: ${top.map((s) => name(snap, s.teamId)).join(' and ')} share the day ${isPM ? 'at' : 'with'} ${v(top[0])}`;
-    produced.push(mk('roundFinal', top.map((s) => s.teamId), h, text, at));
+    produced.push(mk('roundFinal', top.map((s) => s.teamId), h, text, at, top.length === 1 ? top[0].teamId : null));
   }
   return produced;
+}
+
+/**
+ * The headlines worth showing right now: the newest moment (headlines produced by the
+ * same score share `at`), most important first. Board / banner show the first one, or
+ * the first two for a few seconds when two land at once.
+ */
+export function latestMoment(list) {
+  const prim = (list || []).filter((h) => h.primary);
+  if (!prim.length) return [];
+  const at = prim[prim.length - 1].at;
+  return prim.filter((h) => h.at === at).sort((a, b) => a.priority - b.priority);
 }
 
 /** At most one banner per team per hole; the rest go to the feed only. */

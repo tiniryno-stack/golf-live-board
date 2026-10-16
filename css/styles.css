@@ -423,10 +423,12 @@ a { color: inherit; }
 .headlines { display: flex; flex-direction: column; gap: 6px; margin: 0 0 14px; }
 .headline {
   display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; text-align: left; width: 100%;
-  background: color-mix(in srgb, var(--sun) 14%, transparent); border: 1px solid color-mix(in srgb, var(--sun) 35%, transparent);
+  background: color-mix(in srgb, var(--jersey, var(--sun)) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--jersey, var(--sun)) 40%, transparent);
+  box-shadow: inset 4px 0 0 var(--jersey, var(--sun));
   font-size: 14px; font-weight: 600;
 }
-.headline .spark { color: var(--sun); flex: none; }
+.headline .spark { color: var(--jersey, var(--sun)); flex: none; }
 .board-foot { text-align: center; font-size: 12px; color: var(--ink-soft); margin-top: 12px; }
 .headlines.compact .headline { padding: 7px 10px; font-size: 13px; border-radius: 12px; }
 .headlines.compact .headline > span:nth-child(2) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -540,7 +542,7 @@ a { color: inherit; }
   display: flex; align-items: center; gap: 10px; box-shadow: 0 10px 30px rgba(0, 0, 0, .35);
   touch-action: pan-y;
 }
-.banner.headline-b { background: var(--sun); color: #14161A; font-weight: 700; text-align: left; }
+.banner.headline-b { background: var(--jersey, var(--sun)); color: #14161A; font-weight: 700; text-align: left; }
 .banner.headline-b .more { font-family: var(--mono); font-size: 12px; opacity: .7; }
 .banner.ask { background: var(--surface); color: var(--ink); border: 1px solid var(--line-strong); flex-wrap: wrap; }
 .banner.ask .q { flex: 1 1 100%; font-weight: 700; font-size: 15px; }
@@ -567,7 +569,8 @@ a { color: inherit; }
 }
 .away .kicker { font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; opacity: .7; margin-bottom: 8px; }
 .away ol { margin: 0 0 8px; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
-.away li { font-size: 16px; font-weight: 700; line-height: 1.25; }
+.away li { font-size: 16px; font-weight: 700; line-height: 1.25; display: flex; gap: 10px; align-items: baseline; }
+.away li .jdot { width: 10px; height: 10px; align-self: baseline; transform: translateY(1px); box-shadow: 0 0 0 1.5px rgba(20, 22, 26, .45); }
 .away .actions { display: flex; justify-content: space-between; align-items: center; }
 .away .actions button { min-height: 44px; font-weight: 700; padding: 0 4px; }
 .coach {

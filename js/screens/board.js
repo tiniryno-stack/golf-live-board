@@ -6,7 +6,8 @@
 
 import { esc, icon, seg, clock } from '../ui.js';
 import { fmtPts, fmtToPar, fmtSigned, playerLeaderboard, teamLeaderboard, holeAt } from '../scoring.js';
-import { teamColor } from '../teams.js';
+import { teamColor, headlineColor } from '../teams.js';
+import { latestMoment } from '../headlines.js';
 
 const ordinal = (n) => `${n}${['th', 'st', 'nd', 'rd'][(n % 100 >= 11 && n % 100 <= 13) || n % 10 > 3 ? 0 : n % 10]}`;
 
@@ -130,9 +131,14 @@ export default {
     const view = hasTeams ? app.ui.boardView : 'players';
     const mode = snap.hasStrokes ? app.ui.boardMode : 'gross';
     // Headlines are about the team race: they live on the Teams view so Players fits all 8 rows.
-    const recent = view === 'teams' ? app.headlines.slice(-2).reverse() : [];
+    // One at a time: the newest moment's headline. Two that landed on the same score
+    // show together for a few seconds (app.ui.headlinePair), then it's back to one.
+    const moment = view === 'teams' ? latestMoment(app.headlines) : [];
+    const pair = app.ui.headlinePair;
+    const two = pair && pair.until > Date.now() && moment.length > 1 && pair.id === moment[0].id;
+    const recent = moment.slice(0, two ? 2 : 1);
     const headlines = recent.length
-      ? `<div class="headlines compact">${recent.map((h) => `<button class="headline" data-act="board-headlines"><span class="spark">${icon('spark', 14)}</span><span style="flex:1;min-width:0">${esc(h.text)}</span><span class="meta">${clock(h.at)}</span></button>`).join('')}</div>`
+      ? `<div class="headlines compact">${recent.map((h) => `<button class="headline" data-act="board-headlines" style="--jersey:${headlineColor(app.myTeam(), h)}"><span class="spark">${icon('spark', 14)}</span><span style="flex:1;min-width:0">${esc(h.text)}</span><span class="meta">${clock(h.at)}</span></button>`).join('')}</div>`
       : '';
     const segs = `<div class="segs board-segs">
       ${hasTeams ? seg('board-view', [['teams', 'Teams'], ['players', 'Players']], view) : ''}

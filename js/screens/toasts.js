@@ -4,7 +4,7 @@
 
 import { esc, icon } from '../ui.js';
 import { local } from '../db.js';
-import { TEAM_NAME_PICKS, isDefaultTeamName } from '../teams.js';
+import { TEAM_NAME_PICKS, isDefaultTeamName, headlineColor } from '../teams.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -38,10 +38,18 @@ export function hideToast() {
 
 // ───────────────────────────────────────────── banners
 
-let headline = null; // { h, extra, markSeen }
+let headline = null; // { list: [1–2 headlines, most important first], extra, markSeen }
 
-export function showHeadline(h, extra, app, markSeen) {
-  headline = { h, extra, markSeen };
+export function showHeadlines(list, extra, app, markSeen) {
+  if (!list.length) return;
+  headline = { list, extra, markSeen };
+  renderBanners(app);
+}
+
+/** After a pair has had its moment: keep just the first (the newest, most important). */
+export function collapseHeadlines(app) {
+  if (!headline || headline.list.length < 2) return;
+  headline = { ...headline, list: headline.list.slice(0, 1) };
   renderBanners(app);
 }
 
@@ -70,9 +78,14 @@ export function renderBanners(app) {
     })
     .join('');
   if (headline) {
-    const more = headline.extra > 0 ? `<span class="more">+${headline.extra}</span>` : '';
-    html += `<button class="banner headline-b" data-act="headline-dismiss" data-swipe="headline">
-      <span class="spark">${icon('spark', 18)}</span><span style="flex:1">${esc(headline.h.text)}</span>${more}</button>`;
+    const mine = app.myTeam();
+    html += headline.list
+      .map((h, i) => {
+        const more = i === headline.list.length - 1 && headline.extra > 0 ? `<span class="more">+${headline.extra}</span>` : '';
+        return `<button class="banner headline-b" data-act="headline-dismiss" data-swipe="headline" style="--jersey:${headlineColor(mine, h)}">
+      <span class="spark">${icon('spark', 18)}</span><span style="flex:1">${esc(h.text)}</span>${more}</button>`;
+      })
+      .join('');
   }
   root.innerHTML = html;
 }
@@ -122,7 +135,7 @@ export function showAway(list, app, markSeen) {
   overlay = { onDismiss: markSeen, app, away: true };
   root.innerHTML = `<div class="away" data-act="away-dismiss" role="dialog">
     <div class="kicker">While you were away</div>
-    <ol>${list.map((h) => `<li>${esc(h.text)}</li>`).join('')}</ol>
+    <ol>${list.map((h) => `<li><i class="jdot" style="--jersey:${headlineColor(app.myTeam(), h)}"></i><span>${esc(h.text)}</span></li>`).join('')}</ol>
     <div class="actions"><button data-act="away-all">See all</button><button data-act="away-dismiss">Got it</button></div>
   </div>`;
   root.classList.add('open');

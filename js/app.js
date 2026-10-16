@@ -5,7 +5,7 @@
 import * as db from './db.js';
 import { compute, nextHoleFor, currentHoleOf, sameFoursome, matchFor, playOrder, posOf, holeAt, HOLES } from './scoring.js';
 import { isDefaultTeamName } from './teams.js';
-import { replayHeadlines } from './headlines.js';
+import { replayHeadlines, latestMoment } from './headlines.js';
 import { esc, icon, initials, roundLink, copyText } from './ui.js';
 import * as fx from './screens/toasts.js';
 import * as sheets from './screens/sheets.js';
@@ -804,6 +804,7 @@ function flushBatch(key) {
 function seenKey() {
   return `glb.seen.${app.code}`;
 }
+const PAIR_MS = 10000;
 function processHeadlines(mode) {
   if (!app.code) return;
   const primary = app.headlines.filter((h) => h.primary);
@@ -820,8 +821,22 @@ function processHeadlines(mode) {
     const all = new Set([...s.ids, ...fresh.map((h) => h.id)]);
     db.local.set(seenKey(), { last: Date.now(), ids: [...all].slice(-400) });
   };
-  if (mode === 'away') fx.showAway(fresh.slice().reverse().slice(0, 3), app, markSeen);
-  else fx.showHeadline(fresh[fresh.length - 1], fresh.length - 1, app, markSeen);
+  if (mode === 'away') {
+    fx.showAway(fresh.slice().reverse().slice(0, 3), app, markSeen);
+    return;
+  }
+  // One headline at a time. Two that land on the same score show together for a few
+  // seconds, then it's back to one: the newest moment's most important headline.
+  const moment = latestMoment(fresh);
+  const shown = moment.slice(0, 2);
+  if (shown.length > 1) {
+    app.ui.headlinePair = { id: shown[0].id, until: Date.now() + PAIR_MS };
+    setTimeout(() => {
+      fx.collapseHeadlines(app);
+      if (app.route.tab === 'board') app.render();
+    }, PAIR_MS + 50);
+  }
+  fx.showHeadlines(shown, fresh.length - shown.length, app, markSeen);
 }
 
 function maybeAskWho() {

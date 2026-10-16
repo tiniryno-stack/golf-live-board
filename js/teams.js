@@ -14,6 +14,11 @@ export function teamColor(myTeamId, teamId) {
   return AWAY[teamId] ? `var(${AWAY[teamId]})` : 'var(--ink-soft)';
 }
 
+/** A headline wears the jersey of the team on its positive end; sun when nobody is (halved, tie). */
+export function headlineColor(myTeamId, h) {
+  return h?.hero ? teamColor(myTeamId, h.hero) : 'var(--sun)';
+}
+
 /** A team still has its placeholder name ("Cart A"…) and can pick one. */
 export function isDefaultTeamName(team) {
   return !team?.name || /^Cart [A-D]$/i.test(String(team.name).trim());

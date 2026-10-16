@@ -10,6 +10,8 @@
 //      tile, your cart ~60% of Enter, toasts only for the other foursome
 //   8. Their cart is greyed: a stray tap doesn't score, it opens 50/50; tap yours to go
 //      back; the next hole opens on yours again. Your cart tops the Card even as cart C.
+//   9. Headlines wear the jersey of the team on their positive end; two that land on the
+//      same score show together, then it's back to one (banner and Board).
 // Realtime isn't mocked, so "the other phone sees it" is driven by a refetch —
 // the same path the app uses when a phone comes back from the lock screen.
 // Run: npm run test:smoke
@@ -306,6 +308,40 @@ await P.page.waitForTimeout(150);
 await P.page.tap('.next-btn');
 await P.page.waitForTimeout(400);
 ok((await P.page.textContent('.hole-title')) === 'Hole 11' && !!(await P.page.$('.cart.opp.dim')), 'next hole opens on your cart again (theirs greyed)');
+
+// 9. Two carts sweep holes 10–12: both streak headlines land on the same score
+for (let i = be.tables.scores.length - 1; i >= 0; i--) if (be.tables.scores[i].event_id === r2.id) be.tables.scores.splice(i, 1);
+const sweep = { p1: 3, p2: 3, p3: 6, p4: 6, p5: 3, p6: 3, p7: 6, p8: 6 }; // Charmander (A) and Squirtle (C) sweep
+const base = Date.now() - 60000;
+let n = 0;
+for (const hole of [10, 11, 12]) for (const [pid, strokes] of Object.entries(sweep)) {
+  const row = { event_id: r2.id, player_id: pid, hole, strokes, updated_by: 'x', updated_at: new Date(base + 1000 * n++).toISOString() };
+  if (hole === 12 && pid === 'p8') continue; // the last score arrives live
+  be.tables.scores.push(row);
+}
+await refetch(P.page);
+await P.page.evaluate(() => window.__glb.go(window.__glb.tabHash('board')));
+await P.page.waitForTimeout(300);
+await P.page.evaluate(() => { document.getElementById('banners').innerHTML = ''; });
+const lastRow = { event_id: r2.id, player_id: 'p8', hole: 12, strokes: 6, updated_by: 'Jake', updated_at: new Date(base + 1000 * n).toISOString() };
+be.tables.scores.push(lastRow);
+await P.page.evaluate((row) => window.__glb._remote.score(row), lastRow);
+await P.page.waitForTimeout(700);
+const bannersNow = await P.page.$$eval('#banners .headline-b', (els) => els.map((e) => [e.textContent.replace(/\s+/g, ' ').trim(), e.style.getPropertyValue('--jersey')]));
+ok(bannersNow.length === 2, `two headlines at once show together (${bannersNow.map((b) => b[0]).join(' | ')})`);
+ok(bannersNow[0]?.[0].startsWith('Charmander swept 3 straight') && bannersNow[0]?.[1] === 'var(--good)', 'your cart\u2019s headline is green on your phone');
+ok(bannersNow[1]?.[0].startsWith('Squirtle swept 3 straight') && bannersNow[1]?.[1] === 'var(--t-C)', 'another cart\u2019s headline wears its away jersey (pink)');
+const stripNow = await P.page.$$eval('.headlines.compact .headline', (els) => els.length);
+ok(stripNow === 2, `Board strip shows both for now (${stripNow})`);
+await P.page.waitForTimeout(10300);
+const bannersLater = await P.page.$$eval('#banners .headline-b', (els) => els.map((e) => e.textContent.replace(/\s+/g, ' ').trim()));
+const stripLater = await P.page.$$eval('.headlines.compact .headline', (els) => els.map((e) => e.textContent.replace(/\s+/g, ' ').trim()));
+ok(bannersLater.length === 1 && bannersLater[0].startsWith('Charmander'), `a few seconds later: one banner (${bannersLater.join(' | ')})`);
+ok(stripLater.length === 1, `and one headline on the Board (${stripLater.join(' | ')})`);
+await P.page.tap('[data-act="board-headlines"]');
+await P.page.waitForTimeout(300);
+const feed = await P.page.$$eval('#sheet .headline', (els) => els.map((e) => e.style.getPropertyValue('--jersey')));
+ok(feed.includes('var(--good)') && feed.includes('var(--t-C)'), `the full list is color-coded too (${feed.join(', ')})`);
 
 const errors = [A, C, A2, P, Q].flatMap((p) => p.page.errors);
 ok(errors.length === 0, `no page errors${errors.length ? `: ${errors.join('; ')}` : ''}`);
