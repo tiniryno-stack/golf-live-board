@@ -659,7 +659,7 @@ Golf-specific rules:
 
 - [x] GitHub repo `tiniryno-stack/golf-live-board` created (public)
 - [x] Supabase project `golf-live-board` created (ref `yxreupqzwgjzhfosnjbj`, region us-east-2). URL and publishable key are in `BUILD.md`.
-- [ ] Apply `supabase/schema.sql` — the builder does this through the Supabase connector (`apply_migration`); no SQL editor step for Andrew
+- [x] Apply `supabase/schema.sql` — applied Oct 16 (Andrew ran it in the SQL editor after the connector prompt kept cancelling); verified from the connector
 - [ ] Andrew turns on GitHub Pages after the first code push: repo **Settings → Pages → Deploy from a branch → main, / (root) → Save**. Live at `https://tiniryno-stack.github.io/golf-live-board/`
 - [x] Design direction set → section 9 (Sundown base, Flighty-inspired layout, dark default)
 - [ ] At the course: open Setup, pick Twin Creeks, type names, name teams, drop the link in the group chat, everyone taps their name
