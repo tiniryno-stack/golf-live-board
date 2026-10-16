@@ -520,7 +520,7 @@ Players never see Setup: they open the link and tap their name. ("New round" on 
 - **Matchup banner:** this hole's matchup with team names + live status, e.g. `Rotation 2 · Hogan's Heroes vs Fore Play · +1`.
 - **Cart cards — the "enter you + your partner" mechanic:** players are grouped by team, **your cart on top** (known from the name you picked), the cart you're playing below (it changes at holes 7 and 13). Each card shows both partners side by side as two big score tiles, with the team's Low Ball / Low Total for the hole underneath, so entering your cart is two taps.
 - **Score tiles:** an empty tile shows a faint bogey. **Tapping the number sets bogey**; − / + step from that bogey (− = par, − − = birdie, + = double), so the first tap always moves the way you pressed. + stops at the max hole score. A dot under the name for each handicap stroke on that hole. Long-press clears.
-- **60/40:** your cart takes ~60% of the space and the cart you're playing ~40% (smaller, quieter, still editable).
+- **60/40:** your cart takes ~60% of the space and the cart you're playing ~40%, **greyed** with a "Tap to enter" chip. A tap on the greyed cart never scores; it opens that cart at **50/50** (their tiles editable, yours greyed with "Tap to go back"). Tap yours to return to 60/40; any other hole opens on yours. A one-time tip points at the greyed cart the first time your own cart is in and theirs isn't.
 - **Next hole:** once all four players have posted, a full-width `Next hole →` button lights up at the bottom (thumb zone). No auto-advance, so nobody gets skipped mid-correction. Tapping it may first show a full-screen **Lock in** or **Close it out** card (7.10), or **Switch it up** after the last hole of a matchup.
 - **Swap card:** after the last hole of a rotation is posted, `Next hole →` opens a short **Switch it up** screen: the rotation result (`Hogan's Heroes 7½ – Shank Redemption 4½`), who's next (`Holes 7–12 vs Fore Play · Tyler + Jake`), and "One cart waits, one moves up." Continue → hole 7 with the new foursome.
 - Footer: 18-dot strip of completed holes · sync chip.
@@ -546,7 +546,7 @@ Segmented control **Rot 1 | Rot 2 | Rot 3** (defaults to the rotation you're pla
 ### 6. Card
 Segmented **Front | Back** (front nine, back nine); a 9-hole grid grouped **by cart** (name · 9 holes · total), so nothing scrolls sideways and nothing breaks when foursomes reshuffle.
 
-- **Your cart and the cart you're playing right now come first, expanded.**
+- **Your cart always on top** (even if you're cart B or C), then the cart you're playing right now, both expanded.
 - **The other two carts start collapsed** to one summary row each, e.g. `Fore Play · thru 9 · +3`. Tap to expand; tap again to collapse. Remembered per phone.
 - Someone watching without a name picked sees every cart expanded.
 - **This is where you fix past holes.** Tap a cell for any hole where that player was in **your** matchup (on holes 1–6 you can fix the cart you played then; on 7–12, the cart you played then) → an edit sheet slides up: `Hole 4 · Mike · Par 4`, the big score tile, − / +, Clear, Done. Same rules as Enter. Every other cell is view-only; the organizer can edit any cell.
@@ -696,7 +696,7 @@ Golf-specific rules:
 - Scorecard labels → Front / Back, not Out / In
 - Matchup alerts → "Lock in" when you need nearly every remaining point, "Close it out" when this hole can clinch; full-screen card right after tapping Next hole, only for the two carts in that matchup
 - Fixing mistakes → Enter's ◀ edits any hole in your current matchup, plus a 5-second Undo after Next hole; Card is for older holes from previous matchups
-- Card → grouped by cart; your cart and current opponent first and expanded, other carts collapsed; tap a cell from one of your matchups to edit it
+- Card → grouped by cart; your cart first (always), then current opponent, both expanded; other carts collapsed; tap a cell from one of your matchups to edit it
 - Layout → high-yield info never under a scroll (Enter fits entirely, top/tab bars pinned); long pages like leaderboards may scroll; no sideways scroll; portrait only
 
 - Practice rounds → organizer can Reset (clear all scores, keep everything else) or Delete a round from Host (added Oct 16 for test runs before the real round)
@@ -710,6 +710,7 @@ Still open: nothing blocking. Design direction (section 9) is final.
 - **Team names by the carts:** after joining, an unnamed cart gets a full-screen "Name your cart" card with six quick names (Bulbasaur, Charmander, Squirtle, Chikorita, Cyndaquil, Totodile). Either partner can pick; a name another cart has is greyed out and refused by `pick_team_name` (locks the round row). Tap your cart's name on Enter to change it. The organizer can still type names in Setup (team names now sit at the top of the Teams step) or Host.
 - **Jerseys:** your own cart is always green on your phone; every other cart has a fixed away color that's the same for everyone — A orange, B blue, C pink, D violet (no red: red means double bogey). Used on Enter, Matches (counters, tug-of-war, pips), Board, Card and Who are you.
 - **Board → Teams:** each team gets a bar in its jersey color — solid = official points, hatched = provisional; Plus/Minus bars grow left/right from even. **Board → Players:** one compact line per player (rank · to par · name + team · thru · total) so all 8 fit on a 15/16 without scrolling; headlines show on the Teams view.
+- **Enter, their cart greyed:** 60/40 with the other cart greyed; tap it for 50/50 to enter their scores, tap yours to go back (see section 3). **Card:** your cart is always the top block, then the cart you're playing.
 - **Home:** recent rounds are tappable cards with **Open**; "Run it back as a new round" is a small secondary link.
 - **Practice rounds:** organizer Reset scores / Delete round (see 5.1).
 

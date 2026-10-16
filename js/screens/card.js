@@ -65,8 +65,10 @@ export default {
     const list = carts(app);
     let first = [];
     if (app.me) {
+      // Yours always on top (even if you're cart B or C), then the cart you're playing now.
       const near = foursomeTeams(snap.roster, snap.settings, app.me, app.nextHole());
-      first = list.filter((c) => near.includes(c.key) || c.players.some((p) => p.id === app.me));
+      const own = list.find((c) => c.players.some((p) => p.id === app.me));
+      first = [own, ...list.filter((c) => c !== own && near.includes(c.key))].filter(Boolean);
     }
     const ordered = [...first, ...list.filter((c) => !first.includes(c))];
     const saved = openState(app);

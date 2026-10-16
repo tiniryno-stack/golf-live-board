@@ -86,6 +86,15 @@ async function check(page, size, screen, extra) {
         if (b.width < 47.5 || b.height < 47.5) problems.push(`tap target ${Math.round(b.width)}×${Math.round(b.height)} < 48`);
       });
       if (!document.querySelectorAll('.tile').length) problems.push('no score tiles rendered');
+      const carts = [...document.querySelectorAll('.cart')].map((c) => box(c).height);
+      if (document.querySelector('.sheet.even')) {
+        if (carts.length === 2 && Math.abs(carts[0] - carts[1]) > 2) problems.push(`50/50 split is ${Math.round(carts[0])}/${Math.round(carts[1])}`);
+        if (document.querySelectorAll('.cart.opp.focus .tile .step').length < 4) problems.push('their cart is open but not editable');
+        if (!document.querySelector('.cart.mine.dim')) problems.push('your cart should be greyed while theirs is open');
+      } else if (carts.length === 2) {
+        if (!(carts[0] > carts[1] + 8)) problems.push(`your cart (${Math.round(carts[0])}) not bigger than theirs (${Math.round(carts[1])})`);
+        if (!document.querySelector('.cart.opp.dim') || document.querySelector('.cart.opp .tile .step')) problems.push('their cart should be greyed and not editable');
+      }
     }
     if (extra === 'board-players') {
       const rows = [...document.querySelectorAll('.prow')];
@@ -115,7 +124,7 @@ for (const size of SIZES) {
     localStorage.setItem('glb.device', JSON.stringify(dev));
     localStorage.setItem('glb.who.' + code, 'true');
     localStorage.setItem('glb.seen.' + code, JSON.stringify({ last: Date.now(), ids: [] }));
-    for (const k of ['tile', 'prov']) localStorage.setItem('glb.coach.' + k, 'true');
+    for (const k of ['tile', 'prov', 'oppcart']) localStorage.setItem('glb.coach.' + k, 'true');
     localStorage.setItem('glb.me.' + code, '"p1"');
     localStorage.setItem('glb.admin.' + code, JSON.stringify(pin));
   }, [r.code, DEV, r.admin_pin]);
@@ -150,6 +159,10 @@ for (const size of SIZES) {
   await check(page, size, 'Enter', 'enter');
   await page.evaluate(() => { window.__glb.ui.hole = 6; window.__glb.render(); });
   await check(page, size, 'Enter (hole 6)', 'enter');
+  await page.tap('.cart.opp.dim');
+  await check(page, size, 'Enter (their cart open, 50/50)', 'enter');
+  await page.tap('.cart.mine.dim');
+  if (!(await page.$('.cart.opp.dim'))) { failures.push(`${size[0]} · tap back`); rows.push([`${size[0]} · Enter tap back to yours`, 'FAIL: still 50/50']); }
   for (const tab of ['matches', 'board', 'card', 'host']) {
     await go(`#/e/${r.code}/${tab}`);
     await check(page, size, tab[0].toUpperCase() + tab.slice(1), tab);

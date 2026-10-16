@@ -1,5 +1,7 @@
 // enter.js — the default tab. Compact hero (hole + matchup), your cart big on top
-// (~60%) and the cart you're playing smaller below (~40%). An empty tile shows a
+// (~60%) and the cart you're playing smaller below (~40%), greyed until you tap it;
+// then it's 50/50 with theirs open and yours greyed (tap yours to go back; any
+// other hole opens on yours). An empty tile shows a
 // faint bogey: tap it for bogey, or − / + to step from bogey (− = par, − − = birdie).
 // Long-press clears. ◀ back through the current matchup + Undo, Next hole →
 // (Switch it up, Lock in / Close it out). Holes follow play order (start on 1 or 10).
@@ -47,11 +49,17 @@ function cartsFor(app, hole) {
   return carts;
 }
 
-function tile(app, p, hole) {
+/** Which cart is open for entry on this hole: 'mine' (60/40, theirs greyed) or 'opp' (50/50, yours greyed). */
+function focusSide(app, hole, carts) {
+  if (app.ui.enterFocus != null && app.ui.enterFocus !== hole) app.ui.enterFocus = null; // left that hole: back to 60/40
+  return carts.length > 1 && app.ui.enterFocus === hole ? 'opp' : 'mine';
+}
+
+function tile(app, p, hole, dim) {
   const snap = app.snapshot;
   const par = snap.holes[hole - 1].par;
   const g = p.gross[hole - 1];
-  const editable = app.canEdit(p.id, hole);
+  const editable = !dim && app.canEdit(p.id, hole);
   const max = maxHoleScore(snap.course, snap.settings, hole, p.dots[hole - 1]);
   const dots = p.dots[hole - 1] ? `<span class="dots" aria-label="${p.dots[hole - 1]} stroke">${'<i></i>'.repeat(p.dots[hole - 1])}</span>` : '';
   // Empty tile: a faint bogey shows where − / + will start from.
@@ -59,7 +67,7 @@ function tile(app, p, hole) {
   const face = `<span class="who"><span class="ellipsis">${esc(p.name)}</span>${dots}</span>
     <span class="score ${g == null ? 'ghost' : scoreClass(g, par)}">${shown}</span>`;
   if (!editable) {
-    return `<div class="tile readonly${g == null ? ' empty' : ''}"><div class="face">${g == null ? face.replace(`>${shown}<`, '>–<') : face}</div></div>`;
+    return `<div class="tile readonly${g == null ? ' empty' : ''}"><div class="face" data-pid="${esc(p.id)}">${g == null ? face.replace(`>${shown}<`, '>–<') : face}</div></div>`;
   }
   return `<div class="tile${g == null ? ' empty' : ''}${p.id === app.me ? ' mine' : ''}">
     <button class="step" data-act="tile-step" data-pid="${esc(p.id)}" data-d="-1" ${g != null && g <= 1 ? 'disabled' : ''} aria-label="${esc(p.name)} one less">${icon('minus', 22)}</button>
@@ -68,7 +76,7 @@ function tile(app, p, hole) {
   </div>`;
 }
 
-function cartCard(app, cart, hole, mine) {
+function cartCard(app, cart, hole, mine, dim) {
   const snap = app.snapshot;
   const team = cart.teamId ? snap.teamById.get(cart.teamId) : null;
   const comps = team?.comps[hole - 1];
@@ -76,12 +84,18 @@ function cartCard(app, cart, hole, mine) {
   const lblt = team && comps ? short.map((n, i) => `${n} ${comps[i]}`).join(' · ') : team ? short.map((n) => `${n} –`).join(' · ') : '';
   const label = team ? team.name : cart.players.length > 2 ? 'Your group' : 'Your cart';
   const jersey = team ? teamColor(app.myTeam(), team.id) : '';
-  const name = mine && team
+  const name = mine && team && !dim
     ? `<button class="name name-btn" data-act="team-picker" aria-label="Name your cart"><span class="ellipsis">${esc(label)}</span>${isDefaultTeamName(team) ? '<span class="pick">Name it</span>' : ''}</button>`
     : `<span class="name ellipsis">${esc(label)}</span>`;
-  return `<section class="cart ${mine ? 'mine' : 'opp'}" ${jersey ? `style="--jersey:${jersey}"` : ''}>
-    <div class="cart-head">${name}<span class="lblt">${esc(lblt)}</span></div>
-    <div class="tiles">${cart.players.map((p) => tile(app, p, hole)).join('')}</div>
+  // A greyed cart is one big tap target: the first tap only switches which cart is open.
+  const side = mine ? 'mine' : 'opp';
+  const tap = dim
+    ? ` data-act="cart-focus" data-enter="cart-focus" data-v="${side}" role="button" tabindex="0" aria-label="${mine ? 'Back to your cart' : `Enter scores for ${esc(label)}`}"`
+    : '';
+  const chip = dim ? `<span class="focus-chip">${mine ? 'Tap to go back' : 'Tap to enter'}</span>` : '';
+  return `<section class="cart ${side}${dim ? ' dim' : ' focus'}" ${jersey ? `style="--jersey:${jersey}"` : ''}${tap}>
+    <div class="cart-head">${name}<span class="lblt">${esc(lblt)}</span>${chip}</div>
+    <div class="tiles">${cart.players.map((p) => tile(app, p, hole, dim)).join('')}</div>
   </section>`;
 }
 
@@ -123,6 +137,7 @@ export default {
       matchLine = `<span class="teams">${esc(rot.label)}</span>`;
     }
     const carts = cartsFor(app, h);
+    const focus = focusSide(app, h, carts);
     const everyone = carts.flatMap((c) => c.players);
     const allPosted = everyone.length > 0 && everyone.every((p) => p.gross[h - 1] != null);
     const dots = playOrder(st)
@@ -145,8 +160,8 @@ export default {
         </div>
         ${matchLine ? `<div class="matchup-line">${matchLine}</div>` : ''}
       </div>
-      <div class="sheet">
-        ${carts.map((c, i) => cartCard(app, c, h, i === 0)).join('')}
+      <div class="sheet${focus === 'opp' ? ' even' : ''}">
+        ${carts.map((c, i) => cartCard(app, c, h, i === 0, carts.length > 1 && (i === 0) === (focus === 'opp'))).join('')}
         <div class="enter-foot"><div class="holedots" aria-hidden="true">${dots}</div><span class="sync" data-sync>Synced</span></div>
         <button class="btn primary block next-btn" data-act="next-hole" ${allPosted ? '' : 'disabled'}>${nextLabel}</button>
       </div>
@@ -155,8 +170,16 @@ export default {
 
   mount(root, app) {
     if (!app.myPlayer()) return;
-    const first = root.querySelector('.tile.empty .face');
-    if (first) app.coach('tile', first, 'Tap once for bogey. Or tap − for par, − again for birdie.');
+    if (document.querySelector('.coach')) return; // one tip at a time
+    const first = root.querySelector('.cart.focus .tile.empty .face');
+    const mine = root.querySelector('.cart.mine.focus');
+    const theirs = root.querySelector('.cart.opp.dim');
+    // Once your cart is in and theirs isn't, point at the greyed cart.
+    if (mine && theirs && !mine.querySelector('.tile.empty') && theirs.querySelector('.tile.empty')) {
+      app.coach('oppcart', theirs, 'Their cart is greyed so you don’t tap it by mistake. Tap it to enter their scores, then tap yours to come back.');
+    } else if (first) {
+      app.coach('tile', first, 'Tap once for bogey. Or tap − for par, − again for birdie.');
+    }
   },
 
   actions: {
@@ -207,6 +230,11 @@ export default {
       }
     },
     'next-hole': (el, ev, app) => nextHole(app),
+    'cart-focus': (el, ev, app) => {
+      // Remembered for this hole only: any other hole opens on your cart (60/40).
+      app.ui.enterFocus = el.dataset.v === 'opp' ? app.ui.hole : null;
+      app.render();
+    },
     'team-picker': (el, ev, app) => app.openTeamPicker(),
   },
 };

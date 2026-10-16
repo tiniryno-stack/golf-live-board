@@ -8,6 +8,8 @@
 //   6. Organizer resets the round (scores cleared, phones stay joined), then deletes it
 //   7. Back-nine start + unnamed carts: name picker (taken names greyed), − / + on a blank
 //      tile, your cart ~60% of Enter, toasts only for the other foursome
+//   8. Their cart is greyed: a stray tap doesn't score, it opens 50/50; tap yours to go
+//      back; the next hole opens on yours again. Your cart tops the Card even as cart C.
 // Realtime isn't mocked, so "the other phone sees it" is driven by a refetch —
 // the same path the app uses when a phone comes back from the lock screen.
 // Run: npm run test:smoke
@@ -32,7 +34,7 @@ async function phone(name) {
   const ctx = await browser.newContext({ viewport: { width: 375, height: 548 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
   await attach(ctx, be, srv.origin);
   await ctx.addInitScript(() => {
-    for (const k of ['tile', 'prov']) localStorage.setItem('glb.coach.' + k, 'true');
+    for (const k of ['tile', 'prov', 'oppcart']) localStorage.setItem('glb.coach.' + k, 'true');
   });
   const page = await ctx.newPage();
   page.errors = [];
@@ -54,10 +56,17 @@ async function join(page, playerName) {
   await page.waitForTimeout(300);
 }
 
+async function tapTiles(page) {
+  const pids = await page.$$eval('.cart.focus .tile .face[data-act="tile-tap"]', (els) => els.map((e) => e.dataset.pid));
+  for (const pid of pids) await page.tap(`.tile .face[data-pid="${pid}"]`);
+}
 async function playHole(page) {
   await clearOverlays(page);
-  const pids = await page.$$eval('.tile .face[data-act="tile-tap"]', (els) => els.map((e) => e.dataset.pid));
-  for (const pid of pids) await page.tap(`.tile .face[data-pid="${pid}"]`);
+  await tapTiles(page); // your cart
+  if (await page.$('.cart.opp.dim')) {
+    await page.tap('.cart.opp.dim'); // open theirs (50/50)
+    await tapTiles(page);
+  }
   await page.waitForTimeout(100);
   await page.tap('.next-btn');
   await page.waitForTimeout(150);
@@ -118,6 +127,9 @@ ok(h6 === 8, `all 8 players posted hole 6 on the server (${h6})`);
 ok((await A.page.textContent('.hole-title')) === 'Hole 7', 'Andrew is on hole 7');
 const carts7 = await A.page.$$eval('.cart .name', (els) => els.map((e) => e.textContent));
 ok(carts7.join() === 'Hogan’s Heroes,Fore Play', `hole 7 cards on Andrew’s phone: ${carts7.join(' + ')}`);
+await A.page.tap('.face[data-pid="p5"]'); // greyed: this tap only opens Fore Play's side
+await A.page.waitForTimeout(300);
+ok(!be.tables.scores.some((s) => s.player_id === 'p5' && s.hole === 7), 'a tap on the greyed cart doesn\u2019t enter a score');
 await A.page.tap('.face[data-pid="p5"]');
 await A.page.waitForTimeout(900);
 const sam7 = be.tables.scores.find((s) => s.player_id === 'p5' && s.hole === 7);
@@ -128,6 +140,12 @@ const samSees = await app(C.page, () => window.__glb.snapshot.playerById.get('p5
 ok(samSees === 4, 'Sam’s phone shows the score Andrew entered for him');
 const official = await app(C.page, () => window.__glb.snapshot.officialThrough);
 ok(official === 6, `official line through 6 (${official})`);
+await C.page.goto(`${link}/card`);
+await C.page.waitForTimeout(500);
+const cardOrder = await C.page.$$eval('.cart-block .cb-head .name', (els) => els.map((e) => e.textContent));
+ok(cardOrder[0] === 'Fore Play' && cardOrder[1] === 'Hogan\u2019s Heroes', `Sam\u2019s Card: his cart (C) first, then who he\u2019s playing (${cardOrder.slice(0, 2).join(', ')})`);
+await C.page.goto(`${link}/enter`);
+await C.page.waitForTimeout(400);
 
 // 4. Offline queue
 be.offline = true;
@@ -233,9 +251,13 @@ ok(r2.event.roster.teams.find((t) => t.id === 'C').name === 'Squirtle', 'Sam\u20
 const taken = be.rpc.pick_team_name({ p_code: r2.code, p_device_id: await app(Q.page, () => JSON.parse(localStorage.getItem('glb.device'))), p_name: 'charmander' });
 ok(taken.error === 'taken', 'the server refuses a name another cart has (any capitals)');
 ok((await P.page.textContent('.hole-title')) === 'Hole 10', 'starting on 10: Enter opens on Hole 10');
+await P.page.evaluate(() => localStorage.removeItem('glb.coach.oppcart'));
 await P.page.tap('[data-act="tile-step"][data-pid="p1"][data-d="-1"]');
 await P.page.tap('[data-act="tile-step"][data-pid="p2"][data-d="1"]');
 await P.page.waitForTimeout(900);
+const tip = await P.page.evaluate(() => document.querySelector('.coach')?.textContent || '');
+ok(/tap it to enter their scores/i.test(tip), `your cart done: a tip points at their greyed cart (\u201c${tip.slice(0, 40)}\u2026\u201d)`);
+if (tip) await P.page.tap('.coach');
 const par10 = r2.event.course.par[9];
 const s1 = be.tables.scores.find((x) => x.event_id === r2.id && x.player_id === 'p1' && x.hole === 10);
 const s2 = be.tables.scores.find((x) => x.event_id === r2.id && x.player_id === 'p2' && x.hole === 10);
@@ -259,6 +281,31 @@ ok(!(await toastText(P.page)), 'no toast for a score in your own foursome');
 await push('p7', 'Chris', 2); // Chris is in the other foursome
 await P.page.waitForTimeout(1900);
 ok((await toastText(P.page)).includes('Chris 4'), 'toast for the other foursome\u2019s score');
+
+// 8. Their cart: greyed until tapped, then 50/50; back to 60/40 by tapping yours or moving on
+const shares = (page) => page.evaluate(() => {
+  const [a, b] = [...document.querySelectorAll('.cart')].map((c) => c.getBoundingClientRect().height);
+  return a / (a + b);
+});
+ok(!!(await P.page.$('.cart.opp.dim')) && !(await P.page.$('.cart.opp .step')), 'their cart starts greyed, with no − / +');
+await P.page.tap('.cart.opp .face[data-pid="p4"]');
+await P.page.waitForTimeout(400);
+ok(!be.tables.scores.some((x) => x.event_id === r2.id && x.player_id === 'p4' && x.hole === 10), 'tapping it doesn\u2019t score anyone');
+const even = await shares(P.page);
+ok(!!(await P.page.$('.sheet.even .cart.mine.dim')) && Math.abs(even - 0.5) < 0.02, `tapped: 50/50 (${Math.round(even * 100)}%), theirs open, yours greyed`);
+await P.page.tap('[data-act="tile-step"][data-pid="p4"][data-d="-1"]');
+await P.page.waitForTimeout(900);
+const s4 = be.tables.scores.find((x) => x.event_id === r2.id && x.player_id === 'p4' && x.hole === 10);
+ok(s4?.strokes === par10, `entered their score while open (${s4?.strokes})`);
+await P.page.tap('.cart.mine.dim');
+await P.page.waitForTimeout(200);
+const back = await shares(P.page);
+ok(!!(await P.page.$('.cart.opp.dim')) && back > 0.54, `tap yours: back to 60/40 (${Math.round(back * 100)}%)`);
+await P.page.tap('.cart.opp.dim');
+await P.page.waitForTimeout(150);
+await P.page.tap('.next-btn');
+await P.page.waitForTimeout(400);
+ok((await P.page.textContent('.hole-title')) === 'Hole 11' && !!(await P.page.$('.cart.opp.dim')), 'next hole opens on your cart again (theirs greyed)');
 
 const errors = [A, C, A2, P, Q].flatMap((p) => p.page.errors);
 ok(errors.length === 0, `no page errors${errors.length ? `: ${errors.join('; ')}` : ''}`);
