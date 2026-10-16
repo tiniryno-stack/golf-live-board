@@ -470,7 +470,7 @@ Examples (2 points per hole): down 4 with 2 holes left → win out to halve; dow
  │  #/e/TC7K2/enter  #/e/TC7K2/matches  #/e/TC7K2/board  …/card    │ …/host  │
  └─────────────────────────────────────────────────────────────────┴─────────┘
                                        (HOST) = separate round button, organizer's phone only
- Top bar (every tab): your-name chip · round name (label) · light/dark icon · ⋯ menu (share, Go to Home, Switch to watching). No back button inside a round.
+ Top bar (every tab): your-name chip · round name (label) · light/dark icon · ⋯ menu (How today's game works, share, Go to Home, Switch to watching). No back button inside a round.
  Sheets (slide-up overlays): who are you? · player detail
  Toasts: other players' scores and highlights · "let them in" requests
 ```
@@ -714,6 +714,7 @@ Still open: nothing blocking. Design direction (section 9) is final.
 - **Board → Teams:** each team gets a bar in its jersey color — solid = official points, hatched = provisional; Plus/Minus bars grow left/right from even. **Board → Players:** one compact line per player (rank · to par · name + team · thru · total) so all 8 fit on a 15/16 without scrolling; headlines show on the Teams view.
 - **Enter, their cart greyed:** 70/30 with the other cart greyed to one row of small scores; tap it for 50/50 to enter their scores, tap yours to go back (see section 3). **Card:** your cart is always the top block, then the cart you're playing.
 - **Headlines:** color-coded by the team on the positive end (yours green, others their away color); one at a time on the banner and Board, two only briefly when they land together (see 7.10 display).
+- **Today's game:** after you pick your name (and name your cart, if asked), two swipe cards built from the round's settings, then **Let's play** → Enter. Once per phone per round; Skip any time; reopen from the ⋯ menu (watchers too). Card 1, how a hole is scored: game, points per hole (Low Ball / Low Total, or best ball / total), what a push is worth, Plus/Minus cap, a worked par-4 example, net-score note when anyone gets strokes. Card 2, your day: your cart and partner, each rotation's holes and opponent ("other group" in fixed foursomes), points per matchup and on the day, how the day is won, tee off on 10 if so, swap rule, pick-up max. Tiebreakers and other low-yield rules stay out. Watchers see every matchup instead. Fits an iPhone SE without scrolling.
 - **Home:** recent rounds are tappable cards with **Open**; "Run it back as a new round" is a small secondary link.
 - **Practice rounds:** organizer Reset scores / Delete round (see 5.1).
 

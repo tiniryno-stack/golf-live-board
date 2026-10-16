@@ -269,7 +269,7 @@ app.claim = async (pid) => {
       app.ui.hole = null;
       render();
     }
-    setTimeout(maybeAskTeamName, 300);
+    setTimeout(afterJoin, 300);
     return;
   }
   if (res.error === 'taken') {
@@ -342,11 +342,23 @@ app.pickTeamName = async (name) => {
   return false;
 };
 
-/** Right after joining: if my cart still has its placeholder name, offer the picker. */
-function maybeAskTeamName() {
+/** Right after joining: name the cart if it still has its placeholder name, then
+ *  "Today's game" (once per phone per round), then you're on Enter. */
+function afterJoin() {
   const t = app.myTeam() && app.snapshot?.teamById.get(app.myTeam());
-  if (t && isDefaultTeamName(t)) fx.showTeamPicker(app);
+  if (t && isDefaultTeamName(t)) fx.showTeamPicker(app, maybeBrief);
+  else maybeBrief();
 }
+function maybeBrief() {
+  if (!app.me || !app.snapshot?.game) return;
+  const key = `glb.brief.${app.code}`;
+  if (db.local.get(key)) return;
+  fx.showBrief(app, () => {
+    db.local.set(key, true);
+    if (app.me && app.route.tab !== 'enter') app.go(app.tabHash('enter'));
+  });
+}
+app.openBrief = () => fx.showBrief(app, () => db.local.set(`glb.brief.${app.code}`, true));
 app.openTeamPicker = () => fx.showTeamPicker(app);
 
 app.leave = async () => {
@@ -708,7 +720,7 @@ function onRemoteJoinRequest(row) {
       app.closeSheet();
       app.toast({ title: `You’re in as ${app.myName()}`, sub: row.approved_by ? `${row.approved_by} let you in` : '' });
       app.go(app.tabHash('enter'));
-      setTimeout(maybeAskTeamName, 300);
+      setTimeout(afterJoin, 300);
     } else renderSheet();
   }
   if (row.status === 'approved' && row.player_id === app.me && !app.waiting) verifyMe();

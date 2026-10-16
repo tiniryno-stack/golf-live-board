@@ -10,6 +10,7 @@
 //      tile, your cart ~70% of Enter, toasts only for the other foursome
 //   8. Their cart is greyed: a stray tap doesn't score, it opens 50/50; tap yours to go
 //      back; the next hole opens on yours again. Your cart tops the Card even as cart C.
+//   0. Joining shows "Today's game" (your matchups, what's up for grabs) once per phone
 //   9. Headlines wear the jersey of the team on their positive end; two that land on the
 //      same score show together, then it's back to one (banner and Board).
 // Realtime isn't mocked, so "the other phone sees it" is driven by a refetch —
@@ -49,13 +50,16 @@ const refetch = (page) => page.evaluate(() => window.__glb.refetch());
 const toastText = (page) => page.evaluate(() => document.getElementById('toasts').innerText.replace(/\s+/g, ' ').trim());
 const clearOverlays = (page) => page.evaluate(() => {
   document.querySelector('[data-act="away-dismiss"]')?.click();
+  document.querySelector('[data-act="brief-done"]')?.click();
 });
+const briefText = (page) => page.evaluate(() => [...document.querySelectorAll('.brief-page')].map((p) => p.innerText.replace(/\s+/g, ' ').trim()));
+const briefFits = (page) => page.evaluate(() => [...document.querySelectorAll('.brief-page')].every((p) => p.scrollHeight <= p.clientHeight + 1));
 
 async function join(page, playerName) {
   await page.goto(link);
   await page.waitForSelector('.who-btn', { timeout: 8000 });
   await page.locator('.who-btn', { hasText: playerName }).first().tap();
-  await page.waitForTimeout(300);
+  await page.waitForTimeout(700);
 }
 
 async function tapTiles(page) {
@@ -91,6 +95,23 @@ ok((await app(C.page, () => window.__glb.me)) === 'p5', 'Sam’s phone claimed S
 ok(be.tables.claims.length === 2, 'server holds two claims');
 const cartsA = await A.page.$$eval('.cart .name', (els) => els.map((e) => e.textContent));
 ok(cartsA.join() === 'Hogan’s Heroes,Shank Redemption', `hole 1 cards on Andrew’s phone: ${cartsA.join(' + ')}`);
+const briefA = await briefText(A.page);
+ok(briefA.length === 2 && /Rotation Match Play/.test(briefA[0]) && /2 points every hole/.test(briefA[0]) && /Push A tie: ½ point each/.test(briefA[0]),
+  `joining shows Today\u2019s game: how a hole is scored (${(briefA[0] || 'none').slice(0, 60)}\u2026)`);
+ok(/Holes 1–6 vs Shank Redemption/.test(briefA[1] || '') && /Holes 7–12 vs Fore Play/.test(briefA[1] || '') && /12 points per matchup, 36 on the day/.test(briefA[1] || ''),
+  'card 2: Andrew\u2019s three matchups and what\u2019s up for grabs');
+ok(await briefFits(A.page), 'both cards fit an iPhone SE without scrolling');
+await A.page.tap('[data-act="brief-next"]');
+await A.page.waitForTimeout(600);
+ok((await A.page.textContent('[data-act="brief-next"]')).includes('Let’s play'), 'Next swipes to card 2 \u2192 \u201cLet\u2019s play\u201d');
+await A.page.tap('[data-act="brief-next"]');
+await A.page.waitForTimeout(200);
+ok(!(await A.page.$('.fullcard.brief')) && (await A.page.evaluate(() => window.__glb.route.tab)) === 'enter' && !!(await A.page.$('.cart.mine')), 'Let\u2019s play \u2192 Enter');
+ok(await A.page.evaluate((c) => localStorage.getItem('glb.brief.' + c) === 'true', r.code), 'remembered on this phone');
+ok(!!(await C.page.$('.fullcard.brief')), 'Sam gets it too');
+await C.page.tap('[data-act="brief-done"]');
+await C.page.waitForTimeout(200);
+ok(!(await C.page.$('.fullcard.brief')), 'Skip closes it');
 
 // 2. Blocked edit outside your matchup
 const blockedUi = await app(C.page, () => window.__glb.setScore('p1', 3, 4));
@@ -244,11 +265,18 @@ ok(/name your cart/i.test(await P.page.textContent('#overlay')), 'unnamed cart: 
 await P.page.tap('[data-act="team-pick"][data-v="Charmander"]');
 await P.page.waitForTimeout(500);
 ok(r2.event.roster.teams.find((t) => t.id === 'A').name === 'Charmander', 'Andrew\u2019s cart is now Charmander on the server');
+const briefP = await briefText(P.page);
+ok(/^Charmander/.test(briefP[1] || '') && /Holes 10–15 vs/.test(briefP[1] || '') && /Tee off on 10, finish on 9/.test(briefP[1] || ''),
+  `named the cart \u2192 Today\u2019s game with the new name and back-nine holes (${(briefP[1] || 'none').slice(0, 50)}\u2026)`);
+ok(await briefFits(P.page), 'still fits an SE with the extra “tee off on 10” line');
+await P.page.tap('[data-act="brief-done"]');
+await P.page.waitForTimeout(200);
 await refetch(Q.page);
 await Q.page.waitForTimeout(300);
 ok(await Q.page.isDisabled('[data-act="team-pick"][data-v="Charmander"]'), 'Sam sees Charmander taken');
 await Q.page.tap('[data-act="team-pick"][data-v="Squirtle"]');
 await Q.page.waitForTimeout(500);
+await clearOverlays(Q.page);
 ok(r2.event.roster.teams.find((t) => t.id === 'C').name === 'Squirtle', 'Sam\u2019s cart is Squirtle');
 const taken = be.rpc.pick_team_name({ p_code: r2.code, p_device_id: await app(Q.page, () => JSON.parse(localStorage.getItem('glb.device'))), p_name: 'charmander' });
 ok(taken.error === 'taken', 'the server refuses a name another cart has (any capitals)');

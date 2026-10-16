@@ -590,6 +590,62 @@ a { color: inherit; }
 }
 .coach-scrim { position: fixed; inset: 0; z-index: 54; }
 .fullcard.picker { justify-content: flex-start; gap: 14px; overflow-y: auto; }
+/* Today's game: swipe through, then play. The hero stays dark in both themes. */
+.fullcard.brief { justify-content: flex-start; gap: 10px; padding-left: 0; padding-right: 0; }
+.brief-top, .brief-foot { padding: 0 24px; flex: none; }
+.brief-top { display: flex; align-items: center; justify-content: space-between; min-height: 44px; }
+.brief-skip { min-height: 44px; padding: 0 2px 0 12px; font-size: 15px; font-weight: 700; color: var(--hero-soft); }
+.brief-track {
+  flex: 1; min-height: 0; display: flex; overflow-x: auto; overflow-y: hidden;
+  scroll-snap-type: x mandatory; scrollbar-width: none; overscroll-behavior-x: contain;
+}
+.brief-track::-webkit-scrollbar { display: none; }
+.brief-page {
+  flex: 0 0 100%; min-width: 0; scroll-snap-align: start; scroll-snap-stop: always; overflow-y: auto;
+  padding: 0 24px 4px; display: flex; flex-direction: column; gap: 12px;
+}
+.brief-page .micro { color: var(--hero-soft); }
+.brief-page .fc-title { font-size: 28px; }
+.brief-page .sub { font-size: 15px; opacity: .75; margin-top: -6px; }
+.brief-big { display: flex; align-items: center; gap: 12px; font-size: 18px; font-weight: 750; line-height: 1.2; }
+.brief-big small { display: block; font-size: 14px; font-weight: 500; color: var(--hero-soft); }
+.brief-defs { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 14px; margin: 0; font-size: 15px; align-items: baseline; }
+.brief-defs dt { font-weight: 750; color: #F4C95D; }
+.brief-defs dd { margin: 0; }
+.brief-big .n { font-family: var(--mono); font-size: 46px; font-weight: 800; line-height: 1; color: #F4C95D; }
+.brief-rules { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 15px; line-height: 1.3; }
+.brief-rules li { position: relative; padding-left: 16px; }
+.brief-rules li::before { content: ""; position: absolute; left: 2px; top: .55em; width: 6px; height: 6px; border-radius: 50%; background: #F4C95D; }
+.brief-ex {
+  border-radius: 16px; padding: 12px 14px; background: rgba(255, 255, 255, .07); border: 1px solid var(--hero-line);
+  font-family: var(--mono); font-size: 13.5px; line-height: 1.45; display: flex; flex-direction: column; gap: 2px;
+}
+.brief-ex .ex-k { font-family: var(--font, inherit); font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--hero-soft); margin-bottom: 2px; }
+.brief-ex .ex-line { font-weight: 700; }
+.brief-ex .ex-res { margin-top: 4px; font-weight: 800; color: #F4C95D; }
+.brief-note { margin: 0; font-size: 14px; color: var(--hero-soft); }
+.brief-rots { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.brief-rots li {
+  display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 8px; align-items: baseline;
+  padding: 8px 12px; border-radius: 14px; background: rgba(255, 255, 255, .07);
+}
+.brief-rots .rh { font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--hero-soft); }
+.brief-rots .rv { font-size: 16px; font-weight: 600; min-width: 0; }
+.brief-rots.all .rv { font-size: 14px; line-height: 1.35; }
+.brief-rots .rv small { display: block; font-size: 13px; font-weight: 500; color: var(--hero-soft); margin-top: 1px; }
+.brief-dots { display: flex; justify-content: center; gap: 6px; margin-bottom: 2px; }
+.brief-dots i { width: 6px; height: 6px; border-radius: 3px; background: var(--hero-faint); transition: width .2s; }
+.brief-dots i.on { width: 18px; background: var(--hero-ink); }
+@media (max-height: 600px) { /* iPhone SE: same content, tighter */
+  .fullcard.brief { gap: 6px; padding-top: calc(var(--sat) + 10px); padding-bottom: calc(var(--sab) + 14px); }
+  .brief-page { gap: 8px; }
+  .brief-page .fc-title { font-size: 24px; }
+  .brief-big .n { font-size: 36px; }
+  .brief-ex { padding: 8px 12px; line-height: 1.35; }
+  .brief-rots li { padding: 6px 12px; }
+  .brief-top { min-height: 36px; }
+  .brief-foot .btn { margin-top: 6px; }
+}
 .pick-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .pick-btn {
   min-height: 64px; border-radius: 18px; background: rgba(255, 255, 255, .08); color: var(--hero-ink);

@@ -120,6 +120,7 @@ const BODIES = {
       <p class="meta" style="margin:-4px 0 16px">${esc(meta)} · ${p ? `you\u2019re <b>${esc(p.name)}</b> on this phone` : 'watching on this phone'}</p>
       <div class="stack">
         ${p ? '' : '<button class="btn primary big block" data-act="menu-pick">Pick my name</button>'}
+        ${app.snapshot?.game ? `<button class="btn block" data-act="menu-brief">${icon('spark', 18)} How today’s game works</button>` : ''}
         <button class="btn block" data-act="menu-share">${icon('share', 18)} Share round link</button>
         <button class="btn ghost block" data-act="menu-home">${icon('home', 18)} Go to Home</button>
         ${p ? '<button class="btn danger block" data-act="menu-leave">Switch to watching</button>' : ''}
@@ -252,6 +253,10 @@ export const actions = {
   'menu-home': (el, ev, app) => {
     app.closeSheet();
     app.go('#/');
+  },
+  'menu-brief': (el, ev, app) => {
+    app.closeSheet();
+    app.openBrief();
   },
   'menu-share': (el, ev, app) => {
     app.closeSheet();

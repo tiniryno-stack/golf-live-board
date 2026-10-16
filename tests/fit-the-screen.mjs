@@ -178,6 +178,33 @@ for (const size of SIZES) {
   await check(page, size, 'Enter (their cart open, 50/50)', 'enter');
   await page.tap('.cart.mine.dim');
   if (!(await page.$('.cart.opp.dim'))) { failures.push(`${size[0]} · tap back`); rows.push([`${size[0]} · Enter tap back to yours`, 'FAIL: still 50/50']); }
+  // Today's game: both cards fit, swipe lands on page 2, Let's play closes it.
+  await page.evaluate(() => window.__glb.openBrief());
+  await page.waitForTimeout(400);
+  for (const n of [1, 2]) {
+    const res = await page.evaluate((n) => {
+      const vw = window.innerWidth, vh = window.innerHeight;
+      const pg = document.querySelectorAll('.brief-page')[n - 1];
+      const btn = document.querySelector('[data-act="brief-next"]');
+      const problems = [];
+      if (!pg) return { problems: ['no Today’s game card'] };
+      const b = pg.getBoundingClientRect(), bb = btn.getBoundingClientRect();
+      if (Math.abs(b.left) > 1 || Math.abs(b.right - vw) > 1) problems.push(`card ${n} not on screen (${Math.round(b.left)}…${Math.round(b.right)})`);
+      if (pg.scrollHeight > pg.clientHeight + 1) problems.push(`card ${n} needs scrolling (${pg.scrollHeight} > ${pg.clientHeight})`);
+      if (pg.scrollWidth > pg.clientWidth + 1) problems.push(`card ${n} scrolls sideways`);
+      if (bb.bottom > vh || bb.top < 0) problems.push('button off screen');
+      const want = n === 2 ? 'Let’s play' : 'Next';
+      if (btn.textContent.trim() !== want) problems.push(`button says “${btn.textContent.trim()}”`);
+      return { problems };
+    }, n);
+    const name = `${size[0]} · Today’s game ${n}`;
+    rows.push([name, res.problems.length ? `FAIL: ${res.problems.join('; ')}` : 'ok']);
+    if (res.problems.length) failures.push(name);
+    await page.screenshot({ path: `${OUT}${size[1]}x${size[2]}-todays-game-${n}.png` });
+    await page.tap('[data-act="brief-next"]');
+    await page.waitForTimeout(700);
+  }
+  if (await page.$('.fullcard.brief')) { failures.push(`${size[0]} · Let’s play`); rows.push([`${size[0]} · Let’s play closes it`, 'FAIL: still open']); }
   for (const tab of ['matches', 'board', 'card', 'host']) {
     await go(`#/e/${r.code}/${tab}`);
     await check(page, size, tab[0].toUpperCase() + tab.slice(1), tab);

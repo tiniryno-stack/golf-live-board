@@ -2,7 +2,8 @@
 // full-screen cards (Switch it up, Lock in / Close it out), the "While you were
 // away" card, and coach marks.
 
-import { esc, icon } from '../ui.js';
+import { esc, icon, reducedMotion } from '../ui.js';
+import { briefPages } from './brief.js';
 import { local } from '../db.js';
 import { TEAM_NAME_PICKS, isDefaultTeamName, headlineColor } from '../teams.js';
 
@@ -131,7 +132,7 @@ export function showCard(opts, app) {
 
 export function showAway(list, app, markSeen) {
   const root = $('overlay');
-  if (!list.length) return;
+  if (!list.length || picker || brief) return; // don't cover the name picker / Today's game (shown next time)
   overlay = { onDismiss: markSeen, app, away: true };
   root.innerHTML = `<div class="away" data-act="away-dismiss" role="dialog">
     <div class="kicker">While you were away</div>
@@ -154,6 +155,7 @@ export function closeOverlay() {
   const root = $('overlay');
   if (!root) return;
   picker = null;
+  brief = null;
   if (overlay?.away) overlay.onDismiss?.();
   overlay = null;
   root.classList.remove('open');
@@ -167,17 +169,19 @@ let picker = null; // { busy }
 
 export const pickerOpen = () => !!picker;
 
-export function showTeamPicker(app) {
-  picker = { busy: false, shown: false, html: '' };
+export function showTeamPicker(app, onDone) {
+  picker = { busy: false, shown: false, html: '', onDone };
   renderPicker(app);
 }
 
 export function closePicker() {
   if (!picker) return;
+  const done = picker.onDone;
   picker = null;
   const root = $('overlay');
   root.classList.remove('open');
   root.innerHTML = '';
+  done?.();
 }
 
 export function renderPicker(app) {
@@ -209,6 +213,55 @@ export function renderPicker(app) {
   picker.shown = true; // only the first draw slides in
   root.innerHTML = html;
   root.classList.add('open');
+}
+
+// ───────────────────────────────────────────── Today's game (swipe through, then play)
+
+let brief = null; // { page, n, onDone }
+
+export const briefOpen = () => !!brief;
+
+export function showBrief(app, onDone) {
+  const pages = briefPages(app);
+  if (!pages.length) return false;
+  brief = { page: 0, n: pages.length, onDone };
+  const root = $('overlay');
+  root.innerHTML = `<div class="fullcard brief" role="dialog" aria-modal="true" aria-label="Today’s game">
+    <div class="brief-top"><span class="kicker">Today’s game</span><button class="brief-skip" data-act="brief-done">Skip</button></div>
+    <div class="brief-track">${pages.map((p, i) => `<section class="brief-page" aria-label="${i + 1} of ${pages.length}">${p}</section>`).join('')}</div>
+    <div class="brief-foot">
+      <div class="brief-dots" aria-hidden="true">${pages.map((_, i) => `<i${i === 0 ? ' class="on"' : ''}></i>`).join('')}</div>
+      <button class="btn primary big block" data-act="brief-next">${pages.length > 1 ? 'Next' : 'Let’s play'}</button>
+    </div>
+  </div>`;
+  root.classList.add('open');
+  const track = root.querySelector('.brief-track');
+  track.addEventListener('scroll', () => {
+    if (!brief) return;
+    const i = Math.round(track.scrollLeft / Math.max(1, track.clientWidth));
+    if (i !== brief.page) {
+      brief.page = i;
+      syncBrief();
+    }
+  }, { passive: true });
+  return true;
+}
+
+function syncBrief() {
+  const root = $('overlay');
+  root.querySelectorAll('.brief-dots i').forEach((d, i) => d.classList.toggle('on', i === brief.page));
+  const btn = root.querySelector('[data-act="brief-next"]');
+  if (btn) btn.textContent = brief.page >= brief.n - 1 ? 'Let’s play' : 'Next';
+}
+
+function closeBrief() {
+  if (!brief) return;
+  const done = brief.onDone;
+  brief = null;
+  const root = $('overlay');
+  root.classList.remove('open');
+  root.innerHTML = '';
+  done?.();
 }
 
 // ───────────────────────────────────────────── coach marks (once per phone)
@@ -270,6 +323,15 @@ export const actions = {
     else renderPicker(app);
   },
   'team-later': () => closePicker(),
+  'brief-next': () => {
+    if (!brief) return;
+    if (brief.page >= brief.n - 1) return closeBrief();
+    const track = $('overlay').querySelector('.brief-track');
+    brief.page += 1;
+    syncBrief();
+    track.scrollTo({ left: brief.page * track.clientWidth, behavior: reducedMotion() ? 'auto' : 'smooth' });
+  },
+  'brief-done': () => closeBrief(),
   'away-all': (el, ev, app) => {
     closeAway();
     if (app.code) app.go(app.tabHash('board'));
