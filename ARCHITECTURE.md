@@ -28,7 +28,7 @@ It has two layers:
 - Fast score entry for your cart and the cart you're playing, editable any time; carts swap foursomes every 6 holes so every matchup is played in person
 - Live leaderboard (players + teams), live game standings, matchup detail
 - **Season standings (lite):** player and pair records across every round your crew has played, kept **outside** the live round (Home screen, plus a link on the final leaderboard), so there's something to show the group after round one
-- **Organizer** (one admin PIN, only the person who created the round) can change settings mid-round, fix any score, and free up a player spot
+- **Organizer** (one admin PIN, only the person who created the round) can change settings mid-round, fix any score, free up a player spot, and reset (clear all scores) or delete a round — handy for practice rounds
 - Works with spotty course signal (offline queue)
 
 **Out of scope for v1**
@@ -174,6 +174,8 @@ alter publication supabase_realtime add table scores, events, join_requests;
 | `update_event(code, admin_pin, course, roster, settings)` | Organizer | Mid-round changes: rules, team names, strokes, player swaps, par corrections. |
 | `release_player(code, admin_pin, player_id)` | Organizer | Backup: frees a name if nobody in that foursome is around to approve. |
 | `get_audit_log(code, admin_pin)` | Organizer | Returns the round's activity log, newest first. |
+| `reset_round(code, admin_pin)` | Organizer | Clears every score (to null, so Realtime carries it) and keeps players, carts, settings and joined phones. For practice rounds. |
+| `delete_round(code, admin_pin)` | Organizer | Deletes the round and everything in it (scores, claims, PIN, requests, activity log). |
 
 **Audit log:** every write function above also inserts one plain-English line into `audit_log`, so the log can't be skipped or edited from a phone. Examples:
 
@@ -550,7 +552,7 @@ Segmented **Front | Back** (front nine, back nine); a 9-hole grid grouped **by c
 - Long-press a cell to see who last entered it.
 
 ### 7. Host *(organizer's phone only — players never see it)*
-Segmented **Rules | Players | Activity**. Edit game rules mid-round, rename teams, add or change strokes, swap a player, correct par / hole handicap, edit any foursome's scores, approve a "let them in" request for any foursome, free up a player's spot, copy the organizer link. At the very bottom, collapsed: **Activity** — the audit log (time · who · what), newest first.
+Segmented **Rules | Players | Activity**. Edit game rules mid-round, rename teams, add or change strokes, swap a player, correct par / hole handicap, edit any foursome's scores, approve a "let them in" request for any foursome, free up a player's spot, copy the organizer link. Bottom of Rules: **Reset scores** (replay from hole 1 with the same players and phones) and **Delete round** (gone for everyone; other phones show "Round deleted"), each behind a confirm. At the very bottom, collapsed: **Activity** — the audit log (time · who · what), newest first.
 
 **What players would have used a settings page for, and where it lives instead:**
 
@@ -694,6 +696,8 @@ Golf-specific rules:
 - Fixing mistakes → Enter's ◀ edits any hole in your current matchup, plus a 5-second Undo after Next hole; Card is for older holes from previous matchups
 - Card → grouped by cart; your cart and current opponent first and expanded, other carts collapsed; tap a cell from one of your matchups to edit it
 - Layout → high-yield info never under a scroll (Enter fits entirely, top/tab bars pinned); long pages like leaderboards may scroll; no sideways scroll; portrait only
+
+- Practice rounds → organizer can Reset (clear all scores, keep everything else) or Delete a round from Host (added Oct 16 for test runs before the real round)
 
 Still open: nothing blocking. Design direction (section 9) is final.
 

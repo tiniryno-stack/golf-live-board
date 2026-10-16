@@ -20,6 +20,11 @@ No build step: push to `main` and Pages serves it. The browser only ever holds t
 5. **Fixing:** ◀ steps back through your current matchup; older holes are on the **Card** (tap a shaded cell). The organizer can fix any cell and change rules, strokes, team names, par and hole handicaps from **Host** (the round button next to the tab bar).
 6. **New phone / cleared browser:** open the link, tap your name → "That's me — ask my foursome". Anyone in your foursome taps **Let them in** (the organizer can too, or can **Free up** the name from Host).
 7. **Run it back:** Home → Run it back on a past round copies players, team names, carts and settings. **Season standings** live on Home.
+8. **Practice rounds:** Host → Rules → bottom: **Reset scores** clears every score (same players, carts and joined phones; replay from hole 1). **Delete round** removes it for everyone. Delete your test rounds before the real one so they don't show up in Season standings.
+
+## Testing with a laptop and a phone
+
+Any browser counts as a phone. Each browser (and each private/incognito window) gets its own device ID, so a laptop, your phone, and an incognito window can be three different players. Create the round on one, open the share link on the others, and tap a different name on each. To test "Let them in", open the link in a new incognito window and tap a name that's already taken.
 
 ## Tests
 
@@ -27,7 +32,7 @@ No build step: push to `main` and Pages serves it. The browser only ever holds t
 npm install            # test tooling only (Playwright, supabase-js, Geist fonts)
 npm test               # scoring + headlines: section 7 worked examples and scenarios
 npm run test:fit       # every screen at iPhone SE / 13 mini / 15-16 / Pro Max sizes
-npm run test:smoke     # two-phone run: blocked edit, hole-7 swap, offline queue, rejoin
+npm run test:smoke     # two-phone run: blocked edit, hole-7 swap, offline queue, rejoin, reset, delete
 ```
 
 The fit and smoke checks run headless Chromium against an in-memory stand-in for Supabase (`tests/mock-supabase.mjs`) that mirrors the database functions.

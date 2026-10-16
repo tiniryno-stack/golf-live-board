@@ -560,6 +560,36 @@ begin
       from (select * from public.audit_log where event_id = e.id order by id desc limit 500) a), '[]'::jsonb));
 end $$;
 
+-- Organizer: wipe every score but keep the round (players, carts, settings, joined phones).
+-- Scores are cleared to null (not deleted) so every phone hears it over Realtime.
+create or replace function public.reset_round(p_code text, p_admin_pin text)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare e public.events; n int;
+begin
+  e := public._event(p_code);
+  if e.id is null then return jsonb_build_object('ok', false, 'error', 'not_found'); end if;
+  if not public._admin_ok(e.id, p_admin_pin) then return jsonb_build_object('ok', false, 'error', 'bad_pin'); end if;
+  update public.scores set strokes = null, updated_by = 'Organizer', updated_at = now()
+   where event_id = e.id and strokes is not null;
+  get diagnostics n = row_count;
+  update public.join_requests set status = 'expired' where event_id = e.id and status = 'pending';
+  update public.events set updated_at = now() where id = e.id;
+  perform public._log(e.id, 'Organizer', 'Reset the round · cleared ' || n || ' score' || case when n = 1 then '' else 's' end);
+  return jsonb_build_object('ok', true, 'cleared', n);
+end $$;
+
+-- Organizer: delete the round and everything in it (scores, joined phones, PIN, activity log).
+create or replace function public.delete_round(p_code text, p_admin_pin text)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare e public.events;
+begin
+  e := public._event(p_code);
+  if e.id is null then return jsonb_build_object('ok', false, 'error', 'not_found'); end if;
+  if not public._admin_ok(e.id, p_admin_pin) then return jsonb_build_object('ok', false, 'error', 'bad_pin'); end if;
+  delete from public.events where id = e.id;  -- cascades to every table that references it
+  return jsonb_build_object('ok', true);
+end $$;
+
 -- ─────────────────────────────────────────────────────────────── function permissions
 
 revoke execute on function
@@ -584,7 +614,9 @@ grant execute on function
   public.admin_upsert_score(text, text, text, int, int),
   public.update_event(text, text, jsonb, jsonb, jsonb, text),
   public.release_player(text, text, text),
-  public.get_audit_log(text, text)
+  public.get_audit_log(text, text),
+  public.reset_round(text, text),
+  public.delete_round(text, text)
   to anon, authenticated;
 
 -- ─────────────────────────────────────────────────────────────── realtime

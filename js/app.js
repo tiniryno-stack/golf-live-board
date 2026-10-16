@@ -117,7 +117,9 @@ function recompute({ headlines = 'soon' } = {}) {
     return;
   }
   const rows = mergedRows();
+  const hadScores = !!app.snapshot?.anyPosted;
   app.snapshot = compute(app.event, rows);
+  if (!app.snapshot.anyPosted) freshStart(hadScores);
   if (headlines === 'now') {
     clearTimeout(headlineTimer);
     app.headlines = replayHeadlines(app.event, rows);
@@ -129,6 +131,22 @@ function recompute({ headlines = 'soon' } = {}) {
       processHeadlines('live');
       if (app.route.tab === 'board') render();
     }, 300);
+  }
+}
+
+/** No scores in the round (new, or just reset): forget shown headlines + matchup alerts. */
+function freshStart(wasPlaying) {
+  if (!app.code) return;
+  const seen = db.local.get(`glb.seen.${app.code}`);
+  if (seen?.ids?.length) db.local.set(`glb.seen.${app.code}`, { last: Date.now(), ids: [] });
+  try {
+    for (const k of Object.keys(localStorage)) if (k.startsWith(`glb.alert.${app.code}.`)) localStorage.removeItem(k);
+  } catch { /* storage unavailable */ }
+  if (wasPlaying) {
+    app.ui.hole = null;
+    app.ui.matchesRot = null;
+    app.ui.cardHalf = null;
+    fx.clearBanners();
   }
 }
 
@@ -377,6 +395,79 @@ app.release = async (pid) => {
   }
 };
 
+function organizerError(e, what) {
+  if (e?.code === 'PGRST202') {
+    app.toast({ title: `Can\u2019t ${what} yet`, sub: 'The database needs the reset/delete update.', error: true });
+  } else {
+    app.toast({ title: 'No signal', sub: `Couldn\u2019t ${what}. Try again.`, error: true });
+  }
+}
+
+/** Organizer: clear every score, keep players, carts, settings and joined phones. */
+app.resetRound = async () => {
+  let res;
+  try {
+    res = await db.api.resetRound(app.code, app.adminPin);
+  } catch (e) {
+    organizerError(e, 'reset the round');
+    return;
+  }
+  if (!res.ok) {
+    app.toast({ title: 'Not reset', sub: res.error === 'bad_pin' ? 'Organizer PIN didn\u2019t work.' : res.error, error: true });
+    if (res.error === 'bad_pin') setAdmin(null);
+    return;
+  }
+  db.queue.clear(app.code); // a queued old score must not come back after the reset
+  app.unsynced = 0;
+  channel?.send({ kind: 'reset' });
+  await refetchAll();
+  app.hostLog = null;
+  app.toast({ title: 'Round reset', sub: `Cleared ${res.cleared} score${res.cleared === 1 ? '' : 's'}. Same players and carts — tee it up again.` });
+};
+
+/** Organizer: delete the round for everyone. */
+app.deleteRound = async () => {
+  const code = app.code;
+  const name = app.event?.name || code;
+  let res;
+  try {
+    res = await db.api.deleteRound(code, app.adminPin);
+  } catch (e) {
+    organizerError(e, 'delete the round');
+    return;
+  }
+  if (!res.ok) {
+    app.toast({ title: 'Not deleted', sub: res.error === 'bad_pin' ? 'Organizer PIN didn\u2019t work.' : res.error, error: true });
+    if (res.error === 'bad_pin') setAdmin(null);
+    return;
+  }
+  channel?.send({ kind: 'deleted' });
+  db.forgetRound(code);
+  app.go('#/');
+  app.toast({ title: `Deleted ${name}`, sub: 'Gone for everyone. Start a new one any time.' });
+};
+
+/** The round disappeared under us (the organizer deleted it). */
+function roundGone() {
+  const code = app.code;
+  channel?.close();
+  channel = null;
+  db.stopQueue();
+  clearTimeout(headlineTimer);
+  db.forgetRound(code);
+  app.event = null;
+  app.snapshot = null;
+  app.headlines = [];
+  app.scores = new Map();
+  app.joinRequests = new Map();
+  app.notFound = true;
+  app.deleted = true;
+  fx.clearBanners();
+  fx.closeOverlay();
+  app.sheet = null;
+  render();
+}
+
 app.verifyAdmin = async (pin) => {
   try {
     const res = await db.api.verifyAdmin(app.code, pin);
@@ -415,6 +506,7 @@ async function loadRound(code) {
   app.loading = true;
   app.loadError = null;
   app.notFound = false;
+  app.deleted = false;
   app.ui.hole = null;
   app.ui.matchesRot = null;
   app.ui.cardHalf = null;
@@ -438,6 +530,7 @@ async function loadRound(code) {
   hideSplash();
   if (!res) {
     app.notFound = true;
+    db.forgetRound(code);
     render();
     return;
   }
@@ -503,7 +596,11 @@ async function refetchAll() {
         db.fetchEvent(app.code), db.fetchScores(id), db.fetchJoinRequests(id),
       ]);
       if (!app.event || app.event.id !== id) return;
-      if (event) app.event = event;
+      if (!event) {
+        roundGone();
+        return;
+      }
+      app.event = event;
       app.scores = new Map(scores.map((r) => [`${r.player_id}:${r.hole}`, r]));
       app.joinRequests = new Map(joins.map((r) => [r.id, r]));
       recompute({ headlines: 'now' });
@@ -533,10 +630,12 @@ function onRemoteScore(row) {
 
 function onRemoteEvent(row) {
   const recentlySaved = app.savingEvent && Date.now() - app.savingEvent < 4000;
+  const settingsChanged = ['course', 'roster', 'settings', 'name'].some((k) => JSON.stringify(row[k]) !== JSON.stringify(app.event[k]));
   app.event = { ...app.event, ...row };
   recompute({ headlines: 'now' });
   render();
-  if (!recentlySaved && !app.adminPin) app.toast({ title: 'The organizer updated the round', sub: 'Scores and standings are recomputed.' });
+  refetchAll();
+  if (settingsChanged && !recentlySaved && !app.adminPin) app.toast({ title: 'The organizer updated the round', sub: 'Scores and standings are recomputed.' });
 }
 
 function onRemoteJoinRequest(row) {
@@ -559,6 +658,17 @@ function onRemoteJoinRequest(row) {
 
 function onRemoteNote(note) {
   if (!note || !app.snapshot) return;
+  if (note.kind === 'deleted') {
+    refetchAll(); // confirms the round is gone, then shows it
+    return;
+  }
+  if (note.kind === 'reset') {
+    db.queue.clear(app.code);
+    app.unsynced = 0;
+    refetchAll();
+    app.toast({ title: 'The organizer reset the round', sub: 'All scores cleared. Same players and carts.' });
+    return;
+  }
   refreshClaimed();
   if (note.kind === 'release' && note.playerId === app.me) {
     verifyMe();
@@ -768,6 +878,11 @@ function renderRoundState() {
     return `<div class="plain"><h1 class="title">No signal</h1>
       <p class="soft">Couldn’t reach the scoreboard. Scores you enter are saved on this phone and sync when you’re back.</p>
       <button class="btn primary block big" data-act="retry-load">Try again</button></div>`;
+  }
+  if (app.deleted) {
+    return `<div class="plain"><h1 class="title">Round deleted</h1>
+      <p class="soft">The organizer deleted ${esc(app.code)}. Start or join another round from Home.</p>
+      <button class="btn primary block big" data-act="go" data-v="#/">Home</button></div>`;
   }
   if (app.notFound) {
     return `<div class="plain"><h1 class="title">No round ${esc(app.code)}</h1>

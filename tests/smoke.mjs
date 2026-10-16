@@ -5,6 +5,7 @@
 //   4. Offline: a score entered with no signal queues, then syncs
 //   5. Clear-the-browser rejoin: a fresh phone asks to be Andrew, Sam lets them in,
 //      the old phone drops to watch-only
+//   6. Organizer resets the round (scores cleared, phones stay joined), then deletes it
 // Realtime isn't mocked, so "the other phone sees it" is driven by a refetch —
 // the same path the app uses when a phone comes back from the lock screen.
 // Run: npm run test:smoke
@@ -168,6 +169,42 @@ ok((await app(A.page, () => window.__glb.me)) === null, 'old phone dropped to wa
 ok((await A.page.textContent('#topbar')).includes('Watching'), 'old phone’s chip says Watching');
 const owner = be.tables.claims.filter((c) => c.player_id === 'p1');
 ok(owner.length === 1 && owner[0].device_id !== (await app(A.page, () => JSON.parse(localStorage.getItem('glb.device')))), 'server: Andrew belongs to the new phone only');
+
+// 6. Organizer resets the round, then deletes it (practice-round cleanup)
+await app(A2.page, (pin) => window.__glb.setAdmin(pin), r.admin_pin);
+await A2.page.goto(`${link}/host`);
+await A2.page.waitForTimeout(500);
+const before = be.tables.scores.filter((x) => x.strokes != null).length;
+await A2.page.tap('[data-act="host-reset"]');
+await A2.page.waitForSelector('[data-act="confirm-ok"]');
+await A2.page.tap('[data-act="confirm-ok"]');
+await A2.page.waitForTimeout(600);
+ok(before > 40 && be.tables.scores.every((x) => x.strokes == null), `reset cleared all ${before} scores on the server`);
+ok((await toastText(A2.page)).includes('Round reset'), 'organizer sees \u201cRound reset\u201d');
+ok(be.tables.claims.length === 2, 'everyone stays joined after a reset');
+await refetch(C.page);
+await C.page.goto(`${link}/enter`);
+await C.page.waitForTimeout(500);
+ok((await C.page.textContent('.hole-title')) === 'Hole 1', 'Sam\u2019s phone is back on hole 1');
+ok(!(await app(C.page, () => window.__glb.snapshot.anyPosted)), 'Sam\u2019s phone shows no scores');
+await C.page.tap('.face[data-pid="p5"]');
+await C.page.waitForTimeout(900);
+ok(be.tables.scores.some((x) => x.player_id === 'p5' && x.hole === 1 && x.strokes === 6), 'play resumes after the reset');
+await A2.page.goto(`${link}/host`);
+await A2.page.waitForTimeout(400);
+await A2.page.tap('[data-act="host-delete"]');
+await A2.page.waitForSelector('[data-act="confirm-ok"]');
+await A2.page.tap('[data-act="confirm-ok"]');
+await A2.page.waitForTimeout(600);
+ok(be.tables.events.length === 0 && be.tables.scores.length === 0 && be.tables.claims.length === 0, 'delete removed the round, its scores and claims');
+ok((await A2.page.evaluate(() => location.hash)) === '#/', 'organizer lands on Home');
+const recentA2 = await app(A2.page, () => JSON.parse(localStorage.getItem('glb.recent') || '[]').map((x) => x.code));
+ok(!recentA2.includes(r.code), 'deleted round is gone from the organizer\u2019s recent rounds');
+await refetch(C.page);
+await C.page.waitForTimeout(400);
+ok((await C.page.textContent('#content')).includes('Round deleted'), 'Sam\u2019s phone shows \u201cRound deleted\u201d');
+const recentC = await app(C.page, () => JSON.parse(localStorage.getItem('glb.recent') || '[]').map((x) => x.code));
+ok(!recentC.includes(r.code), 'and drops it from Sam\u2019s recent rounds');
 
 const errors = [A, C, A2].flatMap((p) => p.page.errors);
 ok(errors.length === 0, `no page errors${errors.length ? `: ${errors.join('; ')}` : ''}`);

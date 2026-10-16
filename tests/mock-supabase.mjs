@@ -192,6 +192,34 @@ export function createBackend() {
       if (before !== t.claims.length) log(e, 'Organizer', `Freed up ${pname(e, p_player_id)}'s spot`);
       return { ok: true, released: before !== t.claims.length };
     },
+    reset_round({ p_code, p_admin_pin }) {
+      const e = ev(p_code);
+      if (!e) return no('not_found');
+      if (!adminOk(e, p_admin_pin)) return no('bad_pin');
+      let n = 0;
+      for (const sc of t.scores) {
+        if (sc.event_id === e.id && sc.strokes != null) {
+          Object.assign(sc, { strokes: null, updated_by: 'Organizer', updated_at: now() });
+          n++;
+        }
+      }
+      for (const j of t.joins) if (j.event_id === e.id && j.status === 'pending') j.status = 'expired';
+      e.updated_at = now();
+      log(e, 'Organizer', `Reset the round · cleared ${n} scores`);
+      return { ok: true, cleared: n };
+    },
+    delete_round({ p_code, p_admin_pin }) {
+      const e = ev(p_code);
+      if (!e) return no('not_found');
+      if (!adminOk(e, p_admin_pin)) return no('bad_pin');
+      t.events = t.events.filter((x) => x !== e);
+      t.scores = t.scores.filter((x) => x.event_id !== e.id);
+      t.claims = t.claims.filter((x) => x.event_id !== e.id);
+      t.joins = t.joins.filter((x) => x.event_id !== e.id);
+      t.audit = t.audit.filter((x) => x.event_id !== e.id);
+      t.secrets.delete(e.id);
+      return { ok: true };
+    },
     get_audit_log({ p_code, p_admin_pin }) {
       const e = ev(p_code);
       if (!e) return no('not_found');

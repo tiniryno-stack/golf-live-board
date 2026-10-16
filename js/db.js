@@ -64,6 +64,9 @@ export const admin = {
 /** Recent rounds opened on this phone (Home + "Run it back"). */
 export const recent = {
   all: () => local.get('glb.recent', []),
+  remove(code) {
+    local.set('glb.recent', recent.all().filter((r) => r.code !== code));
+  },
   remember(ev) {
     if (!ev?.code) return;
     const list = recent.all().filter((r) => r.code !== ev.code);
@@ -74,6 +77,16 @@ export const recent = {
     local.set('glb.recent', list.slice(0, 12));
   },
 };
+
+/** Forget everything this phone kept about a round (after it's deleted). */
+export function forgetRound(code) {
+  if (!code) return;
+  recent.remove(code);
+  try {
+    const re = new RegExp(`^glb\\.[A-Za-z]+\\.${code}(\\.|$)`);
+    for (const k of Object.keys(localStorage)) if (re.test(k)) localStorage.removeItem(k);
+  } catch { /* storage unavailable */ }
+}
 
 // ───────────────────────────────────────────── client
 
@@ -91,9 +104,10 @@ export function sb() {
 
 /** Thrown when the request never got an answer (no signal, server down). */
 export class NetworkError extends Error {
-  constructor(message) {
+  constructor(message, code) {
     super(message || 'No connection');
     this.network = true;
+    this.code = code || null; // e.g. PGRST202 = function not in the database yet
   }
 }
 
@@ -104,7 +118,7 @@ async function rpc(name, args) {
   } catch (e) {
     throw new NetworkError(e?.message);
   }
-  if (res.error) throw new NetworkError(res.error.message);
+  if (res.error) throw new NetworkError(res.error.message, res.error.code);
   return res.data || { ok: false, error: 'empty_response' };
 }
 
@@ -178,6 +192,8 @@ export const api = {
     rpc('update_event', { p_code: code, p_admin_pin: pin, p_course: course, p_roster: roster, p_settings: settings, p_name: name ?? null }),
   releasePlayer: (code, pin, playerId) => rpc('release_player', { p_code: code, p_admin_pin: pin, p_player_id: playerId }),
   auditLog: (code, pin) => rpc('get_audit_log', { p_code: code, p_admin_pin: pin }),
+  resetRound: (code, pin) => rpc('reset_round', { p_code: code, p_admin_pin: pin }),
+  deleteRound: (code, pin) => rpc('delete_round', { p_code: code, p_admin_pin: pin }),
   upsertScore: (code, playerId, hole, strokes) =>
     rpc('upsert_score', { p_code: code, p_device_id: deviceId, p_player_id: playerId, p_hole: hole, p_strokes: strokes }),
   adminUpsertScore: (code, pin, playerId, hole, strokes) =>
@@ -201,6 +217,7 @@ export const queue = {
     list.push({ ...item, ts: Date.now() });
     local.set(qKey(code), list);
   },
+  clear: (code) => local.del(qKey(code)),
   /** Remove only if nobody queued a newer value for the same cell meanwhile. */
   settle(code, item) {
     const list = queue.items(code).filter(

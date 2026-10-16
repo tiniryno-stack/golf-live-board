@@ -62,7 +62,14 @@ function rules(app, d) {
         <input class="input" inputmode="numeric" maxlength="1" value="${p}" aria-label="Par hole ${i + 1}" data-input="host-par" data-i="${i}">
         <input class="input" inputmode="numeric" maxlength="2" value="${si[i]}" aria-label="Handicap hole ${i + 1}" data-input="host-si" data-i="${i}">`).join('')}
       </div>
-    </details>`;
+    </details>
+    <div class="divider"></div>
+    <div class="micro" style="margin:0 0 6px">Practice rounds &amp; cleanup</div>
+    <p class="help" style="margin:0 0 12px"><b>Reset</b> clears every score but keeps players, carts, settings and everyone\u2019s phones joined, so you can replay from hole 1. <b>Delete</b> removes the round for everyone.</p>
+    <div class="stack" style="gap:8px;margin:0 0 8px">
+      <button class="btn ghost block" data-act="host-reset">Reset scores</button>
+      <button class="btn danger block" data-act="host-delete">Delete round</button>
+    </div>`;
 }
 
 function players(app, d) {
@@ -232,6 +239,20 @@ export default {
     'host-copy': async (el, ev, app) => {
       const ok = await copyText(roundLink(app.code, '/host'));
       app.toast({ title: ok ? 'Organizer link copied' : roundLink(app.code, '/host'), sub: 'Keep it private. It still needs the PIN.' });
+    },
+    'host-reset': (el, ev, app) => {
+      app.openSheet('confirm', {
+        title: 'Reset all scores?',
+        body: `Clears every score in ${app.event.name} for everyone. Players, carts, settings and joined phones stay. The activity log keeps a line.`,
+        ok: 'Reset scores', danger: true, onOk: () => app.resetRound(),
+      });
+    },
+    'host-delete': (el, ev, app) => {
+      app.openSheet('confirm', {
+        title: 'Delete this round?',
+        body: `Deletes ${app.event.name} (${app.code}) with its scores and activity log, for everyone. This can\u2019t be undone.`,
+        ok: 'Delete round', danger: true, onOk: () => app.deleteRound(),
+      });
     },
     'host-discard': (el, ev, app) => {
       app.hostDraft = null;
