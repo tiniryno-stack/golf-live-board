@@ -22,7 +22,7 @@ The spec is `ARCHITECTURE.md`. Build in the order below, commit and push after e
 - [x] 4. Design tokens + app shell (Sundown tokens, dark by default, Flighty-inspired layout — section 9; fit-the-screen rule, section 8)
 - [x] 5. Home + Setup (organizer flow, Twin Creeks in `js/courses.js`, nothing preselected)
 - [x] 6. Enter (cart cards, first tap = bogey, ◀ back + Undo, Switch it up, Lock in / Close it out cards, While you were away)
-- [ ] 7. Matches (hero card, 12-point tug-of-war bar), Board (official + provisional, headlines strip), Card (Front | Back, grouped by cart), Host (Rules | Players | Activity), Season (from Home), toasts
+- [x] 7. Matches (hero card, 12-point tug-of-war bar), Board (official + provisional, headlines strip), Card (Front | Back, grouped by cart), Host (Rules | Players | Activity), Season (from Home), toasts
 - [ ] 8. Fit-the-screen check at iPhone SE / 13 mini / 15-16 / Pro Max sizes
 - [ ] 9. Smoke test: two phones, blocked edit outside your matchup, hole-7 swap, clear-the-browser rejoin; then Andrew turns on GitHub Pages
 

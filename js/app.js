@@ -204,6 +204,13 @@ async function verifyMe() {
     const res = await db.api.whoami(app.code);
     if (!res.ok) return;
     const server = res.player_id || null;
+    if (app.waiting && server && server === app.waiting.playerId) {
+      app.waiting = null; // approved while realtime was asleep
+      setMe(server);
+      app.closeSheet();
+      app.toast({ title: `You\u2019re in as ${app.myName()}` });
+      return;
+    }
     if (server !== app.me) {
       const had = app.me;
       setMe(server);
@@ -952,5 +959,7 @@ $('content').addEventListener('touchend', (ev) => {
 // ───────────────────────────────────────────── boot
 
 window.__glb = app; // handy for debugging from the console
+// Realtime handlers, reachable from the console / headless checks to simulate a push.
+app._remote = { score: onRemoteScore, event: onRemoteEvent, joinRequest: onRemoteJoinRequest, note: onRemoteNote };
 route();
 setTimeout(hideSplash, 4000); // never strand anyone on the launch screen
