@@ -1,0 +1,33 @@
+# Golf Live Board
+
+A mobile web app where each foursome enters hole-by-hole scores and everyone sees one live leaderboard across tee times, plus the rotating 2v2 cart game (Match Play or Plus/Minus). Spec: [ARCHITECTURE.md](ARCHITECTURE.md). Build log: [BUILD.md](BUILD.md).
+
+Live at **https://tiniryno-stack.github.io/golf-live-board/** once GitHub Pages is on.
+
+## One-time setup
+
+1. **Database** — `supabase/schema.sql` is applied to the `golf-live-board` Supabase project. If you ever need to re-run it: Supabase → SQL Editor → new snippet → paste the file → Run.
+2. **GitHub Pages** — repo **Settings → Pages → Deploy from a branch → `main`, `/ (root)` → Save**. Takes a minute or two; then open the live URL on your phone.
+
+No build step: push to `main` and Pages serves it. The browser only ever holds the publishable key (`js/config.js`).
+
+## Running a round
+
+1. **Organizer:** open the site → **New round** → Course (pick Twin Creeks; nothing is preselected) → Players (type names; optional strokes) → Teams (tap players into carts A–D, name them) → Matchups (carts swap every 6 by default; Shuffle if you like) → Game → **Save**.
+2. Save shows the **join code + share link** (drop it in the group chat) and the **organizer link + admin PIN** (screenshot it, keep it private). This phone is the organizer automatically.
+3. **Everyone:** open the link → **tap your name**. No PINs.
+4. **Enter:** your cart is on top, the cart you're playing below. First tap = bogey, then − / + (one tap down = par). Long-press clears. When all four are in, tap **Next hole →**. At 7 and 13 a **Switch it up** card shows the next matchup.
+5. **Fixing:** ◀ steps back through your current matchup; older holes are on the **Card** (tap a shaded cell). The organizer can fix any cell and change rules, strokes, team names, par and hole handicaps from **Host** (the round button next to the tab bar).
+6. **New phone / cleared browser:** open the link, tap your name → "That's me — ask my foursome". Anyone in your foursome taps **Let them in** (the organizer can too, or can **Free up** the name from Host).
+7. **Run it back:** Home → Run it back on a past round copies players, team names, carts and settings. **Season standings** live on Home.
+
+## Tests
+
+```bash
+npm install            # test tooling only (Playwright, supabase-js, Geist fonts)
+npm test               # scoring + headlines: section 7 worked examples and scenarios
+npm run test:fit       # every screen at iPhone SE / 13 mini / 15-16 / Pro Max sizes
+npm run test:smoke     # two-phone run: blocked edit, hole-7 swap, offline queue, rejoin
+```
+
+The fit and smoke checks run headless Chromium against an in-memory stand-in for Supabase (`tests/mock-supabase.mjs`) that mirrors the database functions.

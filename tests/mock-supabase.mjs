@@ -35,9 +35,12 @@ export function createBackend() {
     if (pin != null && adminOk(e, pin)) return 'Organizer';
     const c = claimOf(e, dev);
     if (!c) return null;
-    const last = lastHole(e, pid);
-    if (sameFoursome(e.roster, e.settings, c.player_id, pid, Math.max(last, 1)) ||
-        sameFoursome(e.roster, e.settings, c.player_id, pid, Math.min(last + 1, 18))) return pname(e, c.player_id);
+    const posted = new Set(t.scores.filter((s) => s.event_id === e.id && s.player_id === pid && s.strokes != null).map((s) => s.hole));
+    let gap = 18;
+    for (let h = 1; h <= 18; h++) if (!posted.has(h)) { gap = h; break; }
+    for (const h of [gap, Math.max(gap - 1, 1)]) {
+      if (sameFoursome(e.roster, e.settings, c.player_id, pid, h)) return pname(e, c.player_id);
+    }
     return null;
   }
 

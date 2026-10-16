@@ -334,16 +334,20 @@ begin
 end $$;
 
 -- Shared check for approve/deny: organizer PIN, or a phone in that player's current foursome.
+-- "Current" = the first hole they haven't posted (what Enter shows them), or the hole before it
+-- (so both foursomes can answer while carts swap at 7 and 13). The organizer is the backup.
 create or replace function public._join_approver(e public.events, p_player_id text, p_device_id uuid, p_admin_pin text)
 returns text language plpgsql security definer set search_path = public as $$
-declare v_pid text; v_last int;
+declare v_pid text; v_gap int;
 begin
   if p_admin_pin is not null and public._admin_ok(e.id, p_admin_pin) then return 'Organizer'; end if;
   select player_id into v_pid from public.claims where event_id = e.id and device_id = p_device_id;
   if v_pid is null then return null; end if;
-  v_last := public._last_hole(e.id, p_player_id);
-  if public._same_foursome(e.roster, e.settings, v_pid, p_player_id, greatest(v_last, 1))
-     or public._same_foursome(e.roster, e.settings, v_pid, p_player_id, least(v_last + 1, 18)) then
+  select coalesce(min(g), 18) into v_gap from generate_series(1, 18) g
+   where not exists (select 1 from public.scores s
+                      where s.event_id = e.id and s.player_id = p_player_id and s.hole = g and s.strokes is not null);
+  if public._same_foursome(e.roster, e.settings, v_pid, p_player_id, v_gap)
+     or public._same_foursome(e.roster, e.settings, v_pid, p_player_id, greatest(v_gap - 1, 1)) then
     return public._player_name(e.roster, v_pid);
   end if;
   return null;

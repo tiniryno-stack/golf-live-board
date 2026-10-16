@@ -333,12 +333,9 @@ app.relevantRequests = () => {
     if (!app.me) return false;
     const p = app.snapshot.playerById.get(r.player_id);
     if (!p) return false;
-    const last = Math.max(1, p.lastHole);
-    const next = Math.min(HOLES, p.lastHole + 1);
-    return (
-      sameFoursome(app.event.roster, app.event.settings, app.me, r.player_id, last) ||
-      sameFoursome(app.event.roster, app.event.settings, app.me, r.player_id, next)
-    );
+    const gap = p.gross.findIndex((g) => g == null) + 1 || HOLES; // mirrors _join_approver
+    const holes = [gap, Math.max(1, gap - 1)];
+    return holes.some((h) => sameFoursome(app.event.roster, app.event.settings, app.me, r.player_id, h));
   });
 };
 
