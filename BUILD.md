@@ -19,7 +19,7 @@ The spec is `ARCHITECTURE.md`. Build in the order below, commit and push after e
 - [ ] 1. `supabase/schema.sql` — tables, RLS, write functions (incl. claims, join requests, audit log), realtime publication; applied to the project
 - [ ] 2. `js/scoring.js` + `js/headlines.js` + `tests/` — section 7 worked examples, official-line lead change, comeback, streak, clinch, Lock in / Close it out all passing (`node --test`)
 - [ ] 3. `js/db.js` — load, device ID + name claim, leave, let-them-in, RPC writes, realtime, offline queue, audit log read
-- [ ] 4. Design tokens + app shell (Sundown baseline, section 9; fit-the-screen rule, section 8)
+- [ ] 4. Design tokens + app shell (Flighty-inspired direction, section 9; fit-the-screen rule, section 8)
 - [ ] 5. Home + Setup (organizer flow, Twin Creeks in `js/courses.js`, nothing preselected)
 - [ ] 6. Enter (cart cards, first tap = bogey, ◀ back + Undo, Switch it up, Lock in / Close it out cards, While you were away)
 - [ ] 7. Matches (hero card, 12-point tug-of-war bar), Board (official + provisional, headlines strip), Card (Front | Back, grouped by cart), Host (Rules | Players | Activity), Season (from Home), toasts

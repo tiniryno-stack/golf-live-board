@@ -185,7 +185,7 @@ alter publication supabase_realtime add table scores, events, join_requests;
 | 10:33 | Organizer | Strokes · Mike 15 → 18 |
 | 11:02 | Tyler | Let in Jake's new phone |
 
-Viewable at the bottom of the Host tab ("Activity"), or in Supabase → Table Editor → `audit_log`.
+Viewable in Host → Activity, or in Supabase → Table Editor → `audit_log`.
 
 - One row per player per hole; writes are **upserts**, so double-taps and retries are harmless.
 - Clearing a score sets `strokes = null` instead of deleting the row (Realtime can't filter deletes by `event_id`).
@@ -454,7 +454,7 @@ Examples (2 points per hole): down 4 with 2 holes left → win out to halve; dow
 
 ## 8. Screens (mobile-first, one-handed)
 
-**Players see six screens: two outside a round, four tabs inside one. The organizer also gets a Host tab.** No settings page for players. Hash routes, no page reloads.
+**Players see six screens: two outside a round, four tabs inside one. The organizer also gets a Host screen (round button beside the tab bar).** No settings page for players. Hash routes, no page reloads.
 
 ```
  #/  HOME ──── new round / run it back ────►  #/setup        SETUP (new)
@@ -462,10 +462,10 @@ Examples (2 points per hole): down 4 with 2 holes left → win out to halve; dow
   │                                                │ save → join code, share link, organizer link + PIN
   ▼ open a round  ◄─────────────────────────────────┘
  ┌─────────────── inside a round: bottom tab bar ─────────────────────────┐
- │  ENTER            MATCHES            BOARD            CARD      │ HOST    │
+ │  ENTER            MATCHES            BOARD            CARD      │ (HOST)  │
  │  #/e/TC7K2/enter  #/e/TC7K2/matches  #/e/TC7K2/board  …/card    │ …/host  │
  └─────────────────────────────────────────────────────────────────┴─────────┘
-                                                        organizer's phone only
+                                       (HOST) = separate round button, organizer's phone only
  Top bar (every tab): round name · your-name chip (tap → Leave round) · light/dark icon
  Sheets (slide-up overlays): who are you? · player detail
  Toasts: other players' scores and highlights · "let them in" requests
@@ -573,44 +573,72 @@ Supabase ──realtime──► store { event, scores, deviceId, myPlayer, isOr
             render(activeRoute, snapshot)   →  only the visible screen redraws
 ```
 
-## 9. Design direction
+## 9. Design direction — Flighty-inspired
 
-**Status: waiting on Andrew's Flighty screenshot before any visual design or styling starts.**
+Reference: Flighty screenshots (My Flights, Add Flight, launch screen) via Mobbin. Borrow the **layout language** — not Flighty's branding, icons or imagery.
 
-- **Not** the G-League-Live-Board look (too whimsical).
-- **Baseline: Sundown's theme** — sterile, finance-grade, monochrome shell with one restrained accent, light/dark toggle. Closest to the Flighty feel.
+### What we're taking from Flighty
+
+| Flighty pattern | How it shows up here |
+|---|---|
+| **Dark hero on top, white sheet sliding over it** with big rounded top corners | Every in-round screen: a compact near-black hero with the at-a-glance info (hole + matchup on Enter, leader on Board, the tug-of-war on Matches); the white sheet below holds tiles and lists |
+| **Huge, heavy screen titles** ("My Flights") | `Leaderboard`, `Matches`, `Scorecard`, `New round`, `Who are you?` at 34px, weight 800, tight tracking |
+| **Big numeral column on the left of each row** ("1 DAY", "8 HOURS") | Board: points (`13½` over `PTS`) or to-par (`+5` over `NET`); Matches hole strip: hole numbers; Season: record |
+| **Row anatomy:** small gray meta line (logo · flight no. · date), bold title with a lighter connector word ("San Francisco **to** Los Angeles"), detail line with small circular status icons | Board: `Andrew + Sean · thru 12` meta, **Hogan's Heroes** title; Matches: **Hogan's Heroes** vs **Fore Play** with "vs" in the lighter weight |
+| **Green = good status** ("Departs On Time", green arrow circles) | Green for under par, your points, "Clinched", synced. Red only for doubles and worse and sync errors |
+| **Floating glass tab bar** (pill, blurred background, active item blue with a soft blue pill) **plus a separate round button** (search) | Tab bar: Enter · Matches · Board · Card. The separate round button = **Host**, organizer's phone only — players just don't see it. (Resolves the "Host as a 5th tab" question.) |
+| **Circular icon buttons** (share, close, avatar) | Close on sheets, share on Board, your-name avatar chip, light/dark |
+| **Filled gray chips** (SFO · LAX · date) and **outline pills** (Codeshares, All Airlines ⌄) | Setup: filled chips for Course / Tees / players; outline pills for toggles like "No max on par 3s" |
+| **Saturated promo banner** (purple PRO card) | Headlines and the Lock in / Close it out cards — the one place a strong accent color appears |
+| **Black launch screen with a dim plane** | Loading state: black screen with a dim flag-in-cup silhouette while the round loads |
+
+### Tokens
 
 ```css
-/* From tiniryno-stack/sundown frontend/src/theme.css */
-/* Fonts: Geist (UI + display), Geist Mono (all numbers) */
-[data-theme="light"] {
-  --bg:#F6F6F4; --surface:#FFFFFF; --surface-2:#EFEFEC;
-  --ink:#14161A; --ink-soft:#5A5F66; --ink-faint:#9A9FA6;
-  --line:rgba(20,22,26,.09); --line-strong:rgba(20,22,26,.15);
-  --accent:#14161A; --accent-ink:#FFFFFF;
-  --good:#1E9E62; --warn:#A9802F; --bad:#CB4439;
+/* Font: the iPhone's own system font (SF Pro) via -apple-system — native look, zero load time.
+   All numbers use font-variant-numeric: tabular-nums so columns line up. */
+:root, [data-theme="light"] {
+  --hero:#0B0C0E;  --hero-ink:#FFFFFF;  --hero-soft:rgba(255,255,255,.62);
+  --sheet:#FFFFFF; --fill:#F2F2F5;      /* chips, tiles */
+  --ink:#0A0A0B;   --ink-soft:#6E727A;  --ink-faint:#A3A7AE;
+  --line:rgba(10,10,11,.08);
+  --accent:#1F7AF0; --accent-soft:#E4EFFE;   /* active tab, links, primary buttons */
+  --good:#16A34A;   --good-soft:#E3F6EA;     /* under par, your points, clinched */
+  --bad:#D93B30;                              /* double bogey+, errors */
+  --news:#7B2FBE;   --news-ink:#FFFFFF;      /* headlines + Lock in / Close it out */
+  --radius-sheet:32px; --radius-card:20px; --radius-chip:14px;
 }
-[data-theme="dark"] {
-  --bg:#0B0C0E; --surface:#16181C; --surface-2:#20232A;
-  --ink:#ECEEF1; --ink-soft:rgba(236,238,241,.60); --ink-faint:rgba(236,238,241,.36);
-  --line:rgba(255,255,255,.09); --line-strong:rgba(255,255,255,.17);
-  --accent:#ECEEF1; --accent-ink:#14161A;
-  --good:#34C281; --warn:#D6A23E; --bad:#F0564B;
+[data-theme="dark"] {                         /* Sundown's dark values for the sheet */
+  --sheet:#16181C; --fill:#20232A;
+  --ink:#ECEEF1;   --ink-soft:rgba(236,238,241,.60); --ink-faint:rgba(236,238,241,.36);
+  --line:rgba(255,255,255,.09);
+  --accent:#4C9BFF; --accent-soft:rgba(76,155,255,.16);
+  --good:#34C281;   --good-soft:rgba(52,194,129,.16);
+  --bad:#F0564B;
 }
 ```
 
+**Type scale:** title 34/800 · section 20/700 · row title 17/600 (connector words 17/400) · meta 13/500 `--ink-soft` · big numerals 34/700 tabular · micro labels 11/600, uppercase, +0.06em tracking (`PTS`, `THRU`, `NET`).
+
+### Screen-by-screen
+
+- **Enter:** compact hero (≈120px) with `Hole 8` big, `Par 4 · Hcp 7 · Max 8`, and the matchup line; the sheet holds the two cart cards and Next hole. Hero stays compact so the fit-the-screen rule holds on an SE.
+- **Matches:** the hero *is* your matchup: names, big counters, and the 12-point tug-of-war bar in white on black; the sheet below holds the hole strip and the collapsed other matchup.
+- **Board:** hero shows the current leader and the official line (`Official thru 9`); the sheet holds Flighty-style rows.
+- **Card, Setup, Season, Host:** plain sheet with a big title, no hero.
+
 **UI patterns** (reference: Mobbin):
-- **Bottom tab bar** in this order: Enter · Matches · Board · Card (Matches right next to Enter, the natural next tap after posting a hole), plus Host on the organizer's phone only.
+- **Floating tab bar** in this order: Enter · Matches · Board · Card; **Host** as a separate round button on the organizer's phone only.
 - **Toasts** slide down from the top, one at a time, 3 seconds, tappable. "Let them in" requests use a sticky banner with two buttons instead, until someone answers.
-- **Segmented controls** wherever there are 2–4 mutually exclusive options: Board (Teams | Players, Gross | Net), Matches (Rot 1 | Rot 2 | Rot 3), Setup game options (Match Play | Plus/Minus | None, Gross | Net, team score method, max hole score).
+- **Segmented controls** wherever there are 2–4 mutually exclusive options: Board (Teams | Players, Gross | Net), Matches (Rot 1 | Rot 2 | Rot 3), Card (Front | Back), Host (Rules | Players | Activity), Setup game options.
 - **Coach marks — two, shown once per phone, tap anywhere to dismiss:**
   1. On the first score tile the first time Enter opens: "Tap once for bogey. Tap − for par, again for birdie."
   2. On Board, the first time a provisional chip appears: "These points aren't official until the other foursome plays these holes."
 
-Golf-specific rules (independent of the final look):
-- **Light mode by default** outdoors (sun glare); sun/moon toggle in the top bar.
+Golf-specific rules:
+- **Light sheet by default** outdoors (sun glare), dark hero always; sun/moon toggle in the top bar switches the sheet to dark.
 - Tap targets ≥ 48px; score tiles ≥ 64px. Primary controls in the bottom half of the screen.
-- Scores in large mono. Under par uses `--good`, over par uses `--bad`; golf convention of circle for birdie, square for bogey.
+- Scores in big tabular numerals. Under par in `--good` with a circle, bogey in `--ink` with a square, double+ in `--bad` with a double square.
 - No hover-only UI; nothing needs two hands.
 
 ## 10. Build plan (one-shot order)
@@ -618,7 +646,7 @@ Golf-specific rules (independent of the final look):
 1. `supabase/schema.sql` (tables, RLS, write functions) → Andrew runs it in the Supabase SQL editor
 2. `scoring.js` + `headlines.js` + tests — pass section 7 examples and scripted scenarios (comeback, streak, and a lead change that only fires when the trailing group posts) before any UI
 3. `db.js` — load, device ID + name claim, RPC writes, realtime, offline queue
-4. **Design pass** once the Flighty screenshot lands (tokens + Enter screen first)
+4. **Design tokens + app shell** (section 9: Flighty-inspired hero + sheet, floating tab bar)
 5. Setup screen → creates the round, shows PINs
 6. Enter screen
 7. Board, Season standings (from Home), Matches, Card, Host, toasts, headlines + "While you were away", "let them in"
@@ -631,7 +659,7 @@ Golf-specific rules (independent of the final look):
 - [x] Supabase project `golf-live-board` created (ref `yxreupqzwgjzhfosnjbj`, region us-east-2). URL and publishable key are in `BUILD.md`.
 - [ ] Apply `supabase/schema.sql` — the builder does this through the Supabase connector (`apply_migration`); no SQL editor step for Andrew
 - [ ] Andrew turns on GitHub Pages after the first code push: repo **Settings → Pages → Deploy from a branch → main, / (root) → Save**. Live at `https://tiniryno-stack.github.io/golf-live-board/`
-- [ ] Optional: Flighty screenshot for the design pass (otherwise the Sundown baseline in section 9 ships)
+- [x] Flighty screenshots received → section 9
 - [ ] At the course: open Setup, pick Twin Creeks, type names, name teams, drop the link in the group chat, everyone taps their name
 
 ## 12. Decisions log
@@ -649,10 +677,11 @@ Golf-specific rules (independent of the final look):
 - Permissions → no player PINs. Join = tap your name; you can edit only your current matchup (your cart + the cart you're playing on that hole); organizer's admin PIN edits everything and settings
 - Rejoin → same link, tap your name; if the old phone still holds it, anyone in that foursome taps "Let them in" (organizer as backup)
 - Live updates → pushed over a websocket, no refreshing; in-app toasts for other players' scores and highlights
-- No settings page for players → light/dark lives in the top bar; organizer gets a Host tab via the organizer link
+- No settings page for players → light/dark lives in the top bar; organizer gets a Host button via the organizer link
 - Wrong name → no switching; **Leave round**, then pick the right name like a new join (claimed names still need "Let them in")
 - Handicaps → optional **Strokes** per player, blank = even; literal strokes on the hardest holes; games always use net (identical to gross when nobody has strokes)
-- UI patterns → bottom tab bar, segmented controls, two coach marks
+- UI patterns → floating tab bar, segmented controls, two coach marks
+- Design → Flighty-inspired: dark hero + white sheet, huge titles, big numeral columns, green for good, floating glass tab bar, Host as a separate round button for the organizer
 - Audit log → v1; one line per write, written by the database functions, shown at the bottom of Host
 - Season → V1-lite Season standings (player + pair W-L-H), reachable from Home and the final leaderboard only; never inside a live round. Round history list and deeper stats in V2
 - Standings fairness → Board ranks by official points (holes every team has completed); headlines only fire on confirmed scores
@@ -664,8 +693,7 @@ Golf-specific rules (independent of the final look):
 - Card → grouped by cart; your cart and current opponent first and expanded, other carts collapsed; tap a cell from one of your matchups to edit it
 - Layout → high-yield info never under a scroll (Enter fits entirely, top/tab bars pinned); long pages like leaderboards may scroll; no sideways scroll; portrait only
 
-Still open:
-1. **Flighty screenshot** → finalizes section 9.
+Still open: nothing blocking. Design direction (section 9) is final.
 
 ## 13. V2 backlog (running list)
 
