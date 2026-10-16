@@ -79,7 +79,9 @@ async function check(page, size, screen, extra) {
       if (!next || !onScreen(next) || !within(next, content)) problems.push('Next hole off screen');
       document.querySelectorAll('.tile').forEach((t, i) => {
         if (!within(t, content)) problems.push(`tile ${i + 1} cut off`);
-        if (box(t).height < 63.5) problems.push(`tile ${i + 1} only ${Math.round(box(t).height)}px tall`);
+        // Score tiles you tap need 64px; the greyed cart's small rows aren't tap targets (the whole card is).
+        if (!t.classList.contains('mini') && box(t).height < 63.5) problems.push(`tile ${i + 1} only ${Math.round(box(t).height)}px tall`);
+        if (t.classList.contains('mini') && box(t).height < 36) problems.push(`their row ${i + 1} only ${Math.round(box(t).height)}px tall`);
       });
       document.querySelectorAll('.tile .step, .hole-row .arrow').forEach((s) => {
         const b = box(s);
@@ -92,7 +94,8 @@ async function check(page, size, screen, extra) {
         if (document.querySelectorAll('.cart.opp.focus .tile .step').length < 4) problems.push('their cart is open but not editable');
         if (!document.querySelector('.cart.mine.dim')) problems.push('your cart should be greyed while theirs is open');
       } else if (carts.length === 2) {
-        if (!(carts[0] > carts[1] + 8)) problems.push(`your cart (${Math.round(carts[0])}) not bigger than theirs (${Math.round(carts[1])})`);
+        const share = carts[0] / (carts[0] + carts[1]);
+        if (share < 0.62) problems.push(`your cart is only ${Math.round(share * 100)}% (want ~70)`);
         if (!document.querySelector('.cart.opp.dim') || document.querySelector('.cart.opp .tile .step')) problems.push('their cart should be greyed and not editable');
       }
     }
@@ -124,7 +127,7 @@ for (const size of SIZES) {
     localStorage.setItem('glb.device', JSON.stringify(dev));
     localStorage.setItem('glb.who.' + code, 'true');
     localStorage.setItem('glb.seen.' + code, JSON.stringify({ last: Date.now(), ids: [] }));
-    for (const k of ['tile', 'prov', 'oppcart']) localStorage.setItem('glb.coach.' + k, 'true');
+    for (const k of ['tile', 'prov', 'oppcart2']) localStorage.setItem('glb.coach.' + k, 'true');
     localStorage.setItem('glb.me.' + code, '"p1"');
     localStorage.setItem('glb.admin.' + code, JSON.stringify(pin));
   }, [r.code, DEV, r.admin_pin]);

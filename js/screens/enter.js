@@ -1,7 +1,7 @@
 // enter.js — the default tab. Compact hero (hole + matchup), your cart big on top
-// (~60%) and the cart you're playing smaller below (~40%), greyed until you tap it;
-// then it's 50/50 with theirs open and yours greyed (tap yours to go back; any
-// other hole opens on yours). An empty tile shows a
+// (~70%) and the cart you're playing below (~30%), greyed to one slim row of small
+// scores until you tap it; then it's 50/50 with theirs open and yours greyed (tap
+// yours to go back; any other hole opens on yours). An empty tile shows a
 // faint bogey: tap it for bogey, or − / + to step from bogey (− = par, − − = birdie).
 // Long-press clears. ◀ back through the current matchup + Undo, Next hole →
 // (Switch it up, Lock in / Close it out). Holes follow play order (start on 1 or 10).
@@ -55,11 +55,16 @@ function focusSide(app, hole, carts) {
   return carts.length > 1 && app.ui.enterFocus === hole ? 'opp' : 'mine';
 }
 
-function tile(app, p, hole, dim) {
+function tile(app, p, hole, dim, mini) {
   const snap = app.snapshot;
   const par = snap.holes[hole - 1].par;
   const g = p.gross[hole - 1];
   const editable = !dim && app.canEdit(p.id, hole);
+  if (mini) {
+    // Their cart, greyed: name + a small score on one line.
+    return `<div class="tile readonly mini${g == null ? ' empty' : ''}"><div class="face" data-pid="${esc(p.id)}">
+      <span class="who"><span class="ellipsis">${esc(p.name)}</span></span><span class="score ${g == null ? '' : scoreClass(g, par)}">${g ?? '–'}</span></div></div>`;
+  }
   const max = maxHoleScore(snap.course, snap.settings, hole, p.dots[hole - 1]);
   const dots = p.dots[hole - 1] ? `<span class="dots" aria-label="${p.dots[hole - 1]} stroke">${'<i></i>'.repeat(p.dots[hole - 1])}</span>` : '';
   // Empty tile: a faint bogey shows where − / + will start from.
@@ -95,7 +100,7 @@ function cartCard(app, cart, hole, mine, dim) {
   const chip = dim ? `<span class="focus-chip">${mine ? 'Tap to go back' : 'Tap to enter'}</span>` : '';
   return `<section class="cart ${side}${dim ? ' dim' : ' focus'}" ${jersey ? `style="--jersey:${jersey}"` : ''}${tap}>
     <div class="cart-head">${name}<span class="lblt">${esc(lblt)}</span>${chip}</div>
-    <div class="tiles">${cart.players.map((p) => tile(app, p, hole, dim)).join('')}</div>
+    <div class="tiles">${cart.players.map((p) => tile(app, p, hole, dim, dim && !mine)).join('')}</div>
   </section>`;
 }
 
@@ -176,7 +181,7 @@ export default {
     const theirs = root.querySelector('.cart.opp.dim');
     // Once your cart is in and theirs isn't, point at the greyed cart.
     if (mine && theirs && !mine.querySelector('.tile.empty') && theirs.querySelector('.tile.empty')) {
-      app.coach('oppcart', theirs, 'Their cart is greyed so you don’t tap it by mistake. Tap it to enter their scores, then tap yours to come back.');
+      app.coach('oppcart2', theirs, 'You can enter scores for the other cart in your group too. Tap their card to open it, then tap yours to come back.');
     } else if (first) {
       app.coach('tile', first, 'Tap once for bogey. Or tap − for par, − again for birdie.');
     }

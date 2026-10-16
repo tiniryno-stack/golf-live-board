@@ -295,35 +295,38 @@ a { color: inherit; }
   padding: 12px 12px 10px;
 }
 .cart {
-  flex: 1 1 0; min-height: 0; max-height: 220px;
-  background: var(--surface-2); border-radius: var(--radius-card); padding: 8px;
+  flex: 1 1 0; min-height: 0; max-height: 250px;
+  border-radius: var(--radius-card); padding: 8px;
   display: flex; flex-direction: column; gap: 6px; position: relative; overflow: hidden;
+  /* Jersey: a light tint + a full ring in the cart's color (an edge stripe gets clipped by the corners). */
+  background: color-mix(in srgb, var(--jersey, var(--line-strong)) 7%, var(--surface-2));
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--jersey, var(--line-strong)) 55%, transparent);
 }
-.cart::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--jersey, var(--line-strong)); }
-.cart.mine { flex: 3 1 0; max-height: 300px; box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--good) 45%, transparent); }
-.cart.opp { flex: 2 1 0; min-height: 96px; max-height: 190px; background: color-mix(in srgb, var(--surface-2) 70%, var(--surface)); padding: 6px 8px; gap: 4px; }
-.cart.opp .tile { border-color: transparent; background: color-mix(in srgb, var(--surface) 70%, transparent); }
-.cart.opp .tile .score { font-size: clamp(22px, 4dvh, 34px); }
-.cart.opp .cart-head .name { font-size: 13px; }
-/* Greyed cart: one tap opens it (50/50 when it's theirs). */
-.cart.dim { cursor: pointer; -webkit-tap-highlight-color: transparent; }
-.cart.dim .tiles { opacity: .4; filter: grayscale(1); }
-.cart.dim .cart-head .name, .cart.dim .cart-head .lblt { opacity: .55; }
-.cart.dim::before { opacity: .45; }
-.cart.dim:active { background: var(--surface-2); }
-.cart.mine.dim { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--good) 25%, transparent); }
+.cart.mine { flex: 7 1 0; max-height: 244px; box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--jersey, var(--good)) 60%, transparent); }
+/* Greyed cart: one tap opens it. Theirs greyed = 70/30, one slim row of small scores. */
+.cart.dim { cursor: pointer; -webkit-tap-highlight-color: transparent; background: var(--surface-2); }
+.cart.dim:active { background: var(--surface); }
+.cart.dim .tiles { opacity: .5; }
+.cart.dim .cart-head .name, .cart.dim .cart-head .lblt { opacity: .6; }
+.cart.mine.dim { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--good) 30%, transparent); }
+.cart.opp.dim {
+  flex: 3 1 0; min-height: 76px; max-height: 96px; padding: 6px 8px; gap: 4px;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--jersey, var(--line-strong)) 25%, transparent);
+}
+.cart.opp.dim .cart-head .name { font-size: 13px; }
+.tile.mini {
+  min-height: 40px; max-height: 60px; grid-template-columns: minmax(0, 1fr);
+  border: 0; border-radius: 12px; background: color-mix(in srgb, var(--surface) 70%, transparent);
+}
+.tile.mini .face { flex-direction: row; justify-content: space-between; gap: 8px; padding: 0 12px; }
+.tile.mini .who { font-size: 13px; }
+.tile.mini .score { font-size: 19px; min-width: 1.5em; min-height: 1.25em; }
 .focus-chip {
   flex: none; align-self: center; font-size: 11px; font-weight: 700; color: var(--ink);
   background: var(--surface); border: 1px solid var(--line-strong); border-radius: 999px; padding: 2px 8px;
 }
-.sheet.even .cart { flex: 1 1 0; min-height: 0; max-height: 250px; }
-.cart.opp.focus {
-  padding: 8px; gap: 6px; background: var(--surface-2);
-  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--jersey, var(--line-strong)) 50%, transparent);
-}
-.cart.opp.focus .tile { border-color: var(--line); background: var(--surface); }
-.cart.opp.focus .tile.empty { border-color: var(--line-strong); }
-.cart.opp.focus .cart-head .name { font-size: 14px; }
+/* Theirs open: 50/50, yours greyed. */
+.sheet.even .cart { flex: 1 1 0; min-height: 0; max-height: 244px; }
 .sheet.even .tile .score { font-size: clamp(24px, 4.6dvh, 40px); }
 .cart-head .name { color: var(--jersey, var(--ink)); }
 .cart-head .name-btn { display: flex; align-items: center; gap: 6px; min-height: 22px; text-align: left; }
@@ -333,7 +336,7 @@ a { color: inherit; }
 .cart-head .lblt { font-family: var(--mono); font-size: 12px; color: var(--ink-soft); white-space: nowrap; }
 .tiles { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .tile {
-  min-height: 64px; max-height: 150px; height: 100%;
+  min-height: 64px; max-height: 200px; height: 100%;
   display: grid; grid-template-columns: var(--tap) minmax(0, 1fr) var(--tap);
   grid-template-rows: minmax(0, 1fr); align-items: stretch; align-content: stretch;
   border-radius: 14px; background: var(--surface); overflow: hidden;
@@ -357,7 +360,7 @@ a { color: inherit; }
 .tile.readonly { grid-template-columns: minmax(0, 1fr); }
 .tile.readonly .step { display: none; }
 .tile.mine .who { color: var(--ink); }
-.enter-foot { display: flex; align-items: center; gap: 8px; min-height: 16px; padding: 0 4px; }
+.enter-foot { display: flex; align-items: center; gap: 8px; min-height: 16px; padding: 0 4px; margin-top: auto; } /* spare height sits above the dots: Next stays in the thumb zone */
 .holedots { flex: 1; display: grid; grid-template-columns: repeat(18, 1fr); gap: 3px; }
 .holedots i { height: 5px; border-radius: 3px; background: var(--line-strong); display: block; }
 .holedots i.done { background: var(--ink-soft); }
@@ -425,7 +428,6 @@ a { color: inherit; }
   display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; text-align: left; width: 100%;
   background: color-mix(in srgb, var(--jersey, var(--sun)) 14%, transparent);
   border: 1px solid color-mix(in srgb, var(--jersey, var(--sun)) 40%, transparent);
-  box-shadow: inset 4px 0 0 var(--jersey, var(--sun));
   font-size: 14px; font-weight: 600;
 }
 .headline .spark { color: var(--jersey, var(--sun)); flex: none; }
@@ -626,7 +628,7 @@ a { color: inherit; }
 .team-picks button { height: 40px; border-radius: 10px; background: var(--surface-2); font-weight: 700; font-family: var(--mono); }
 .team-picks button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
 .name-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.team-name-cell { display: flex; flex-direction: column; gap: 6px; padding: 10px; border-radius: var(--radius-card); background: var(--surface); border-left: 4px solid var(--jersey, var(--line-strong)); min-width: 0; }
+.team-name-cell { display: flex; flex-direction: column; gap: 6px; padding: 10px; border-radius: var(--radius-card); background: color-mix(in srgb, var(--jersey, var(--line-strong)) 7%, var(--surface)); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--jersey, var(--line-strong)) 55%, transparent); min-width: 0; }
 .team-name-cell .input { min-height: 44px; }
 .cart-tag { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; }
 .team-card { padding: 12px; border-radius: var(--radius-card); background: var(--surface); margin: 0 0 10px; }

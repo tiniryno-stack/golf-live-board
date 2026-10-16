@@ -7,7 +7,7 @@
 //      the old phone drops to watch-only
 //   6. Organizer resets the round (scores cleared, phones stay joined), then deletes it
 //   7. Back-nine start + unnamed carts: name picker (taken names greyed), − / + on a blank
-//      tile, your cart ~60% of Enter, toasts only for the other foursome
+//      tile, your cart ~70% of Enter, toasts only for the other foursome
 //   8. Their cart is greyed: a stray tap doesn't score, it opens 50/50; tap yours to go
 //      back; the next hole opens on yours again. Your cart tops the Card even as cart C.
 //   9. Headlines wear the jersey of the team on their positive end; two that land on the
@@ -36,7 +36,7 @@ async function phone(name) {
   const ctx = await browser.newContext({ viewport: { width: 375, height: 548 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
   await attach(ctx, be, srv.origin);
   await ctx.addInitScript(() => {
-    for (const k of ['tile', 'prov', 'oppcart']) localStorage.setItem('glb.coach.' + k, 'true');
+    for (const k of ['tile', 'prov', 'oppcart2']) localStorage.setItem('glb.coach.' + k, 'true');
   });
   const page = await ctx.newPage();
   page.errors = [];
@@ -253,12 +253,12 @@ ok(r2.event.roster.teams.find((t) => t.id === 'C').name === 'Squirtle', 'Sam\u20
 const taken = be.rpc.pick_team_name({ p_code: r2.code, p_device_id: await app(Q.page, () => JSON.parse(localStorage.getItem('glb.device'))), p_name: 'charmander' });
 ok(taken.error === 'taken', 'the server refuses a name another cart has (any capitals)');
 ok((await P.page.textContent('.hole-title')) === 'Hole 10', 'starting on 10: Enter opens on Hole 10');
-await P.page.evaluate(() => localStorage.removeItem('glb.coach.oppcart'));
+await P.page.evaluate(() => localStorage.removeItem('glb.coach.oppcart2'));
 await P.page.tap('[data-act="tile-step"][data-pid="p1"][data-d="-1"]');
 await P.page.tap('[data-act="tile-step"][data-pid="p2"][data-d="1"]');
 await P.page.waitForTimeout(900);
 const tip = await P.page.evaluate(() => document.querySelector('.coach')?.textContent || '');
-ok(/tap it to enter their scores/i.test(tip), `your cart done: a tip points at their greyed cart (\u201c${tip.slice(0, 40)}\u2026\u201d)`);
+ok(/enter scores for the other cart/i.test(tip), `your cart done: a tip points at their greyed cart (\u201c${tip.slice(0, 40)}\u2026\u201d)`);
 if (tip) await P.page.tap('.coach');
 const par10 = r2.event.course.par[9];
 const s1 = be.tables.scores.find((x) => x.event_id === r2.id && x.player_id === 'p1' && x.hole === 10);
@@ -269,7 +269,7 @@ const cartRatio = await P.page.evaluate(() => {
   const [a, b] = [...document.querySelectorAll('.cart')].map((c) => c.getBoundingClientRect().height);
   return a / (a + b);
 });
-ok(cartRatio > 0.54 && cartRatio < 0.66, `your cart gets ~60% of the space (${Math.round(cartRatio * 100)}%)`);
+ok(cartRatio > 0.64 && cartRatio < 0.76, `your cart gets ~70% of the space (${Math.round(cartRatio * 100)}%)`);
 await P.page.evaluate(() => { document.getElementById('toasts').innerHTML = ''; });
 const t0 = Date.now();
 const push = async (pid, by, i) => {
@@ -302,7 +302,7 @@ ok(s4?.strokes === par10, `entered their score while open (${s4?.strokes})`);
 await P.page.tap('.cart.mine.dim');
 await P.page.waitForTimeout(200);
 const back = await shares(P.page);
-ok(!!(await P.page.$('.cart.opp.dim')) && back > 0.54, `tap yours: back to 60/40 (${Math.round(back * 100)}%)`);
+ok(!!(await P.page.$('.cart.opp.dim')) && back > 0.64, `tap yours: back to 70/30 (${Math.round(back * 100)}%)`);
 await P.page.tap('.cart.opp.dim');
 await P.page.waitForTimeout(150);
 await P.page.tap('.next-btn');
