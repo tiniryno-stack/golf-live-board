@@ -82,6 +82,18 @@ async function check(page, size, screen, extra) {
         // Score tiles you tap need 64px; the greyed cart's small rows aren't tap targets (the whole card is).
         if (!t.classList.contains('mini') && box(t).height < 63.5) problems.push(`tile ${i + 1} only ${Math.round(box(t).height)}px tall`);
         if (t.classList.contains('mini') && box(t).height < 36) problems.push(`their row ${i + 1} only ${Math.round(box(t).height)}px tall`);
+        if (!t.classList.contains('mini')) {
+          // The name sits above the score (clear of its circle / square), centered; the score is level with − / +.
+          const name = t.querySelector('.who .ellipsis'), sc = t.querySelector('.score'), face = t.querySelector('.face');
+          const nb = box(name), sb = box(sc), fb = box(face);
+          const deco = 0.08 * parseFloat(getComputedStyle(sc).fontSize); // how far a bogey square / birdie circle reaches above the number
+          if (nb.bottom > sb.top - deco - 1) problems.push(`tile ${i + 1}: name touches the score (${Math.round(nb.bottom)} vs ${Math.round(sb.top - deco)})`);
+          if (name.scrollWidth > name.clientWidth + 1) problems.push(`tile ${i + 1}: “${name.textContent}” cut off`);
+          const who = box(t.querySelector('.who'));
+          if (Math.abs((who.left + who.right) / 2 - (fb.left + fb.right) / 2) > 1.5) problems.push(`tile ${i + 1}: name off center`);
+          const step = t.querySelector('.step');
+          if (step && Math.abs((sb.top + sb.bottom) / 2 - (box(step).top + box(step).bottom) / 2) > 2) problems.push(`tile ${i + 1}: score not level with − / +`);
+        }
       });
       document.querySelectorAll('.tile .step, .hole-row .arrow').forEach((s) => {
         const b = box(s);
