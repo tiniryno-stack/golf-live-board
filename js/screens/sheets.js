@@ -194,7 +194,7 @@ const BODIES = {
     return `${head('Headlines')}
       ${list.length ? `<div class="headlines">${list
         .map((h) => `<div class="headline"><span class="spark">${icon('spark', 16)}</span><span style="flex:1">${esc(h.text)}</span><span class="meta">${clock(h.at)}</span></div>`)
-        .join('')}</div>` : '<p class="empty">No big moments yet. They show up once both foursomes have played a hole.</p>'}`;
+        .join('')}</div>` : '<p class="empty-state">No big moments yet. They show up once both foursomes have played a hole.</p>'}`;
   },
 
   confirm(app, p) {

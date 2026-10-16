@@ -260,7 +260,7 @@ a { color: inherit; }
 }
 .rank { width: 18px; flex: none; font-family: var(--mono); font-size: 13px; color: var(--ink-faint); text-align: right; }
 .me-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--good); margin-left: 6px; vertical-align: middle; }
-.empty { padding: 32px 8px; text-align: center; color: var(--ink-soft); }
+.empty-state { padding: 32px 8px; text-align: center; color: var(--ink-soft); }
 .divider { height: 1px; background: var(--line); margin: 16px 0; }
 .stack { display: flex; flex-direction: column; gap: 12px; }
 .spread { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
@@ -279,10 +279,11 @@ a { color: inherit; }
 .hole-title { font-size: clamp(26px, 5.2dvh, 36px); font-weight: 800; letter-spacing: -0.03em; line-height: 1.05; }
 .hole-meta { font-size: 13px; font-weight: 500; color: var(--hero-soft); margin-top: 2px; }
 .matchup-line {
-  margin-top: 6px; text-align: center; font-size: 13px; font-weight: 600; color: var(--hero-ink);
-  padding: 0 8px;
+  margin-top: 6px; font-size: 13px; font-weight: 600; color: var(--hero-ink);
+  padding: 0 8px; display: flex; justify-content: center; gap: 6px; min-width: 0;
 }
-.matchup-line .status { font-family: var(--mono); margin-left: 4px; }
+.matchup-line .teams { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.matchup-line .status { font-family: var(--mono); flex: none; color: var(--hero-ink); }
 .enter .sheet {
   flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px;
   padding: 12px 12px 10px;
@@ -300,13 +301,14 @@ a { color: inherit; }
 .tile {
   min-height: 64px; max-height: 150px; height: 100%;
   display: grid; grid-template-columns: var(--tap) minmax(0, 1fr) var(--tap);
+  grid-template-rows: minmax(0, 1fr); align-items: stretch; align-content: stretch;
   border-radius: 14px; background: var(--surface); overflow: hidden;
   border: 1px solid var(--line);
 }
 .tile.empty { border-style: dashed; border-color: var(--line-strong); }
+.tile > button, .tile > .face { height: 100%; min-height: 0; align-self: stretch; }
 .tile .step {
   display: grid; place-items: center; font-size: 26px; font-weight: 500; color: var(--ink);
-  min-height: 64px;
 }
 .tile .step:active { background: var(--surface-2); }
 .tile .step:disabled { color: var(--ink-faint); }
@@ -485,7 +487,7 @@ a { color: inherit; }
 }
 .fullcard.sunny { background: var(--sun); color: #14161A; }
 .fullcard .kicker { font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; opacity: .7; }
-.fullcard .big { font-size: 34px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.08; }
+.fullcard .fc-title { font-size: 34px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.08; }
 .fullcard .result { font-family: var(--mono); font-size: 20px; font-weight: 700; }
 .fullcard .sub { font-size: 16px; opacity: .8; }
 .fullcard .btn { margin-top: 12px; }

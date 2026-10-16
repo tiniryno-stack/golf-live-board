@@ -106,7 +106,7 @@ export function showCard(opts, app) {
   overlay = { onContinue: opts.onContinue, app };
   root.innerHTML = `<div class="fullcard${opts.sunny ? ' sunny' : ''}" role="dialog" aria-modal="true">
     ${opts.kicker ? `<div class="kicker">${esc(opts.kicker)}</div>` : ''}
-    <div class="big">${esc(opts.big)}</div>
+    <div class="fc-title">${esc(opts.big)}</div>
     ${opts.result ? `<div class="result">${esc(opts.result)}</div>` : ''}
     ${opts.sub ? `<div class="sub">${esc(opts.sub)}</div>` : ''}
     ${opts.sub2 ? `<div class="sub">${esc(opts.sub2)}</div>` : ''}

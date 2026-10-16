@@ -176,6 +176,7 @@ function onQueueSaved(item, res) {
 // ───────────────────────────────────────────── identity
 
 function setMe(pid) {
+  if ((pid || null) !== app.me) app.ui.hole = null;
   app.me = pid || null;
   db.me.set(app.code, app.me);
   render();
@@ -878,6 +879,7 @@ document.addEventListener('click', (ev) => {
 // Long-press (clear a tile, see who entered a cell)
 let hold = null;
 document.addEventListener('pointerdown', (ev) => {
+  suppressClick = false; // a new gesture: only the long-press's own click is swallowed
   const el = ev.target.closest('[data-hold]');
   if (!el) return;
   const x = ev.clientX, y = ev.clientY;
@@ -887,8 +889,7 @@ document.addEventListener('pointerdown', (ev) => {
       const fn = actions[el.dataset.hold];
       if (fn) {
         suppressClick = true;
-        setTimeout(() => (suppressClick = false), 700);
-        fn(el, ev, app);
+        runAction(fn, el, ev);
       }
       hold = null;
     }, 550),
