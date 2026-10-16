@@ -21,7 +21,8 @@ function teamBar(isPM, s, scale) {
       ${prov ? `<span class="fill prov" style="${side(off + prov)};width:${w(off + prov)}"></span>` : ''}</div>`;
   }
   const pct = (v) => `${Math.max(0, Math.min(100, (v / scale) * 100))}%`;
-  return `<div class="tbar"><span class="fill prov" style="width:${pct(s.officialPoints + s.provisionalPoints)}"></span><span class="fill" style="width:${pct(s.officialPoints)}"></span></div>`;
+  const prov = s.provisionalPoints ? `<span class="fill prov" style="width:${pct(s.officialPoints + s.provisionalPoints)}"></span>` : '';
+  return `<div class="tbar">${prov}<span class="fill" style="width:${pct(s.officialPoints)}"></span></div>`;
 }
 
 function teamRowsGame(app) {

@@ -206,7 +206,7 @@ function leaderboard(app) {
     x += text(ctx, score, x, y, { size: 28, weight: 700, color: C.ink, mono: true }) + 16;
     text(ctx, I.tname(b), x, y, { size: 28, weight: res === b ? 800 : 500, color: res === b ? I.jersey(b) : C.ink, max: W - PAD - 90 - x });
     const bonus = res && res !== 'halved' ? m.bonus?.[res] : res === 'halved' ? m.bonus?.[a] : 0;
-    if (bonus) text(ctx, `+${fmtPts(bonus)}${res === 'halved' ? ' ea' : ''}`, W - PAD, y, { size: 26, weight: 800, color: C.sun, align: 'right', mono: true });
+    if (bonus) text(ctx, res === 'halved' ? `${fmtPts(bonus)} each` : `+${fmtPts(bonus)}`, W - PAD, y, { size: 26, weight: 800, color: C.sun, align: 'right', mono: true });
     y += 50;
   }
   return finish(cv, y, app);
