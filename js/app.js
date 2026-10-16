@@ -77,7 +77,7 @@ app.canEdit = (pid, hole) => {
   return sameFoursome(app.event.roster, app.event.settings, app.me, pid, hole);
 };
 
-app.render = () => render();
+app.render = (opts) => render(opts);
 
 app.toast = (opts) => fx.toast(opts, app);
 app.showCard = (opts) => fx.showCard(opts, app);
@@ -720,7 +720,7 @@ window.addEventListener('hashchange', route);
 
 let pendingContent = false;
 
-function render() {
+function render(opts = {}) {
   const r = app.route;
   const screen = SCREENS[r.name] || home;
   const appEl = $('app');
@@ -735,8 +735,9 @@ function render() {
   $('tabbar').innerHTML = inRound && ready ? renderTabbar() : '';
 
   const active = document.activeElement;
-  if (active && content.contains(active) && /^(INPUT|TEXTAREA|SELECT)$/.test(active.tagName)) {
-    pendingContent = true; // don't wipe what someone is typing
+  const typing = active && content.contains(active) && /^(INPUT|TEXTAREA|SELECT)$/.test(active.tagName);
+  if (typing && !opts.force && !userAction) {
+    pendingContent = true; // background update: don't wipe what someone is typing
   } else {
     pendingContent = false;
     const top = content.scrollTop;
@@ -849,6 +850,15 @@ Object.assign(actions, {
 for (const s of [...Object.values(SCREENS), sheets, fx]) Object.assign(actions, s.actions || {});
 
 let suppressClick = false;
+let userAction = false;
+function runAction(fn, el, ev) {
+  userAction = true;
+  try {
+    return fn(el, ev, app);
+  } finally {
+    userAction = false;
+  }
+}
 document.addEventListener('click', (ev) => {
   const el = ev.target.closest('[data-act]');
   if (!el) return;
@@ -861,7 +871,7 @@ document.addEventListener('click', (ev) => {
   const fn = actions[el.dataset.act];
   if (fn) {
     ev.preventDefault();
-    fn(el, ev, app);
+    runAction(fn, el, ev);
   }
 });
 
@@ -917,7 +927,7 @@ document.addEventListener('keydown', (ev) => {
   const fn = actions[el.dataset.enter];
   if (fn) {
     ev.preventDefault();
-    fn(el, ev, app);
+    runAction(fn, el, ev);
   }
 });
 

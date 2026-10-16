@@ -20,7 +20,7 @@ The spec is `ARCHITECTURE.md`. Build in the order below, commit and push after e
 - [x] 2. `js/scoring.js` + `js/headlines.js` + `tests/` — section 7 worked examples, official-line lead change, comeback, streak, clinch, Lock in / Close it out all passing (`node --test`)
 - [x] 3. `js/db.js` — load, device ID + name claim, leave, let-them-in, RPC writes, realtime, offline queue, audit log read
 - [x] 4. Design tokens + app shell (Sundown tokens, dark by default, Flighty-inspired layout — section 9; fit-the-screen rule, section 8)
-- [ ] 5. Home + Setup (organizer flow, Twin Creeks in `js/courses.js`, nothing preselected)
+- [x] 5. Home + Setup (organizer flow, Twin Creeks in `js/courses.js`, nothing preselected)
 - [ ] 6. Enter (cart cards, first tap = bogey, ◀ back + Undo, Switch it up, Lock in / Close it out cards, While you were away)
 - [ ] 7. Matches (hero card, 12-point tug-of-war bar), Board (official + provisional, headlines strip), Card (Front | Back, grouped by cart), Host (Rules | Players | Activity), Season (from Home), toasts
 - [ ] 8. Fit-the-screen check at iPhone SE / 13 mini / 15-16 / Pro Max sizes
