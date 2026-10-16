@@ -170,6 +170,17 @@ export function createBackend() {
       if (!sameFoursome(e.roster, e.settings, c.player_id, p_player_id, p_hole)) return no('not_your_foursome');
       return writeScore(e, p_player_id, p_hole, p_strokes, pname(e, c.player_id));
     },
+    fill_score({ p_code, p_device_id, p_player_id, p_hole, p_strokes }) {
+      const e = ev(p_code);
+      if (!e) return no('not_found');
+      const c = claimOf(e, p_device_id);
+      if (!c) return no('not_claimed');
+      if (!sameFoursome(e.roster, e.settings, c.player_id, p_player_id, p_hole)) return no('not_your_foursome');
+      const cur = t.scores.find((s) => s.event_id === e.id && s.player_id === p_player_id && s.hole === p_hole);
+      if (cur && cur.strokes != null) return { ok: true, filled: false, strokes: cur.strokes };
+      const res = writeScore(e, p_player_id, p_hole, p_strokes, pname(e, c.player_id));
+      return { ...res, filled: true, strokes: p_strokes };
+    },
     admin_upsert_score({ p_code, p_admin_pin, p_player_id, p_hole, p_strokes }) {
       const e = ev(p_code);
       if (!e) return no('not_found');

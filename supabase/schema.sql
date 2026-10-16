@@ -632,6 +632,38 @@ begin
   return jsonb_build_object('ok', true, 'team', v_team, 'name', v_name);
 end $$;
 
+-- Next hole with a tile left blank = par. Only fills a cell that is still empty
+-- (one atomic insert-or-update-if-null), so it never overwrites a score another
+-- phone entered a moment earlier; returns what the cell holds either way.
+create or replace function public.fill_score(p_code text, p_device_id uuid, p_player_id text, p_hole int, p_strokes int)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare e public.events; v_actor text; v_by text; v_at timestamptz; v_cur smallint;
+begin
+  e := public._event(p_code);
+  if e.id is null then return jsonb_build_object('ok', false, 'error', 'not_found'); end if;
+  select player_id into v_actor from public.claims where event_id = e.id and device_id = p_device_id;
+  if v_actor is null then return jsonb_build_object('ok', false, 'error', 'not_claimed'); end if;
+  if not public._same_foursome(e.roster, e.settings, v_actor, p_player_id, p_hole) then
+    return jsonb_build_object('ok', false, 'error', 'not_your_foursome');
+  end if;
+  if p_hole is null or p_hole < 1 or p_hole > 18 then return jsonb_build_object('ok', false, 'error', 'bad_hole'); end if;
+  if p_strokes is null or p_strokes < 1 or p_strokes > 15 then return jsonb_build_object('ok', false, 'error', 'bad_strokes'); end if;
+  if public._player(e.roster, p_player_id) is null then return jsonb_build_object('ok', false, 'error', 'unknown_player'); end if;
+  v_by := public._player_name(e.roster, v_actor);
+  insert into public.scores (event_id, player_id, hole, strokes, updated_by, updated_at)
+  values (e.id, p_player_id, p_hole, p_strokes, v_by, now())
+  on conflict (event_id, player_id, hole)
+  do update set strokes = excluded.strokes, updated_by = excluded.updated_by, updated_at = excluded.updated_at
+     where public.scores.strokes is null
+  returning updated_at into v_at;
+  if v_at is null then
+    select strokes into v_cur from public.scores where event_id = e.id and player_id = p_player_id and hole = p_hole;
+    return jsonb_build_object('ok', true, 'filled', false, 'strokes', v_cur);
+  end if;
+  perform public._log(e.id, v_by, 'Hole ' || p_hole || ' · ' || public._player_name(e.roster, p_player_id) || ' ' || p_strokes || ' (left at par)');
+  return jsonb_build_object('ok', true, 'filled', true, 'strokes', p_strokes, 'updated_at', v_at, 'updated_by', v_by);
+end $$;
+
 -- ─────────────────────────────────────────────────────────────── function permissions
 
 revoke execute on function
@@ -655,6 +687,7 @@ grant execute on function
   public.deny_join(text, uuid, uuid, text),
   public.upsert_score(text, uuid, text, int, int),
   public.admin_upsert_score(text, text, text, int, int),
+  public.fill_score(text, uuid, text, int, int),
   public.update_event(text, text, jsonb, jsonb, jsonb, text),
   public.release_player(text, text, text),
   public.get_audit_log(text, text),

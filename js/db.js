@@ -197,6 +197,8 @@ export const api = {
   deleteRound: (code, pin) => rpc('delete_round', { p_code: code, p_admin_pin: pin }),
   upsertScore: (code, playerId, hole, strokes) =>
     rpc('upsert_score', { p_code: code, p_device_id: deviceId, p_player_id: playerId, p_hole: hole, p_strokes: strokes }),
+  fillScore: (code, playerId, hole, strokes) =>
+    rpc('fill_score', { p_code: code, p_device_id: deviceId, p_player_id: playerId, p_hole: hole, p_strokes: strokes }),
   adminUpsertScore: (code, pin, playerId, hole, strokes) =>
     rpc('admin_upsert_score', { p_code: code, p_admin_pin: pin, p_player_id: playerId, p_hole: hole, p_strokes: strokes }),
 };
@@ -255,8 +257,9 @@ function onOnline() {
 }
 
 /** Optimistic write: queued immediately, sent shortly after the last tap. */
-export function writeScore(code, { playerId, hole, strokes, asAdmin = false }) {
-  queue.put(code, { playerId, hole, strokes: strokes ?? null, admin: !!asAdmin });
+/** fill: only if the cell is still empty on the server (Next hole with a tile left at par). */
+export function writeScore(code, { playerId, hole, strokes, asAdmin = false, fill = false }) {
+  queue.put(code, { playerId, hole, strokes: strokes ?? null, admin: !!asAdmin, ...(fill ? { fill: true } : {}) });
   sync.handlers.onChange?.(queue.count(code));
   clearTimeout(sync.timer);
   sync.timer = setTimeout(() => flush(), 600);
@@ -277,6 +280,8 @@ export async function flush() {
         if (item.admin) {
           const pin = sync.handlers.adminPin?.();
           res = pin ? await api.adminUpsertScore(code, pin, item.playerId, item.hole, item.strokes) : { ok: false, error: 'bad_pin' };
+        } else if (item.fill) {
+          res = await api.fillScore(code, item.playerId, item.hole, item.strokes);
         } else {
           res = await api.upsertScore(code, item.playerId, item.hole, item.strokes);
         }

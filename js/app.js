@@ -182,6 +182,22 @@ app.setScore = (pid, hole, strokes) => {
 
 app.scoreOf = (pid, hole) => app.snapshot?.playerById.get(pid)?.gross[hole - 1] ?? null;
 
+/** Next hole: tiles left blank count as par. Only fills cells still empty on the server. */
+app.fillPar = (hole, pids) => {
+  const par = app.snapshot.holes[hole - 1].par;
+  const filled = [];
+  for (const pid of pids) {
+    if (app.scoreOf(pid, hole) != null || !app.inMyFoursome(pid, hole)) continue;
+    db.writeScore(app.code, { playerId: pid, hole, strokes: par, fill: true });
+    filled.push(pid);
+  }
+  if (filled.length) {
+    app.unsynced = db.queue.count(app.code);
+    recompute();
+  }
+  return filled;
+};
+
 const REJECT_TEXT = {
   not_your_foursome: 'not in your matchup on that hole',
   not_claimed: 'this phone isn’t playing as anyone',
@@ -201,10 +217,17 @@ function onQueueSaved(item, res) {
   if (res.unchanged) return;
   const key = `${item.playerId}:${item.hole}`;
   if (db.queue.has(app.code, item.playerId, item.hole)) return; // newer tap pending
+  // A par fill that found a score already there: take the server's number.
+  const kept = item.fill && res.filled === false;
   app.scores.set(key, {
-    player_id: item.playerId, hole: item.hole, strokes: item.strokes,
-    updated_by: res.updated_by || app.myName(), updated_at: res.updated_at || new Date().toISOString(),
+    player_id: item.playerId, hole: item.hole, strokes: kept ? res.strokes : item.strokes,
+    updated_by: kept ? app.scores.get(key)?.updated_by || null : res.updated_by || app.myName(),
+    updated_at: kept ? app.scores.get(key)?.updated_at || new Date().toISOString() : res.updated_at || new Date().toISOString(),
   });
+  if (kept) {
+    recompute();
+    render();
+  }
 }
 
 // ───────────────────────────────────────────── identity
