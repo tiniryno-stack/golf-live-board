@@ -1,0 +1,16 @@
+{
+  "name": "golf-live-board",
+  "private": true,
+  "type": "module",
+  "description": "Live golf scorecard + leaderboard across tee times. No build step: GitHub Pages serves the repo root.",
+  "scripts": {
+    "test": "node --test",
+    "test:fit": "node tests/fit-the-screen.mjs",
+    "test:smoke": "node tests/smoke.mjs"
+  },
+  "devDependencies": {
+    "@supabase/supabase-js": "2.118.0",
+    "geist": "1.7.2",
+    "playwright": "1.56.0"
+  }
+}
