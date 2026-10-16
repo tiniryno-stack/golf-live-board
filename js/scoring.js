@@ -18,6 +18,7 @@ export const DEFAULT_SETTINGS = {
   game: 'rotationMatch',
   teamScore: 'bestBallAggregate',
   halvedHolePoints: 0.5,
+  matchBonus: 1, // Match Play: bonus points for winning a matchup (halved = split like a pushed hole)
   plusMinusCap: null,
   maxHoleScore: 'doublePar',
   par3NoMax: false,
@@ -341,6 +342,7 @@ function computeGame(settings, teams, teamById, holes) {
   const halves = Number(settings.halvedHolePoints) || 0;
   const type = settings.game; // rotationMatch | rotationPlusMinus
   const cap = settings.plusMinusCap == null || settings.plusMinusCap === '' ? null : Number(settings.plusMinusCap);
+  const bonus = type === 'rotationMatch' ? Math.max(0, Number(settings.matchBonus) || 0) : 0;
   const rotations = settings.rotation.map((r, ri) => {
     const from = r.holes[0], to = r.holes[1]; // play-order positions
     const matches = r.matches.map(([x, y], mi) => {
@@ -380,10 +382,16 @@ function computeGame(settings, teams, teamById, holes) {
         const v = type === 'rotationPlusMinus' ? capped : lead;
         result = v > 0 ? x : v < 0 ? y : 'halved';
       }
+      // Matchup win bonus (Match Play): the winner gets it once all its holes are in.
+      const won = { [x]: 0, [y]: 0 };
+      if (final && bonus) {
+        if (result === 'halved') won[x] = won[y] = bonus * halves;
+        else won[result] = bonus;
+      }
       return {
         id: `r${ri + 1}m${mi + 1}`, rotation: ri + 1, from, to, teams: [x, y], holes: hs,
         firstHole: holeAt(settings, from), lastHole: holeAt(settings, to), label: holesLabel(settings, from, to),
-        points, margin: { [x]: capped, [y]: -capped }, rawMargin: { [x]: raw, [y]: -raw },
+        points, bonus: won, margin: { [x]: capped, [y]: -capped }, rawMargin: { [x]: raw, [y]: -raw },
         played, total, left, final, clinchedBy, result,
       };
     });
@@ -411,7 +419,7 @@ function computeGame(settings, teams, teamById, holes) {
       }
     }
   }
-  return { type, ncomp, halves, cap, rotations, matches, holeComplete, pointsByHole, teamIds: teams.map((t) => t.id) };
+  return { type, ncomp, halves, cap, bonus, rotations, matches, holeComplete, pointsByHole, teamIds: teams.map((t) => t.id) };
 }
 
 /** Plus/Minus total for a team over holes ≤ through (each rotation capped). */
@@ -431,6 +439,7 @@ function pointsThrough(game, teamId, through) {
   for (const m of game.matches) {
     if (!m.teams.includes(teamId)) continue;
     for (const hh of m.holes) if (hh.complete && hh.pos <= through) total += hh.points[teamId];
+    if (m.final && m.to <= through) total += m.bonus?.[teamId] || 0; // matchup win bonus
   }
   return total;
 }
@@ -582,7 +591,7 @@ export function seasonStandings(rounds) {
     }
     if (!snap.game) continue;
     counted++;
-    const pts = (m, t) => (snap.game.type === 'rotationPlusMinus' ? m.margin[t] : m.points[t]);
+    const pts = (m, t) => (snap.game.type === 'rotationPlusMinus' ? m.margin[t] : m.points[t] + (m.bonus?.[t] || 0));
     for (const m of snap.game.matches) {
       if (!m.final) continue;
       for (const t of m.teams) {

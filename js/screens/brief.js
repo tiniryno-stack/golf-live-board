@@ -115,7 +115,9 @@ function dayPage(app, snap, g) {
   const day = myMatches.reduce((a, r) => a + perMatch(r), 0);
   const stakes = pm
     ? '<li>Your <b>+/−</b> adds up across matchups. <b>Highest after 18</b> wins.</li>'
-    : `<li><b>${each.length === 1 ? each[0] : 'Up to ' + Math.max(...each)} points</b> per matchup, <b>${day}</b> on the day.</li>
+    : g.bonus
+      ? `<li><b>${each.length === 1 ? each[0] : 'Up to ' + Math.max(...each)} points</b> per matchup, <b>+${fmtPts(g.bonus)}</b> for winning it.</li>`
+      : `<li><b>${each.length === 1 ? each[0] : 'Up to ' + Math.max(...each)} points</b> per matchup, <b>${day}</b> on the day.</li>
        <li><b>Most points after 18</b> wins the day.</li>`;
   const len = rotationLength(st);
   const flow = swap

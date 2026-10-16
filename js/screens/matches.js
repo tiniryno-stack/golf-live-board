@@ -54,7 +54,8 @@ function statusLine(app, m, left, right) {
     return m.played ? `${name(left)} ${fmtSigned(v, 'even')} thru ${m.played}` : 'Not started';
   }
   const a = m.points[left], b = m.points[right];
-  if (m.final) return a === b ? `Matchup halved ${fmtPts(a)}–${fmtPts(b)}` : `${name(a > b ? left : right)} won ${fmtPts(Math.max(a, b))}–${fmtPts(Math.min(a, b))}`;
+  const plus = g.bonus ? (a === b ? (g.halves ? ` · ${fmtPts(g.bonus * g.halves)} each` : '') : ` · +${fmtPts(g.bonus)}`) : ''; // matchup win bonus
+  if (m.final) return a === b ? `Matchup halved ${fmtPts(a)}–${fmtPts(b)}${plus}` : `${name(a > b ? left : right)} won ${fmtPts(Math.max(a, b))}–${fmtPts(Math.min(a, b))}${plus}`;
   if (m.clinchedBy) return `${name(m.clinchedBy)} clinched the matchup`;
   const n = m.total * g.ncomp;
   const unit = g.halves > 0 ? 0.5 : 1;

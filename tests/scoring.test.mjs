@@ -186,7 +186,7 @@ test('7.4 official line: one foursome through 10, the other through 9 → offici
   const snap = compute(ev, sb.rows());
   assert.equal(snap.officialThrough, 9);
   const a = snap.game.standings.find((s) => s.teamId === 'A');
-  assert.equal(a.officialPoints, 9);
+  assert.equal(a.officialPoints, 9.5); // 9 holes of halves + ½ for the halved holes 1–6 matchup
   assert.equal(a.provisionalPoints, 2);
   assert.deepEqual(snap.game.provisionalHoles, [10]);
   postAll(sb, 10, ['b', 'd']);
@@ -247,12 +247,58 @@ test('7.5 standings tiebreak: points → record → head-to-head', () => {
   sb.post(6, { a1: 3, a2: 4, b1: 4, b2: 5, c1: 4, c2: 4, d1: 4, d2: 4 });
   const st = compute(ev, sb.rows()).game.standings;
   assert.equal(st[0].teamId, 'A');
-  assert.equal(st[0].points, 7);
+  assert.equal(st[0].points, 8); // 7 hole points + 1 for winning the matchup
   assert.deepEqual(st[0].record, { w: 1, l: 0, h: 0 });
   // C and D are level on everything → shared position
   const c = st.find((s) => s.teamId === 'C'), d = st.find((s) => s.teamId === 'D');
   assert.equal(c.rank, d.rank);
   assert.equal(c.shared, true);
+});
+
+test('matchup win bonus: +1 to the winner once the matchup is in; halved splits it', () => {
+  const ev = makeEvent();
+  const sb = scorebook();
+  // Rotation 1: A beats B; C and D halve every hole
+  for (let h = 1; h <= 5; h++) sb.post(h, { a1: 3, a2: 4, b1: 4, b2: 5, c1: 4, c2: 4, d1: 4, d2: 4 });
+  let snap = compute(ev, sb.rows());
+  let a = snap.game.standings.find((s) => s.teamId === 'A');
+  assert.equal(a.points, 10, 'no bonus until the matchup is finished');
+  sb.post(6, { a1: 3, a2: 4, b1: 4, b2: 5, c1: 4, c2: 4, d1: 4, d2: 4 });
+  snap = compute(ev, sb.rows());
+  const m1 = match(snap, 'r1m1'), m2 = match(snap, 'r1m2');
+  assert.deepEqual(m1.bonus, { A: 1, B: 0 });
+  assert.deepEqual(m2.bonus, { C: 0.5, D: 0.5 });
+  a = snap.game.standings.find((s) => s.teamId === 'A');
+  assert.equal(a.points, 13);
+  assert.equal(a.officialPoints, 13, 'official: both foursomes are through 6');
+  assert.equal(snap.game.standings.find((s) => s.teamId === 'C').points, 6.5);
+});
+
+test('matchup win bonus is provisional until both foursomes finish the matchup', () => {
+  const ev = makeEvent();
+  const sb = scorebook();
+  for (let h = 1; h <= 6; h++) sb.post(h, { a1: 3, a2: 4, b1: 4, b2: 5 }); // A/B foursome done, C/D still out
+  const a = compute(ev, sb.rows()).game.standings.find((s) => s.teamId === 'A');
+  assert.equal(a.officialPoints, 0);
+  assert.equal(a.provisionalPoints, 13);
+});
+
+test('matchup win bonus: off, ties worth nothing, and never in Plus/Minus', () => {
+  const sweep = (ev) => {
+    const sb = scorebook();
+    for (let h = 1; h <= 6; h++) sb.post(h, { a1: 3, a2: 4, b1: 4, b2: 5, c1: 4, c2: 4, d1: 4, d2: 4 });
+    return compute(ev, sb.rows()).game;
+  };
+  let g = sweep(makeEvent({ matchBonus: 0 }));
+  assert.equal(g.standings.find((s) => s.teamId === 'A').points, 12);
+  g = sweep(makeEvent({ halvedHolePoints: 0 }));
+  assert.deepEqual(match({ game: g }, 'r1m2').bonus, { C: 0, D: 0 }, 'a halved matchup splits nothing when ties score nothing');
+  g = sweep(makeEvent({ game: 'rotationPlusMinus' }));
+  assert.deepEqual(match({ game: g }, 'r1m1').bonus, { A: 0, B: 0 });
+  // An older round saved without the setting gets the bonus (the default).
+  const old = makeEvent();
+  delete old.settings.matchBonus;
+  assert.equal(sweep(old).standings.find((s) => s.teamId === 'A').points, 13);
 });
 
 test('nextHoleFor: first hole the foursome hasn’t fully posted', () => {
@@ -294,7 +340,7 @@ test('7.9 season: player + pair W-L-H across rounds, by personId', () => {
   const a1 = season.players.find((p) => p.key === 'person-a1');
   assert.deepEqual([a1.w, a1.l, a1.h], [3, 0, 0]);
   assert.equal(a1.roundsWon, 1);
-  assert.equal(a1.points, 36);
+  assert.equal(a1.points, 39); // 36 hole points + 3 matchup wins
   assert.equal(season.players[0].key.startsWith('person-a'), true);
   const pair = season.pairs.find((p) => p.key === 'person-a1|person-a2');
   assert.equal(pair.teamName, 'Hogan’s Heroes');

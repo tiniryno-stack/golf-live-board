@@ -41,14 +41,14 @@ function teamRowsGame(app) {
       const chip = prov ? `<span class="prov" data-prov>${isPM ? fmtSigned(prov, '') : `+${fmtPts(prov)}`} prov.</span>` : '';
       const rec = s.officialRecord;
       const thru = Math.min(...team.playerIds.map((id) => snap.playerById.get(id).thru));
-      return `<div class="row team-row" style="--jersey:${teamColor(mine, s.teamId)}">
+      return `<div class="row team-row tap" role="button" tabindex="0" data-act="board-team" data-enter="board-team" data-v="${esc(s.teamId)}" aria-label="${esc(team.name)}: breakdown" style="--jersey:${teamColor(mine, s.teamId)}">
         <span class="rank">${s.shared ? `T${s.rank}` : s.rank}</span>
         <div class="numcol"><div class="n" style="color:var(--jersey)">${esc(val)}</div><span class="micro">${isPM ? 'Margin' : 'Pts'}</span></div>
         <div class="body">
           <div class="spread"><span class="row-title ellipsis">${esc(team.name)}${s.teamId === mine ? '<span class="me-dot" aria-label="your team"></span>' : ''}</span>${chip}</div>
           ${teamBar(isPM, s, scale)}
           <div class="detail ellipsis">${esc(names)} · ${rec.w}-${rec.l}-${rec.h} · thru ${thru}</div>
-        </div></div>`;
+        </div><span class="chev" aria-hidden="true">${icon('fwd', 16)}</span></div>`;
     })
     .join('');
 }
@@ -181,6 +181,7 @@ export default {
       app.render();
     },
     'board-player': (el, ev, app) => app.openSheet('player', { pid: el.dataset.v }),
+    'board-team': (el, ev, app) => app.openSheet('team', { teamId: el.dataset.v }),
     'board-headlines': (el, ev, app) => app.openSheet('headlines', {}),
     'board-share': (el, ev, app) => app.copyLink(),
   },

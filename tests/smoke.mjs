@@ -102,7 +102,7 @@ ok(cartsA.join() === 'Hogan’s Heroes,Shank Redemption', `hole 1 cards on Andre
 const briefA = await briefText(A.page);
 ok(briefA.length === 2 && /Rotation Match Play/.test(briefA[0]) && /2 points every hole/.test(briefA[0]) && /Push A tie: ½ point each/.test(briefA[0]),
   `joining shows Today\u2019s game: how a hole is scored (${(briefA[0] || 'none').slice(0, 60)}\u2026)`);
-ok(/Holes 1–6 vs Shank Redemption/.test(briefA[1] || '') && /Holes 7–12 vs Fore Play/.test(briefA[1] || '') && /12 points per matchup, 36 on the day/.test(briefA[1] || ''),
+ok(/Holes 1–6 vs Shank Redemption/.test(briefA[1] || '') && /Holes 7–12 vs Fore Play/.test(briefA[1] || '') && /12 points per matchup, \+1 for winning it/.test(briefA[1] || ''),
   'card 2: Andrew\u2019s three matchups and what\u2019s up for grabs');
 ok(await briefFits(A.page), 'both cards fit an iPhone SE without scrolling');
 await A.page.tap('[data-act="brief-next"]');
@@ -171,6 +171,23 @@ await C.page.goto(`${link}/card`);
 await C.page.waitForTimeout(500);
 const cardOrder = await C.page.$$eval('.cart-block .cb-head .name', (els) => els.map((e) => e.textContent));
 ok(cardOrder[0] === 'Fore Play' && cardOrder[1] === 'Hogan\u2019s Heroes', `Sam\u2019s Card: his cart (C) first, then who he\u2019s playing (${cardOrder.slice(0, 2).join(', ')})`);
+// Matchup win bonus: rotation 1 is in → the winner's +1 shows; tap a team for the breakdown
+await C.page.goto(`${link}/board`);
+await C.page.waitForTimeout(500);
+const r1 = await app(C.page, () => {
+  const g = window.__glb.snapshot.game;
+  const m = g.matches.find((x) => x.id === 'r1m1');
+  const w = m.result;
+  const st = g.liveStandings.find((x) => x.teamId === w);
+  return { w, holePts: m.points[w], bonus: m.bonus[w], total: st?.points, name: window.__glb.snapshot.teamById.get(w)?.name };
+});
+ok(r1.w && r1.w !== 'halved' && r1.bonus === 1, `holes 1–6 winner (${r1.name}) gets +1 for the matchup`);
+await C.page.tap(`[data-act="board-team"][data-v="${r1.w}"]`);
+await C.page.waitForTimeout(400);
+const bd = (await C.page.textContent('#sheet')).replace(/\s+/g, ' ');
+const fmt = (n) => String(Math.floor(n)) .replace(/^0$/, n % 1 ? '' : '0') + (n % 1 ? '½' : '');
+ok(bd.includes('+1 for the win') && bd.includes(`Total`) && bd.includes(fmt(r1.holePts + 1)), `tap ${r1.name} \u2192 breakdown: matchup ${fmt(r1.holePts)} + 1 for the win (${bd.slice(0, 90)}\u2026)`);
+ok(bd.includes(fmt(r1.total)), `breakdown total matches the Board (${fmt(r1.total)})`);
 await C.page.goto(`${link}/enter`);
 await C.page.waitForTimeout(400);
 

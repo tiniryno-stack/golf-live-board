@@ -83,7 +83,7 @@ function valuesAt(g, h) {
         raw += hh.margin[t];
       }
       if (g.type === 'rotationPlusMinus') v[t] += g.cap != null ? Math.max(-g.cap, Math.min(g.cap, raw)) : raw;
-      else v[t] += pts;
+      else v[t] += pts + (m.final && m.to <= h ? m.bonus?.[t] || 0 : 0); // + matchup win bonus
     }
   }
   return v;

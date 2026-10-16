@@ -2,7 +2,7 @@
 // leave round, player detail, edit a past score, hole detail, headline feed, confirm.
 
 import { esc, icon, scoreClass, clock } from '../ui.js';
-import { fmtToPar, fmtPts, maxHoleScore, componentNames } from '../scoring.js';
+import { fmtToPar, fmtPts, fmtSigned, maxHoleScore, componentNames } from '../scoring.js';
 import { teamColor, headlineColor } from '../teams.js';
 
 let lastHtml = '';
@@ -166,6 +166,52 @@ const BODIES = {
       <div class="micro" style="margin:0 0 6px">Front</div>${half(0)}
       <div class="micro" style="margin:0 0 6px">Back</div>${half(9)}
       ${snap.hasStrokes ? '<p class="meta">Bottom row is net.</p>' : ''}`;
+  },
+
+  team(app, { teamId }) {
+    const snap = app.snapshot;
+    const g = snap?.game;
+    const team = snap?.teamById.get(teamId);
+    if (!team || !g) return head('Team');
+    const isPM = g.type === 'rotationPlusMinus';
+    const s = g.standings.find((x) => x.teamId === teamId);
+    const mine = app.myTeam();
+    const color = teamColor(mine, teamId);
+    const names = team.playerIds.map((id) => snap.playerById.get(id)?.name).join(' + ');
+    const rec = s.record;
+    const rows = g.matches
+      .filter((m) => m.teams.includes(teamId))
+      .map((m) => {
+        const opp = m.teams[0] === teamId ? m.teams[1] : m.teams[0];
+        const status = !m.played ? 'Not started'
+          : !m.final ? `${m.played} of ${m.total} played`
+            : m.result === 'halved' ? 'Halved' : m.result === teamId ? 'Won' : 'Lost';
+        const bonus = m.bonus?.[teamId] || 0;
+        const detail = isPM
+          ? `${status}${m.played ? ` · ${fmtSigned(m.margin[teamId], 'even')}` : ''}`
+          : `${m.played ? `${fmtPts(m.points[teamId])}–${fmtPts(m.points[opp])} · ` : ''}${status}${bonus ? ` · <b>+${fmtPts(bonus)}</b> for the ${m.result === 'halved' ? 'halve' : 'win'}` : ''}`;
+        const value = isPM ? (m.played ? fmtSigned(m.margin[teamId], 'E') : '–') : m.played ? fmtPts(m.points[teamId] + bonus) : '–';
+        return `<div class="row bd-row">
+          <div class="body"><div class="row-title ellipsis">${esc(m.label)} <span class="faint">vs</span> <span style="color:${teamColor(mine, opp)}">${esc(snap.teamById.get(opp)?.name || opp)}</span></div>
+          <div class="detail">${detail}</div></div>
+          <div class="bd-n">${value}</div></div>`;
+      })
+      .join('');
+    const prov = isPM ? s.provisionalPm : s.provisionalPoints;
+    const total = isPM ? fmtSigned(s.pm, 'E') : fmtPts(s.points);
+    const split = prov
+      ? `<p class="meta" style="margin:6px 0 0">${isPM ? fmtSigned(s.officialPm, 'E') : fmtPts(s.officialPoints)} official + ${isPM ? fmtSigned(prov, '') : fmtPts(prov)} provisional (the other foursome hasn’t finished those holes yet).</p>`
+      : '';
+    const how = isPM
+      ? 'Each hole: the strokes you beat them by (Low Ball + Low Total), capped per matchup if set.'
+      : `Each hole: ${g.ncomp === 2 ? 'Low Ball 1 + Low Total 1' : '1 point'}, a push ${g.halves ? `${fmtPts(g.halves)} each` : 'nothing'}.${g.bonus ? ` Win a matchup: <b>+${fmtPts(g.bonus)}</b>${g.halves ? ` (halved: ${fmtPts(g.bonus * g.halves)} each)` : ''}.` : ''}`;
+    return `${head(team.name)}
+      <p class="meta" style="margin:-4px 0 14px">${esc(names)} · ${s.shared ? 'T' : ''}${s.rank}${['th', 'st', 'nd', 'rd'][(s.rank % 100 >= 11 && s.rank % 100 <= 13) || s.rank % 10 > 3 ? 0 : s.rank % 10]} · ${rec.w}-${rec.l}-${rec.h}</p>
+      <div class="list bd">${rows}
+        <div class="row bd-row bd-total"><div class="body"><div class="row-title">Total</div></div><div class="bd-n" style="color:${color}">${total}</div></div>
+      </div>
+      ${split}
+      <p class="meta" style="margin:10px 0 0">${how}</p>`;
   },
 
   edit(app, { pid, hole }) {

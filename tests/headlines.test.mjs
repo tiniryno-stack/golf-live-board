@@ -145,7 +145,7 @@ test('round final names the winner', () => {
   }
   const hl = replayHeadlines(ev, sb.rows());
   const fin = hl.find((h) => h.type === 'roundFinal');
-  assert.equal(fin.text, 'Final: Hogan’s Heroes win the day with 36');
+  assert.equal(fin.text, 'Final: Hogan’s Heroes win the day with 39'); // 36 + 3 matchup wins
   assert.equal(fin.primary, true);
   assert.equal(fin.hero, 'A');
   // The newest moment: everything the last score produced, most important first.

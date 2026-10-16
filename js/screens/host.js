@@ -51,6 +51,7 @@ function rules(app, d) {
       <button class="pill" data-act="host-swap" aria-pressed="${(st.rotationMode || 'swap') === 'swap'}"><span class="dot"></span>Carts swap every 6</button>
     </div>
     ${st.game === 'rotationMatch' ? `<div class="field"><span class="label">Halved points</span>${seg('host-set', [['0.5', '½ each'], ['0', 'Nothing']], String(st.halvedHolePoints), 'data-k="halvedHolePoints"')}</div>` : ''}
+    ${st.game === 'rotationMatch' ? `<div class="field"><span class="label">Matchup win bonus</span>${seg('host-set', [['1', '+1 point'], ['0', 'None']], String(st.matchBonus ?? 1), 'data-k="matchBonus"')}</div>` : ''}
     ${pm ? `<div class="field"><span class="label">Max swing per rotation</span>${seg('host-set', [['', 'Uncapped'], ['3', '3'], ['5', '5']], st.plusMinusCap == null ? '' : String(st.plusMinusCap), 'data-k="plusMinusCap"')}</div>` : ''}
     <details class="fold"${st.handicapMode !== 'full' ? ' open' : ''}><summary>Advanced handicaps</summary>
       <div class="chips" style="margin:4px 0 12px"><button class="pill" data-act="host-lowman" aria-pressed="${st.handicapMode === 'offLow'}"><span class="dot"></span>Play off the low man</button></div>
@@ -167,7 +168,7 @@ export default {
       const st = draft(app).settings;
       const k = el.dataset.k;
       let v = el.dataset.v;
-      if (k === 'halvedHolePoints') v = Number(v);
+      if (k === 'halvedHolePoints' || k === 'matchBonus') v = Number(v);
       if (k === 'plusMinusCap') v = v === '' ? null : Number(v);
       if (k === 'startHole') v = Number(v);
       st[k] = v;
