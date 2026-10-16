@@ -11,6 +11,10 @@
 //   8. Their cart is greyed: a stray tap doesn't score, it opens 50/50; tap yours to go
 //      back; the next hole opens on yours again. Your cart tops the Card even as cart C.
 //   0. Joining shows "Today's game" (your matchups, what's up for grabs) once per phone
+//  10. Organizer: Setup → Save → Open the round on a fresh phone, pick a name, keep the
+//      cart name, Today's game, Enter (the first tip waits until the cards are gone)
+//  11. Never a blank screen: a stalled connection shows "Opening…" then Try again; a
+//      drawing error shows "Something went wrong" + Reload
 //   9. Headlines wear the jersey of the team on their positive end; two that land on the
 //      same score show together, then it's back to one (banner and Board).
 // Realtime isn't mocked, so "the other phone sees it" is driven by a refetch —
@@ -371,7 +375,67 @@ await P.page.waitForTimeout(300);
 const feed = await P.page.$$eval('#sheet .headline', (els) => els.map((e) => e.style.getPropertyValue('--jersey')));
 ok(feed.includes('var(--good)') && feed.includes('var(--t-C)'), `the full list is color-coded too (${feed.join(', ')})`);
 
-const errors = [A, C, A2, P, Q].flatMap((p) => p.page.errors);
+// 10. The organizer's path, from a phone that has never seen the app
+const O = await (async () => {
+  const ctx = await browser.newContext({ viewport: { width: 393, height: 659 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  await attach(ctx, be, srv.origin);
+  const page = await ctx.newPage();
+  page.errors = [];
+  page.on('pageerror', (e) => page.errors.push(`Organizer: ${e.message}`));
+  return { ctx, page };
+})();
+await O.page.goto(`${srv.origin}/#/setup`);
+await O.page.waitForTimeout(800);
+await O.page.tap('[data-act="setup-course"]');
+await O.page.tap('[data-act="setup-next"]');
+for (const n of ['Andrew', 'Justin', 'Sean', 'Mitchell', 'Ryan', 'Joseph', 'Chuck', 'Peter']) {
+  await O.page.fill('#new-player', n);
+  await O.page.press('#new-player', 'Enter');
+}
+await O.page.tap('[data-act="setup-next"]');
+for (let p = 0; p < 8; p++) await O.page.tap(`[data-act="setup-team"][data-i="${p}"][data-v="${'ABADCCBD'[p]}"]`);
+for (let i = 0; i < 3; i++) await O.page.tap('[data-act="setup-next"]');
+await O.page.tap('[data-act="setup-save"]');
+await O.page.waitForTimeout(800);
+await O.page.tap('[data-act="setup-open"]');
+await O.page.waitForTimeout(1200);
+ok(/Watching/.test(await O.page.textContent('#content')) && /Who are you/.test(await O.page.textContent('#sheet')), 'Open the round \u2192 the round (watching) with \u201cWho are you?\u201d');
+await O.page.locator('.who-btn', { hasText: 'Andrew' }).first().tap();
+await O.page.waitForTimeout(900);
+ok(/name your cart/i.test(await O.page.textContent('#overlay')) && !(await O.page.$('.coach')), 'picked Andrew \u2192 cart-name card, with no tip popping over it');
+await O.page.tap('[data-act="team-later"]');
+await O.page.waitForTimeout(500);
+ok(!!(await O.page.$('.fullcard.brief')) && !(await O.page.$('.coach')), 'kept \u201cCart A\u201d \u2192 Today\u2019s game, still no tip on top');
+await O.page.tap('[data-act="brief-done"]');
+await O.page.waitForTimeout(500);
+ok(!!(await O.page.$('.cart.mine')) && /Tap once for bogey/.test((await O.page.textContent('.coach').catch(() => '')) || ''), 'then Enter, and the first tip shows there');
+
+// 11. Never a blank screen
+const S = await (async () => {
+  const ctx = await browser.newContext({ viewport: { width: 375, height: 548 }, isMobile: true, hasTouch: true });
+  await attach(ctx, be, srv.origin);
+  await ctx.addInitScript(() => { window.__glbLoadTimeout = 2000; localStorage.setItem('glb.who.x', 'true'); });
+  const page = await ctx.newPage();
+  page.errors = [];
+  return { ctx, page };
+})();
+await S.page.goto(`${srv.origin}/#/`);
+await S.page.waitForTimeout(600);
+be.stall = true;
+await S.page.evaluate((code) => window.__glb.go(`#/e/${code}/board`), r2.code);
+await S.page.waitForTimeout(400);
+ok(/Opening/.test(await S.page.textContent('#content')), `stalled connection: \u201cOpening ${r2.code}\u2026\u201d, not a blank screen`);
+await S.page.waitForTimeout(2200);
+ok(/No signal/.test(await S.page.textContent('#content')) && !!(await S.page.$('[data-act="retry-load"]')), 'gives up after a while: \u201cNo signal\u201d + Try again');
+be.stall = false;
+await S.page.tap('[data-act="retry-load"]');
+await S.page.waitForTimeout(900);
+ok(/Charmander|Squirtle/.test(await S.page.textContent('#content')), 'Try again loads the round');
+await S.page.evaluate(() => { window.__glb.snapshot = { broken: true }; window.__glb.render(); });
+await S.page.waitForTimeout(200);
+ok(/Something went wrong/.test(await S.page.textContent('#content')) && !!(await S.page.$('[data-act="reload"]')), 'a drawing error shows \u201cSomething went wrong\u201d + Reload (and the error text)');
+
+const errors = [A, C, A2, P, Q, O].flatMap((p) => p.page.errors);
 ok(errors.length === 0, `no page errors${errors.length ? `: ${errors.join('; ')}` : ''}`);
 
 await browser.close();

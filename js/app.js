@@ -92,7 +92,12 @@ app.render = (opts) => render(opts);
 
 app.toast = (opts) => fx.toast(opts, app);
 app.showCard = (opts) => fx.showCard(opts, app);
-app.coach = (key, target, text) => fx.coach(key, target, text);
+app.coach = (key, target, text) => {
+  // Not over the who-are-you sheet, the cart-name card or Today's game: it shows on the next draw instead.
+  if (app.sheet || $('overlay')?.classList.contains('open')) return;
+  if (app.joining && Date.now() - app.joining < 60000) return;
+  fx.coach(key, target, text);
+};
 
 app.openSheet = (type, props = {}) => {
   app.sheet = { type, props };
@@ -259,6 +264,7 @@ app.claim = async (pid) => {
     return;
   }
   if (res.ok) {
+    app.joining = Date.now(); // name → cart name → Today's game: hold coach tips until it's done
     setMe(pid);
     app.claimed.add(pid);
     app.closeSheet();
@@ -350,13 +356,18 @@ function afterJoin() {
   else maybeBrief();
 }
 function maybeBrief() {
-  if (!app.me || !app.snapshot?.game) return;
   const key = `glb.brief.${app.code}`;
-  if (db.local.get(key)) return;
-  fx.showBrief(app, () => {
-    db.local.set(key, true);
+  const finish = () => {
+    app.joining = 0; // the join sequence is over: Enter's first tip can show now
     if (app.me && app.route.tab !== 'enter') app.go(app.tabHash('enter'));
+    else render();
+  };
+  if (!app.me || !app.snapshot?.game || db.local.get(key)) return finish();
+  const shown = fx.showBrief(app, () => {
+    db.local.set(key, true);
+    finish();
   });
+  if (!shown) finish();
 }
 app.openBrief = () => fx.showBrief(app, () => db.local.set(`glb.brief.${app.code}`, true));
 app.openTeamPicker = () => fx.showTeamPicker(app);
@@ -559,6 +570,7 @@ app.copyLink = async (suffix = '') => {
 let channel = null;
 let loadSeq = 0;
 
+const LOAD_TIMEOUT_MS = 12000;
 async function loadRound(code) {
   const seq = ++loadSeq;
   closeRound();
@@ -576,7 +588,11 @@ async function loadRound(code) {
   render();
   let res;
   try {
-    res = await db.fetchRound(code);
+    // A stalled connection must never leave a blank screen: give up after a while and offer Try again.
+    res = await Promise.race([
+      db.fetchRound(code),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Taking too long to load')), window.__glbLoadTimeout || LOAD_TIMEOUT_MS)),
+    ]);
   } catch (e) {
     if (seq !== loadSeq) return;
     app.loading = false;
@@ -715,6 +731,7 @@ function onRemoteJoinRequest(row) {
   if (app.waiting && app.waiting.requestId === row.id && row.status !== 'pending') {
     app.waiting.status = row.status;
     if (row.status === 'approved') {
+      app.joining = Date.now();
       setMe(app.waiting.playerId);
       app.waiting = null;
       app.closeSheet();
@@ -923,6 +940,14 @@ window.addEventListener('hashchange', route);
 let pendingContent = false;
 
 function render(opts = {}) {
+  try {
+    draw(opts);
+  } catch (e) {
+    showCrash(e);
+  }
+}
+
+function draw(opts) {
   const r = app.route;
   const screen = SCREENS[r.name] || home;
   const appEl = $('app');
@@ -961,7 +986,10 @@ document.addEventListener('focusout', () => {
 });
 
 function renderRoundState() {
-  if (app.loading) return '';
+  if (app.loading) {
+    return `<div class="plain loading-state"><div class="spinner" aria-hidden="true"></div>
+      <p class="soft">Opening ${esc(app.code || 'the round')}…</p></div>`;
+  }
   if (app.loadError) {
     return `<div class="plain"><h1 class="title">No signal</h1>
       <p class="soft">Couldn’t reach the scoreboard. Scores you enter are saved on this phone and sync when you’re back.</p>
@@ -1026,6 +1054,29 @@ function renderSheet() {
   sheets.render($('sheet'), app);
 }
 
+// Never a blank screen: if drawing fails, say so, show the error (screenshot-able) and offer a reload.
+function showCrash(e) {
+  console.error(e);
+  hideSplash();
+  // Clear anything on top so the message (and Reload) is what you see.
+  app.sheet = null;
+  $('sheet').className = 'sheet-root';
+  $('sheet').innerHTML = '';
+  try { fx.closeOverlay(); } catch { /* keep going */ }
+  const msg = String(e?.message || e || 'Unknown error').slice(0, 300);
+  $('content').innerHTML = `<div class="plain crash"><h1 class="title">Something went wrong</h1>
+    <p class="soft">Your scores are safe: anything entered is saved on this phone and syncs when it can. Reload to pick up where you left off.</p>
+    <button class="btn primary block big" data-act="reload">Reload</button>
+    <p class="meta crash-detail">${esc(msg)}</p></div>`;
+}
+const blankScreen = () => !$('content').textContent.trim() && !$('overlay')?.classList.contains('open');
+window.addEventListener('error', (ev) => {
+  if (blankScreen()) showCrash(ev.error || ev.message);
+});
+window.addEventListener('unhandledrejection', (ev) => {
+  if (blankScreen()) showCrash(ev.reason);
+});
+
 let splashGone = false;
 function hideSplash() {
   if (splashGone) return;
@@ -1057,6 +1108,7 @@ Object.assign(actions, {
     }
   },
   'retry-load': () => loadRound(app.route.code),
+  reload: () => location.reload(),
 });
 for (const s of [...Object.values(SCREENS), sheets, fx]) Object.assign(actions, s.actions || {});
 

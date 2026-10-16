@@ -722,3 +722,10 @@ a { color: inherit; }
 details.fold { margin: 6px 0 14px; }
 details.fold summary { min-height: var(--tap); display: flex; align-items: center; font-weight: 600; color: var(--ink-soft); cursor: pointer; list-style: none; }
 details.fold summary::-webkit-details-marker { display: none; }
+
+/* Opening a round / something went wrong: never a blank screen */
+.loading-state { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; min-height: 50vh; text-align: center; }
+.spinner { width: 28px; height: 28px; border-radius: 50%; border: 3px solid var(--line-strong); border-top-color: var(--ink); animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2.4s; } }
+.crash .crash-detail { margin-top: 14px; font-family: var(--mono); font-size: 12px; word-break: break-word; }

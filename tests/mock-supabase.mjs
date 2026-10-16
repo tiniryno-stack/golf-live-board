@@ -281,6 +281,7 @@ export function createBackend() {
     };
     if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors });
     if (backend.offline) return route.abort('internetdisconnected');
+    if (backend.stall) return; // never answers: like a phone on one bar
     const m = url.pathname.match(/^\/rest\/v1\/(rpc\/)?([a-z_]+)$/);
     if (!m) return route.fulfill({ status: 404, headers: cors, body: '{}' });
     if (m[1]) {
@@ -294,7 +295,7 @@ export function createBackend() {
     return route.fulfill({ status: res.status, headers: cors, body: JSON.stringify(res.body) });
   }
 
-  const backend = { tables: t, rpc, handle, calls: [], offline: false };
+  const backend = { tables: t, rpc, handle, calls: [], offline: false, stall: false };
   return backend;
 }
 
