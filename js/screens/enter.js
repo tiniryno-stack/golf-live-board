@@ -49,9 +49,9 @@ function cartsFor(app, hole) {
   return carts;
 }
 
-/** Which cart is open for entry on this hole: 'mine' (60/40, theirs greyed) or 'opp' (50/50, yours greyed). */
+/** Which cart is open for entry on this hole: 'mine' (70/30, theirs greyed) or 'opp' (50/50, yours greyed). */
 function focusSide(app, hole, carts) {
-  if (app.ui.enterFocus != null && app.ui.enterFocus !== hole) app.ui.enterFocus = null; // left that hole: back to 60/40
+  if (app.ui.enterFocus != null && app.ui.enterFocus !== hole) app.ui.enterFocus = null; // left that hole: back to 70/30
   return carts.length > 1 && app.ui.enterFocus === hole ? 'opp' : 'mine';
 }
 
@@ -236,7 +236,7 @@ export default {
     },
     'next-hole': (el, ev, app) => nextHole(app),
     'cart-focus': (el, ev, app) => {
-      // Remembered for this hole only: any other hole opens on your cart (60/40).
+      // Remembered for this hole only: any other hole opens on your cart (70/30).
       app.ui.enterFocus = el.dataset.v === 'opp' ? app.ui.hole : null;
       app.render();
     },
