@@ -229,6 +229,29 @@ for (const size of SIZES) {
     await page.waitForTimeout(700);
   }
   if (await page.$('.fullcard.brief')) { failures.push(`${size[0]} · Let’s play`); rows.push([`${size[0]} · Let’s play closes it`, 'FAIL: still open']); }
+  // Round recap: images fit the width, the save button is on screen
+  await page.evaluate(() => window.__glb.openRecap());
+  await page.waitForSelector('.recap-img', { timeout: 8000 }).catch(() => {});
+  await page.waitForTimeout(300);
+  {
+    const res = await page.evaluate(() => {
+      const vw = window.innerWidth, vh = window.innerHeight;
+      const problems = [];
+      const imgs = [...document.querySelectorAll('.recap-img')];
+      if (imgs.length < 3) problems.push(`${imgs.length} images`);
+      const first = imgs[0]?.getBoundingClientRect();
+      if (!first || first.width > vw - 30 || first.left < 0) problems.push('image wider than the screen');
+      const btn = document.querySelector('[data-act="recap-save"]')?.getBoundingClientRect();
+      if (!btn || btn.bottom > vh || btn.top < 0) problems.push('save button off screen');
+      if (document.documentElement.scrollWidth > vw + 1) problems.push('page scrolls sideways');
+      return problems;
+    });
+    rows.push([`${size[0]} · Round recap`, res.length ? `FAIL: ${res.join('; ')}` : 'ok']);
+    if (res.length) failures.push(`${size[0]} · Round recap`);
+    await page.screenshot({ path: `${OUT}${size[1]}x${size[2]}-recap.png` });
+    await page.tap('[data-act="recap-close"]');
+    await page.waitForTimeout(200);
+  }
   for (const tab of ['matches', 'board', 'card', 'host']) {
     await go(`#/e/${r.code}/${tab}`);
     await check(page, size, tab[0].toUpperCase() + tab.slice(1), tab);

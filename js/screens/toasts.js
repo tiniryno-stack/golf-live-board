@@ -4,6 +4,7 @@
 
 import { esc, icon, reducedMotion } from '../ui.js';
 import { briefPages } from './brief.js';
+import { recapImages, saveImage } from './recap.js';
 import { local } from '../db.js';
 import { TEAM_NAME_PICKS, isDefaultTeamName, headlineColor } from '../teams.js';
 
@@ -132,7 +133,7 @@ export function showCard(opts, app) {
 
 export function showAway(list, app, markSeen) {
   const root = $('overlay');
-  if (!list.length || picker || brief) return; // don't cover the name picker / Today's game (shown next time)
+  if (!list.length || picker || brief || recap) return; // don't cover the name picker / Today's game (shown next time)
   overlay = { onDismiss: markSeen, app, away: true };
   root.innerHTML = `<div class="away" data-act="away-dismiss" role="dialog">
     <div class="kicker">While you were away</div>
@@ -156,6 +157,7 @@ export function closeOverlay() {
   if (!root) return;
   picker = null;
   brief = null;
+  recap = null;
   if (overlay?.away) overlay.onDismiss?.();
   overlay = null;
   root.classList.remove('open');
@@ -264,6 +266,58 @@ function closeBrief() {
   done?.();
 }
 
+// ───────────────────────────────────────────── Round recap (swipe through keepsake images)
+
+let recap = null; // { page, n, items, slug }
+
+export async function showRecap(app) {
+  const root = $('overlay');
+  const top = `<div class="brief-top"><span class="kicker">Round recap</span><button class="brief-skip" data-act="recap-close">Done</button></div>`;
+  recap = { page: 0, n: 0, items: [], slug: String(app.event?.name || 'round').replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase() || 'round' };
+  root.innerHTML = `<div class="fullcard brief recap" role="dialog" aria-modal="true" aria-label="Round recap">${top}
+    <div class="loading-state"><div class="spinner" aria-hidden="true"></div><p class="sub">Drawing the scorecards…</p></div></div>`;
+  root.classList.add('open');
+  let items;
+  try {
+    items = await recapImages(app);
+  } catch (e) {
+    console.error(e);
+    if (!recap) return;
+    root.querySelector('.loading-state').innerHTML = `<p class="sub">Couldn’t draw the recap.</p><p class="meta">${esc(String(e?.message || e))}</p>`;
+    return;
+  }
+  if (!recap) return; // closed while drawing
+  recap.items = items;
+  recap.n = items.length;
+  root.innerHTML = `<div class="fullcard brief recap" role="dialog" aria-modal="true" aria-label="Round recap">${top}
+    <div class="brief-track">${items.map((it, i) => `<section class="brief-page recap-page" aria-label="${i + 1} of ${items.length}">
+      <div class="micro">${esc(it.title)}</div>
+      <img class="recap-img" alt="${esc(it.title)}" src="${it.canvas.toDataURL('image/png')}" width="${it.canvas.width}" height="${it.canvas.height}">
+    </section>`).join('')}</div>
+    <div class="brief-foot">
+      <div class="brief-dots" aria-hidden="true">${items.map((_, i) => `<i${i === 0 ? ' class="on"' : ''}></i>`).join('')}</div>
+      <button class="btn primary big block" data-act="recap-save">${icon('share', 18)} Save or share</button>
+    </div>
+  </div>`;
+  const track = root.querySelector('.brief-track');
+  track.addEventListener('scroll', () => {
+    if (!recap) return;
+    const i = Math.round(track.scrollLeft / Math.max(1, track.clientWidth));
+    if (i !== recap.page) {
+      recap.page = i;
+      root.querySelectorAll('.brief-dots i').forEach((d, k) => d.classList.toggle('on', k === i));
+    }
+  }, { passive: true });
+}
+
+function closeRecap() {
+  if (!recap) return;
+  recap = null;
+  const root = $('overlay');
+  root.classList.remove('open');
+  root.innerHTML = '';
+}
+
 // ───────────────────────────────────────────── coach marks (once per phone)
 
 export function coach(key, target, text) {
@@ -332,6 +386,14 @@ export const actions = {
     track.scrollTo({ left: brief.page * track.clientWidth, behavior: reducedMotion() ? 'auto' : 'smooth' });
   },
   'brief-done': () => closeBrief(),
+  'recap-close': () => closeRecap(),
+  'recap-save': async (el, ev, app) => {
+    const it = recap?.items[recap.page];
+    if (!it) return;
+    const res = await saveImage(it.canvas, `${recap.slug}-${it.key}`);
+    if (res === 'downloaded') app.toast({ title: 'Image saved', sub: 'Check your downloads.' });
+    else if (res === 'failed') app.toast({ title: 'Couldn’t save the image', error: true });
+  },
   'away-all': (el, ev, app) => {
     closeAway();
     if (app.code) app.go(app.tabHash('board'));

@@ -394,6 +394,7 @@ function maybeBrief() {
   });
   if (!shown) finish();
 }
+app.openRecap = () => fx.showRecap(app);
 app.openBrief = () => fx.showBrief(app, () => db.local.set(`glb.brief.${app.code}`, true));
 app.openTeamPicker = () => fx.showTeamPicker(app);
 

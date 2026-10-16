@@ -121,6 +121,32 @@ function hero(app, mode) {
   </div>`;
 }
 
+/** The round is over: a big tappable card that opens the recap (keepsake images). */
+function finalCard(app) {
+  const snap = app.snapshot;
+  const g = snap.game;
+  let who, sub;
+  if (g) {
+    const isPM = g.type === 'rotationPlusMinus';
+    const top = g.standings.filter((s) => s.rank === 1);
+    who = top.map((s) => snap.teamById.get(s.teamId).name).join(' & ');
+    const v = isPM ? fmtSigned(top[0].officialPm, 'E') : `${fmtPts(top[0].officialPoints)} pts`;
+    const names = top.length === 1 ? snap.teamById.get(top[0].teamId).playerIds.map((id) => snap.playerById.get(id).name).join(' + ') : '';
+    sub = [top.length > 1 ? 'share the day' : 'win the day', v, names].filter(Boolean).join(' · ');
+  } else {
+    const lead = playerLeaderboard(snap, snap.hasStrokes ? 'net' : 'gross')[0];
+    who = lead?.name || 'Final';
+    sub = lead ? `wins at ${fmtToPar(snap.hasStrokes ? lead.netToPar : lead.grossToPar)}` : '';
+  }
+  return `<button class="final-card" data-act="recap-open">
+      <span class="fc-k">${icon('trophy', 15)} Final</span>
+      <span class="fc-w">${esc(who)}</span>
+      <span class="fc-s">${esc(sub)}</span>
+      <span class="fc-cta">Round recap &amp; scorecards ${icon('fwd', 15)}</span>
+    </button>
+    ${app.event.crew_id ? `<button class="btn ghost block" style="margin:0 0 14px" data-act="go" data-v="#/season/${esc(app.event.crew_id)}">See season standings</button>` : ''}`;
+}
+
 export default {
   hero: true,
 
@@ -133,7 +159,7 @@ export default {
     // Headlines are about the team race: they live on the Teams view so Players fits all 8 rows.
     // One at a time: the newest moment's headline. Two that landed on the same score
     // show together for a few seconds (app.ui.headlinePair), then it's back to one.
-    const moment = view === 'teams' ? latestMoment(app.headlines) : [];
+    const moment = view === 'teams' && !snap.roundComplete ? latestMoment(app.headlines) : []; // the final card says it once it's over
     const pair = app.ui.headlinePair;
     const two = pair && pair.until > Date.now() && moment.length > 1 && pair.id === moment[0].id;
     const recent = moment.slice(0, two ? 2 : 1);
@@ -154,10 +180,7 @@ export default {
           ? `Official through hole ${snap.officialHole}${prov.length ? ` · ${prov.length > 1 ? 'holes' : 'hole'} ${prov.join(', ')} provisional (lighter bar)` : ''}`
           : `Points go official once both foursomes finish hole ${holeAt(snap.settings, 1)}`;
     }
-    const final = snap.roundComplete && g
-      ? `<div class="final-banner">${esc(app.headlines.find((h) => h.type === 'roundFinal')?.text || 'Final')}</div>
-         ${app.event.crew_id ? `<button class="btn ghost block" style="margin:0 0 14px" data-act="go" data-v="#/season/${esc(app.event.crew_id)}">See season standings</button>` : ''}`
-      : '';
+    const final = snap.roundComplete ? finalCard(app) : '';
     return `${hero(app, mode)}
       <div class="sheet">
         ${final}${headlines}${segs}
@@ -182,6 +205,7 @@ export default {
     },
     'board-player': (el, ev, app) => app.openSheet('player', { pid: el.dataset.v }),
     'board-team': (el, ev, app) => app.openSheet('team', { teamId: el.dataset.v }),
+    'recap-open': (el, ev, app) => app.openRecap(),
     'board-headlines': (el, ev, app) => app.openSheet('headlines', {}),
     'board-share': (el, ev, app) => app.copyLink(),
   },

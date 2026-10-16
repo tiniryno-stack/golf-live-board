@@ -120,6 +120,7 @@ const BODIES = {
       <p class="meta" style="margin:-4px 0 16px">${esc(meta)} · ${p ? `you\u2019re <b>${esc(p.name)}</b> on this phone` : 'watching on this phone'}</p>
       <div class="stack">
         ${p ? '' : '<button class="btn primary big block" data-act="menu-pick">Pick my name</button>'}
+        ${app.snapshot?.roundComplete ? `<button class="btn primary block" data-act="menu-recap">${icon('trophy', 18)} Round recap &amp; scorecards</button>` : ''}
         ${app.snapshot?.game ? `<button class="btn block" data-act="menu-brief">${icon('spark', 18)} How today’s game works</button>` : ''}
         <button class="btn block" data-act="menu-share">${icon('share', 18)} Share round link</button>
         <button class="btn ghost block" data-act="menu-home">${icon('home', 18)} Go to Home</button>
@@ -344,6 +345,10 @@ export const actions = {
     app.closeSheet();
     if (app.route.tab !== 'enter') app.go(app.tabHash('enter'));
     else app.render();
+  },
+  'menu-recap': (el, ev, app) => {
+    app.closeSheet();
+    app.openRecap();
   },
   'menu-brief': (el, ev, app) => {
     app.closeSheet();

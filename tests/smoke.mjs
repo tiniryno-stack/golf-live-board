@@ -500,6 +500,48 @@ await F.page.tap('[data-act="hole-current"]');
 await F.page.waitForTimeout(200);
 ok((await F.page.textContent('.hole-title')).startsWith('Hole 4'), 'Back to hole 4');
 
+// 14. Final: a big card on the Board opens the recap — four keepsake images to save or share
+const r4 = seedRound(be, { holesPlayed: 18 });
+const DEV4 = '44444444-4444-4444-8444-444444444444';
+be.tables.claims.push({ event_id: r4.id, player_id: 'p1', device_id: DEV4 });
+const R = await (async () => {
+  const ctx = await browser.newContext({ viewport: { width: 393, height: 659 }, isMobile: true, hasTouch: true, acceptDownloads: true });
+  await attach(ctx, be, srv.origin);
+  await ctx.addInitScript(([code, dev]) => {
+    localStorage.setItem('glb.device', JSON.stringify(dev));
+    localStorage.setItem('glb.me.' + code, '"p1"');
+    localStorage.setItem('glb.who.' + code, 'true');
+    localStorage.setItem('glb.brief.' + code, 'true');
+    localStorage.setItem('glb.seen.' + code, JSON.stringify({ last: Date.now(), ids: [] }));
+    for (const k of ['tile3', 'prov', 'oppcart2']) localStorage.setItem('glb.coach.' + k, 'true');
+  }, [r4.code, DEV4]);
+  const page = await ctx.newPage();
+  page.errors = [];
+  page.on('pageerror', (e) => page.errors.push(`Recap phone: ${e.message}`));
+  return { ctx, page };
+})();
+await R.page.goto(`${srv.origin}/#/e/${r4.code}/board`);
+await R.page.waitForTimeout(1000);
+await clearOverlays(R.page);
+const fc = await R.page.evaluate(() => document.querySelector('.final-card')?.innerText.replace(/\s+/g, ' ').trim() || '');
+ok(/Final/i.test(fc) && /win the day/.test(fc) && /Round recap/.test(fc), `round over \u2192 big final card on the Board (${fc.slice(0, 70)}\u2026)`);
+ok(!(await R.page.$('.headlines.compact')), 'the final headline isn\u2019t repeated under it');
+await R.page.tap('[data-act="recap-open"]');
+await R.page.waitForSelector('.recap-img', { timeout: 8000 });
+await R.page.waitForTimeout(300);
+const recapImgs = await R.page.$$eval('.recap-img', (els) => els.map((e) => [e.alt, e.naturalWidth, e.naturalHeight]));
+ok(recapImgs.length === 4 && recapImgs.every(([, w, h]) => w === 1080 && h > 900), `recap: ${recapImgs.map(([a, w, h]) => `${a} ${w}×${h}`).join(', ')}`);
+ok((await R.page.evaluate(() => document.querySelectorAll('.brief-dots i').length)) === 4, 'four cards to swipe through');
+await R.page.evaluate(() => { const t = document.querySelector('.recap .brief-track'); t.scrollTo({ left: t.clientWidth, behavior: 'auto' }); });
+await R.page.waitForTimeout(300);
+const [dl] = await Promise.all([R.page.waitForEvent('download', { timeout: 6000 }).catch(() => null), R.page.tap('[data-act="recap-save"]')]);
+ok(!!dl && /scorecard|-me\.png$/.test(dl.suggestedFilename()), `Save or share \u2192 a PNG of the card you\u2019re on (${dl?.suggestedFilename() || 'none'})`);
+await R.page.tap('[data-act="recap-close"]');
+await R.page.waitForTimeout(200);
+await R.page.tap('[data-act="round-menu"]');
+await R.page.waitForTimeout(400);
+ok(/Round recap/.test(await R.page.textContent('#sheet')), 'the round menu has Round recap too');
+
 // 11. Never a blank screen
 const S = await (async () => {
   const ctx = await browser.newContext({ viewport: { width: 375, height: 548 }, isMobile: true, hasTouch: true });
@@ -525,7 +567,7 @@ await S.page.evaluate(() => { window.__glb.snapshot = { broken: true }; window._
 await S.page.waitForTimeout(200);
 ok(/Something went wrong/.test(await S.page.textContent('#content')) && !!(await S.page.$('[data-act="reload"]')), 'a drawing error shows \u201cSomething went wrong\u201d + Reload (and the error text)');
 
-const errors = [A, C, A2, P, Q, O, F].flatMap((p) => p.page.errors);
+const errors = [A, C, A2, P, Q, O, F, R].flatMap((p) => p.page.errors);
 ok(errors.length === 0, `no page errors${errors.length ? `: ${errors.join('; ')}` : ''}`);
 
 await browser.close();
