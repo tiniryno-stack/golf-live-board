@@ -135,6 +135,7 @@ function watchView(app) {
       <p class="soft" style="margin:0">Pick your name to enter scores for your matchup. Everyone can watch everything.${org ? ' As organizer you can also fix any score from the Card.' : ''}</p>
       <button class="btn primary big block" data-act="name-chip">Pick my name</button>
       <button class="btn ghost block" data-act="tab" data-v="board">See the Board</button>
+      ${app.isFinal() ? `<button class="btn ghost block" data-act="final-relock">${icon('lock', 16)} Done fixing \u2014 lock again</button>` : ''}
     </div></div></div>`;
 }
 
@@ -147,7 +148,7 @@ function finalView(app) {
       <p class="soft" style="margin:0">The organizer finalized the round, so scores are locked.</p>
       <button class="btn primary big block" data-act="tab" data-v="board">See the final Board</button>
       ${app.snapshot.roundComplete ? `<button class="btn block" data-act="recap-open">${icon('trophy', 18)} Round recap &amp; scorecards</button>` : ''}
-      <button class="btn ghost block" data-act="pin-open">${icon('lock', 16)} Fix a score (organizer PIN)</button>
+      <button class="btn ghost block" data-act="pin-open">${icon('lock', 16)} Fix a score${app.adminPin ? '' : ' (organizer PIN)'}</button>
     </div></div></div>`;
 }
 
@@ -157,7 +158,7 @@ export default {
 
   render(app) {
     const snap = app.snapshot;
-    if (app.isFinal() && !app.adminPin) return finalView(app);
+    if (app.isFinal() && !app.finalUnlocked()) return finalView(app);
     if (!app.myPlayer()) return watchView(app);
     const st = snap.settings;
     const h = currentHole(app);
@@ -177,6 +178,8 @@ export default {
     } else if (rot) {
       matchLine = `<span class="teams">${esc(rot.label)}</span>`;
     }
+    // Fixing a finalized round: say so, with Done to lock this phone again.
+    if (app.isFinal()) matchLine = `<span class="teams">${icon('lock', 13)} Fixing a finalized round</span><button class="link-btn relock" data-act="final-relock">Done</button>`;
     const carts = cartsFor(app, h);
     const focus = focusSide(app, h, carts);
     const locked = isLocked(app, h);
@@ -295,7 +298,12 @@ export default {
       app.render();
     },
     'team-picker': (el, ev, app) => app.openTeamPicker(),
-    'pin-open': (el, ev, app) => app.openSheet('pin', {}),
+    'pin-open': (el, ev, app) => app.unlockFinal(),
+    'final-relock': (el, ev, app) => {
+      app.ui.finalUnlock = null;
+      app.render();
+      app.toast({ title: 'Locked again' });
+    },
   },
 };
 

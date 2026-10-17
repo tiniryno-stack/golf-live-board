@@ -290,6 +290,8 @@ a { color: inherit; }
 }
 .matchup-line .teams { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .matchup-line .status { font-family: var(--mono); flex: none; color: var(--hero-ink); }
+.matchup-line .teams svg { vertical-align: -2px; }
+.matchup-line .relock { min-height: 0; padding: 2px 6px; flex: none; color: var(--hero-ink); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
 .enter .sheet {
   flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px;
   padding: 12px 12px 10px;

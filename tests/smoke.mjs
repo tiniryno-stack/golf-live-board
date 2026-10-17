@@ -626,6 +626,16 @@ ok(be.rpc.upsert_score({ p_code: r5.code, p_device_id: DEV5, p_player_id: 'p1', 
 await X.page.evaluate((at) => window.__glb._remote.event({ finalized_at: at }), ev5.finalized_at);
 await X.page.waitForTimeout(400);
 ok(/The round is final/.test(await toastText(X.page)), 'other phones hear it: “The round is final”');
+await Y.page.tap('[data-act="tab"][data-v="enter"]');
+await Y.page.waitForTimeout(400);
+ok(!!(await Y.page.$('.final-lock')) && (await Y.page.evaluate(() => window.__glb.setScore('p1', 18, 3))) === false, 'the organizer’s phone locks too once final');
+await Y.page.evaluate(() => { document.getElementById('toasts').innerHTML = ''; });
+await Y.page.tap('[data-act="pin-open"]');
+await Y.page.waitForTimeout(400);
+ok(!(await Y.page.$('.final-lock')) && !(await Y.page.$('#sheet .panel')) && /Unlocked/.test(await toastText(Y.page)), 'organizer: Fix a score unlocks in one tap (PIN already on the phone)');
+await Y.page.tap('[data-act="final-relock"]');
+await Y.page.waitForTimeout(300);
+ok(!!(await Y.page.$('.final-lock')), 'Done \u2192 locked again');
 await X.page.tap('[data-act="tab"][data-v="enter"]');
 await X.page.waitForTimeout(400);
 ok(!!(await X.page.$('.final-lock')) && !(await X.page.$('.tile .step')) && !!(await X.page.$('[data-act="pin-open"]')), 'Enter: “Final”, no score boxes, “Fix a score (organizer PIN)”');
@@ -639,7 +649,7 @@ ok(/didn’t work/.test(await toastText(X.page)) && !!(await X.page.$('#sheet .p
 await X.page.fill('#pin-unlock', r5.admin_pin);
 await X.page.tap('[data-act="pin-unlock"]');
 await X.page.waitForTimeout(600);
-ok(!(await X.page.$('.final-lock')) && !!(await X.page.$('.cart.mine .tile .step')), 'right PIN: the score boxes come back on this phone');
+ok(!(await X.page.$('.final-lock')) && !!(await X.page.$('.cart.mine .tile .step')) && /Fixing a finalized round/.test(await X.page.textContent('.matchup-line')), 'right PIN: the score boxes come back, marked \u201cFixing a finalized round\u201d');
 const before18 = be.tables.scores.find((x) => x.event_id === r5.id && x.player_id === 'p1' && x.hole === 18).strokes;
 await X.page.tap('[data-act="tile-step"][data-pid="p1"][data-d="1"]');
 await X.page.waitForTimeout(900);

@@ -91,9 +91,11 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
 - Board: tap a team → breakdown sheet. When final: big trophy card → **Round recap** (4 canvas
   PNGs: leaderboard, your scorecard, your cart, full report; Save or share via share sheet).
   Organizer gets **Finalize round** under it (also Host → Rules); then the card says `Final · locked`.
-- **Finalized round:** Enter shows a locked "Final" view (See the final Board · Recap · Fix a score
-  (organizer PIN) → `pin` sheet). `app.isFinal()`, `app.roundOver()` (final or every score in),
-  `app.homeTab()`. A round that's over opens on the **Board**, also from an old `/enter` link.
+- **Finalized round:** every phone locks, **the organizer's too**. Enter shows a locked "Final" view
+  (See the final Board · Recap · Fix a score). Fix a score → `app.unlockFinal()`: one tap on the
+  organizer's phone, the `pin` sheet elsewhere; then Enter says "Fixing a finalized round · Done"
+  (Done re-locks). The unlock (`app.ui.finalUnlock`) is in memory only. `app.isFinal()`,
+  `app.finalUnlocked()`, `app.roundOver()` (final or every score in), `app.homeTab()`. A round that's over opens on the **Board**, also from an old `/enter` link.
 - Never a blank screen; never a coach tip over a sheet / full-screen card.
 - localStorage keys: `glb.device`, `glb.me.CODE`, `glb.admin.CODE`, `glb.recent`,
   `glb.queue.CODE`, `glb.seen.CODE`, `glb.alert.CODE.H`, `glb.switch.CODE.H`, `glb.brief.CODE`,
@@ -105,8 +107,8 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
 ```bash
 npm install
 npm test               # 49 unit tests: scoring + headlines (spec examples, bonus, back nine)
-npm run test:fit       # 116 checks: every screen at SE / 13 mini / 15-16 / Pro Max, no scroll on Enter
-npm run test:smoke     # 132 checks: multi-phone flows against the mock (join, swap, offline, rejoin,
+npm run test:fit       # 120 checks: every screen at SE / 13 mini / 15-16 / Pro Max, no scroll on Enter
+npm run test:smoke     # 135 checks: multi-phone flows against the mock (join, swap, offline, rejoin,
                        # reset/delete, back nine, Next waits for every score, grid/locks, recap,
                        # finalize + PIN unlock, blank-screen guards)
 ```

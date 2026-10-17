@@ -75,6 +75,19 @@ app.isFinal = () => !!app.event?.finalized_at;
 app.roundOver = () => app.isFinal() || !!app.snapshot?.roundComplete;
 /** Where this phone belongs in the round: Enter while playing, the Board once it's over. */
 app.homeTab = () => (app.roundOver() ? 'board' : 'enter');
+/** Finalized round unlocked on this phone (organizer PIN + "Fix a score"). Lasts until reload or re-finalize. */
+app.finalUnlocked = () => !!app.adminPin && app.ui.finalUnlock === app.code;
+/** "Fix a score" on a finalized round: the organizer's phone unlocks in one tap; anyone else types the PIN. */
+app.unlockFinal = () => {
+  if (!app.adminPin) {
+    app.openSheet('pin', {});
+    return;
+  }
+  app.ui.finalUnlock = app.code;
+  app.closeSheet();
+  render();
+  app.toast({ title: 'Unlocked on this phone', sub: 'Fix what you need, then tap Done to lock it again.' });
+};
 /** The hole this phone should be on (play order); the last hole once its foursome is done. */
 app.nextHole = () => {
   if (!app.snapshot) return 1;
@@ -89,8 +102,10 @@ app.inMyFoursome = (pid, hole) =>
 
 /** May this phone write this player's score on this hole? (mirrors the server) */
 app.canEdit = (pid, hole) => {
+  // Finalized: locked on every phone, the organizer's too, until "Fix a score" unlocks this one.
+  if (app.isFinal()) return app.finalUnlocked();
   if (app.adminPin) return true;
-  if (!app.me || !app.event || app.isFinal()) return false;
+  if (!app.me || !app.event) return false;
   return sameFoursome(app.event.roster, app.event.settings, app.me, pid, hole);
 };
 
@@ -177,7 +192,7 @@ function freshStart(wasPlaying) {
 /** Optimistic score write: screen updates now, server in the background. */
 app.setScore = (pid, hole, strokes) => {
   if (!app.canEdit(pid, hole)) {
-    if (app.isFinal()) app.toast({ title: 'The round is final', sub: 'Scores are locked. The organizer PIN unlocks them.', action: 'Unlock', onAction: () => app.openSheet('pin', {}), error: true });
+    if (app.isFinal()) app.toast({ title: 'The round is final', sub: app.adminPin ? 'Scores are locked. Tap Unlock to fix one.' : 'Scores are locked. The organizer PIN unlocks them.', action: 'Unlock', onAction: () => app.unlockFinal(), error: true });
     else app.toast({ title: 'Not your matchup', sub: 'You can enter your cart and the cart you’re playing.', error: true });
     return false;
   }
@@ -508,8 +523,8 @@ app.confirmFinalize = (final = true) => {
   app.openSheet('confirm', {
     title: 'Finalize the round?',
     body: blank
-      ? `${blank} score${blank === 1 ? ' is' : 's are'} still blank. Finalizing locks the round as it stands. Your PIN can still fix any score, and you can reopen it.`
-      : 'Locks every score for everyone, so nobody can change them. Your PIN can still fix one, and you can reopen it.',
+      ? `${blank} score${blank === 1 ? ' is' : 's are'} still blank. Finalizing locks the round as it stands, on your phone too. Enter \u2192 Fix a score unlocks yours, and you can reopen it.`
+      : 'Locks every score for everyone, your phone too. Enter \u2192 Fix a score unlocks yours if you need to change one, and you can reopen it.',
     ok: 'Finalize round', onOk: () => app.finalizeRound(true),
   });
 };
@@ -529,11 +544,12 @@ app.finalizeRound = async (final = true) => {
     return;
   }
   app.event = { ...app.event, finalized_at: res.finalized_at ?? null };
+  app.ui.finalUnlock = null; // finalizing locks this phone too
   await refetchAll();
   app.hostLog = null;
   render();
   app.toast(final
-    ? { title: 'Round finalized', sub: 'Scores are locked for everyone. Your PIN still fixes any score.' }
+    ? { title: 'Round finalized', sub: 'Scores are locked, on your phone too. Enter \u2192 Fix a score to change one.' }
     : { title: 'Round reopened', sub: 'Players can change their scores again.' });
 };
 
@@ -783,6 +799,7 @@ function onRemoteEvent(row) {
   const strip = (r) => JSON.stringify({ ...r?.roster, teams: (r?.roster?.teams || []).map((t) => t.id) });
   const settingsChanged = ['course', 'settings', 'name'].some((k) => JSON.stringify(row[k]) !== JSON.stringify(before[k])) || strip(row) !== strip(before);
   const finalChanged = 'finalized_at' in row && !!row.finalized_at !== !!before.finalized_at;
+  if (finalChanged) app.ui.finalUnlock = null;
   app.event = { ...app.event, ...row };
   recompute({ headlines: 'now' });
   render();

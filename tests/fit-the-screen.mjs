@@ -307,6 +307,12 @@ for (const size of SIZES) {
   await watcher.evaluate(() => window.__glb.openSheet('pin', {}));
   await watcher.waitForTimeout(400);
   await check(watcher, size, 'Fix a score (PIN) sheet');
+  // The organizer (also playing) unlocks a finalized round to fix a score: tiles + "Fixing…" line.
+  await go(`#/e/${rf.code}/enter`);
+  await page.tap('[data-act="pin-open"]');
+  await page.waitForTimeout(300);
+  await page.evaluate(() => { document.getElementById('toasts').innerHTML = ''; });
+  await check(page, size, 'Enter (fixing a finalized round)', 'enter');
   if (errors.length) {
     failures.push(`${size[0]} · page errors`);
     rows.push([`${size[0]} · page errors`, `FAIL: ${errors.join('; ')}`]);

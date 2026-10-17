@@ -68,9 +68,9 @@ function rules(app, d) {
     <div class="divider"></div>
     <div class="micro" style="margin:0 0 6px">Finish the round</div>
     ${app.isFinal()
-      ? `<p class="help" style="margin:0 0 12px"><b>Finalized</b> \u2014 scores are locked for everyone. Your PIN still fixes any score (Card, or Enter on this phone). Reopen to let players change them again.</p>
+      ? `<p class="help" style="margin:0 0 12px"><b>Finalized</b> \u2014 scores are locked for everyone, this phone too. To change one, Enter \u2192 Fix a score unlocks this phone. Reopen to let players change them again.</p>
       <div class="stack" style="gap:8px;margin:0 0 8px"><button class="btn ghost block" data-act="host-reopen">Reopen round</button></div>`
-      : `<p class="help" style="margin:0 0 12px"><b>Finalize</b> locks every score so nobody can change them, and finished rounds open on the Board. Do it once everyone\u2019s checked their card. Your PIN can still fix one.</p>
+      : `<p class="help" style="margin:0 0 12px"><b>Finalize</b> locks every score so nobody can change them, and finished rounds open on the Board. Do it once everyone\u2019s checked their card. You can still fix one from Enter \u2192 Fix a score.</p>
       <div class="stack" style="gap:8px;margin:0 0 8px"><button class="btn primary block" data-act="host-finalize">${icon('lock', 16)} Finalize round</button></div>`}
     <div class="divider"></div>
     <div class="micro" style="margin:0 0 6px">Practice rounds &amp; cleanup</div>

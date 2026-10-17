@@ -392,9 +392,7 @@ export const actions = {
       app.toast({ title: 'That PIN didn\u2019t work', error: true });
       return;
     }
-    app.closeSheet();
-    app.render();
-    app.toast({ title: 'Unlocked on this phone', sub: 'You can fix any score (and Host is open).' });
+    app.unlockFinal(); // PIN saved: unlock this phone for edits
   },
   'confirm-ok': (el, ev, app) => {
     const fn = app.sheet?.props?.onOk;
