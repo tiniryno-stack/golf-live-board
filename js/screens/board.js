@@ -1,9 +1,10 @@
 // board.js — today's leaderboard. Hero: the leader + official line. Headlines strip,
 // Teams | Players, Gross | Net (only once someone has strokes).
-// Teams: ranked by OFFICIAL points (holes all 8 have finished). Match Play bar: dark = share of
-// the points on offer on those holes (same for every team, so the longest dark bar is always
-// first; dashed line = half); lighter = points won on holes played ahead, on the same scale
-// ("+2 prov." chip too). Plus/Minus bars grow left/right from even (lighter = provisional).
+// Teams: ranked by ALL points won so far (live standings), the big number included; the part
+// won on holes the other foursome hasn't played yet is provisional: "2 prov." chip (already in the number),
+// striped on the bar past a divider. Match Play bar = points ÷ the most points anyone could
+// have won so far (same for every team, so the longest bar is always first). Plus/Minus bars
+// grow left/right from even. Headlines still fire on the official line (confirmed moments).
 // Players: one compact line each.
 
 import { esc, icon, seg, clock } from '../ui.js';
@@ -22,14 +23,15 @@ function teamBar(isPM, s, scale) {
       ${off ? `<span class="fill" style="${side(off)};width:${w(off)}"></span>` : ''}
       ${prov ? `<span class="fill prov" style="${side(off + prov)};width:${w(off + prov)}"></span>` : ''}</div>`;
   }
-  // Dark = share of the points on offer on holes everyone has finished (what the ranking uses).
-  // Lighter = points won on holes played ahead, added on the same scale (before any shared hole,
-  // the scale is this team's own holes). Points lost ahead add nothing, so it never shrinks.
-  const unit = s.officialAvailable || s.available || 1;
-  const pct = (v) => `${(Math.max(0, Math.min(1, v / unit)) * 100).toFixed(1)}%`;
-  const label = `${s.officialAvailable ? `${fmtPts(s.officialPoints)} of ${s.officialAvailable} points` : 'no shared holes yet'}${s.provisionalPoints ? `, plus ${fmtPts(s.provisionalPoints)} provisional` : ''}`;
-  const prov = s.provisionalPoints ? `<span class="fill prov" style="width:${pct(s.officialPoints + s.provisionalPoints)}"></span>` : '';
-  return `<div class="tbar share" role="img" aria-label="${label}"><span class="mid"></span>${prov}<span class="fill" style="width:${pct(s.officialPoints)}"></span></div>`;
+  // scale = the most points any team could have won so far (same for every team), so bar
+  // length follows the points and the ranking. Solid = confirmed (holes all 8 have finished),
+  // striped past the divider = provisional (holes only this foursome has played).
+  const pct = (v) => `${(Math.max(0, Math.min(1, v / scale)) * 100).toFixed(1)}%`;
+  const label = `${fmtPts(s.points)} of ${s.available} points${s.provisionalPoints ? `, ${fmtPts(s.provisionalPoints)} provisional` : ''}`;
+  const prov = s.provisionalPoints
+    ? `<span class="fill prov" style="width:${pct(s.points)}"></span><span class="cut" style="left:${pct(s.officialPoints)}"></span>`
+    : '';
+  return `<div class="tbar" role="img" aria-label="${label}">${prov}<span class="fill" style="width:${pct(s.officialPoints)}"></span></div>`;
 }
 
 function teamRowsGame(app) {
@@ -38,16 +40,17 @@ function teamRowsGame(app) {
   const isPM = g.type === 'rotationPlusMinus';
   const mine = app.myTeam();
   const scale = isPM
-    ? Math.max(1, ...g.standings.map((s) => Math.max(Math.abs(s.officialPm), Math.abs(s.officialPm + s.provisionalPm))))
-    : Math.max(1, ...g.standings.map((s) => s.officialPoints + s.provisionalPoints));
-  return g.standings
+    ? Math.max(1, ...g.liveStandings.map((s) => Math.max(Math.abs(s.officialPm), Math.abs(s.officialPm + s.provisionalPm))))
+    : Math.max(1, ...g.liveStandings.map((s) => s.available));
+  return g.liveStandings
     .map((s) => {
       const team = snap.teamById.get(s.teamId);
       const names = team.playerIds.map((id) => snap.playerById.get(id).name).join(' + ');
       const prov = isPM ? s.provisionalPm : s.provisionalPoints;
-      const val = isPM ? fmtSigned(s.officialPm, 'E') : fmtPts(s.officialPoints);
-      const chip = prov ? `<span class="prov" data-prov>${isPM ? fmtSigned(prov, '') : `+${fmtPts(prov)}`} prov.</span>` : '';
-      const rec = s.officialRecord;
+      const val = isPM ? fmtSigned(s.pm, 'E') : fmtPts(s.points);
+      // "1½ prov." = how much of the number is provisional (already counted in it).
+      const chip = prov ? `<span class="prov" data-prov aria-label="${isPM ? fmtSigned(prov, '') : fmtPts(prov)} of this is provisional">${isPM ? fmtSigned(prov, '') : fmtPts(prov)} prov.</span>` : '';
+      const rec = s.record;
       const thru = Math.min(...team.playerIds.map((id) => snap.playerById.get(id).thru));
       return `<div class="row team-row tap" role="button" tabindex="0" data-act="board-team" data-enter="board-team" data-v="${esc(s.teamId)}" aria-label="${esc(team.name)}: breakdown" style="--jersey:${teamColor(mine, s.teamId)}">
         <span class="rank">${s.shared ? `T${s.rank}` : s.rank}</span>
@@ -100,21 +103,25 @@ function hero(app, mode) {
   const g = snap.game;
   if (g) {
     const isPM = g.type === 'rotationPlusMinus';
-    const top = g.standings.filter((s) => s.rank === 1);
-    const val = (s) => (isPM ? fmtSigned(s.officialPm, 'E') : fmtPts(s.officialPoints));
-    const lead = snap.officialThrough
+    // Live standings: every point won so far counts (the provisional part is marked on the rows).
+    const st = snap.roundComplete ? g.standings : g.liveStandings;
+    const top = st.filter((s) => s.rank === 1);
+    const started = st.some((s) => s.holesPlayed > 0);
+    const val = (s) => (isPM ? fmtSigned(s.pm, 'E') : fmtPts(s.points));
+    const lead = started
       ? top.length === 1 ? snap.teamById.get(top[0].teamId).name : `${top.map((s) => snap.teamById.get(s.teamId).name).join(' & ')}`
       : 'Nobody yet';
-    const leadColor = snap.officialThrough && top.length === 1 ? teamColor(app.myTeam(), top[0].teamId) : 'var(--hero-ink)';
-    const mine = app.myTeam() ? g.standings.find((s) => s.teamId === app.myTeam()) : null;
-    const you = mine && snap.officialThrough
+    const leadColor = started && top.length === 1 ? teamColor(app.myTeam(), top[0].teamId) : 'var(--hero-ink)';
+    const mine = app.myTeam() ? st.find((s) => s.teamId === app.myTeam()) : null;
+    const you = mine && started
       ? `You: ${mine.shared ? 'T-' : ''}${ordinal(mine.rank)} · ${val(mine)}${isPM ? '' : ' pts'}`
       : '';
+    const anyProv = st.some((s) => (isPM ? s.provisionalPm : s.provisionalPoints));
     return `<div class="hero board-hero">
-      <div class="micro">${snap.roundComplete ? 'Final' : snap.officialThrough ? `Leader · official thru ${snap.officialHole}` : 'Leader'}${top.length > 1 && snap.officialThrough ? ' · tied' : ''}</div>
+      <div class="micro">${snap.roundComplete ? 'Final' : snap.officialThrough ? `Leader · official thru ${snap.officialHole}${anyProv ? ' + provisional' : ''}` : 'Leader'}${top.length > 1 && started ? ' · tied' : ''}</div>
       <div class="spread" style="align-items:flex-end">
         <div class="leader-name ellipsis" style="flex:1;color:${leadColor}">${esc(lead)}</div>
-        ${snap.officialThrough ? `<div class="leader-pts">${esc(val(top[0]))}</div>` : ''}
+        ${started ? `<div class="leader-pts">${esc(val(top[0]))}</div>` : ''}
       </div>
       ${you ? `<div class="you">${esc(you)}</div>` : ''}
     </div>`;
@@ -194,8 +201,8 @@ export default {
       foot = snap.roundComplete
         ? 'Final'
         : snap.officialThrough
-          ? `Official through hole ${snap.officialHole}${isPMfoot ? '' : ' · dark bar: share of the points on offer (dashed line = half)'}${prov.length ? ` · ${prov.length > 1 ? 'holes' : 'hole'} ${prov.join(', ')} provisional (lighter bar)` : ''}`
-          : `Points go official once both foursomes finish hole ${holeAt(snap.settings, 1)}`;
+          ? `Official through hole ${snap.officialHole}${prov.length ? ` · ${prov.length > 1 ? 'holes' : 'hole'} ${prov.join(', ')} provisional (${isPMfoot ? 'lighter bar' : 'striped, past the line'})` : ''}`
+          : `Points count now and go official once both foursomes finish hole ${holeAt(snap.settings, 1)}`;
     }
     // Finalized before every score was in: still say it's locked.
     const final = snap.roundComplete
@@ -211,7 +218,7 @@ export default {
 
   mount(root, app) {
     const chip = root.querySelector('[data-prov]');
-    if (chip) app.coach('prov', chip, 'These points aren’t official until the other foursome plays these holes.');
+    if (chip) app.coach('prov2', chip, 'These points already count. They’re provisional until the other foursome plays these holes.');
   },
 
   actions: {

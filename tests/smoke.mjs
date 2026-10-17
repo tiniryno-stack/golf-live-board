@@ -45,7 +45,7 @@ async function phone(name) {
   const ctx = await browser.newContext({ viewport: { width: 375, height: 548 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
   await attach(ctx, be, srv.origin);
   await ctx.addInitScript(() => {
-    for (const k of ['tile4', 'prov', 'oppcart2']) localStorage.setItem('glb.coach.' + k, 'true');
+    for (const k of ['tile4', 'prov2', 'oppcart2']) localStorage.setItem('glb.coach.' + k, 'true');
   });
   const page = await ctx.newPage();
   page.errors = [];
@@ -443,7 +443,7 @@ const F = await (async () => {
     localStorage.setItem('glb.me.' + code, '"p1"');
     localStorage.setItem('glb.who.' + code, 'true');
     localStorage.setItem('glb.brief.' + code, 'true');
-    for (const k of ['tile4', 'prov', 'oppcart2']) localStorage.setItem('glb.coach.' + k, 'true');
+    for (const k of ['tile4', 'prov2', 'oppcart2']) localStorage.setItem('glb.coach.' + k, 'true');
   }, [r3.code, DEV3]);
   const page = await ctx.newPage();
   page.errors = [];
@@ -531,7 +531,7 @@ const R = await (async () => {
     localStorage.setItem('glb.who.' + code, 'true');
     localStorage.setItem('glb.brief.' + code, 'true');
     localStorage.setItem('glb.seen.' + code, JSON.stringify({ last: Date.now(), ids: [] }));
-    for (const k of ['tile4', 'prov', 'oppcart2']) localStorage.setItem('glb.coach.' + k, 'true');
+    for (const k of ['tile4', 'prov2', 'oppcart2']) localStorage.setItem('glb.coach.' + k, 'true');
   }, [r4.code, DEV4]);
   const page = await ctx.newPage();
   page.errors = [];
@@ -600,7 +600,7 @@ async function presetPhone(label, code, { dev, me, pin } = {}) {
     localStorage.setItem('glb.who.' + c, 'true');
     localStorage.setItem('glb.brief.' + c, 'true');
     localStorage.setItem('glb.seen.' + c, JSON.stringify({ last: Date.now(), ids: [] }));
-    for (const k of ['tile4', 'prov', 'oppcart2']) localStorage.setItem('glb.coach.' + k, 'true');
+    for (const k of ['tile4', 'prov2', 'oppcart2']) localStorage.setItem('glb.coach.' + k, 'true');
   }, [code, dev || null, me || null, pin || null]);
   const page = await ctx.newPage();
   page.errors = [];
@@ -684,7 +684,7 @@ const G = await (async () => {
     geolocation: { latitude: 33.1084, longitude: -96.7181 }, permissions: ['geolocation'],
   });
   await attach(ctx, be, srv.origin);
-  await ctx.addInitScript(() => { for (const k of ['tile4', 'prov', 'oppcart2']) localStorage.setItem('glb.coach.' + k, 'true'); });
+  await ctx.addInitScript(() => { for (const k of ['tile4', 'prov2', 'oppcart2']) localStorage.setItem('glb.coach.' + k, 'true'); });
   const page = await ctx.newPage();
   page.errors = [];
   page.on('pageerror', (e) => page.errors.push(`Course phone: ${e.message}`));

@@ -447,4 +447,9 @@ test('Board bars: 3 holes, 4 of 6 points = two-thirds of the bar; holes played a
   assert.equal(b.officialPoints, 2);
   assert.equal(b.provisionalPoints, 2);
   assert.equal(a.available, 8, 'live: 4 holes on offer for group 1');
+  // The Board ranks on everything won so far: B's 2 provisional points count (4, level with A).
+  const live = compute(ev, sb.rows()).game.liveStandings;
+  const lb = live.find((x) => x.teamId === 'B');
+  assert.equal(lb.points, 4);
+  assert.ok(lb.rank <= 2, 'B moves up on its provisional points');
 });

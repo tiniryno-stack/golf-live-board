@@ -263,6 +263,7 @@ a { color: inherit; }
   display: inline-block; margin-left: 6px; padding: 2px 6px; border-radius: 8px; vertical-align: middle;
   font-family: var(--mono); font-size: 11px; font-weight: 700; color: var(--ink-soft); background: var(--surface-2);
   border: 1px dashed var(--line-strong);
+  white-space: nowrap; flex: none;
 }
 .rank { width: 18px; flex: none; font-family: var(--mono); font-size: 13px; color: var(--ink-faint); text-align: right; }
 .me-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--good); margin-left: 6px; vertical-align: middle; }
@@ -474,8 +475,9 @@ a { color: inherit; }
   background: color-mix(in srgb, var(--jersey, var(--ink)) 30%, transparent);
   background-image: repeating-linear-gradient(135deg, transparent 0 3px, color-mix(in srgb, var(--jersey, var(--ink)) 35%, transparent) 3px 6px);
 }
-.tbar.pm .mid, .tbar.share .mid { position: absolute; left: 50%; top: 0; bottom: 0; border-left: 1.5px dashed var(--line-strong); z-index: 1; }
-.tbar.share .mid { opacity: .7; }
+.tbar.pm .mid { position: absolute; left: 50%; top: 0; bottom: 0; border-left: 1.5px dashed var(--line-strong); z-index: 1; }
+/* Where the confirmed points end and the provisional (striped) part starts */
+.tbar .cut { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--ink); opacity: .85; z-index: 2; }
 @media (prefers-reduced-motion: reduce) { .tbar .fill { transition: none; } }
 .row.team-row { position: relative; padding-left: 10px; }
 .row.team-row.tap { cursor: pointer; -webkit-tap-highlight-color: transparent; }

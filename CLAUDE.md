@@ -90,9 +90,10 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
 - No back button inside a round (name pill / ⋯ menu: Round recap when final, How today's game
   works, Share, Go to Home, Switch to watching). Your cart is always first (Card, Matches).
 - Headlines: colored by `hero`; one at a time, two for ~10 s when they land together.
-- Board → Teams (Match Play): solid bar = official points ÷ points on offer on shared holes
-  (`officialAvailable`, same for all teams → bar order = rank order), dashed line = half, hatched =
-  points won on holes played ahead (same scale). Ranking/big numbers use official points only.
+- Board → Teams: ranked on **all points won so far** (`g.liveStandings`); big number includes the
+  provisional part, shown as a "1½ prov." chip and, on the bar, striped past a divider line (`.cut`).
+  Match Play bar = points ÷ max `available` across teams (same scale → longest bar = 1st).
+  Headlines still use the official line (holes all 8 finished); the recap uses final standings.
 - Board: tap a team → breakdown sheet. When final: big trophy card → **Round recap** (4 canvas
   PNGs: leaderboard, your scorecard, your cart, full report; Save or share via share sheet).
   Organizer gets **Finalize round** under it (also Host → Rules); then the card says `Final · locked`.
@@ -109,7 +110,7 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
 - Never a blank screen; never a coach tip over a sheet / full-screen card.
 - localStorage keys: `glb.device`, `glb.me.CODE`, `glb.admin.CODE`, `glb.recent`,
   `glb.queue.CODE`, `glb.seen.CODE`, `glb.alert.CODE.H`, `glb.switch.CODE.H`, `glb.brief.CODE`,
-  `glb.who.CODE`, `glb.cardOpen.CODE`, `glb.coach.{tile4,oppcart2,prov}`, `glb.setupDraft`,
+  `glb.who.CODE`, `glb.cardOpen.CODE`, `glb.coach.{tile4,oppcart2,prov2}`, `glb.setupDraft`,
   `glb.theme`. Bump a coach key's suffix when its text changes so people see the new tip.
 
 ## Testing (run before every push; all headless, no network needed)
