@@ -24,10 +24,11 @@ The spec is `ARCHITECTURE.md`. Build in the order below, commit and push after e
 - [x] 6. Enter (cart cards, first tap = bogey, ◀ back + Undo, Switch it up, Lock in / Close it out cards, While you were away)
 - [x] 7. Matches (hero card, 12-point tug-of-war bar), Board (official + provisional, headlines strip), Card (Front | Back, grouped by cart), Host (Rules | Players | Activity), Season (from Home), toasts
 - [x] 8. Fit-the-screen check at iPhone SE / 13 mini / 15-16 / Pro Max sizes
-- [ ] 9. Smoke test: two phones, blocked edit outside your matchup, hole-7 swap, clear-the-browser rejoin; then Andrew turns on GitHub Pages
+- [x] 9. Smoke test: two phones, blocked edit outside your matchup, hole-7 swap, clear-the-browser rejoin; then Andrew turns on GitHub Pages
 
 ## Notes for whoever picks this up
 
 - Stay on spec; extras go to the V2 backlog (section 13).
 - Needed for a round on Fri Oct 16, 2026 at Twin Creeks.
 - **Stage 9 status (Oct 16, ~3am):** smoke-tested two ways and passing — headless two-phone run (`npm run test:smoke`, 34/34: blocked edit, hole-7 swap, offline queue, clear-the-browser rejoin) and the same rules run against the live database in rolled-back transactions. The smoke run found and fixed one real bug: "let them in" keyed off a player's highest posted hole, so a stray future score locked their foursome out; it now uses the first hole they haven't posted (what Enter shows) or the hole before it (applied as migration `join_approver_current_hole`). **Left to tick this box:** Andrew turns on GitHub Pages, then a two-real-phones check on the live URL.
+- **Stage 9 done (Oct 16):** GitHub Pages is on and the app ran a full live round ("Chucks Bday", 8 phones, all 18 holes). Everything after that is playtest iteration — see ARCHITECTURE.md §13a and `CLAUDE.md` (handoff notes for new sessions).

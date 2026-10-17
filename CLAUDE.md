@@ -1,0 +1,131 @@
+# Golf Live Board — handoff notes for Claude sessions
+
+Read this first. It replaces re-reading the whole repo. `ARCHITECTURE.md` (≈735 lines) is the full
+spec: **grep the section you need, don't read it end to end.** Section 13a lists every change made
+after the first playtest; section 13 is the V2 backlog.
+
+## What it is / where things stand
+
+- Mobile web app for Andrew's friend group: each foursome enters hole-by-hole scores on their
+  phones; everyone sees one live board across tee times, plus a rotating 2v2 cart game
+  (Rotation Match Play or Plus/Minus). Sundown design, dark by default, Flighty-inspired.
+- Live: https://tiniryno-stack.github.io/golf-live-board/ (GitHub Pages, `main`, root). Repo:
+  `tiniryno-stack/golf-live-board`.
+- **Played for real on Oct 16, 2026** ("Chucks Bday", code `V4T3M`, Twin Creeks, 8 phones). It
+  went well. All BUILD.md stages are done; everything since is playtest-driven iteration.
+- Andrew's style: voice-note messages, wants plain-English results, short summaries. When he's
+  **mid-round**, replay the live round's data through the new code before pushing (see Testing),
+  and never make destructive DB changes.
+
+## Stack and file map
+
+Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UMD from jsdelivr).
+
+| File | What it does |
+|---|---|
+| `index.html` | shell, fonts (Geist / Geist Mono from Google Fonts), loads `js/app.js` |
+| `js/config.js` | Supabase URL + **publishable** key (browser-safe). Never commit the secret/service_role key or DB password. |
+| `js/courses.js` | course catalog (Twin Creeks: par, stroke index, tees) |
+| `js/scoring.js` | **pure** engine: `compute(event, scores)` → snapshot; play order (start on 1 or 10), rotations, Low Ball/Low Total, halves, clinch, official line, matchup win bonus, standings + tiebreakers, season |
+| `js/headlines.js` | **pure**: replays scores by `updated_at` → headlines (each has a `hero` team for color); `latestMoment`; Lock in / Close it out alerts |
+| `js/teams.js` | jersey colors (`teamColor`), `headlineColor`, Pokémon quick names |
+| `js/db.js` | localStorage helpers, device ID, RPC wrappers (`api.*`), reads, offline queue (latest wins; `fill` flag), realtime subscribe |
+| `js/app.js` | router/state, render loop (wrapped in an error boundary → "Something went wrong"), round loading (12 s timeout → "No signal / Try again"), join flow (name → cart-name picker → Today's game), realtime handlers, actions |
+| `js/ui.js` | `esc`, `icon` (SVG set), `seg`, formatting helpers |
+| `js/screens/*.js` | `enter` (score entry), `matches`, `board` (+ final card), `card`, `host` (organizer), `home`, `setup`, `season`, `sheets` (all bottom sheets incl. hole grid, team breakdown, menu), `toasts` (toasts, banners, full-screen cards, picker, Today's game pager, recap pager, coach tips), `brief` (Today's game content), `recap` (canvas-drawn keepsake PNGs) |
+| `supabase/schema.sql` | **source of truth for the DB**; keep it in sync with what's live |
+| `tests/` | unit tests (`*.test.mjs`), `fit-the-screen.mjs`, `smoke.mjs`, `mock-supabase.mjs` (in-memory stand-in mirroring every RPC), `helpers.mjs` |
+
+## Database (Supabase project `yxreupqzwgjzhfosnjbj`, via the Supabase connector)
+
+- Tables: `events`, `event_secrets`, `claims`, `join_requests`, `join_request_devices`, `audit_log`,
+  `scores`. RLS: anon may only `select` events / scores / join_requests. **All writes go through
+  SECURITY DEFINER RPCs** returning `{ ok, error }`.
+- RPCs: `create_event, verify_admin, claimed_players, whoami, claim_player, leave_round,
+  request_join, approve_join, deny_join, upsert_score, admin_upsert_score, fill_score,
+  update_event, release_player, get_audit_log, reset_round, delete_round, pick_team_name`.
+  Helpers `_same_foursome`, `_play_pos`, `_hole_at`, `_join_approver`, `_write_score`, … are not
+  executable by anon.
+- `fill_score` = "Next hole with a box left blank = par": one atomic
+  insert-or-update-**where strokes is null**, so it never overwrites another phone's score.
+- **Applying changes:** additive SQL (`create or replace function`, `grant`) works with
+  `apply_migration`. Anything with drop / delete / revoke tends to stall on an approval prompt —
+  give Andrew a snippet to run in Supabase → SQL Editor → New snippet instead. Always mirror the
+  change in `schema.sql` **and** `tests/mock-supabase.mjs`.
+- **Testing against live data safely:** a `do $$ … $$` block that ends with
+  `raise exception '…'` (rolls everything back), optionally `set local role anon` to exercise
+  RPCs as the browser would. Never read server files or run OS commands via SQL.
+
+## Rules of the game (what the engine does)
+
+- Play order: `settings.startHole` 1 or 10; rotations are **play-order positions** (1–6, 7–12,
+  13–18); screens always show real hole numbers ("Holes 16–18, 1–3").
+- Match Play: each hole Low Ball 1 pt + Low Total 1 pt (or 1 pt best ball / total); push =
+  `halvedHolePoints` (½ default). **Matchup win bonus** `matchBonus` (default 1; halved splits like a
+  push; official once both foursomes finish that matchup). Plus/Minus: stroke margins, optional cap.
+- Official line = holes every foursome has finished (play order); beyond it is provisional.
+- Settings are normalized from `DEFAULT_SETTINGS`, so new settings must default sensibly for old
+  rounds.
+
+## UI conventions (don't regress these)
+
+- **Enter:** your cart ~70% with full tiles; the other cart greyed to one slim row of small scores
+  ("Tap to enter" → 50/50, yours greyed, "Tap to go back"). Empty box shows a **grey par**; the
+  **first tap on any button (−, number, +) = par**, then − / + step. **Next hole** saves untouched
+  boxes as par via `fill_score` and says so ("Next hole · 2 at par →"). Name pinned at the top of
+  a tile, score dead center level with − / +.
+- **Holes:** tap the hole number → grid of 18 (one row per matchup). The current hole and the one
+  just finished are editable; **2+ holes back open locked** ("Tap to edit"). Switch it up shows
+  once per swap.
+- **Jerseys:** your cart is always green on your phone; others fixed away colors A orange, B blue,
+  C pink, D violet (no red — red = double bogey). On rounded cards use a tint + full ring, never
+  an edge stripe (it clips at the corners).
+- No back button inside a round (name pill / ⋯ menu: Round recap when final, How today's game
+  works, Share, Go to Home, Switch to watching). Your cart is always first (Card, Matches).
+- Headlines: colored by `hero`; one at a time, two for ~10 s when they land together.
+- Board: tap a team → breakdown sheet. When final: big trophy card → **Round recap** (4 canvas
+  PNGs: leaderboard, your scorecard, your cart, full report; Save or share via share sheet).
+- Never a blank screen; never a coach tip over a sheet / full-screen card.
+- localStorage keys: `glb.device`, `glb.me.CODE`, `glb.admin.CODE`, `glb.recent`,
+  `glb.queue.CODE`, `glb.seen.CODE`, `glb.alert.CODE.H`, `glb.switch.CODE.H`, `glb.brief.CODE`,
+  `glb.who.CODE`, `glb.cardOpen.CODE`, `glb.coach.{tile3,oppcart2,prov}`, `glb.setupDraft`,
+  `glb.theme`. Bump a coach key's suffix when its text changes so people see the new tip.
+
+## Testing (run before every push; all headless, no network needed)
+
+```bash
+npm install
+npm test               # 49 unit tests: scoring + headlines (spec examples, bonus, back nine)
+npm run test:fit       # 100 checks: every screen at SE / 13 mini / 15-16 / Pro Max, no scroll on Enter
+npm run test:smoke     # 115 checks: multi-phone flows against the mock (join, swap, offline, rejoin,
+                       # reset/delete, back nine, par fill, grid/locks, recap, blank-screen guards)
+```
+
+- Playwright 1.56 with Chromium at `PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers` (don't run
+  `playwright install`; WebKit isn't available). Screenshots land in `tests/screenshots/`
+  (git-ignored) — look at them after UI changes.
+- The sandbox can't reach supabase.co or the CDNs; realtime isn't exercised (the mock aborts it;
+  the app falls back to refetch-on-return and 20 s polling).
+- To check a change against a real round: pull its event + scores with `execute_sql` (read-only),
+  seed them into the mock (`be.rpc.create_event` + push rows into `be.tables.scores`), and render.
+- When behavior changes, update the affected test expectations and add a test for the new rule.
+
+## Workflow
+
+- Small commits straight to `main`, push after each change (Pages redeploys in ~1 min; phones can
+  cache files up to 10 min — tell people to refresh/reopen). End commit messages with the
+  attribution lines your session provides.
+- Update `ARCHITECTURE.md` (section 3 for Enter, 13a for changes) and `README.md` when behavior
+  changes.
+
+## Open items / ideas
+
+- Next hole fills untouched boxes with par **and** first tap = par. Andrew may prefer Next to
+  require every box to be tapped — ask before changing.
+- `_setting_label` in the DB doesn't know `matchBonus` (audit log shows the raw key): one-line
+  additive migration if wanted.
+- The recap images use the viewer's perspective (their cart green); a neutral "everyone's jersey"
+  variant could be nicer for group-chat sharing.
+- V2 backlog (ARCHITECTURE.md §13): carryovers, more courses (catalog → table), more teams/games,
+  round history, deeper season stats, add-to-home-screen (PWA) + lock-screen notifications,
+  stronger security (PIN attempt limits).
