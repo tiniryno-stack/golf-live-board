@@ -90,6 +90,9 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
 - No back button inside a round (name pill / ⋯ menu: Round recap when final, How today's game
   works, Share, Go to Home, Switch to watching). Your cart is always first (Card, Matches).
 - Headlines: colored by `hero`; one at a time, two for ~10 s when they land together.
+- Board → Teams (Match Play): solid bar = official points ÷ points on offer on shared holes
+  (`officialAvailable`, same for all teams → bar order = rank order), dashed line = half, hatched =
+  points won on holes played ahead (same scale). Ranking/big numbers use official points only.
 - Board: tap a team → breakdown sheet. When final: big trophy card → **Round recap** (4 canvas
   PNGs: leaderboard, your scorecard, your cart, full report; Save or share via share sheet).
   Organizer gets **Finalize round** under it (also Host → Rules); then the card says `Final · locked`.
@@ -113,7 +116,7 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
 
 ```bash
 npm install
-npm test               # 55 unit tests: scoring + headlines + course data (spec examples, bonus, back nine)
+npm test               # 57 unit tests: scoring + headlines + course data (spec examples, bonus, back nine)
 npm run test:fit       # 128 checks: every screen at SE / 13 mini / 15-16 / Pro Max, no scroll on Enter
 npm run test:smoke     # 152 checks: multi-phone flows against the mock (join, swap, offline, rejoin,
                        # reset/delete, back nine, Next waits for every score, grid/locks, recap,

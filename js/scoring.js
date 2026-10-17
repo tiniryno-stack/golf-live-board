@@ -444,6 +444,19 @@ function pointsThrough(game, teamId, through) {
   return total;
 }
 
+/** Points a team could have won on holes ≤ through (each matchup hole + each finished matchup's
+ *  win bonus). On the official line it's the same for every team, so share = points / available
+ *  always ranks in the same order as the points. */
+function availableThrough(game, teamId, through) {
+  let total = 0;
+  for (const m of game.matches) {
+    if (!m.teams.includes(teamId)) continue;
+    for (const hh of m.holes) if (hh.complete && hh.pos <= through) total += game.ncomp;
+    if (m.final && m.to <= through) total += game.bonus;
+  }
+  return total;
+}
+
 function recordOf(game, teamId, through = HOLES) {
   const r = { w: 0, l: 0, h: 0 };
   for (const m of game.matches) {
@@ -468,6 +481,7 @@ function finishGame(game, settings, teams, officialThrough) {
     return {
       teamId: t.id, name: t.name, playerIds: t.playerIds,
       points, officialPoints, provisionalPoints: points - officialPoints,
+      available: availableThrough(game, t.id, HOLES), officialAvailable: availableThrough(game, t.id, officialThrough),
       pm, officialPm, provisionalPm: pm - officialPm,
       record: recordOf(game, t.id), officialRecord: recordOf(game, t.id, officialThrough),
       holesPlayed, currentMatchId: current ? current.id : null,

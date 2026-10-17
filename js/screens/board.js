@@ -1,8 +1,10 @@
 // board.js — today's leaderboard. Hero: the leader + official line. Headlines strip,
 // Teams | Players, Gross | Net (only once someone has strokes).
-// Teams: ranked by OFFICIAL points, each with a bar in its jersey color — solid =
-// official, lighter = provisional (holes the other foursome hasn't played yet).
-// Plus/Minus bars grow left/right from even. Players: one compact line each.
+// Teams: ranked by OFFICIAL points (holes all 8 have finished). Match Play bar: dark = share of
+// the points on offer on those holes (same for every team, so the longest dark bar is always
+// first; dashed line = half); lighter = points won on holes played ahead, on the same scale
+// ("+2 prov." chip too). Plus/Minus bars grow left/right from even (lighter = provisional).
+// Players: one compact line each.
 
 import { esc, icon, seg, clock } from '../ui.js';
 import { fmtPts, fmtToPar, fmtSigned, playerLeaderboard, teamLeaderboard, holeAt } from '../scoring.js';
@@ -20,9 +22,14 @@ function teamBar(isPM, s, scale) {
       ${off ? `<span class="fill" style="${side(off)};width:${w(off)}"></span>` : ''}
       ${prov ? `<span class="fill prov" style="${side(off + prov)};width:${w(off + prov)}"></span>` : ''}</div>`;
   }
-  const pct = (v) => `${Math.max(0, Math.min(100, (v / scale) * 100))}%`;
+  // Dark = share of the points on offer on holes everyone has finished (what the ranking uses).
+  // Lighter = points won on holes played ahead, added on the same scale (before any shared hole,
+  // the scale is this team's own holes). Points lost ahead add nothing, so it never shrinks.
+  const unit = s.officialAvailable || s.available || 1;
+  const pct = (v) => `${(Math.max(0, Math.min(1, v / unit)) * 100).toFixed(1)}%`;
+  const label = `${s.officialAvailable ? `${fmtPts(s.officialPoints)} of ${s.officialAvailable} points` : 'no shared holes yet'}${s.provisionalPoints ? `, plus ${fmtPts(s.provisionalPoints)} provisional` : ''}`;
   const prov = s.provisionalPoints ? `<span class="fill prov" style="width:${pct(s.officialPoints + s.provisionalPoints)}"></span>` : '';
-  return `<div class="tbar">${prov}<span class="fill" style="width:${pct(s.officialPoints)}"></span></div>`;
+  return `<div class="tbar share" role="img" aria-label="${label}"><span class="mid"></span>${prov}<span class="fill" style="width:${pct(s.officialPoints)}"></span></div>`;
 }
 
 function teamRowsGame(app) {
@@ -183,10 +190,11 @@ export default {
     let foot = '';
     if (g && view === 'teams') {
       const prov = g.provisionalHoles;
+      const isPMfoot = g.type === 'rotationPlusMinus';
       foot = snap.roundComplete
         ? 'Final'
         : snap.officialThrough
-          ? `Official through hole ${snap.officialHole}${prov.length ? ` · ${prov.length > 1 ? 'holes' : 'hole'} ${prov.join(', ')} provisional (lighter bar)` : ''}`
+          ? `Official through hole ${snap.officialHole}${isPMfoot ? '' : ' · dark bar: share of the points on offer (dashed line = half)'}${prov.length ? ` · ${prov.length > 1 ? 'holes' : 'hole'} ${prov.join(', ')} provisional (lighter bar)` : ''}`
           : `Points go official once both foursomes finish hole ${holeAt(snap.settings, 1)}`;
     }
     // Finalized before every score was in: still say it's locked.

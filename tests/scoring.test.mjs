@@ -408,3 +408,43 @@ test('start on 10: official line runs 10 → 18 → 1, holes 1–9 come last', (
   assert.equal(done.officialHole, 9);
   assert.equal(nextHoleFor(done, 'a1'), null);
 });
+
+test('Board bars: share of points on offer always ranks like the points (random rounds)', () => {
+  // Deterministic pseudo-random scores: both foursomes through `shared` holes, group 1 a few ahead.
+  let seed = 7;
+  const rnd = () => ((seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648);
+  for (let round = 0; round < 60; round++) {
+    const ev = makeEvent({ halvedHolePoints: round % 3 === 0 ? 0 : 0.5, matchBonus: round % 2 });
+    const sb = scorebook();
+    const shared = 1 + Math.floor(rnd() * 17);
+    const ahead = Math.min(18 - shared, Math.floor(rnd() * 4));
+    for (let h = 1; h <= shared + ahead; h++) {
+      const par = COURSE.par[h - 1];
+      const ids = h <= shared ? ['a1', 'a2', 'b1', 'b2', 'c1', 'c2', 'd1', 'd2'] : ['a1', 'a2', 'b1', 'b2'];
+      sb.post(h, Object.fromEntries(ids.map((id) => [id, par - 1 + Math.floor(rnd() * 4)])));
+    }
+    const g = compute(ev, sb.rows()).game;
+    const avail = new Set(g.standings.map((s) => s.officialAvailable));
+    assert.equal(avail.size, 1, 'every team has the same points on offer on the official line');
+    const share = g.standings.map((s) => (s.officialAvailable ? s.officialPoints / s.officialAvailable : 0));
+    for (let i = 1; i < share.length; i++) assert.ok(share[i] <= share[i - 1] + 1e-9, `rank ${i + 1} never has a longer bar (round ${round})`);
+  }
+});
+
+test('Board bars: 3 holes, 4 of 6 points = two-thirds of the bar; holes played ahead stay out', () => {
+  const ev = makeEvent();
+  const sb = scorebook();
+  // A wins Low Ball on 1 and 2 (Low Total halved), all square on 3: A 4 of 6, B 2. C/D push everything.
+  sb.post(1, { a1: 4, a2: 6, b1: 5, b2: 5, c1: 5, c2: 5, d1: 5, d2: 5 });
+  sb.post(2, { a1: 3, a2: 5, b1: 4, b2: 4, c1: 4, c2: 4, d1: 4, d2: 4 });
+  sb.post(3, { a1: 3, a2: 3, b1: 3, b2: 3, c1: 3, c2: 3, d1: 3, d2: 3 });
+  sb.post(4, { a1: 9, a2: 9, b1: 3, b2: 3 }); // group 1 ahead: B sweeps hole 4, provisional
+  const s = compute(ev, sb.rows()).game.standings;
+  const a = s.find((x) => x.teamId === 'A');
+  const b = s.find((x) => x.teamId === 'B');
+  assert.equal(a.officialAvailable, 6);
+  assert.equal(a.officialPoints, 4);
+  assert.equal(b.officialPoints, 2);
+  assert.equal(b.provisionalPoints, 2);
+  assert.equal(a.available, 8, 'live: 4 holes on offer for group 1');
+});

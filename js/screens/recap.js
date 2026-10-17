@@ -187,7 +187,9 @@ function leaderboard(app) {
     text(ctx, `${I.pnames(s.teamId)} · ${r.w}-${r.l}-${r.h}`, PAD + 96, y + 88, { size: 26, weight: 500, color: C.soft, max: 560 });
     const v = isPM ? s.officialPm : s.officialPoints;
     fillRect(ctx, PAD + 96, y + 104, 600, 10, 5, C.card2);
-    if (v) fillRect(ctx, PAD + 96, y + 104, Math.max(10, (Math.abs(v) / scale) * 600), 10, 5, col);
+    // Match Play: share of the points on offer (same as the Board). Plus/Minus: size vs the biggest margin.
+    const frac = isPM ? Math.abs(v) / scale : s.officialAvailable ? v / s.officialAvailable : 0;
+    if (v) fillRect(ctx, PAD + 96, y + 104, Math.max(10, Math.min(1, frac) * 600), 10, 5, col);
     text(ctx, val(s), W - PAD, y + 72, { size: 56, weight: 700, color: col, align: 'right', mono: true });
     y += 124;
   }

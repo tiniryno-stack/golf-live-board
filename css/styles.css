@@ -474,7 +474,8 @@ a { color: inherit; }
   background: color-mix(in srgb, var(--jersey, var(--ink)) 30%, transparent);
   background-image: repeating-linear-gradient(135deg, transparent 0 3px, color-mix(in srgb, var(--jersey, var(--ink)) 35%, transparent) 3px 6px);
 }
-.tbar.pm .mid { position: absolute; left: 50%; top: 0; bottom: 0; border-left: 1.5px dashed var(--line-strong); z-index: 1; }
+.tbar.pm .mid, .tbar.share .mid { position: absolute; left: 50%; top: 0; bottom: 0; border-left: 1.5px dashed var(--line-strong); z-index: 1; }
+.tbar.share .mid { opacity: .7; }
 @media (prefers-reduced-motion: reduce) { .tbar .fill { transition: none; } }
 .row.team-row { position: relative; padding-left: 10px; }
 .row.team-row.tap { cursor: pointer; -webkit-tap-highlight-color: transparent; }
