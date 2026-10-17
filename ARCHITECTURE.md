@@ -65,13 +65,15 @@ golf-live-board/
 ├── css/styles.css          # tokens (section 9) + components
 ├── js/
 │   ├── config.js           # SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY
-│   ├── courses.js          # course catalog (v1: Twin Creeks only), add courses here
+│   ├── courses.js          # built-in courses (checked against the real card): Twin Creeks
+│   ├── coursedata.js       # course search + scorecards from OpenGolfAPI (pure shaping + fetch)
 │   ├── app.js              # routing (hash-based), state, rendering
 │   ├── db.js               # load round, RPC writes, realtime subscribe, offline queue
 │   ├── scoring.js          # PURE functions only — no DOM, no network
 │   ├── headlines.js        # PURE: replays scores in time order → comeback / streak / lead-change headlines
 │   └── screens/            # home, setup, enter, board, matches, card, host, sheets, toasts
 ├── supabase/schema.sql     # tables, RLS, write functions, realtime publication
+├── supabase/functions/course-search/  # Edge Function: backup route to OpenGolfAPI
 ├── tests/scoring.test.mjs  # node --test, covers section 7 worked examples
 ├── ARCHITECTURE.md
 └── README.md               # setup + how to run a round
@@ -198,7 +200,7 @@ Viewable in Host → Activity, or in Supabase → Table Editor → `audit_log`.
 
 ### 5.2 JSON shapes
 
-**Course catalog (`js/courses.js`)** — the round stores a copy, so later catalog edits never change past rounds.
+**Course catalog (`js/courses.js`)** — built-in courses; any other course comes from course search (`js/coursedata.js`) in the same shape (plus `ogaId`, `source`, `lat`/`lng`, `holes`). The round stores a copy (with `tees`, `source`, `ogaId`), so later catalog edits never change past rounds.
 ```json
 [{
   "id": "twin-creeks-allen-tx",
@@ -509,7 +511,10 @@ Join by code, "New round", "Run it back" (copy a past round's players, team name
 
 ### 2. Setup — organizer only; step by step (Course → Players → Teams → Matchups → Game → Save)
 Players never see Setup: they open the link and tap their name. ("New round" on Home is open to anyone; whoever starts a round is that round's organizer.)
-- **Course:** pick from the course list (v1: Twin Creeks only). **Nothing is preselected**; Save stays disabled until a course is chosen so nobody plays the wrong card. Then pick tees.
+- **Course:** a search box, then **Your courses** (built-in ones like Twin Creeks, plus every course your group has played — the copy from your last round there, so a fixed par or handicap sticks) and **Near you** (**Find courses near me** asks for location; if the site already has permission it loads by itself; nearest first, with miles). Typing 2+ letters searches by name (your matching courses first, then OpenGolfAPI results, nearest first when location is known; the list updates without stealing focus from the box). 9-hole courses show but can't be picked yet. **Can't find it? Enter the scorecard yourself** (a name box; the card is filled in on Save). **Nothing is preselected.**
+  - Picking a course shows a card with its status and **Change**: "Getting the scorecard…" (it loads in the background while you do Players, Teams, …), "Scorecard ready · par 72 · from OpenGolfAPI / checked against the card / from your last round there", or what's missing ("Hole handicaps are missing… You'll fix it on the last step"). Then pick tees (from the course; same name for men and women gets "(M)" / "(W)").
+  - **Data:** OpenGolfAPI (`js/coursedata.js`), free and keyless, built on OpenStreetMap — show "© OpenStreetMap contributors (ODbL 1.0) via OpenGolfAPI" wherever its data appears (Course step, scorecard card). Direct from the phone first; if blocked, the Supabase Edge Function `course-search` (GET only, our origins only, forwards search + one course; `verify_jwt` off because the publishable key isn't a JWT). A built-in course's `ogaId` makes search use the checked copy.
+- **Save → Scorecard check:** a card above the summary: source, "Par 72 · hole handicaps 1–18" or the first problem, and **Check it against the card** (front 9 / back 9 grid of Par + Hcp inputs; opens by itself when something's wrong). Save stays off until the card is complete: 18 pars of 3–6, hole handicaps 1–18 each once, a name for an entered course, and not still loading.
 - **Players:** tap names from past rounds of this crew (keeps their season history), or type new ones. Optional **Strokes** per player (blank = plays even). Helper text: "Giving a newer player 15 strokes = 1 stroke on the 15 hardest holes."
 - **Teams:** tap players into Team A–D (one per cart), then **name each team** (defaults to `Cart A`–`Cart D`).
 - **Matchups:** shows the three rotations in the default order with a **Shuffle** button, and the toggle **Carts swap foursomes every 6 holes** (on by default; turning it off = fixed foursomes and asks for Group 1/2).
@@ -723,6 +728,7 @@ Still open: nothing blocking. Design direction (section 9) is final.
 - **Par first (after the Oct 16 round):** blank tiles show grey par; the first tap on any button is par, then − / + step. New coach tip.
 - **Every box needs a tap (Oct 16, later):** Next hole no longer saves blanks as par. It waits until your whole group has scores ("Next hole · 2 scores left"); a tap while waiting shakes the empty boxes, names who's missing, and opens the other cart if only theirs are missing. Coach tip bumped to `tile4`.
 - **Finalize + lock (Oct 16, later):** the organizer finalizes the round from the Board's final card or Host (`finalize_round`, `events.finalized_at`). Every phone then locks — **the organizer's too** — and the server refuses players' score changes. Enter shows **Final** with See the final Board · Round recap · **Fix a score**: on the organizer's phone (PIN already saved) it unlocks in one tap; anyone else gets a PIN sheet. While unlocked, Enter's matchup line reads "Fixing a finalized round · **Done**" (Done locks it again); the unlock is in memory only, so a reload or a re-finalize locks it again. Writes go through `admin_upsert_score`. Host can **Reopen round**; Reset also reopens. Finished rounds (finalized or complete) open on the Board.
+- **Add a course (Oct 17):** Setup's Course step searches OpenGolfAPI (name or near me, nearest first) with your group's courses first; the scorecard loads in the background; Save has a scorecard check that blocks gaps (missing hole handicaps, odd pars). Enter-it-yourself for courses it doesn't have. Twin Creeks' OpenGolfAPI card matched ours exactly. Backup route: Supabase function `course-search`.
 - **Hole grid + locked holes:** tap the hole number for a grid of all 18; view any hole you've played; two or more back are locked until you tap the box (see section 3).
 - **Round recap:** when the round is final, the Board's top becomes a big tappable card (trophy · winner · "win the day · 39 pts · players" · "Round recap & scorecards →"), replacing the repeated final headline; the ⋯ menu has it too. It opens a swipeable recap of keepsake images drawn on a canvas (`js/screens/recap.js`, no libraries, dark Sundown look, 1080 px wide): **Final leaderboard** (winner, standings with bars, every matchup with its +1), **Your scorecard** (gross / to par / net if you get strokes, front and back nine with birdie circles and bogey squares, birdies-pars-bogeys counts), **Your cart** (both partners, Low Ball / Low Total per hole, your matchups), **Full report** (standings + all 18 holes for everyone, by cart). **Save or share** sends the PNG of the card you're on to the phone's share sheet (Save Image, Messages…), or downloads it on a laptop. Watchers get the leaderboard and full report.
 - **Home:** recent rounds are tappable cards with **Open**; "Run it back as a new round" is a small secondary link.
@@ -731,7 +737,7 @@ Still open: nothing blocking. Design direction (section 9) is final.
 ## 13. V2 backlog (running list)
 
 - **Carryovers (skins-style):** a tied point rolls onto the next hole instead of halving, so the next hole can be worth 3–4 points. Open design question: does an unresolved carry die at the end of a 6-hole rotation, or roll into the next opponent?
-- **More courses:** move the catalog from `courses.js` into a database table with an "add a course" form
+- **More courses:** ~~add a course~~ (built Oct 17 via OpenGolfAPI search, see 13a); still open: a shared `courses` table so one group's fixes reach every group (today fixes carry within your group via its past rounds), **scan the scorecard** (photo → AI) and **AI lookup** when OpenGolfAPI lacks a course, both behind a Supabase function holding the AI key; 9-hole courses
 - **More teams:** generic N-cart rotations (6 or 8 carts, three-plus foursomes)
 - **More games:** skins, Nassau, presses, scramble / alternate shot
 - **Round history:** list of past rounds → tap one to see its final board and match cards

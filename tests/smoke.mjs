@@ -15,6 +15,8 @@
 //      cart name, Today's game, Enter (the first tip waits until the cards are gone)
 //  11. Never a blank screen: a stalled connection shows "Opening…" then Try again; a
 //      drawing error shows "Something went wrong" + Reload
+//  16. Add a course: near me (via the backup route), search, background scorecard, fix it at
+//      Save, your group's card reused next time, enter it yourself, no signal
 //  15. Finalize: finished rounds open on the Board; the organizer finalizes (scores locked on
 //      server and screen); the organizer PIN unlocks a phone; Host can reopen
 //   9. Headlines wear the jersey of the team on their positive end; two that land on the
@@ -24,7 +26,7 @@
 // Run: npm run test:smoke
 
 import { chromium } from 'playwright';
-import { createBackend, attach, serve, seedRound } from './mock-supabase.mjs';
+import { createBackend, attach, serve, seedRound, OGA_FIXTURES } from './mock-supabase.mjs';
 
 const srv = await serve();
 const be = createBackend();
@@ -405,7 +407,7 @@ const O = await (async () => {
 })();
 await O.page.goto(`${srv.origin}/#/setup`);
 await O.page.waitForTimeout(800);
-await O.page.tap('[data-act="setup-course"]');
+await O.page.tap('[data-act="setup-mine"][data-v="twin-creeks-allen-tx"]');
 await O.page.tap('[data-act="setup-next"]');
 for (const n of ['Andrew', 'Justin', 'Sean', 'Mitchell', 'Ryan', 'Joseph', 'Chuck', 'Peter']) {
   await O.page.fill('#new-player', n);
@@ -669,7 +671,96 @@ await Z.page.waitForTimeout(1000);
 ok((await Z.page.evaluate(() => location.hash)).endsWith('/board'), 'a finalized round opens on the Board even from an old Enter link');
 ok(be.rpc.reset_round({ p_code: r5.code, p_admin_pin: r5.admin_pin }).ok && !ev5.finalized_at, 'Reset scores also reopens a finalized round');
 
-const errors = [A, C, A2, P, Q, O, F, R, X, Y, Z].flatMap((p) => p.page.errors);
+// 16. Add a course: Setup's Course step finds courses near the phone (OpenGolfAPI, here through
+//     the Supabase backup route because the direct one is "blocked"), searches by name, loads
+//     the scorecard in the background, and Save won't go until the card is complete. The
+//     group's corrected card is reused next time. Can't find it: enter it yourself.
+const fx = OGA_FIXTURES;
+be.oga.blocked = true;
+be.oga.calls.length = 0;
+const G = await (async () => {
+  const ctx = await browser.newContext({
+    viewport: { width: 393, height: 659 }, isMobile: true, hasTouch: true,
+    geolocation: { latitude: 33.1084, longitude: -96.7181 }, permissions: ['geolocation'],
+  });
+  await attach(ctx, be, srv.origin);
+  await ctx.addInitScript(() => { for (const k of ['tile4', 'prov', 'oppcart2']) localStorage.setItem('glb.coach.' + k, 'true'); });
+  const page = await ctx.newPage();
+  page.errors = [];
+  page.on('pageerror', (e) => page.errors.push(`Course phone: ${e.message}`));
+  return { ctx, page };
+})();
+const listText = () => G.page.evaluate(() => document.getElementById('course-results')?.innerText.replace(/\s+/g, ' ').trim() || '');
+await G.page.goto(`${srv.origin}/#/setup`);
+await G.page.waitForTimeout(1200);
+const nearText = await listText();
+ok(/Your courses/i.test(nearText) && /Twin Creeks Allen, TX · here · checked/.test(nearText), 'Course step: Your courses has Twin Creeks (checked), with its distance');
+ok(/Mesquite Hollow.*1\.4 mi.*Cedar Bend.*6\.9 mi/.test(nearText) && (nearText.match(/Twin Creeks/g) || []).length === 1, `location already allowed → courses near you, nearest first, Twin Creeks not listed twice (${nearText.slice(0, 120)}…)`);
+ok(!!(await G.page.$('[data-act="setup-pick"][data-v="' + fx.pecanNine.id + '"][disabled]')) && /9 holes/.test(nearText), 'a 9-hole course shows but can’t be picked yet');
+ok(be.oga.calls[0]?.via === 'direct' && be.oga.calls.some((c) => c.via === 'proxy'), 'direct route blocked → it went through the Supabase backup route');
+ok(/OpenStreetMap contributors/.test(nearText), 'the OpenStreetMap / OpenGolfAPI credit is shown');
+await G.page.fill('#course-q', 'cedar');
+await G.page.waitForTimeout(900);
+const cedar = await listText();
+ok(/Cedar Bend/.test(cedar) && !/Mesquite/.test(cedar) && (await G.page.evaluate(() => document.activeElement?.id)) === 'course-q', 'search by name: results update while you type (the box keeps focus)');
+await G.page.fill('#course-q', 'mesquite');
+await G.page.waitForTimeout(900);
+await G.page.tap(`[data-act="setup-pick"][data-v="${fx.mesquiteHollow.id}"]`);
+await G.page.waitForTimeout(900);
+const picked = await G.page.textContent('#content');
+ok(/Mesquite Hollow/.test(picked) && /Hole handicaps are missing/.test(picked), 'picked it → scorecard loaded in the background; says hole handicaps are missing');
+const teeNames = await G.page.$$eval('[data-act="setup-tee"]', (els) => els.map((e) => e.dataset.v));
+ok(teeNames.join(',') === 'Black,White (M),White (W)', `tees from the course (${teeNames.join(', ')})`);
+await G.page.tap('[data-act="setup-tee"][data-v="Black"]');
+await G.page.tap('[data-act="setup-next"]');
+for (const n of ['Andrew', 'Justin', 'Sean', 'Mitchell', 'Ryan', 'Joseph', 'Chuck', 'Peter']) {
+  await G.page.fill('#new-player', n);
+  await G.page.press('#new-player', 'Enter');
+}
+await G.page.tap('[data-act="setup-next"]');
+for (let p = 0; p < 8; p++) await G.page.tap(`[data-act="setup-team"][data-i="${p}"][data-v="${'ABADCCBD'[p]}"]`);
+for (let i = 0; i < 3; i++) await G.page.tap('[data-act="setup-next"]');
+ok(await G.page.isDisabled('[data-act="setup-save"]') && !!(await G.page.$('.sc-card.needs [data-input="setup-scsi"]')), 'Save: blocked, and the scorecard check is open to fill in');
+const si = [7, 11, 17, 1, 5, 13, 15, 3, 9, 8, 2, 18, 4, 12, 10, 16, 14, 6];
+for (let i = 0; i < 18; i++) await G.page.fill(`[data-input="setup-scsi"][data-i="${i}"]`, String(si[i]));
+await G.page.tap('.title');
+await G.page.waitForTimeout(300);
+ok(!(await G.page.isDisabled('[data-act="setup-save"]')) && /Par 72 · hole handicaps 1–18/.test(await G.page.textContent('.sc-card')), 'filled in the 18 hole handicaps → the card checks out, Save is on');
+await G.page.tap('[data-act="setup-save"]');
+await G.page.waitForTimeout(900);
+const made = be.tables.events[be.tables.events.length - 1];
+ok(made.course.id === `oga:${fx.mesquiteHollow.id}` && made.course.shortName === 'Mesquite Hollow' && made.course.tee?.name === 'Black' && made.course.source === 'opengolfapi', `the round has the course (${made.course.shortName}, ${made.course.tee?.name} tees)`);
+ok(JSON.stringify(made.course.strokeIndex) === JSON.stringify(si) && made.course.par.reduce((a, b) => a + b, 0) === 72 && made.course.tees.length === 3, 'with the pars, your hole handicaps and its tees');
+// Next round: the group's corrected card comes back instantly, no lookup.
+be.oga.calls.length = 0;
+await G.page.evaluate(() => { localStorage.removeItem('glb.setupDraft'); });
+await G.page.goto(`${srv.origin}/#/`);
+await G.page.waitForTimeout(500);
+await G.page.goto(`${srv.origin}/#/setup`);
+await G.page.waitForTimeout(1200);
+ok(/Mesquite Hollow.*played before/.test(await listText()), 'next round: Mesquite Hollow is in Your courses (played before)');
+await G.page.tap(`[data-act="setup-mine"][data-v="oga:${fx.mesquiteHollow.id}"]`);
+await G.page.waitForTimeout(300);
+ok(/Scorecard ready · par 72 · from your last round there/.test(await G.page.textContent('#content')) && !be.oga.calls.some((c) => c.url.includes(fx.mesquiteHollow.id)), 'picked it → ready right away with your hole handicaps, no lookup');
+// Enter it yourself
+await G.page.tap('[data-act="setup-unpick"]');
+await G.page.waitForTimeout(200);
+await G.page.tap('[data-act="setup-manual"]');
+await G.page.waitForTimeout(300);
+ok(!!(await G.page.$('#course-name')) && await G.page.isDisabled('[data-act="setup-next"]'), 'Enter the scorecard yourself: a name box, Next waits for a name');
+await G.page.fill('#course-name', 'Backyard Links');
+ok(!(await G.page.isDisabled('[data-act="setup-next"]')), 'typed a name → Next is on');
+await G.page.tap('[data-act="setup-unpick"]');
+await G.page.waitForTimeout(200);
+// No signal at all
+be.oga.down = true;
+await G.page.fill('#course-q', 'zzz');
+await G.page.waitForTimeout(1000);
+ok(/Couldn’t reach course search/.test(await listText()) && !!(await G.page.$('[data-act="setup-search-retry"]')), 'no signal: “Couldn’t reach course search” + Try again');
+be.oga.down = false;
+be.oga.blocked = false;
+
+const errors = [A, C, A2, P, Q, O, F, R, X, Y, Z, G].flatMap((p) => p.page.errors);
 ok(errors.length === 0, `no page errors${errors.length ? `: ${errors.join('; ')}` : ''}`);
 
 await browser.close();

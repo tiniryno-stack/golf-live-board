@@ -25,7 +25,8 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
 |---|---|
 | `index.html` | shell, fonts (Geist / Geist Mono from Google Fonts), loads `js/app.js` |
 | `js/config.js` | Supabase URL + **publishable** key (browser-safe). Never commit the secret/service_role key or DB password. |
-| `js/courses.js` | course catalog (Twin Creeks: par, stroke index, tees) |
+| `js/courses.js` | built-in courses (Twin Creeks: par, stroke index, tees, `ogaId`) |
+| `js/coursedata.js` | course search + scorecards from **OpenGolfAPI** (free, keyless, ODbL — show `ATTRIBUTION`): direct from the phone, falling back to the `course-search` Edge Function; pure shaping (`fromOpenGolf`, `scorecardProblems`, `shortCourseName`, distances) |
 | `js/scoring.js` | **pure** engine: `compute(event, scores)` → snapshot; play order (start on 1 or 10), rotations, Low Ball/Low Total, halves, clinch, official line, matchup win bonus, standings + tiebreakers, season |
 | `js/headlines.js` | **pure**: replays scores by `updated_at` → headlines (each has a `hero` team for color); `latestMoment`; Lock in / Close it out alerts |
 | `js/teams.js` | jersey colors (`teamColor`), `headlineColor`, Pokémon quick names |
@@ -34,7 +35,8 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
 | `js/ui.js` | `esc`, `icon` (SVG set), `seg`, formatting helpers |
 | `js/screens/*.js` | `enter` (score entry), `matches`, `board` (+ final card), `card`, `host` (organizer), `home`, `setup`, `season`, `sheets` (all bottom sheets incl. hole grid, team breakdown, menu), `toasts` (toasts, banners, full-screen cards, picker, Today's game pager, recap pager, coach tips), `brief` (Today's game content), `recap` (canvas-drawn keepsake PNGs) |
 | `supabase/schema.sql` | **source of truth for the DB**; keep it in sync with what's live |
-| `tests/` | unit tests (`*.test.mjs`), `fit-the-screen.mjs`, `smoke.mjs`, `mock-supabase.mjs` (in-memory stand-in mirroring every RPC), `helpers.mjs` |
+| `supabase/functions/course-search/index.ts` | Edge Function (deployed, `verify_jwt` off): GET-only backup route to OpenGolfAPI search + one course, our origins only. Redeploy with `deploy_edge_function` after edits |
+| `tests/` | unit tests (`*.test.mjs`), `fit-the-screen.mjs`, `smoke.mjs`, `mock-supabase.mjs` (in-memory stand-in mirroring every RPC, plus OpenGolfAPI + the backup route from `fixtures/opengolf.json`: Twin Creeks' real record and fictional test courses; `be.oga.blocked` / `be.oga.down`), `helpers.mjs` |
 
 ## Database (Supabase project `yxreupqzwgjzhfosnjbj`, via the Supabase connector)
 
@@ -91,6 +93,11 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
 - Board: tap a team → breakdown sheet. When final: big trophy card → **Round recap** (4 canvas
   PNGs: leaderboard, your scorecard, your cart, full report; Save or share via share sheet).
   Organizer gets **Finalize round** under it (also Host → Rules); then the card says `Final · locked`.
+- **Setup → Course:** search box, **Your courses** (built-ins + courses from your group's past rounds,
+  latest copy wins so fixes stick), **Near you** (location only on tap, or automatically if already
+  allowed). Picking loads the scorecard in the background (`s.courseStatus`). **Save** has a
+  scorecard check (front/back 9 grid) and won't save gaps (`scorecardProblems`). "Enter the
+  scorecard yourself" for missing courses. Search results/location are never saved to the draft.
 - **Finalized round:** every phone locks, **the organizer's too**. Enter shows a locked "Final" view
   (See the final Board · Recap · Fix a score). Fix a score → `app.unlockFinal()`: one tap on the
   organizer's phone, the `pin` sheet elsewhere; then Enter says "Fixing a finalized round · Done"
@@ -106,17 +113,18 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
 
 ```bash
 npm install
-npm test               # 49 unit tests: scoring + headlines (spec examples, bonus, back nine)
-npm run test:fit       # 120 checks: every screen at SE / 13 mini / 15-16 / Pro Max, no scroll on Enter
-npm run test:smoke     # 135 checks: multi-phone flows against the mock (join, swap, offline, rejoin,
+npm test               # 55 unit tests: scoring + headlines + course data (spec examples, bonus, back nine)
+npm run test:fit       # 128 checks: every screen at SE / 13 mini / 15-16 / Pro Max, no scroll on Enter
+npm run test:smoke     # 152 checks: multi-phone flows against the mock (join, swap, offline, rejoin,
                        # reset/delete, back nine, Next waits for every score, grid/locks, recap,
-                       # finalize + PIN unlock, blank-screen guards)
+                       # finalize + PIN unlock, add a course, blank-screen guards)
 ```
 
 - Playwright 1.56 with Chromium at `PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers` (don't run
   `playwright install`; WebKit isn't available). Screenshots land in `tests/screenshots/`
   (git-ignored) — look at them after UI changes.
-- The sandbox can't reach supabase.co or the CDNs; realtime isn't exercised (the mock aborts it;
+- The sandbox can't reach supabase.co, OpenGolfAPI or the CDNs (WebFetch can read
+  `api.opengolfapi.org` with Andrew's OK); realtime isn't exercised (the mock aborts it;
   the app falls back to refetch-on-return and 20 s polling).
 - To check a change against a real round: pull its event + scores with `execute_sql` (read-only),
   seed them into the mock (`be.rpc.create_event` + push rows into `be.tables.scores`), and render.
@@ -136,7 +144,11 @@ npm run test:smoke     # 135 checks: multi-phone flows against the mock (join, s
   additive migration if wanted.
 - The recap images use the viewer's perspective (their cart green); a neutral "everyone's jersey"
   variant could be nicer for group-chat sharing.
-- V2 backlog (ARCHITECTURE.md §13): carryovers, more courses (catalog → table), more teams/games,
+- **Add a course, next steps** (Andrew's ideas): scan the scorecard from a photo and AI lookup when
+  OpenGolfAPI lacks a course — kicked off at the start of Setup so it's ready by Save; needs an AI
+  key in a Supabase function secret (never in the site, never pasted in chat). Not yet confirmed
+  whether phones can call OpenGolfAPI directly (CORS) or always use the backup route.
+- V2 backlog (ARCHITECTURE.md §13): carryovers, shared courses table, more teams/games,
   round history, deeper season stats, add-to-home-screen (PWA) + lock-screen notifications,
   stronger security (PIN attempt limits), **GPS yardages behind `settings.gps`** (front/middle/back
   from OpenStreetMap or our own course mapping; first step: check if Twin Creeks is in OSM).

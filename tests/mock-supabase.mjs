@@ -15,6 +15,9 @@ import { COURSES } from '../js/courses.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SUPABASE = 'https://yxreupqzwgjzhfosnjbj.supabase.co';
+const OGA = 'https://api.opengolfapi.org';
+// OpenGolfAPI stand-in: Twin Creeks (real record), plus fictional test courses.
+export const OGA_FIXTURES = JSON.parse(readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures/opengolf.json'), 'utf8'));
 const ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 
 export function createBackend() {
@@ -321,7 +324,7 @@ export function createBackend() {
     return route.fulfill({ status: res.status, headers: cors, body: JSON.stringify(res.body) });
   }
 
-  const backend = { tables: t, rpc, handle, calls: [], offline: false, stall: false };
+  const backend = { tables: t, rpc, handle, calls: [], offline: false, stall: false, oga: { blocked: false, down: false, calls: [] } };
   return backend;
 }
 
@@ -333,6 +336,20 @@ const fontCss = `
 export async function attach(context, backend, origin) {
   await context.route(`${SUPABASE}/rest/v1/**`, (route) => backend.handle(route));
   await context.route(`${SUPABASE}/realtime/**`, (route) => route.abort());
+  // Course search: OpenGolfAPI directly, or our Supabase function `course-search` as the backup.
+  // backend.oga.blocked = the direct route fails (like CORS); backend.oga.down = both fail.
+  await context.route(`${OGA}/**`, (route) => {
+    backend.oga.calls.push({ via: 'direct', url: route.request().url() });
+    if (backend.oga.blocked || backend.oga.down) return route.abort();
+    return ogaAnswer(route, new URL(route.request().url()));
+  });
+  await context.route(`${SUPABASE}/functions/v1/course-search**`, (route) => {
+    backend.oga.calls.push({ via: 'proxy', url: route.request().url() });
+    if (backend.oga.down) return route.abort();
+    const u = new URL(route.request().url());
+    const id = u.searchParams.get('id');
+    return ogaAnswer(route, id ? new URL(`${OGA}/api/v1/courses/${id}`) : new URL(`${OGA}/api/v1/courses/search${u.search}`));
+  });
   await context.routeWebSocket(/supabase\.co\/realtime/, (ws) => ws.close());
   await context.route('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@*/dist/umd/supabase.js', (route) =>
     route.fulfill({
@@ -342,6 +359,20 @@ export async function attach(context, backend, origin) {
   );
   await context.route('https://fonts.googleapis.com/**', (route) => route.fulfill({ status: 200, contentType: 'text/css', body: fontCss.replaceAll('/__fonts', `${origin}/__fonts`) }));
   await context.route('https://fonts.gstatic.com/**', (route) => route.abort());
+}
+
+function ogaAnswer(route, u) {
+  const fx = OGA_FIXTURES;
+  const send = (status, body) => route.fulfill({ status, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(body) });
+  if (u.pathname === '/api/v1/courses/search') {
+    const q = (u.searchParams.get('q') || '').toLowerCase();
+    let rows = fx.near.courses;
+    if (q) rows = rows.filter((r) => r.name.toLowerCase().includes(q)).map(({ distance_mi, ...r }) => r);
+    return send(200, { total: rows.length, courses: rows });
+  }
+  const m = u.pathname.match(/^\/api\/v1\/courses\/([0-9a-f-]{36})$/i);
+  const course = m && [fx.twinCreeks, fx.mesquiteHollow, fx.pecanNine].find((c) => c.id === m[1]);
+  return course ? send(200, course) : send(404, { error: 'not_found' });
 }
 
 /** Tiny static server for the repo root (+ the Geist font files). */

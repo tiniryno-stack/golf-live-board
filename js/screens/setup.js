@@ -1,9 +1,15 @@
 // setup.js — organizer flow: Course → Players → Teams → Matchups → Game → Save.
-// Nothing is preselected on Course. "Run it back" (#/setup/CODE) copies players,
-// team names, carts and settings from a past round (not the course).
+// Course: search by name or "Courses near me" (OpenGolfAPI, js/coursedata.js); your group's
+// courses come first (built-in ones, and the copy from your last round there, with any fixes).
+// Picking a course fetches its scorecard in the background while you set up the rest; Save
+// has a scorecard check (fix pars / hole handicaps) and won't save a card with gaps.
+// Can't find it: enter the scorecard yourself. Nothing is preselected.
+// "Run it back" (#/setup/CODE) copies players, team names, carts and settings from a past
+// round (not the course).
 
 import { esc, icon, seg, todayISO, prettyDate, copyText, roundLink } from '../ui.js';
 import { COURSES } from '../courses.js';
+import * as cd from '../coursedata.js';
 import { DEFAULT_SETTINGS, DEFAULT_ROTATION, holesLabel } from '../scoring.js';
 import { TEAM_NAME_PICKS } from '../teams.js';
 import * as db from '../db.js';
@@ -23,6 +29,8 @@ function blank(from = null) {
   const { rotation, ...settings } = DEFAULT_SETTINGS;
   return {
     step: 0, from, loadingFrom: !!from, courseId: null, tee: null, name: '',
+    course: null, courseStatus: 'idle', mine: [], q: '', results: null, searching: false, searchError: '',
+    near: null, nearStatus: 'idle', loc: null, editCard: false,
     players: [], teams: TEAM_IDS.map((id) => ({ id, name: '' })),
     rotation: clone(DEFAULT_ROTATION), settings: { ...settings, rotationMode: 'swap' },
     crewId: null, crewFromSource: false, past: [], newName: '',
@@ -31,7 +39,13 @@ function blank(from = null) {
 }
 
 function persist(s) {
-  if (!s.saved) db.local.set(DRAFT_KEY, { ...s, saving: false, loadingFrom: false });
+  // Search results and the phone's location stay in memory only.
+  if (!s.saved) {
+    db.local.set(DRAFT_KEY, {
+      ...s, saving: false, loadingFrom: false, results: null, searching: false, searchError: '',
+      near: null, nearStatus: 'idle', loc: null, mine: [],
+    });
+  }
 }
 
 async function loadPast(app, crewId) {
@@ -39,10 +53,15 @@ async function loadPast(app, crewId) {
   try {
     const rounds = await db.fetchCrewRounds(crewId);
     const people = new Map();
-    for (const { event } of rounds) for (const p of event.roster?.players || []) if (p.personId) people.set(p.personId, p.name);
+    const courses = new Map(); // course id → the copy from the group's latest round there (with any fixes)
+    for (const { event } of rounds) {
+      for (const p of event.roster?.players || []) if (p.personId) people.set(p.personId, p.name);
+      if (event.course?.id) courses.set(event.course.id, event.course);
+    }
     if (app.setup) {
       app.setup.past = [...people].map(([personId, name]) => ({ personId, name, crewId }));
-      app.render();
+      app.setup.mine = yourCourses([...courses.values()].reverse());
+      paintCourses(app);
     }
   } catch { /* offline: typing names still works */ }
 }
@@ -78,7 +97,147 @@ async function loadFrom(app, code) {
 }
 
 function course(s) {
-  return COURSES.find((c) => c.id === s.courseId) || null;
+  return s.course || COURSES.find((c) => c.id === s.courseId) || null;
+}
+
+/** Your courses: the built-in ones plus any your group has played, newest first, using the
+ *  copy from your last round there (so a par or handicap you fixed sticks). */
+function yourCourses(played) {
+  const out = [];
+  for (const c of played) {
+    const built = COURSES.find((b) => b.id === c.id);
+    out.push({
+      ...(built || {}), ...c,
+      tees: c.tees?.length ? c.tees : built?.tees || (c.tee ? [c.tee] : []),
+      source: built ? 'builtin' : 'yours',
+      lastSource: c.source || null,
+    });
+  }
+  for (const b of COURSES) if (!out.some((c) => c.id === b.id)) out.push({ ...clone(b), source: 'builtin' });
+  return out;
+}
+
+const SOURCE_LABEL = {
+  builtin: 'checked against the card',
+  yours: 'from your last round there',
+  opengolfapi: 'from OpenGolfAPI',
+  manual: 'entered by you',
+};
+
+/** Start fetching a course's scorecard in the background. */
+async function loadCourse(app, ogaId) {
+  const s = app.setup;
+  try {
+    const full = await cd.fetchCourse(ogaId);
+    if (app.setup !== s || s.course?.ogaId !== ogaId) return;
+    s.course = { ...full, name: s.course.name || full.name, shortName: s.course.shortName || full.shortName };
+    s.courseStatus = 'ready';
+  } catch {
+    if (app.setup !== s || s.course?.ogaId !== ogaId) return;
+    s.courseStatus = 'error';
+  }
+  persist(s);
+  app.render();
+}
+
+/** Update just the course list (so typing in the search box isn't interrupted). */
+function paintCourses(app) {
+  const el = document.getElementById('course-results');
+  if (el && app.setup) el.innerHTML = courseList(app.setup);
+  else app.render();
+}
+
+function courseRow(c, act, val, extra = '') {
+  const nine = c.par != null && !Array.isArray(c.par) && c.par < 50;
+  const bits = [c.location || [c.city, c.state].filter(Boolean).join(', '), cd.fmtMiles(c.distance), nine ? '9 holes · not yet' : extra].filter(Boolean);
+  return `<button class="course-opt" data-act="${act}" data-v="${esc(val)}" ${nine ? 'disabled' : ''}>
+    <div class="row-title">${esc(c.name)}</div><div class="detail">${esc(bits.join(' · '))}</div></button>`;
+}
+
+function mineRows(list, here) {
+  return cd.sortByDistance(list.map((c) => ({ ...c, distance: null })), null)
+    .map((c) => courseRow({ ...c, distance: here && c.lat != null ? cd.distanceMi(here, c) : null }, 'setup-mine', c.id, c.source === 'builtin' ? 'checked' : 'played before'))
+    .join('');
+}
+
+/** The list under the search box: results while searching, else your courses + near you. */
+function courseList(s) {
+  const q = (s.q || '').trim();
+  const mine = s.mine.length ? s.mine : yourCourses([]);
+  const mineIds = new Set(mine.map((c) => c.ogaId).filter(Boolean));
+  if (q.length >= 2) {
+    const ql = q.toLowerCase();
+    const myHits = mine.filter((c) => `${c.name} ${c.shortName || ''}`.toLowerCase().includes(ql));
+    const api = (s.results || []).filter((r) => !mineIds.has(r.ogaId));
+    const body = s.searching && !s.results
+      ? '<p class="meta">Searching…</p>'
+      : s.searchError
+        ? `<p class="meta">${esc(s.searchError)}</p><button class="btn small" data-act="setup-search-retry">Try again</button>`
+        : !myHits.length && !api.length
+          ? `<p class="meta">No courses match \u201c${esc(q)}\u201d. Try part of the name, or enter the scorecard yourself.</p>`
+          : '';
+    return `<div class="stack">${mineRows(myHits, s.loc)}${api.map((r) => courseRow(r, 'setup-pick', r.ogaId)).join('')}</div>${body}${listFoot(s)}`;
+  }
+  let near;
+  switch (s.nearStatus) {
+    case 'locating': near = '<p class="meta">Finding where you are…</p>'; break;
+    case 'loading': near = '<p class="meta">Looking for courses near you…</p>'; break;
+    case 'denied': near = '<p class="meta">Location is off for this site, so search by name instead. (To turn it on: your browser\u2019s settings for this site.)</p>'; break;
+    case 'unavailable': near = '<p class="meta">This phone can\u2019t share its location here. Search by name instead.</p>'; break;
+    case 'error': near = '<p class="meta">Couldn\u2019t reach course search.</p><button class="btn small" data-act="setup-near">Try again</button>'; break;
+    case 'ok': {
+      const rows = (s.near || []).filter((r) => !mineIds.has(r.ogaId));
+      near = rows.length ? `<div class="stack">${rows.map((r) => courseRow(r, 'setup-pick', r.ogaId)).join('')}</div>` : '<p class="meta">No courses within 25 miles. Search by name instead.</p>';
+      break;
+    }
+    default: near = '<button class="btn block" data-act="setup-near">Find courses near me</button>';
+  }
+  return `<div class="micro" style="margin:0 0 8px">Your courses</div>
+    <div class="stack">${mineRows(mine, s.loc)}</div>
+    <div class="micro" style="margin:18px 0 8px">Near you</div>${near}${listFoot(s)}`;
+}
+
+function listFoot() {
+  return `<p class="meta" style="margin:14px 0 4px">Can\u2019t find it? <button class="link-btn inline" data-act="setup-manual">Enter the scorecard yourself</button></p>
+    <p class="meta attrib">Course data ${esc(cd.ATTRIBUTION)}</p>`;
+}
+
+/** Status of the picked course's scorecard, one line. */
+function cardStatus(s, c) {
+  if (s.courseStatus === 'loading') return '<div class="sc-line"><span class="spinner tiny" aria-hidden="true"></span><span>Getting the scorecard…</span></div>';
+  if (s.courseStatus === 'error') return '<div class="sc-line warn"><span>Couldn\u2019t get the scorecard. <button class="link-btn inline" data-act="setup-course-retry">Try again</button>, or fill it in on the last step.</span></div>';
+  if (c.source === 'manual') return '<div class="sc-line"><span>You\u2019ll fill in the scorecard on the last step.</span></div>';
+  const issues = cd.scorecardProblems(c);
+  if (issues.length) return `<div class="sc-line warn"><span>${esc(issues[0])} You\u2019ll fix it on the last step.</span></div>`;
+  const par = c.par.reduce((a, b) => a + b, 0);
+  return `<div class="sc-line good">${icon('check', 16)}<span>Scorecard ready · par ${par} · ${esc(SOURCE_LABEL[c.source] || 'ready')}</span></div>`;
+}
+
+/** Save step: the scorecard to check (and fix) before the round is created. */
+function scorecardCard(s) {
+  const c = course(s);
+  if (!c) return '';
+  if (s.courseStatus === 'loading') return `<div class="card sc-card"><div class="micro">Scorecard</div>${cardStatus(s, c)}</div>`;
+  const issues = c.source === 'manual' && !c.par.some(Boolean) ? ['Fill in the par and hole handicap for each hole.'] : cd.scorecardProblems(c);
+  const open = s.editCard || issues.length;
+  const par = (c.par || []).reduce((a, b) => a + (Number(b) || 0), 0);
+  const half = (from) => `<div class="par-grid sc-grid"><span class="micro">Hole</span><span class="micro">Par</span><span class="micro">Hcp</span>
+    ${Array.from({ length: 9 }, (_, k) => {
+      const i = from + k;
+      return `<span class="h">${i + 1}</span>
+      <input class="input" inputmode="numeric" pattern="[0-9]*" maxlength="1" value="${esc(c.par?.[i] ?? '')}" aria-label="Par hole ${i + 1}" data-input="setup-scpar" data-i="${i}">
+      <input class="input" inputmode="numeric" pattern="[0-9]*" maxlength="2" value="${esc(c.strokeIndex?.[i] ?? '')}" aria-label="Handicap hole ${i + 1}" data-input="setup-scsi" data-i="${i}">`;
+    }).join('')}</div>`;
+  const grid = `<div class="sc-halves">${half(0)}${half(9)}</div>
+  <p class="help" style="margin:10px 0 0">Copy these from the card. Hcp is the hole handicap: 1 is the hardest hole, 18 the easiest, each number once.</p>`;
+  return `<div class="card sc-card${issues.length ? ' needs' : ''}">
+    <div class="spread"><span class="micro">Scorecard</span><span class="meta">${esc(SOURCE_LABEL[c.source] || '')}</span></div>
+    ${issues.length
+      ? `<div class="sc-line warn" style="margin:4px 0 10px"><span>${esc(issues[0])}</span></div>`
+      : `<div class="sc-line good" style="margin:4px 0 ${open ? '10px' : '0'}">${icon('check', 16)}<span>Par ${par} · hole handicaps 1\u201318</span></div>`}
+    ${open ? grid : '<button class="btn small" style="margin-top:10px" data-act="setup-card-edit">Check it against the card</button>'}
+    ${c.source === 'opengolfapi' ? `<p class="meta attrib" style="margin:10px 0 0">${esc(cd.ATTRIBUTION)}</p>` : ''}
+  </div>`;
 }
 function teamName(s, id) {
   const t = s.teams.find((x) => x.id === id);
@@ -93,7 +252,13 @@ function hasFullTeams(s) {
 
 function problems(s) {
   const out = [];
-  if (!s.courseId) out.push('Pick a course.');
+  const c = course(s);
+  if (!c) out.push('Pick a course.');
+  else if (s.courseStatus === 'loading') out.push('Still getting the scorecard\u2026');
+  else {
+    if (c.source === 'manual' && !(c.name || '').trim()) out.push('Name the course (on the Course step).');
+    out.push(...cd.scorecardProblems(c));
+  }
   const names = s.players.map((p) => p.name.trim().toLowerCase()).filter(Boolean);
   if (!names.length) out.push('Add the players.');
   if (new Set(names).size !== names.length) out.push('Two players have the same name.');
@@ -119,8 +284,14 @@ function buildRound(s) {
   }));
   const teams = teamsUsed(s).map((id) => ({ id, name: teamName(s, id).slice(0, 20) }));
   return {
-    name: s.name.trim() || `${c.shortName} · ${prettyDate(todayISO())}`,
-    course: { id: c.id, name: c.name, shortName: c.shortName, location: c.location, tee: s.tee, par: [...c.par], strokeIndex: [...c.strokeIndex] },
+    name: s.name.trim() || `${c.shortName || cd.shortCourseName(c.name)} · ${prettyDate(todayISO())}`,
+    course: {
+      id: c.id, ...(c.ogaId ? { ogaId: c.ogaId } : {}), source: c.source === 'yours' ? c.lastSource || 'yours' : c.source || 'builtin',
+      name: c.name.trim(), shortName: c.shortName || cd.shortCourseName(c.name), location: c.location || '',
+      ...(c.lat != null && c.lng != null ? { lat: c.lat, lng: c.lng } : {}),
+      tee: s.tee, tees: (c.tees || []).map((t) => ({ name: t.name, yards: t.yards ?? null, rating: t.rating ?? null, slope: t.slope ?? null })),
+      par: c.par.map(Number), strokeIndex: c.strokeIndex.map(Number),
+    },
     roster: { groups: [{ id: 'g1', name: 'Group 1' }, { id: 'g2', name: 'Group 2' }], teams, players },
     settings: { ...s.settings, rotation: clone(s.rotation) },
     playedOn: todayISO(),
@@ -133,17 +304,25 @@ function buildRound(s) {
 const VIEWS = {
   Course(s) {
     const c = course(s);
-    return `<div class="stack">
-      ${COURSES.map((x) => `<button class="course-opt" data-act="setup-course" data-v="${esc(x.id)}" aria-pressed="${s.courseId === x.id}">
-        <div class="row-title">${esc(x.name)}</div><div class="detail">${esc(x.location)} · Par ${x.par.reduce((a, b) => a + b, 0)}</div></button>`).join('')}
+    if (!c) {
+      return `<input class="input course-q" id="course-q" type="search" placeholder="Search courses by name" value="${esc(s.q)}" autocomplete="off" autocapitalize="words" enterkeyhint="search" aria-label="Search courses by name" data-input="setup-q">
+        <div id="course-results" style="margin-top:14px">${courseList(s)}</div>`;
+    }
+    const title = c.source === 'manual'
+      ? `<input class="input" id="course-name" maxlength="60" placeholder="Course name" value="${esc(c.name)}" aria-label="Course name" data-input="setup-cname">`
+      : `<div class="row-title">${esc(c.name)}</div><div class="detail">${esc(c.location || '')}</div>`;
+    return `<div class="card course-picked">
+      <div class="spread" style="align-items:flex-start;gap:10px"><div style="flex:1;min-width:0">${title}</div>
+        <button class="btn small" data-act="setup-unpick">Change</button></div>
+      <div style="margin-top:8px">${cardStatus(s, c)}</div>
     </div>
-    ${c ? `<div class="micro" style="margin:18px 0 8px">Tees</div>
-      <div class="chips">${c.tees.map((t) => `<button class="chip" data-act="setup-tee" data-v="${esc(t.name)}" aria-pressed="${s.tee?.name === t.name}">${esc(t.name)} <span class="soft mono" style="font-size:12px">${t.yards}</span></button>`).join('')}</div>` : ''}
+    ${c.tees?.length ? `<div class="micro" style="margin:18px 0 8px">Tees</div>
+      <div class="chips">${c.tees.map((t) => `<button class="chip" data-act="setup-tee" data-v="${esc(t.name)}" aria-pressed="${s.tee?.name === t.name}">${esc(t.name)}${t.yards ? ` <span class="soft mono" style="font-size:12px">${t.yards}</span>` : ''}</button>`).join('')}</div>` : ''}
     <div class="field" style="margin-top:18px"><span class="label">First tee</span>${seg('setup-set', [['1', 'Hole 1'], ['10', 'Hole 10']], String(s.settings.startHole || 1), 'data-k="startHole"')}</div>
     <p class="help">Starting on 10? Everything follows the order you play: 10 → 18, then 1 → 9.</p>
     <div class="field"><label for="round-name">Round name</label>
       <input class="input" id="round-name" maxlength="60" value="${esc(s.name)}" placeholder="${esc(c ? `${c.shortName} · ${prettyDate(todayISO())}` : 'e.g. Twin Creeks · Fri')}" data-input="setup-name"></div>
-    <p class="meta">Nothing is preselected, so nobody plays the wrong card. Check pars against the card on the first tee; the organizer can fix any hole mid-round.</p>`;
+    <p class="meta">You\u2019ll check the scorecard on the last step. The organizer can still fix any hole mid-round from Host.</p>`;
   },
 
   Players(s) {
@@ -225,6 +404,7 @@ const VIEWS = {
     const c = course(s);
     const r = !issues.length ? buildRound(s) : null;
     return `${issues.length ? `<div class="card" style="margin:0 0 14px;border:1px solid var(--warn)">${issues.map((x) => `<div style="margin:2px 0">${esc(x)}</div>`).join('')}</div>` : ''}
+      ${scorecardCard(s)}
       <div class="card" style="margin:0 0 14px">
         <div class="micro">Course</div><div class="row-title" style="margin:2px 0 10px">${c ? esc(c.name) : '—'}${s.tee ? ` · ${esc(s.tee.name)}` : ''}</div>
         <div class="micro">Round</div><div style="margin:2px 0 10px">${esc(r?.name || s.name || '—')}</div>
@@ -252,6 +432,88 @@ function savedView(s) {
     <button class="btn primary big block" data-act="setup-open">Open the round</button>`;
 }
 
+// ───────────────────────────────────────────── course search actions
+
+let searchTimer = null;
+
+async function runSearch(app) {
+  const s = app.setup;
+  const q = (s?.q || '').trim();
+  if (!s || q.length < 2) return;
+  s.searching = true;
+  s.searchError = '';
+  paintCourses(app);
+  try {
+    const rows = await cd.searchCourses(q, s.loc);
+    if (app.setup !== s || s.q.trim() !== q) return;
+    s.results = rows;
+  } catch {
+    if (app.setup !== s || s.q.trim() !== q) return;
+    s.searchError = 'Couldn\u2019t reach course search. Check your signal.';
+  }
+  s.searching = false;
+  paintCourses(app);
+}
+
+function findNear(app) {
+  const s = app.setup;
+  if (!navigator.geolocation) {
+    s.nearStatus = 'unavailable';
+    paintCourses(app);
+    return;
+  }
+  s.nearStatus = 'locating';
+  paintCourses(app);
+  navigator.geolocation.getCurrentPosition(
+    async (pos) => {
+      if (app.setup !== s) return;
+      s.loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      s.nearStatus = 'loading';
+      paintCourses(app);
+      try {
+        s.near = await cd.nearbyCourses(s.loc.lat, s.loc.lng);
+        s.nearStatus = 'ok';
+      } catch {
+        s.nearStatus = 'error';
+      }
+      if (app.setup === s) paintCourses(app);
+    },
+    (err) => {
+      if (app.setup !== s) return;
+      s.nearStatus = err?.code === 1 ? 'denied' : 'error';
+      paintCourses(app);
+    },
+    { enableHighAccuracy: false, timeout: 10000, maximumAge: 600000 },
+  );
+}
+
+function pickCourse(app, c, status) {
+  const s = app.setup;
+  s.course = c;
+  s.courseId = c.id;
+  s.courseStatus = status;
+  s.tee = null;
+  s.editCard = false;
+  persist(s);
+  app.render();
+  document.getElementById('content').scrollTop = 0;
+}
+
+/** Typing in the scorecard check on Save. */
+function scoreCell(app, el, key, lo, hi) {
+  const s = app.setup;
+  const c = course(s);
+  if (!c) return;
+  const v = el.value.replace(/[^0-9]/g, '').slice(0, String(hi).length);
+  if (v !== el.value) el.value = v;
+  const n = v === '' ? null : Number(v);
+  if (!s.course) s.course = clone(c);
+  s.course[key][Number(el.dataset.i)] = n != null && n >= lo && n <= hi ? n : null;
+  s.editCard = true;
+  persist(s);
+  app.render(); // shows after the box loses focus (typing isn't interrupted)
+}
+
 // ───────────────────────────────────────────── screen
 
 export default {
@@ -261,9 +523,14 @@ export default {
     const draft = db.local.get(DRAFT_KEY);
     if (!from && draft && !draft.saved && (draft.players?.length || draft.courseId)) {
       app.setup = { ...blank(null), ...draft, step: Math.min(draft.step || 0, 4), saving: false };
+      const s = app.setup;
+      if (!s.course && s.courseId) s.course = clone(COURSES.find((c) => c.id === s.courseId) || null);
+      if (!s.course) s.courseId = null;
+      if (s.courseStatus === 'loading' && s.course?.ogaId) loadCourse(app, s.course.ogaId);
     } else {
       app.setup = blank(from);
     }
+    if (!app.setup.mine.length) app.setup.mine = yourCourses([]);
     if (from) loadFrom(app, from);
     else {
       const crew = db.recent.all().find((r) => r.crew_id)?.crew_id;
@@ -271,12 +538,25 @@ export default {
     }
   },
 
+  mount(root, app) {
+    const s = app.setup;
+    if (!s || s.saved || s.step !== 0 || course(s) || s.nearStatus !== 'idle' || s.autoNearTried) return;
+    s.autoNearTried = true;
+    // Only when this site already has location permission: never pop the prompt unasked.
+    try {
+      navigator.permissions?.query({ name: 'geolocation' }).then((p) => {
+        if (p.state === 'granted' && app.setup === s && s.nearStatus === 'idle') findNear(app);
+      }).catch(() => {});
+    } catch { /* no Permissions API: the button still works */ }
+  },
+
   render(app) {
     const s = app.setup;
     if (!s) return '';
     const name = STEPS[s.step];
     const dots = STEPS.map((_, i) => `<i class="${i <= s.step ? 'on' : ''}"></i>`).join('');
-    const canNext = s.step === 0 ? !!s.courseId : true;
+    const c0 = course(s);
+    const canNext = s.step === 0 ? !!c0 && (c0.source !== 'manual' || !!(c0.name || '').trim()) : true;
     const foot = s.saved
       ? ''
       : `<div class="setup-foot">
@@ -293,13 +573,85 @@ export default {
   },
 
   actions: {
-    'setup-course': (el, ev, app) => {
+    'setup-q': (el, ev, app) => {
       const s = app.setup;
-      if (s.courseId !== el.dataset.v) s.tee = null;
-      s.courseId = el.dataset.v;
+      s.q = el.value;
+      clearTimeout(searchTimer);
+      if (s.q.trim().length < 2) {
+        s.results = null;
+        s.searchError = '';
+        paintCourses(app);
+        return;
+      }
+      paintCourses(app); // your matching courses show right away
+      searchTimer = setTimeout(() => runSearch(app), 350);
+    },
+    'setup-search-retry': (el, ev, app) => runSearch(app),
+    'setup-near': (el, ev, app) => findNear(app),
+    'setup-pick': (el, ev, app) => {
+      const s = app.setup;
+      const id = el.dataset.v;
+      const row = [...(s.results || []), ...(s.near || [])].find((r) => r.ogaId === id);
+      const built = cd.builtInFor(id);
+      if (built) {
+        pickCourse(app, { ...clone(built), source: 'builtin' }, 'ready');
+        return;
+      }
+      if (!row) return;
+      pickCourse(app, {
+        id: `oga:${id}`, ogaId: id, name: row.name, shortName: cd.shortCourseName(row.name),
+        location: [row.city, row.state].filter(Boolean).join(', '), lat: row.lat, lng: row.lng, tees: [],
+        par: Array(18).fill(null), strokeIndex: Array(18).fill(null), holes: 18, source: 'opengolfapi',
+      }, 'loading');
+      loadCourse(app, id);
+    },
+    'setup-mine': (el, ev, app) => {
+      const s = app.setup;
+      const m = (s.mine.length ? s.mine : yourCourses([])).find((c) => c.id === el.dataset.v);
+      if (!m) return;
+      pickCourse(app, clone(m), 'ready');
+    },
+    'setup-manual': (el, ev, app) => {
+      const s = app.setup;
+      pickCourse(app, {
+        id: `manual:${db.uuid()}`, name: (s.q || '').trim().slice(0, 60), shortName: '', location: '', tees: [],
+        par: Array(18).fill(null), strokeIndex: Array(18).fill(null), holes: 18, source: 'manual',
+      }, 'ready');
+      s.editCard = true;
+      setTimeout(() => document.getElementById('course-name')?.focus(), 50);
+    },
+    'setup-unpick': (el, ev, app) => {
+      const s = app.setup;
+      s.course = null;
+      s.courseId = null;
+      s.courseStatus = 'idle';
+      s.tee = null;
+      s.editCard = false;
       persist(s);
       app.render();
     },
+    'setup-course-retry': (el, ev, app) => {
+      const s = app.setup;
+      if (!s.course?.ogaId) return;
+      s.courseStatus = 'loading';
+      app.render();
+      loadCourse(app, s.course.ogaId);
+    },
+    'setup-cname': (el, ev, app) => {
+      const s = app.setup;
+      if (!s.course) return;
+      s.course.name = el.value.slice(0, 60);
+      s.course.shortName = cd.shortCourseName(s.course.name);
+      persist(s);
+      const next = document.querySelector('[data-act="setup-next"]');
+      if (next) next.disabled = !s.course.name.trim();
+    },
+    'setup-card-edit': (el, ev, app) => {
+      app.setup.editCard = true;
+      app.render();
+    },
+    'setup-scpar': (el, ev, app) => scoreCell(app, el, 'par', 3, 6),
+    'setup-scsi': (el, ev, app) => scoreCell(app, el, 'strokeIndex', 1, 18),
     'setup-tee': (el, ev, app) => {
       const s = app.setup;
       const t = course(s)?.tees.find((x) => x.name === el.dataset.v) || null;
@@ -421,7 +773,8 @@ export default {
     },
     'setup-next': (el, ev, app) => {
       const s = app.setup;
-      if (s.step === 0 && !s.courseId) return;
+      const c = course(s);
+      if (s.step === 0 && (!c || (c.source === 'manual' && !(c.name || '').trim()))) return;
       s.step = Math.min(STEPS.length - 1, s.step + 1);
       persist(s);
       app.render();
@@ -457,7 +810,7 @@ export default {
       s.saved = res;
       db.admin.set(res.code, res.admin_pin);
       db.local.del(DRAFT_KEY);
-      db.recent.remember({ code: res.code, name: buildRound(s).name, played_on: todayISO(), crew_id: res.crew_id, course: course(s) });
+      db.recent.remember({ code: res.code, name: buildRound(s).name, played_on: todayISO(), crew_id: res.crew_id, course: buildRound(s).course });
       app.render();
       document.getElementById('content').scrollTop = 0;
     },
