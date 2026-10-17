@@ -3,8 +3,9 @@
 // scores until you tap it; then it's 50/50 with theirs open and yours greyed (tap
 // yours to go back; any other hole opens on yours). An empty tile shows a
 // grey par. The first tap anywhere on an empty box (−, the number or +) is par; after
-// that − / + step (so bogey = tap, +). Next hole saves any box left blank as par (only
-// if it's still empty on the server). Long-press clears. ◀ back through the current matchup + Undo, Next hole →
+// that − / + step (so bogey = tap, +). Next hole waits until every box in your group has a
+// score ("Next hole · 2 scores left"); tapping it then points at who's missing. Nothing is
+// ever saved as par without a tap. Long-press clears. ◀ back through the current matchup + Undo, Next hole →
 // (Switch it up, Lock in / Close it out). Holes follow play order (start on 1 or 10).
 // Must fit an iPhone SE with no scrolling.
 
@@ -81,14 +82,16 @@ function tile(app, p, hole, dim, mini, locked) {
   }
   const max = maxHoleScore(snap.course, snap.settings, hole, p.dots[hole - 1]);
   const dots = p.dots[hole - 1] ? `<span class="dots" aria-label="${p.dots[hole - 1]} stroke">${'<i></i>'.repeat(p.dots[hole - 1])}</span>` : '';
-  // Empty tile: a grey par, which is what Next hole records if nobody touches it.
+  // Empty tile: a grey par, which is what the first tap records.
   const shown = g ?? Math.min(par, max);
   const face = `<span class="who"><span class="ellipsis">${esc(p.name)}</span>${dots}</span>
     <span class="score ${g == null ? 'ghost' : scoreClass(g, par)}">${shown}</span>`;
   if (!editable) {
     return `<div class="tile readonly${g == null ? ' empty' : ''}"><div class="face" data-pid="${esc(p.id)}">${g == null ? face.replace(`>${shown}<`, '>–<') : face}</div></div>`;
   }
-  return `<div class="tile${g == null ? ' empty' : ''}${p.id === app.me ? ' mine' : ''}">
+  // Just tapped Next with this box empty: shake it (survives a redraw for a moment).
+  const nudge = g == null && app.ui.nudge?.hole === hole && Date.now() < app.ui.nudge.until ? ' nudge' : '';
+  return `<div class="tile${g == null ? ' empty' : ''}${nudge}${p.id === app.me ? ' mine' : ''}">
     <button class="step" data-act="tile-step" data-pid="${esc(p.id)}" data-d="-1" ${g != null && g <= 1 ? 'disabled' : ''} aria-label="${esc(p.name)} one less">${icon('minus', 22)}</button>
     <button class="face" data-act="tile-tap" data-hold="tile-clear" data-pid="${esc(p.id)}" aria-label="${esc(p.name)}: ${g ?? 'no score yet'}">${face}</button>
     <button class="step" data-act="tile-step" data-pid="${esc(p.id)}" data-d="1" ${g != null && g >= max ? 'disabled' : ''} aria-label="${esc(p.name)} one more">${icon('plus', 22)}</button>
@@ -173,13 +176,13 @@ export default {
         return `<i class="${n === h ? 'here' : done ? 'done' : ''}"></i>`;
       })
       .join('');
-    // Tiles left blank are saved as par when you move on; say so on the button.
-    const blanks = everyone.filter((p) => p.gross[h - 1] == null && app.inMyFoursome(p.id, h)).length;
-    const atPar = blanks ? ` · ${blanks} at par` : '';
-    const nextLabel = h === lastHole ? `Finish${atPar} →` : `Next hole${atPar} →`;
+    // Every box needs a score before you move on; the button says how many are left.
+    const blanks = blankPlayers(app, h).length;
+    const left = blanks ? ` · ${blanks} score${blanks === 1 ? '' : 's'} left` : ' →';
+    const nextLabel = `${h === lastHole ? 'Finish' : 'Next hole'}${left}`;
     // Looking back at a finished hole: the button takes you back to where you are.
     const footBtn = pos >= frontierPos(app) - 1
-      ? `<button class="btn primary block next-btn" data-act="next-hole">${nextLabel}</button>`
+      ? `<button class="btn primary block next-btn${blanks ? ' waiting' : ''}" data-act="next-hole">${nextLabel}</button>`
       : done
         ? '<button class="btn primary block next-btn" data-act="tab" data-v="board">See the Board →</button>'
         : `<button class="btn primary block next-btn" data-act="hole-current">Back to hole ${cur} →</button>`;
@@ -213,7 +216,7 @@ export default {
     if (mine && theirs && !mine.querySelector('.tile.empty') && theirs.querySelector('.tile.empty')) {
       app.coach('oppcart2', theirs, 'You can enter scores for the other cart in your group too. Tap their card to open it, then tap yours to come back.');
     } else if (first) {
-      app.coach('tile3', first, 'The grey number is par. Your first tap on the box makes it par, then + for bogey or − for birdie. Leave it and Next hole counts it as par.');
+      app.coach('tile4', first, 'The grey number is par. Your first tap on the box makes it par, then + for bogey or − for birdie. Every box needs a score before Next hole.');
     }
   },
 
@@ -289,12 +292,38 @@ function parFor(app, pid, h) {
   return Math.min(app.snapshot.holes[h - 1].par, maxFor(app, pid, h));
 }
 
-function goHole(app, to, from, filled = []) {
+/** Players in your group with no score yet on this hole. */
+function blankPlayers(app, h) {
+  return cartsFor(app, h).flatMap((c) => c.players).filter((p) => p.gross[h - 1] == null && app.inMyFoursome(p.id, h));
+}
+
+/** Next hole tapped with boxes still empty: point at them instead of moving on. */
+function nudgeBlanks(app, h, blanks) {
+  const carts = cartsFor(app, h);
+  const open = focusSide(app, h, carts) === 'opp' ? carts[1] : carts[0];
+  const openHasBlank = open.players.some((p) => blanks.includes(p));
+  // All the missing scores are in the greyed cart: open it so they can be entered.
+  if (!openHasBlank && carts.length > 1) {
+    app.ui.enterFocus = open === carts[0] ? h : null;
+  }
+  app.ui.nudge = { hole: h, until: Date.now() + 1200 };
+  app.render();
+  const names = blanks.map((p) => p.name);
+  const list = names.length > 1 ? `${names.slice(0, -1).join(', ')} + ${names[names.length - 1]}` : names[0];
+  app.toast({
+    title: `Still need ${list}`,
+    sub: openHasBlank ? 'Tap each box: first tap is par, then − / +' : 'Enter theirs here, or wait for their phone',
+    ms: 3500,
+  });
+  // Their phone may have entered them already: pull the latest so the button can flip.
+  app.refetch?.();
+}
+
+function goHole(app, to, from) {
   app.ui.hole = to;
   app.render();
-  const names = filled.map((pid) => app.snapshot.playerById.get(pid)?.name).filter(Boolean);
   app.toast({
-    title: `Hole ${from} saved`, sub: names.length ? `Par for ${names.join(' + ')}` : '', action: 'Undo', ms: names.length ? 4000 : 3000,
+    title: `Hole ${from} saved`, action: 'Undo', ms: 3000,
     onAction: () => {
       app.ui.hole = from;
       app.render();
@@ -304,8 +333,12 @@ function goHole(app, to, from, filled = []) {
 
 function nextHole(app) {
   const h = app.ui.hole;
-  // Anything still blank in your group counts as par (filled only where still empty).
-  const filled = app.fillPar(h, cartsFor(app, h).flatMap((c) => c.players.map((p) => p.id)));
+  // Every box needs a real tap first: nothing is saved as par on its own.
+  const blanks = blankPlayers(app, h);
+  if (blanks.length) {
+    nudgeBlanks(app, h, blanks);
+    return;
+  }
   const snap = app.snapshot;
   const st = snap.settings;
   const pos = posOf(st, h);
@@ -343,7 +376,7 @@ function nextHole(app) {
       sub,
       sub2: swap ? 'One cart waits, one moves up.' : 'Same foursome — this matchup compares scores with the other group.',
       button: `Continue to hole ${nh}`,
-      onContinue: () => goHole(app, nh, h, filled),
+      onContinue: () => goHole(app, nh, h),
     });
     return;
   }
@@ -359,9 +392,9 @@ function nextHole(app) {
       big: rest.join(' — ').replace(/^./, (c) => c.toUpperCase()),
       sub: m ? `${snap.teamById.get(myTeam).name}: ${matchStatus(snap, m, myTeam)}` : '',
       button: 'Let’s go',
-      onContinue: () => goHole(app, nh, h, filled),
+      onContinue: () => goHole(app, nh, h),
     });
     return;
   }
-  goHole(app, nh, h, filled);
+  goHole(app, nh, h);
 }

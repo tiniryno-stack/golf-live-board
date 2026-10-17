@@ -41,7 +41,7 @@ async function phone(name) {
   const ctx = await browser.newContext({ viewport: { width: 375, height: 548 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
   await attach(ctx, be, srv.origin);
   await ctx.addInitScript(() => {
-    for (const k of ['tile3', 'prov', 'oppcart2']) localStorage.setItem('glb.coach.' + k, 'true');
+    for (const k of ['tile4', 'prov', 'oppcart2']) localStorage.setItem('glb.coach.' + k, 'true');
   });
   const page = await ctx.newPage();
   page.errors = [];
@@ -427,7 +427,7 @@ await O.page.tap('[data-act="brief-done"]');
 await O.page.waitForTimeout(500);
 ok(!!(await O.page.$('.cart.mine')) && /grey number is par/.test((await O.page.textContent('.coach').catch(() => '')) || ''), 'then Enter, and the first tip shows there');
 
-// 12. Blank tiles are par: Next hole saves them, but never over a score already on the server
+// 12. Every box needs a score: Next hole waits, points at who's missing, never saves par on its own
 const r3 = seedRound(be);
 const DEV3 = '33333333-3333-4333-8333-333333333333';
 be.tables.claims.push({ event_id: r3.id, player_id: 'p1', device_id: DEV3 });
@@ -439,7 +439,7 @@ const F = await (async () => {
     localStorage.setItem('glb.me.' + code, '"p1"');
     localStorage.setItem('glb.who.' + code, 'true');
     localStorage.setItem('glb.brief.' + code, 'true');
-    for (const k of ['tile3', 'prov', 'oppcart2']) localStorage.setItem('glb.coach.' + k, 'true');
+    for (const k of ['tile4', 'prov', 'oppcart2']) localStorage.setItem('glb.coach.' + k, 'true');
   }, [r3.code, DEV3]);
   const page = await ctx.newPage();
   page.errors = [];
@@ -456,19 +456,33 @@ await F.page.waitForTimeout(150);
 ok((await F.page.evaluate(() => window.__glb.scoreOf('p1', 1))) === par1, 'first tap on + is par, not bogey');
 await F.page.tap('[data-act="tile-step"][data-pid="p1"][data-d="1"]'); // …second tap = bogey
 await F.page.waitForTimeout(800);
-ok(/Next hole · 3 at par/.test(await F.page.textContent('.next-btn')), `the button says what happens: “${(await F.page.textContent('.next-btn')).trim()}”`);
+const nextText = async () => (await F.page.textContent('.next-btn')).replace(/\s+/g, ' ').trim();
+ok(/Next hole · 3 scores left/.test(await nextText()) && !!(await F.page.$('.next-btn.waiting')), `blanks left: the button waits and says how many (“${await nextText()}”)`);
 be.tables.scores.push({ event_id: r3.id, player_id: 'p3', hole: 1, strokes: 7, updated_by: 'Mike', updated_at: new Date().toISOString() }); // Mike's 7 already on the server
 await F.page.tap('.next-btn');
-await F.page.waitForTimeout(1500);
+await F.page.waitForTimeout(250);
 const at = (pid) => be.tables.scores.find((x) => x.event_id === r3.id && x.player_id === pid && x.hole === 1)?.strokes;
-ok(at('p1') === par1 + 1 && at('p2') === par1 && at('p4') === par1, `Next hole: Andrew\u2019s bogey kept, Sean + Tyler saved at par (${at('p1')}, ${at('p2')}, ${at('p4')})`);
-ok(at('p3') === 7, `Mike\u2019s 7 that was already on the server is not overwritten (${at('p3')})`);
-ok((await F.page.evaluate(() => window.__glb.scoreOf('p3', 1))) === 7, 'and Andrew\u2019s phone shows Mike\u2019s 7');
+ok((await F.page.textContent('.hole-title')) === 'Hole 1' && at('p2') == null && at('p4') == null, 'Next with blanks: stays on hole 1 and saves nobody at par');
+ok(/Still need/.test(await toastText(F.page)) && (await F.page.$$('.cart.focus .tile.empty.nudge')).length > 0, `it points at the empty boxes (“${await toastText(F.page)}”)`);
+await F.page.waitForTimeout(1200);
+ok((await F.page.evaluate(() => window.__glb.scoreOf('p3', 1))) === 7 && /2 scores left/.test(await nextText()), 'and pulls the latest: Mike’s 7 from his phone shows up, 2 left');
+await F.page.tap('.cart.mine .face[data-pid="p2"]'); // Sean: par
+await F.page.waitForTimeout(300);
+await F.page.evaluate(() => { document.getElementById('toasts').innerHTML = ''; });
+await F.page.tap('.next-btn');
+await F.page.waitForTimeout(400);
+ok(!!(await F.page.$('.sheet.even .cart.opp.focus')) && /Tyler/.test(await toastText(F.page)), `only their cart is missing one: Next opens their cart and names him (“${await toastText(F.page)}”)`);
+await F.page.tap('.cart.opp .face[data-pid="p4"]');
+await F.page.waitForTimeout(300);
+ok(/^Next hole →$/.test(await nextText()) && !(await F.page.$('.next-btn.waiting')), `all four in: “${await nextText()}”`);
+await F.page.tap('.next-btn');
+await F.page.waitForTimeout(1200);
+ok(at('p1') === par1 + 1 && at('p2') === par1 && at('p3') === 7 && at('p4') === par1, `hole 1 saved as tapped (${at('p1')}, ${at('p2')}, ${at('p3')}, ${at('p4')})`);
 ok((await F.page.textContent('.hole-title')) === 'Hole 2', 'on to hole 2');
 
 // 13. Hole grid + locked holes: look back at any hole; two or more back needs a tap to edit
-for (let i = 0; i < 2; i++) { await F.page.tap('.next-btn'); await F.page.waitForTimeout(700); await clearOverlays(F.page); }
-ok((await F.page.textContent('.hole-title')).startsWith('Hole 4'), 'Next with blanks twice \u2192 hole 4');
+for (let i = 0; i < 2; i++) { await playHole(F.page); await F.page.waitForTimeout(600); await clearOverlays(F.page); }
+ok((await F.page.textContent('.hole-title')).startsWith('Hole 4'), 'played 2 and 3 → hole 4');
 await F.page.tap('[data-act="hole-prev"]');
 await F.page.waitForTimeout(200);
 ok(!(await F.page.$('.cart.locked')) && !!(await F.page.$('.cart.mine .step')) && /Next hole/.test(await F.page.textContent('.next-btn')), 'one hole back (3): still editable, Next hole');
@@ -513,7 +527,7 @@ const R = await (async () => {
     localStorage.setItem('glb.who.' + code, 'true');
     localStorage.setItem('glb.brief.' + code, 'true');
     localStorage.setItem('glb.seen.' + code, JSON.stringify({ last: Date.now(), ids: [] }));
-    for (const k of ['tile3', 'prov', 'oppcart2']) localStorage.setItem('glb.coach.' + k, 'true');
+    for (const k of ['tile4', 'prov', 'oppcart2']) localStorage.setItem('glb.coach.' + k, 'true');
   }, [r4.code, DEV4]);
   const page = await ctx.newPage();
   page.errors = [];

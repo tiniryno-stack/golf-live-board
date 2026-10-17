@@ -46,7 +46,7 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
   update_event, release_player, get_audit_log, reset_round, delete_round, pick_team_name`.
   Helpers `_same_foursome`, `_play_pos`, `_hole_at`, `_join_approver`, `_write_score`, … are not
   executable by anon.
-- `fill_score` = "Next hole with a box left blank = par": one atomic
+- `fill_score` (legacy: the app no longer calls it, kept for older phones' queued fills): one atomic
   insert-or-update-**where strokes is null**, so it never overwrites another phone's score.
 - **Applying changes:** additive SQL (`create or replace function`, `grant`) works with
   `apply_migration`. Anything with drop / delete / revoke tends to stall on an approval prompt —
@@ -71,8 +71,10 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
 
 - **Enter:** your cart ~70% with full tiles; the other cart greyed to one slim row of small scores
   ("Tap to enter" → 50/50, yours greyed, "Tap to go back"). Empty box shows a **grey par**; the
-  **first tap on any button (−, number, +) = par**, then − / + step. **Next hole** saves untouched
-  boxes as par via `fill_score` and says so ("Next hole · 2 at par →"). Name pinned at the top of
+  **first tap on any button (−, number, +) = par**, then − / + step. **Next hole** waits until every
+  box in the foursome has a score ("Next hole · 2 scores left", greyed); a tap then shakes the
+  empty boxes, names who's missing, and opens the other cart if only theirs are blank. Nothing is
+  ever auto-saved as par. Name pinned at the top of
   a tile, score dead center level with − / +.
 - **Holes:** tap the hole number → grid of 18 (one row per matchup). The current hole and the one
   just finished are editable; **2+ holes back open locked** ("Tap to edit"). Switch it up shows
@@ -88,7 +90,7 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
 - Never a blank screen; never a coach tip over a sheet / full-screen card.
 - localStorage keys: `glb.device`, `glb.me.CODE`, `glb.admin.CODE`, `glb.recent`,
   `glb.queue.CODE`, `glb.seen.CODE`, `glb.alert.CODE.H`, `glb.switch.CODE.H`, `glb.brief.CODE`,
-  `glb.who.CODE`, `glb.cardOpen.CODE`, `glb.coach.{tile3,oppcart2,prov}`, `glb.setupDraft`,
+  `glb.who.CODE`, `glb.cardOpen.CODE`, `glb.coach.{tile4,oppcart2,prov}`, `glb.setupDraft`,
   `glb.theme`. Bump a coach key's suffix when its text changes so people see the new tip.
 
 ## Testing (run before every push; all headless, no network needed)
@@ -120,8 +122,6 @@ npm run test:smoke     # 115 checks: multi-phone flows against the mock (join, s
 
 ## Open items / ideas
 
-- Next hole fills untouched boxes with par **and** first tap = par. Andrew may prefer Next to
-  require every box to be tapped — ask before changing.
 - `_setting_label` in the DB doesn't know `matchBonus` (audit log shows the raw key): one-line
   additive migration if wanted.
 - The recap images use the viewer's perspective (their cart green); a neutral "everyone's jersey"
