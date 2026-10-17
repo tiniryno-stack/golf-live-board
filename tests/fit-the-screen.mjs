@@ -35,6 +35,9 @@ for (const [pid, s] of [['p1', 3], ['p2', 5], ['p5', 4], ['p6', 4]]) {
   be.tables.scores.push({ event_id: r.id, player_id: pid, hole: 10, strokes: s, updated_by: 'Sam', updated_at: new Date().toISOString() });
 }
 be.tables.claims.push({ event_id: r.id, player_id: 'p1', device_id: DEV });
+// A finished round (every score in) for the end-of-round screens: Finalize, then locked.
+const rf = seedRound(be, { holesPlayed: 18 });
+be.tables.claims.push({ event_id: rf.id, player_id: 'p1', device_id: DEV });
 
 const browser = await chromium.launch();
 const failures = [];
@@ -143,6 +146,13 @@ for (const size of SIZES) {
     localStorage.setItem('glb.me.' + code, '"p1"');
     localStorage.setItem('glb.admin.' + code, JSON.stringify(pin));
   }, [r.code, DEV, r.admin_pin]);
+  await ctx.addInitScript(([code, pin]) => {
+    localStorage.setItem('glb.who.' + code, 'true');
+    localStorage.setItem('glb.brief.' + code, 'true');
+    localStorage.setItem('glb.me.' + code, '"p1"');
+    localStorage.setItem('glb.seen.' + code, JSON.stringify({ last: Date.now(), ids: [] }));
+    localStorage.setItem('glb.admin.' + code, JSON.stringify(pin));
+  }, [rf.code, rf.admin_pin]);
   const page = await ctx.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
@@ -270,7 +280,7 @@ for (const size of SIZES) {
   // Someone who hasn't picked a name yet (fresh phone)
   const ctx2 = await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
   await attach(ctx2, be, srv.origin);
-  await ctx2.addInitScript((code) => localStorage.setItem('glb.who.' + code, 'true'), r.code);
+  await ctx2.addInitScript((codes) => codes.forEach((code) => localStorage.setItem('glb.who.' + code, 'true')), [r.code, rf.code]);
   const watcher = await ctx2.newPage();
   await watcher.goto(`${srv.origin}/#/e/${r.code}/enter`);
   await watcher.waitForTimeout(800);
@@ -278,6 +288,25 @@ for (const size of SIZES) {
   await watcher.evaluate(() => window.__glb.openSheet('who', {}));
   await watcher.waitForTimeout(400);
   await check(watcher, size, 'Who are you? sheet');
+  // End of round: the organizer's Board offers Finalize; once final, players get a locked Enter.
+  be.tables.events.find((x) => x.id === rf.id).finalized_at = null;
+  await go(`#/e/${rf.code}/board`);
+  await check(page, size, 'Board final (Finalize)');
+  await go(`#/e/${rf.code}/host`);
+  await page.tap('[data-act="host-tab"][data-v="rules"]');
+  await page.waitForTimeout(200);
+  await page.evaluate(() => document.querySelector('[data-act="host-finalize"]')?.scrollIntoView({ block: 'center' }));
+  await page.screenshot({ path: `${OUT}${size[1]}x${size[2]}-host-finalize.png` });
+  be.tables.events.find((x) => x.id === rf.id).finalized_at = new Date().toISOString();
+  await watcher.goto(`${srv.origin}/#/e/${rf.code}/board`);
+  await watcher.waitForTimeout(800);
+  await check(watcher, size, 'Board final (locked)');
+  await watcher.evaluate((c) => window.__glb.go(`#/e/${c}/enter`), rf.code);
+  await watcher.waitForTimeout(400);
+  await check(watcher, size, 'Enter (final, locked)');
+  await watcher.evaluate(() => window.__glb.openSheet('pin', {}));
+  await watcher.waitForTimeout(400);
+  await check(watcher, size, 'Fix a score (PIN) sheet');
   if (errors.length) {
     failures.push(`${size[0]} · page errors`);
     rows.push([`${size[0]} · page errors`, `FAIL: ${errors.join('; ')}`]);

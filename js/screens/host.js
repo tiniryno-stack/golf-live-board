@@ -66,8 +66,15 @@ function rules(app, d) {
       </div>
     </details>
     <div class="divider"></div>
+    <div class="micro" style="margin:0 0 6px">Finish the round</div>
+    ${app.isFinal()
+      ? `<p class="help" style="margin:0 0 12px"><b>Finalized</b> \u2014 scores are locked for everyone. Your PIN still fixes any score (Card, or Enter on this phone). Reopen to let players change them again.</p>
+      <div class="stack" style="gap:8px;margin:0 0 8px"><button class="btn ghost block" data-act="host-reopen">Reopen round</button></div>`
+      : `<p class="help" style="margin:0 0 12px"><b>Finalize</b> locks every score so nobody can change them, and finished rounds open on the Board. Do it once everyone\u2019s checked their card. Your PIN can still fix one.</p>
+      <div class="stack" style="gap:8px;margin:0 0 8px"><button class="btn primary block" data-act="host-finalize">${icon('lock', 16)} Finalize round</button></div>`}
+    <div class="divider"></div>
     <div class="micro" style="margin:0 0 6px">Practice rounds &amp; cleanup</div>
-    <p class="help" style="margin:0 0 12px"><b>Reset</b> clears every score but keeps players, carts, settings and everyone\u2019s phones joined, so you can replay from hole 1. <b>Delete</b> removes the round for everyone.</p>
+    <p class="help" style="margin:0 0 12px"><b>Reset</b> clears every score (and reopens a finalized round) but keeps players, carts, settings and everyone\u2019s phones joined, so you can replay from hole 1. <b>Delete</b> removes the round for everyone.</p>
     <div class="stack" style="gap:8px;margin:0 0 8px">
       <button class="btn ghost block" data-act="host-reset">Reset scores</button>
       <button class="btn danger block" data-act="host-delete">Delete round</button>
@@ -243,6 +250,8 @@ export default {
       const ok = await copyText(roundLink(app.code, '/host'));
       app.toast({ title: ok ? 'Organizer link copied' : roundLink(app.code, '/host'), sub: 'Keep it private. It still needs the PIN.' });
     },
+    'host-finalize': (el, ev, app) => app.confirmFinalize(true),
+    'host-reopen': (el, ev, app) => app.confirmFinalize(false),
     'host-reset': (el, ev, app) => {
       app.openSheet('confirm', {
         title: 'Reset all scores?',

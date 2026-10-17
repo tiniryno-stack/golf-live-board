@@ -43,9 +43,12 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
   SECURITY DEFINER RPCs** returning `{ ok, error }`.
 - RPCs: `create_event, verify_admin, claimed_players, whoami, claim_player, leave_round,
   request_join, approve_join, deny_join, upsert_score, admin_upsert_score, fill_score,
-  update_event, release_player, get_audit_log, reset_round, delete_round, pick_team_name`.
+  update_event, release_player, get_audit_log, reset_round, finalize_round, delete_round, pick_team_name`.
   Helpers `_same_foursome`, `_play_pos`, `_hole_at`, `_join_approver`, `_write_score`, … are not
   executable by anon.
+- **Finalize:** `events.finalized_at` (set/cleared by `finalize_round` with the organizer PIN). While
+  set, `upsert_score` / `fill_score` / `pick_team_name` return `finalized`; `admin_upsert_score` still
+  works, and the app routes organizer writes through it when final. `reset_round` clears it.
 - `fill_score` (legacy: the app no longer calls it, kept for older phones' queued fills): one atomic
   insert-or-update-**where strokes is null**, so it never overwrites another phone's score.
 - **Applying changes:** additive SQL (`create or replace function`, `grant`) works with
@@ -87,6 +90,10 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
 - Headlines: colored by `hero`; one at a time, two for ~10 s when they land together.
 - Board: tap a team → breakdown sheet. When final: big trophy card → **Round recap** (4 canvas
   PNGs: leaderboard, your scorecard, your cart, full report; Save or share via share sheet).
+  Organizer gets **Finalize round** under it (also Host → Rules); then the card says `Final · locked`.
+- **Finalized round:** Enter shows a locked "Final" view (See the final Board · Recap · Fix a score
+  (organizer PIN) → `pin` sheet). `app.isFinal()`, `app.roundOver()` (final or every score in),
+  `app.homeTab()`. A round that's over opens on the **Board**, also from an old `/enter` link.
 - Never a blank screen; never a coach tip over a sheet / full-screen card.
 - localStorage keys: `glb.device`, `glb.me.CODE`, `glb.admin.CODE`, `glb.recent`,
   `glb.queue.CODE`, `glb.seen.CODE`, `glb.alert.CODE.H`, `glb.switch.CODE.H`, `glb.brief.CODE`,
@@ -98,9 +105,10 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
 ```bash
 npm install
 npm test               # 49 unit tests: scoring + headlines (spec examples, bonus, back nine)
-npm run test:fit       # 100 checks: every screen at SE / 13 mini / 15-16 / Pro Max, no scroll on Enter
-npm run test:smoke     # 115 checks: multi-phone flows against the mock (join, swap, offline, rejoin,
-                       # reset/delete, back nine, par fill, grid/locks, recap, blank-screen guards)
+npm run test:fit       # 116 checks: every screen at SE / 13 mini / 15-16 / Pro Max, no scroll on Enter
+npm run test:smoke     # 132 checks: multi-phone flows against the mock (join, swap, offline, rejoin,
+                       # reset/delete, back nine, Next waits for every score, grid/locks, recap,
+                       # finalize + PIN unlock, blank-screen guards)
 ```
 
 - Playwright 1.56 with Chromium at `PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers` (don't run

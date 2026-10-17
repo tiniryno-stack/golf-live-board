@@ -138,12 +138,26 @@ function watchView(app) {
     </div></div></div>`;
 }
 
+/** The organizer finalized the round: scores are locked; the PIN unlocks them on this phone. */
+function finalView(app) {
+  return `<div class="enter">
+    <div class="hero"><div class="hole-head" style="padding:6px 0 0"><div class="hole-title">${icon('lock', 22)} Final</div>
+      <div class="hole-meta">${esc(app.event.name)}</div></div></div>
+    <div class="sheet"><div class="watch-card final-lock">
+      <p class="soft" style="margin:0">The organizer finalized the round, so scores are locked.</p>
+      <button class="btn primary big block" data-act="tab" data-v="board">See the final Board</button>
+      ${app.snapshot.roundComplete ? `<button class="btn block" data-act="recap-open">${icon('trophy', 18)} Round recap &amp; scorecards</button>` : ''}
+      <button class="btn ghost block" data-act="pin-open">${icon('lock', 16)} Fix a score (organizer PIN)</button>
+    </div></div></div>`;
+}
+
 export default {
   hero: true,
   noscroll: true,
 
   render(app) {
     const snap = app.snapshot;
+    if (app.isFinal() && !app.adminPin) return finalView(app);
     if (!app.myPlayer()) return watchView(app);
     const st = snap.settings;
     const h = currentHole(app);
@@ -281,6 +295,7 @@ export default {
       app.render();
     },
     'team-picker': (el, ev, app) => app.openTeamPicker(),
+    'pin-open': (el, ev, app) => app.openSheet('pin', {}),
   },
 };
 

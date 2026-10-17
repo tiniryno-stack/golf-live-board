@@ -139,12 +139,20 @@ function finalCard(app) {
     who = lead?.name || 'Final';
     sub = lead ? `wins at ${fmtToPar(snap.hasStrokes ? lead.netToPar : lead.grossToPar)}` : '';
   }
+  const locked = app.isFinal();
+  // Organizer: finalize once everyone's checked their card. Everyone else: a note until then.
+  const lock = locked
+    ? ''
+    : app.isOrganizer()
+      ? `<button class="btn primary block" style="margin:0 0 14px" data-act="board-finalize">${icon('lock', 16)} Finalize round</button>`
+      : '<p class="meta final-note">Scores can still be fixed until the organizer finalizes the round.</p>';
   return `<button class="final-card" data-act="recap-open">
-      <span class="fc-k">${icon('trophy', 15)} Final</span>
+      <span class="fc-k">${icon('trophy', 15)} Final${locked ? ` · ${icon('lock', 13)} locked` : ''}</span>
       <span class="fc-w">${esc(who)}</span>
       <span class="fc-s">${esc(sub)}</span>
       <span class="fc-cta">Round recap &amp; scorecards ${icon('fwd', 15)}</span>
     </button>
+    ${lock}
     ${app.event.crew_id ? `<button class="btn ghost block" style="margin:0 0 14px" data-act="go" data-v="#/season/${esc(app.event.crew_id)}">See season standings</button>` : ''}`;
 }
 
@@ -181,7 +189,10 @@ export default {
           ? `Official through hole ${snap.officialHole}${prov.length ? ` · ${prov.length > 1 ? 'holes' : 'hole'} ${prov.join(', ')} provisional (lighter bar)` : ''}`
           : `Points go official once both foursomes finish hole ${holeAt(snap.settings, 1)}`;
     }
-    const final = snap.roundComplete ? finalCard(app) : '';
+    // Finalized before every score was in: still say it's locked.
+    const final = snap.roundComplete
+      ? finalCard(app)
+      : app.isFinal() ? `<div class="final-note locked">${icon('lock', 14)} The organizer finalized the round · scores locked</div>` : '';
     return `${hero(app, mode)}
       <div class="sheet">
         ${final}${headlines}${segs}
@@ -207,6 +218,7 @@ export default {
     'board-player': (el, ev, app) => app.openSheet('player', { pid: el.dataset.v }),
     'board-team': (el, ev, app) => app.openSheet('team', { teamId: el.dataset.v }),
     'recap-open': (el, ev, app) => app.openRecap(),
+    'board-finalize': (el, ev, app) => app.confirmFinalize(true),
     'board-headlines': (el, ev, app) => app.openSheet('headlines', {}),
     'board-share': (el, ev, app) => app.copyLink(),
   },

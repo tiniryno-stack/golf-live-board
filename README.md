@@ -21,9 +21,9 @@ No build step: push to `main` and Pages serves it. The browser only ever holds t
    - **Leaving:** the ⋯ menu (or your name) → Go to Home (you stay joined) or Switch to watching (frees your name).
 5. **Fixing:** tap the hole number for a grid of all 18 holes (or use ◀); holes two or more back open locked, so tap the box to edit. The **Card** works too (tap a shaded cell). The organizer can fix any cell and change rules, strokes, team names, par and hole handicaps from **Host** (the round button next to the tab bar).
 6. **New phone / cleared browser:** open the link, tap your name → "That's me — ask my foursome". Anyone in your foursome taps **Let them in** (the organizer can too, or can **Free up** the name from Host).
-7. **When it's over:** the Board shows a big Final card: tap it (or ⋯ → Round recap) for keepsake images (leaderboard, your scorecard, your cart, everyone) and **Save or share** any of them.
+7. **When it's over:** the Board shows a big Final card: tap it (or ⋯ → Round recap) for keepsake images (leaderboard, your scorecard, your cart, everyone) and **Save or share** any of them. Once everyone's checked their card, the organizer taps **Finalize round** (under the Final card, or Host → Rules): scores lock for everyone. To fix one after that, Enter → **Fix a score (organizer PIN)**; Host can **Reopen round**. Finished rounds open on the Board.
 8. **Run it back:** Home → Run it back on a past round copies players, team names, carts and settings. **Season standings** live on Home.
-9. **Practice rounds:** Host → Rules → bottom: **Reset scores** clears every score (same players, carts and joined phones; replay from hole 1). **Delete round** removes it for everyone. Delete your test rounds before the real one so they don't show up in Season standings.
+9. **Practice rounds:** Host → Rules → bottom: **Reset scores** clears every score (same players, carts and joined phones; replay from hole 1; reopens a finalized round). **Delete round** removes it for everyone. Delete your test rounds before the real one so they don't show up in Season standings.
 
 ## Testing with a laptop and a phone
 

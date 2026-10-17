@@ -71,7 +71,7 @@ export function createBackend() {
       const crew = p_crew_id || randomUUID();
       const e = {
         id, code, name: String(p_name).trim().slice(0, 60), played_on: p_played_on || now().slice(0, 10), crew_id: crew,
-        course: p_course, roster: p_roster, settings: p_settings, created_at: now(), updated_at: now(),
+        course: p_course, roster: p_roster, settings: p_settings, created_at: now(), updated_at: now(), finalized_at: null,
       };
       t.events.push(e);
       t.secrets.set(id, pin);
@@ -168,6 +168,7 @@ export function createBackend() {
       const c = claimOf(e, p_device_id);
       if (!c) return no('not_claimed');
       if (!sameFoursome(e.roster, e.settings, c.player_id, p_player_id, p_hole)) return no('not_your_foursome');
+      if (e.finalized_at) return no('finalized');
       return writeScore(e, p_player_id, p_hole, p_strokes, pname(e, c.player_id));
     },
     fill_score({ p_code, p_device_id, p_player_id, p_hole, p_strokes }) {
@@ -176,6 +177,7 @@ export function createBackend() {
       const c = claimOf(e, p_device_id);
       if (!c) return no('not_claimed');
       if (!sameFoursome(e.roster, e.settings, c.player_id, p_player_id, p_hole)) return no('not_your_foursome');
+      if (e.finalized_at) return no('finalized');
       const cur = t.scores.find((s) => s.event_id === e.id && s.player_id === p_player_id && s.hole === p_hole);
       if (cur && cur.strokes != null) return { ok: true, filled: false, strokes: cur.strokes };
       const res = writeScore(e, p_player_id, p_hole, p_strokes, pname(e, c.player_id));
@@ -209,6 +211,7 @@ export function createBackend() {
       if (!e) return no('not_found');
       const name = String(p_name || '').trim().slice(0, 20);
       if (!name) return no('name_required');
+      if (e.finalized_at) return no('finalized');
       const c = claimOf(e, p_device_id);
       if (!c) return no('not_claimed');
       const team = player(e, c.player_id)?.teamId;
@@ -223,6 +226,17 @@ export function createBackend() {
       log(e, pname(e, c.player_id), `Named the cart ${name} (was ${was})`);
       return { ok: true, team, name };
     },
+    finalize_round({ p_code, p_admin_pin, p_final = true }) {
+      const e = ev(p_code);
+      if (!e) return no('not_found');
+      if (!adminOk(e, p_admin_pin)) return no('bad_pin');
+      const want = p_final !== false;
+      if (want === !!e.finalized_at) return { ok: true, unchanged: true, finalized_at: e.finalized_at };
+      e.finalized_at = want ? now() : null;
+      e.updated_at = now();
+      log(e, 'Organizer', want ? 'Finalized the round · scores locked' : 'Reopened the round · scores unlocked');
+      return { ok: true, finalized_at: e.finalized_at };
+    },
     reset_round({ p_code, p_admin_pin }) {
       const e = ev(p_code);
       if (!e) return no('not_found');
@@ -236,6 +250,7 @@ export function createBackend() {
       }
       for (const j of t.joins) if (j.event_id === e.id && j.status === 'pending') j.status = 'expired';
       e.updated_at = now();
+      e.finalized_at = null; // a reset round is open again
       log(e, 'Organizer', `Reset the round · cleared ${n} scores`);
       return { ok: true, cleared: n };
     },

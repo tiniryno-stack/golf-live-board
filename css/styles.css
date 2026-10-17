@@ -784,6 +784,10 @@ details.fold summary::-webkit-details-marker { display: none; }
 .final-card .fc-w { font-size: 30px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; }
 .final-card .fc-s { font-size: 15px; font-weight: 600; opacity: .8; }
 .final-card .fc-cta { margin-top: 8px; display: inline-flex; align-items: center; gap: 4px; font-size: 15px; font-weight: 750; background: #14161A; color: #F4C95D; border-radius: 999px; padding: 8px 14px; }
+/* Before the organizer finalizes (everyone else), or finalized early with scores missing */
+.final-note { margin: -4px 0 14px; text-align: center; }
+.final-note.locked { margin: 0 0 14px; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 12px; border-radius: 14px; background: var(--surface-2); color: var(--ink-soft); font-size: 14px; font-weight: 600; }
+.hole-title svg { vertical-align: -2px; }
 .recap-page { gap: 10px; }
 .recap-img { display: block; width: 100%; height: auto; border-radius: 16px; box-shadow: 0 10px 30px rgba(0, 0, 0, .45); }
 .recap .loading-state { flex: 1; }

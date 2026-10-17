@@ -94,7 +94,8 @@ create table events (
   roster      jsonb not null,                -- 5.2
   settings    jsonb not null,                -- 5.2
   created_at  timestamptz default now(),
-  updated_at  timestamptz default now()
+  updated_at  timestamptz default now(),
+  finalized_at timestamptz                   -- organizer finalized: scores locked (organizer PIN to edit)
 );
 
 create table event_secrets (                 -- never readable from the browser
@@ -169,12 +170,13 @@ alter publication supabase_realtime add table scores, events, join_requests;
 | `leave_round(code, device_id)` | A playing phone | Releases this phone's name and drops it to watch-only. |
 | `request_join(code, player_id, device_id)` | Anyone | When a name is `taken`: creates a pending "let them in" request (expires after 5 minutes). |
 | `approve_join(code, approver_device_id, request_id)` / `deny_join(...)` | Any phone in **that player's current foursome** (their partner or current opponents), or the organizer | Approve moves the name to the requesting phone (the old phone drops to watch-only). Deny closes the request. |
-| `upsert_score(code, device_id, player_id, hole, strokes)` | A phone that has claimed a player | Rejects unless the player being scored is in the phone's **foursome for that hole**: their own cart or the cart they're playing on that hole (fixed mode: same group). Then upserts and stamps `updated_by` with the phone's player name. |
-| `admin_upsert_score(code, admin_pin, ...)` | Organizer | Fix any foursome's score. |
+| `upsert_score(code, device_id, player_id, hole, strokes)` | A phone that has claimed a player | Rejects unless the player being scored is in the phone's **foursome for that hole**: their own cart or the cart they're playing on that hole (fixed mode: same group). Rejects with `finalized` once the organizer has finalized the round. Then upserts and stamps `updated_by` with the phone's player name. |
+| `admin_upsert_score(code, admin_pin, ...)` | Organizer | Fix any foursome's score — also while the round is finalized. |
 | `update_event(code, admin_pin, course, roster, settings)` | Organizer | Mid-round changes: rules, team names, strokes, player swaps, par corrections. |
 | `release_player(code, admin_pin, player_id)` | Organizer | Backup: frees a name if nobody in that foursome is around to approve. |
 | `get_audit_log(code, admin_pin)` | Organizer | Returns the round's activity log, newest first. |
-| `reset_round(code, admin_pin)` | Organizer | Clears every score (to null, so Realtime carries it) and keeps players, carts, settings and joined phones. For practice rounds. |
+| `reset_round(code, admin_pin)` | Organizer | Clears every score (to null, so Realtime carries it) and keeps players, carts, settings and joined phones; reopens a finalized round. For practice rounds. |
+| `finalize_round(code, admin_pin, final = true)` | Organizer | Sets (or with `false` clears) `events.finalized_at`. While set, `upsert_score`, `fill_score` and `pick_team_name` refuse with `finalized`; `admin_upsert_score` still works. Realtime on `events` tells every phone. |
 | `delete_round(code, admin_pin)` | Organizer | Deletes the round and everything in it (scores, claims, PIN, requests, activity log). |
 | `pick_team_name(code, device_id, name)` | A phone that has claimed a player | Names that player's cart; refuses a name another cart already has (case-insensitive). |
 
@@ -531,6 +533,8 @@ Players never see Setup: they open the link and tap their name. ("New round" on 
 ### 4. Board
 Today only. Headline at the top on the Teams view (the newest one, two for a few seconds when they land together; tap for all), then segmented controls for **Teams | Players** and **Gross | Net**. Teams are ranked by **official** points with a provisional chip for points beyond the official line; footer reads e.g. `Official through 9 · hole 10 provisional`. Tap a row → player detail sheet. Share icon copies the round link.
 - **After Round final:** a `Final` banner on top plus a **See season standings** button. That's the end-of-round moment to show the group.
+- **Finalize (organizer):** under the final card the organizer gets **Finalize round** (also Host → Rules → Finish the round; confirm sheet says how many scores are blank, if any). Once finalized the card reads `Final · locked`; everyone else sees "Scores can still be fixed until the organizer finalizes the round" before that. Finalized early (scores missing): a grey "finalized · scores locked" strip instead of the card.
+- **Finished rounds open here:** opening a round that's over (finalized, or every score in) lands on the Board instead of Enter — from Home, the share link, or an old `/enter` link. Joining a finished round skips the cart-name and Today's game cards.
 
 ### 5. Matches — the showpiece
 Segmented control **Rot 1 | Rot 2 | Rot 3** (defaults to the rotation you're playing; finished rotations show their final state).
@@ -718,6 +722,7 @@ Still open: nothing blocking. Design direction (section 9) is final.
 - **Matchup win bonus (Match Play, added mid-round Oct 16):** the winner of each matchup gets **+1** on the Board once all its holes are in; a halved matchup splits it like a pushed hole (½ each, or nothing when ties score nothing). It's official once both foursomes are through the matchup's last hole, provisional before that. Setting `matchBonus` (1 / 0, default 1 so older rounds get it), on Host → Rules and Setup → Game. Counts toward lead-change headlines and Season points. Not used in Plus/Minus. **Board → tap a team:** breakdown sheet with each matchup (holes, opponent, score, status, +1 for the win), the total, and official vs provisional.
 - **Par first (after the Oct 16 round):** blank tiles show grey par; the first tap on any button is par, then − / + step. New coach tip.
 - **Every box needs a tap (Oct 16, later):** Next hole no longer saves blanks as par. It waits until your whole group has scores ("Next hole · 2 scores left"); a tap while waiting shakes the empty boxes, names who's missing, and opens the other cart if only theirs are missing. Coach tip bumped to `tile4`.
+- **Finalize + lock (Oct 16, later):** the organizer finalizes the round from the Board's final card or Host (`finalize_round`, `events.finalized_at`). Players' phones and the server then refuse score changes; Enter shows **Final** with See the final Board · Round recap · **Fix a score (organizer PIN)**, which opens a PIN sheet and unlocks that phone (organizer writes go through `admin_upsert_score`). Host can **Reopen round**; Reset also reopens. Finished rounds (finalized or complete) open on the Board.
 - **Hole grid + locked holes:** tap the hole number for a grid of all 18; view any hole you've played; two or more back are locked until you tap the box (see section 3).
 - **Round recap:** when the round is final, the Board's top becomes a big tappable card (trophy · winner · "win the day · 39 pts · players" · "Round recap & scorecards →"), replacing the repeated final headline; the ⋯ menu has it too. It opens a swipeable recap of keepsake images drawn on a canvas (`js/screens/recap.js`, no libraries, dark Sundown look, 1080 px wide): **Final leaderboard** (winner, standings with bars, every matchup with its +1), **Your scorecard** (gross / to par / net if you get strokes, front and back nine with birdie circles and bogey squares, birdies-pars-bogeys counts), **Your cart** (both partners, Low Ball / Low Total per hole, your matchups), **Full report** (standings + all 18 holes for everyone, by cart). **Save or share** sends the PNG of the card you're on to the phone's share sheet (Save Image, Messages…), or downloads it on a laptop. Watchers get the leaderboard and full report.
 - **Home:** recent rounds are tappable cards with **Open**; "Run it back as a new round" is a small secondary link.

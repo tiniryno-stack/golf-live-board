@@ -69,6 +69,12 @@ app.myPlayer = () => (app.me && app.snapshot ? app.snapshot.playerById.get(app.m
 app.myName = () => app.myPlayer()?.name || null;
 app.myTeam = () => app.myPlayer()?.teamId || null;
 app.isOrganizer = () => !!app.adminPin;
+/** The organizer finalized the round: scores are locked (organizer PIN to edit). */
+app.isFinal = () => !!app.event?.finalized_at;
+/** Nothing left to enter (finalized, or every score is in): the round opens on the Board. */
+app.roundOver = () => app.isFinal() || !!app.snapshot?.roundComplete;
+/** Where this phone belongs in the round: Enter while playing, the Board once it's over. */
+app.homeTab = () => (app.roundOver() ? 'board' : 'enter');
 /** The hole this phone should be on (play order); the last hole once its foursome is done. */
 app.nextHole = () => {
   if (!app.snapshot) return 1;
@@ -84,7 +90,7 @@ app.inMyFoursome = (pid, hole) =>
 /** May this phone write this player's score on this hole? (mirrors the server) */
 app.canEdit = (pid, hole) => {
   if (app.adminPin) return true;
-  if (!app.me || !app.event) return false;
+  if (!app.me || !app.event || app.isFinal()) return false;
   return sameFoursome(app.event.roster, app.event.settings, app.me, pid, hole);
 };
 
@@ -171,10 +177,12 @@ function freshStart(wasPlaying) {
 /** Optimistic score write: screen updates now, server in the background. */
 app.setScore = (pid, hole, strokes) => {
   if (!app.canEdit(pid, hole)) {
-    app.toast({ title: 'Not your matchup', sub: 'You can enter your cart and the cart you’re playing.', error: true });
+    if (app.isFinal()) app.toast({ title: 'The round is final', sub: 'Scores are locked. The organizer PIN unlocks them.', action: 'Unlock', onAction: () => app.openSheet('pin', {}), error: true });
+    else app.toast({ title: 'Not your matchup', sub: 'You can enter your cart and the cart you’re playing.', error: true });
     return false;
   }
-  const asAdmin = !!app.adminPin && !(app.me && sameFoursome(app.event.roster, app.event.settings, app.me, pid, hole));
+  // Organizer writes go through the PIN when it isn't their own foursome, or when the round is final.
+  const asAdmin = !!app.adminPin && (app.isFinal() || !(app.me && sameFoursome(app.event.roster, app.event.settings, app.me, pid, hole)));
   db.writeScore(app.code, { playerId: pid, hole, strokes: strokes ?? null, asAdmin });
   app.unsynced = db.queue.count(app.code);
   recompute();
@@ -188,6 +196,7 @@ const REJECT_TEXT = {
   not_your_foursome: 'not in your matchup on that hole',
   not_claimed: 'this phone isn’t playing as anyone',
   bad_pin: 'the organizer PIN didn’t work',
+  finalized: 'the round is final (organizer PIN to edit)',
   unknown_player: 'that player isn’t in the round anymore',
 };
 
@@ -280,7 +289,7 @@ app.claim = async (pid) => {
     app.closeSheet();
     channel?.send({ kind: 'join', playerId: pid });
     app.toast({ title: `You’re in as ${app.myName()}` });
-    if (app.route.tab !== 'enter') app.go(app.tabHash('enter'));
+    if (app.route.tab !== app.homeTab()) app.go(app.tabHash(app.homeTab()));
     else {
       app.ui.hole = null;
       render();
@@ -362,17 +371,17 @@ app.pickTeamName = async (name) => {
  *  "Today's game" (once per phone per round), then you're on Enter. */
 function afterJoin() {
   const t = app.myTeam() && app.snapshot?.teamById.get(app.myTeam());
-  if (t && isDefaultTeamName(t)) fx.showTeamPicker(app, maybeBrief);
+  if (t && isDefaultTeamName(t) && !app.roundOver()) fx.showTeamPicker(app, maybeBrief);
   else maybeBrief();
 }
 function maybeBrief() {
   const key = `glb.brief.${app.code}`;
   const finish = () => {
     app.joining = 0; // the join sequence is over: Enter's first tip can show now
-    if (app.me && app.route.tab !== 'enter') app.go(app.tabHash('enter'));
+    if (app.me && app.route.tab !== app.homeTab()) app.go(app.tabHash(app.homeTab()));
     else render();
   };
-  if (!app.me || !app.snapshot?.game || db.local.get(key)) return finish();
+  if (!app.me || !app.snapshot?.game || db.local.get(key) || app.roundOver()) return finish();
   const shown = fx.showBrief(app, () => {
     db.local.set(key, true);
     finish();
@@ -484,6 +493,49 @@ function organizerError(e, what) {
     app.toast({ title: 'No signal', sub: `Couldn\u2019t ${what}. Try again.`, error: true });
   }
 }
+
+/** Organizer: ask before finalizing (says how many scores are still blank, if any) or reopening. */
+app.confirmFinalize = (final = true) => {
+  if (!final) {
+    app.openSheet('confirm', {
+      title: 'Reopen the round?',
+      body: 'Players can change their scores again until you finalize it.',
+      ok: 'Reopen round', onOk: () => app.finalizeRound(false),
+    });
+    return;
+  }
+  const blank = (app.snapshot?.players || []).reduce((n, p) => n + p.gross.filter((g) => g == null).length, 0);
+  app.openSheet('confirm', {
+    title: 'Finalize the round?',
+    body: blank
+      ? `${blank} score${blank === 1 ? ' is' : 's are'} still blank. Finalizing locks the round as it stands. Your PIN can still fix any score, and you can reopen it.`
+      : 'Locks every score for everyone, so nobody can change them. Your PIN can still fix one, and you can reopen it.',
+    ok: 'Finalize round', onOk: () => app.finalizeRound(true),
+  });
+};
+
+/** Organizer: finalize the round (lock every score) or reopen it. */
+app.finalizeRound = async (final = true) => {
+  let res;
+  try {
+    res = await db.api.finalizeRound(app.code, app.adminPin, final);
+  } catch (e) {
+    organizerError(e, final ? 'finalize the round' : 'reopen the round');
+    return;
+  }
+  if (!res.ok) {
+    app.toast({ title: final ? 'Not finalized' : 'Not reopened', sub: res.error === 'bad_pin' ? 'Organizer PIN didn\u2019t work.' : res.error, error: true });
+    if (res.error === 'bad_pin') setAdmin(null);
+    return;
+  }
+  app.event = { ...app.event, finalized_at: res.finalized_at ?? null };
+  await refetchAll();
+  app.hostLog = null;
+  render();
+  app.toast(final
+    ? { title: 'Round finalized', sub: 'Scores are locked for everyone. Your PIN still fixes any score.' }
+    : { title: 'Round reopened', sub: 'Players can change their scores again.' });
+};
 
 /** Organizer: clear every score, keep players, carts, settings and joined phones. */
 app.resetRound = async () => {
@@ -626,6 +678,11 @@ async function loadRound(code) {
   app.joinRequests = new Map(res.joinRequests.map((r) => [r.id, r]));
   db.recent.remember(app.event);
   recompute({ headlines: 'now' });
+  // Coming back to a round that's over (finalized, or every score in): show the result, not Enter.
+  if (app.route.tab === 'enter' && app.roundOver()) {
+    history.replaceState(null, '', app.tabHash('board'));
+    app.route = parseHash();
+  }
   render();
   processHeadlines('away');
   fx.renderBanners(app);
@@ -725,11 +782,16 @@ function onRemoteEvent(row) {
   }).map((t) => ({ from: (before.roster.teams.find((o) => o.id === t.id) || {}).name, to: t.name, id: t.id }));
   const strip = (r) => JSON.stringify({ ...r?.roster, teams: (r?.roster?.teams || []).map((t) => t.id) });
   const settingsChanged = ['course', 'settings', 'name'].some((k) => JSON.stringify(row[k]) !== JSON.stringify(before[k])) || strip(row) !== strip(before);
+  const finalChanged = 'finalized_at' in row && !!row.finalized_at !== !!before.finalized_at;
   app.event = { ...app.event, ...row };
   recompute({ headlines: 'now' });
   render();
   refetchAll();
-  if (settingsChanged && !recentlySaved && !app.adminPin) app.toast({ title: 'The organizer updated the round', sub: 'Scores and standings are recomputed.' });
+  if (finalChanged && !app.adminPin) {
+    app.toast(row.finalized_at
+      ? { title: 'The round is final', sub: 'Scores are locked. Nice playing.' }
+      : { title: 'The organizer reopened the round', sub: 'Scores can be changed again.' });
+  } else if (settingsChanged && !recentlySaved && !app.adminPin) app.toast({ title: 'The organizer updated the round', sub: 'Scores and standings are recomputed.' });
   else if (renamed.length && !(renamed.length === 1 && renamed[0].id === app.myTeam() && app.justPicked)) {
     app.toast({ title: renamed.map((r) => `${r.from} is now ${r.to}`).join(' · ') });
   }
@@ -747,7 +809,7 @@ function onRemoteJoinRequest(row) {
       app.waiting = null;
       app.closeSheet();
       app.toast({ title: `You’re in as ${app.myName()}`, sub: row.approved_by ? `${row.approved_by} let you in` : '' });
-      app.go(app.tabHash('enter'));
+      app.go(app.tabHash(app.homeTab()));
       setTimeout(afterJoin, 300);
     } else renderSheet();
   }

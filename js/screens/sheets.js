@@ -1,5 +1,6 @@
 // sheets.js — slide-up overlays: who are you?, name in use, waiting to be let in,
-// leave round, player detail, edit a past score, hole detail, headline feed, confirm.
+// leave round, player detail, edit a past score, hole detail, headline feed, confirm,
+// organizer PIN (unlock a finalized round).
 
 import { esc, icon, scoreClass, clock } from '../ui.js';
 import { fmtToPar, fmtPts, fmtSigned, maxHoleScore, componentNames, posOf, holeAt, holesLabel, matchFor } from '../scoring.js';
@@ -300,6 +301,15 @@ const BODIES = {
         .join('')}</div>` : '<p class="empty-state">No big moments yet. They show up once both foursomes have played a hole.</p>'}`;
   },
 
+  pin(app) {
+    return `${head('Fix a score')}
+      <p class="soft" style="margin:0 0 14px">The round is final, so scores are locked. The organizer PIN unlocks them on this phone.</p>
+      <div class="field"><label for="pin-unlock">Organizer PIN</label>
+        <input class="input pin-input" id="pin-unlock" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="off" data-enter="pin-unlock"></div>
+      <div class="stack"><button class="btn primary big block" data-act="pin-unlock">Unlock</button>
+      <button class="btn ghost block" data-act="sheet-close">Cancel</button></div>`;
+  },
+
   confirm(app, p) {
     return `${head(p.title)}
       <p class="soft" style="margin:0 0 16px">${esc(p.body || '')}</p>
@@ -373,6 +383,18 @@ export const actions = {
   'edit-clear': (el, ev, app) => {
     const { pid, hole } = app.sheet.props;
     app.setScore(pid, hole, null);
+  },
+  'pin-unlock': async (el, ev, app) => {
+    const pin = (document.getElementById('pin-unlock')?.value || '').replace(/\D/g, '');
+    if (!pin) return;
+    const ok = await app.verifyAdmin(pin);
+    if (!ok) {
+      app.toast({ title: 'That PIN didn\u2019t work', error: true });
+      return;
+    }
+    app.closeSheet();
+    app.render();
+    app.toast({ title: 'Unlocked on this phone', sub: 'You can fix any score (and Host is open).' });
   },
   'confirm-ok': (el, ev, app) => {
     const fn = app.sheet?.props?.onOk;

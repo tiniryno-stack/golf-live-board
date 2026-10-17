@@ -15,6 +15,8 @@
 //      cart name, Today's game, Enter (the first tip waits until the cards are gone)
 //  11. Never a blank screen: a stalled connection shows "Opening…" then Try again; a
 //      drawing error shows "Something went wrong" + Reload
+//  15. Finalize: finished rounds open on the Board; the organizer finalizes (scores locked on
+//      server and screen); the organizer PIN unlocks a phone; Host can reopen
 //   9. Headlines wear the jersey of the team on their positive end; two that land on the
 //      same score show together, then it's back to one (banner and Board).
 // Realtime isn't mocked, so "the other phone sees it" is driven by a refetch —
@@ -581,7 +583,83 @@ await S.page.evaluate(() => { window.__glb.snapshot = { broken: true }; window._
 await S.page.waitForTimeout(200);
 ok(/Something went wrong/.test(await S.page.textContent('#content')) && !!(await S.page.$('[data-act="reload"]')), 'a drawing error shows \u201cSomething went wrong\u201d + Reload (and the error text)');
 
-const errors = [A, C, A2, P, Q, O, F, R].flatMap((p) => p.page.errors);
+// 15. Finalize: a finished round opens on the Board; the organizer finalizes it, which locks every
+//     score (server and screen); the organizer PIN unlocks a phone to fix one; Host can reopen.
+const r5 = seedRound(be, { holesPlayed: 18 });
+const DEV5 = '55555555-5555-4555-8555-555555555555';
+be.tables.claims.push({ event_id: r5.id, player_id: 'p1', device_id: DEV5 });
+async function presetPhone(label, code, { dev, me, pin } = {}) {
+  const ctx = await browser.newContext({ viewport: { width: 375, height: 667 }, isMobile: true, hasTouch: true });
+  await attach(ctx, be, srv.origin);
+  await ctx.addInitScript(([c, d, m, p]) => {
+    if (d) localStorage.setItem('glb.device', JSON.stringify(d));
+    if (m) localStorage.setItem('glb.me.' + c, JSON.stringify(m));
+    if (p) localStorage.setItem('glb.admin.' + c, JSON.stringify(p));
+    localStorage.setItem('glb.who.' + c, 'true');
+    localStorage.setItem('glb.brief.' + c, 'true');
+    localStorage.setItem('glb.seen.' + c, JSON.stringify({ last: Date.now(), ids: [] }));
+    for (const k of ['tile4', 'prov', 'oppcart2']) localStorage.setItem('glb.coach.' + k, 'true');
+  }, [code, dev || null, me || null, pin || null]);
+  const page = await ctx.newPage();
+  page.errors = [];
+  page.on('pageerror', (e) => page.errors.push(`${label}: ${e.message}`));
+  return { ctx, page };
+}
+const X = await presetPhone('Final player', r5.code, { dev: DEV5, me: 'p1' });
+await X.page.goto(`${srv.origin}/#/e/${r5.code}`);
+await X.page.waitForTimeout(1000);
+await clearOverlays(X.page);
+ok((await X.page.evaluate(() => location.hash)).endsWith('/board') && !!(await X.page.$('.final-card')), 'opening a finished round lands on the Board (final card), not Enter');
+ok(/until the organizer finalizes/.test((await X.page.textContent('.final-note').catch(() => '')) || ''), 'players see that scores can be fixed until the organizer finalizes');
+const Y = await presetPhone('Organizer', r5.code, { pin: r5.admin_pin });
+await Y.page.goto(`${srv.origin}/#/e/${r5.code}/board`);
+await Y.page.waitForTimeout(1000);
+await clearOverlays(Y.page);
+await Y.page.tap('[data-act="board-finalize"]');
+await Y.page.waitForTimeout(400);
+ok(/Finalize the round\?/.test(await Y.page.textContent('#sheet')), 'organizer: Finalize round asks first');
+await Y.page.tap('[data-act="confirm-ok"]');
+await Y.page.waitForTimeout(900);
+const ev5 = be.tables.events.find((x) => x.id === r5.id);
+ok(!!ev5.finalized_at && /locked/i.test(await Y.page.textContent('.final-card')) && !(await Y.page.$('[data-act="board-finalize"]')), 'finalized on the server; the final card says locked');
+ok(be.rpc.upsert_score({ p_code: r5.code, p_device_id: DEV5, p_player_id: 'p1', p_hole: 18, p_strokes: 3 }).error === 'finalized', 'the server refuses a player’s score change once final');
+await X.page.evaluate((at) => window.__glb._remote.event({ finalized_at: at }), ev5.finalized_at);
+await X.page.waitForTimeout(400);
+ok(/The round is final/.test(await toastText(X.page)), 'other phones hear it: “The round is final”');
+await X.page.tap('[data-act="tab"][data-v="enter"]');
+await X.page.waitForTimeout(400);
+ok(!!(await X.page.$('.final-lock')) && !(await X.page.$('.tile .step')) && !!(await X.page.$('[data-act="pin-open"]')), 'Enter: “Final”, no score boxes, “Fix a score (organizer PIN)”');
+ok((await X.page.evaluate(() => window.__glb.setScore('p1', 18, 3))) === false && /round is final/i.test(await toastText(X.page)), 'any other way in (Card, grid) is refused on the phone too');
+await X.page.tap('[data-act="pin-open"]');
+await X.page.waitForTimeout(400);
+await X.page.fill('#pin-unlock', '0000' === r5.admin_pin ? '1111' : '0000');
+await X.page.tap('[data-act="pin-unlock"]');
+await X.page.waitForTimeout(400);
+ok(/didn’t work/.test(await toastText(X.page)) && !!(await X.page.$('#sheet .panel')), 'wrong PIN: “That PIN didn’t work”, still locked');
+await X.page.fill('#pin-unlock', r5.admin_pin);
+await X.page.tap('[data-act="pin-unlock"]');
+await X.page.waitForTimeout(600);
+ok(!(await X.page.$('.final-lock')) && !!(await X.page.$('.cart.mine .tile .step')), 'right PIN: the score boxes come back on this phone');
+const before18 = be.tables.scores.find((x) => x.event_id === r5.id && x.player_id === 'p1' && x.hole === 18).strokes;
+await X.page.tap('[data-act="tile-step"][data-pid="p1"][data-d="1"]');
+await X.page.waitForTimeout(900);
+const s18 = be.tables.scores.find((x) => x.event_id === r5.id && x.player_id === 'p1' && x.hole === 18);
+ok(s18.strokes === before18 + 1 && s18.updated_by === 'Organizer', `fixed a score with the PIN while final (${before18} → ${s18.strokes}, by ${s18.updated_by})`);
+await Y.page.tap('.host-btn');
+await Y.page.waitForTimeout(500);
+await Y.page.tap('[data-act="host-reopen"]');
+await Y.page.waitForTimeout(300);
+await Y.page.tap('[data-act="confirm-ok"]');
+await Y.page.waitForTimeout(800);
+ok(!ev5.finalized_at && !!(await Y.page.$('[data-act="host-finalize"]')), 'Host: Reopen round unlocks it (and offers Finalize again)');
+be.rpc.finalize_round({ p_code: r5.code, p_admin_pin: r5.admin_pin });
+const Z = await presetPhone('Late phone', r5.code, {});
+await Z.page.goto(`${srv.origin}/#/e/${r5.code}/enter`);
+await Z.page.waitForTimeout(1000);
+ok((await Z.page.evaluate(() => location.hash)).endsWith('/board'), 'a finalized round opens on the Board even from an old Enter link');
+ok(be.rpc.reset_round({ p_code: r5.code, p_admin_pin: r5.admin_pin }).ok && !ev5.finalized_at, 'Reset scores also reopens a finalized round');
+
+const errors = [A, C, A2, P, Q, O, F, R, X, Y, Z].flatMap((p) => p.page.errors);
 ok(errors.length === 0, `no page errors${errors.length ? `: ${errors.join('; ')}` : ''}`);
 
 await browser.close();

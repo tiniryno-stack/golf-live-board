@@ -22,9 +22,11 @@ create table if not exists public.events (
   roster      jsonb not null,
   settings    jsonb not null,
   created_at  timestamptz default now(),
-  updated_at  timestamptz default now()
+  updated_at  timestamptz default now(),
+  finalized_at timestamptz                   -- organizer finalized: scores locked (organizer PIN to edit)
 );
 create index if not exists events_crew_idx on public.events (crew_id);
+alter table public.events add column if not exists finalized_at timestamptz;  -- added Oct 16, 2026
 
 create table if not exists public.event_secrets (   -- never readable from the browser
   event_id    uuid primary key references public.events(id) on delete cascade,
@@ -450,6 +452,7 @@ begin
   if not public._same_foursome(e.roster, e.settings, v_actor, p_player_id, p_hole) then
     return jsonb_build_object('ok', false, 'error', 'not_your_foursome');
   end if;
+  if e.finalized_at is not null then return jsonb_build_object('ok', false, 'error', 'finalized'); end if;
   return public._write_score(e, p_player_id, p_hole, p_strokes, public._player_name(e.roster, v_actor));
 end $$;
 
@@ -586,9 +589,28 @@ begin
    where event_id = e.id and strokes is not null;
   get diagnostics n = row_count;
   update public.join_requests set status = 'expired' where event_id = e.id and status = 'pending';
-  update public.events set updated_at = now() where id = e.id;
+  update public.events set updated_at = now(), finalized_at = null where id = e.id;  -- a reset round is open again
   perform public._log(e.id, 'Organizer', 'Reset the round · cleared ' || n || ' score' || case when n = 1 then '' else 's' end);
   return jsonb_build_object('ok', true, 'cleared', n);
+end $$;
+
+-- Organizer: finalize the round (locks every score; players can't change them) or reopen it.
+-- While finalized, upsert_score / fill_score / pick_team_name refuse with 'finalized';
+-- admin_upsert_score (organizer PIN) still works, so the organizer can fix a score.
+create or replace function public.finalize_round(p_code text, p_admin_pin text, p_final boolean default true)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare e public.events; v_at timestamptz;
+begin
+  e := public._event(p_code);
+  if e.id is null then return jsonb_build_object('ok', false, 'error', 'not_found'); end if;
+  if not public._admin_ok(e.id, p_admin_pin) then return jsonb_build_object('ok', false, 'error', 'bad_pin'); end if;
+  if coalesce(p_final, true) = (e.finalized_at is not null) then
+    return jsonb_build_object('ok', true, 'unchanged', true, 'finalized_at', e.finalized_at);
+  end if;
+  update public.events set finalized_at = case when coalesce(p_final, true) then now() end, updated_at = now()
+   where id = e.id returning finalized_at into v_at;
+  perform public._log(e.id, 'Organizer', case when v_at is null then 'Reopened the round · scores unlocked' else 'Finalized the round · scores locked' end);
+  return jsonb_build_object('ok', true, 'finalized_at', v_at);
 end $$;
 
 -- Organizer: delete the round and everything in it (scores, joined phones, PIN, activity log).
@@ -613,6 +635,7 @@ begin
   select * into e from public.events where code = upper(trim(p_code)) for update;
   if e.id is null then return jsonb_build_object('ok', false, 'error', 'not_found'); end if;
   if v_name = '' then return jsonb_build_object('ok', false, 'error', 'name_required'); end if;
+  if e.finalized_at is not null then return jsonb_build_object('ok', false, 'error', 'finalized'); end if;
   select player_id into v_pid from public.claims where event_id = e.id and device_id = p_device_id;
   if v_pid is null then return jsonb_build_object('ok', false, 'error', 'not_claimed'); end if;
   v_team := public._player(e.roster, v_pid)->>'teamId';
@@ -632,6 +655,7 @@ begin
   return jsonb_build_object('ok', true, 'team', v_team, 'name', v_name);
 end $$;
 
+-- Legacy (the app stopped calling it Oct 16, 2026; kept for phones with old queued fills):
 -- Next hole with a tile left blank = par. Only fills a cell that is still empty
 -- (one atomic insert-or-update-if-null), so it never overwrites a score another
 -- phone entered a moment earlier; returns what the cell holds either way.
@@ -649,6 +673,7 @@ begin
   if p_hole is null or p_hole < 1 or p_hole > 18 then return jsonb_build_object('ok', false, 'error', 'bad_hole'); end if;
   if p_strokes is null or p_strokes < 1 or p_strokes > 15 then return jsonb_build_object('ok', false, 'error', 'bad_strokes'); end if;
   if public._player(e.roster, p_player_id) is null then return jsonb_build_object('ok', false, 'error', 'unknown_player'); end if;
+  if e.finalized_at is not null then return jsonb_build_object('ok', false, 'error', 'finalized'); end if;
   v_by := public._player_name(e.roster, v_actor);
   insert into public.scores (event_id, player_id, hole, strokes, updated_by, updated_at)
   values (e.id, p_player_id, p_hole, p_strokes, v_by, now())
@@ -692,6 +717,7 @@ grant execute on function
   public.release_player(text, text, text),
   public.get_audit_log(text, text),
   public.reset_round(text, text),
+  public.finalize_round(text, text, boolean),
   public.delete_round(text, text),
   public.pick_team_name(text, uuid, text)
   to anon, authenticated;
