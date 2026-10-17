@@ -138,4 +138,5 @@ npm run test:smoke     # 135 checks: multi-phone flows against the mock (join, s
   variant could be nicer for group-chat sharing.
 - V2 backlog (ARCHITECTURE.md §13): carryovers, more courses (catalog → table), more teams/games,
   round history, deeper season stats, add-to-home-screen (PWA) + lock-screen notifications,
-  stronger security (PIN attempt limits).
+  stronger security (PIN attempt limits), **GPS yardages behind `settings.gps`** (front/middle/back
+  from OpenStreetMap or our own course mapping; first step: check if Twin Creeks is in OSM).
