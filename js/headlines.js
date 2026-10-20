@@ -74,6 +74,10 @@ function cfgFor(g) {
 function valuesAt(g, h) {
   const v = {};
   for (const t of g.teamIds) v[t] = 0;
+  if (g.type === 'splitPoint') {
+    for (const hh of g.holes) if (hh.complete && hh.pos <= h) for (const t of g.teamIds) v[t] += hh.points[t];
+    return v;
+  }
   for (const m of g.matches) {
     for (const t of m.teams) {
       let pts = 0, raw = 0;
@@ -102,7 +106,7 @@ function mk(type, teams, hole, text, at, hero = teams[0]) {
 
 function leadChange(snap, st, vals, h, at) {
   const order = ranked(vals);
-  const leader = order.length > 1 && vals[order[0]] > vals[order[1]] ? order[0] : null;
+  const leader = order.length > 1 && vals[order[0]] - vals[order[1]] > 1e-9 ? order[0] : null;
   let out = null;
   if (leader && st.lastLeader && leader !== st.lastLeader) {
     out = mk('leadChange', [leader], h, `${name(snap, leader)} takes the lead`, at);
@@ -229,7 +233,7 @@ function atHole(snap, st, h, at) {
     const v = (s) => (isPM ? fmtToPar(s.officialPm) : fmtPts(s.officialPoints));
     const text =
       top.length === 1
-        ? `Final: ${name(snap, top[0].teamId)} win the day ${isPM ? 'at' : 'with'} ${v(top[0])}`
+        ? `Final: ${name(snap, top[0].teamId)} ${snap.settings.solo ? 'wins' : 'win'} the day ${isPM ? 'at' : 'with'} ${v(top[0])}`
         : `Final: ${top.map((s) => name(snap, s.teamId)).join(' and ')} share the day ${isPM ? 'at' : 'with'} ${v(top[0])}`;
     produced.push(mk('roundFinal', top.map((s) => s.teamId), h, text, at, top.length === 1 ? top[0].teamId : null));
   }

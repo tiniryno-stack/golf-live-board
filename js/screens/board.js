@@ -8,7 +8,7 @@
 // Players: one compact line each.
 
 import { esc, icon, seg, clock } from '../ui.js';
-import { fmtPts, fmtToPar, fmtSigned, playerLeaderboard, teamLeaderboard, holeAt } from '../scoring.js';
+import { fmtPts, fmtToPar, fmtSigned, playerLeaderboard, teamLeaderboard, holeAt, recordLabel } from '../scoring.js';
 import { teamColor, headlineColor } from '../teams.js';
 import { latestMoment } from '../headlines.js';
 
@@ -50,7 +50,6 @@ function teamRowsGame(app) {
       const val = isPM ? fmtSigned(s.pm, 'E') : fmtPts(s.points);
       // "1½ prov." = how much of the number is provisional (already counted in it).
       const chip = prov ? `<span class="prov" data-prov aria-label="${isPM ? fmtSigned(prov, '') : fmtPts(prov)} of this is provisional">${isPM ? fmtSigned(prov, '') : fmtPts(prov)} prov.</span>` : '';
-      const rec = s.record;
       const thru = Math.min(...team.playerIds.map((id) => snap.playerById.get(id).thru));
       return `<div class="row team-row tap" role="button" tabindex="0" data-act="board-team" data-enter="board-team" data-v="${esc(s.teamId)}" aria-label="${esc(team.name)}: breakdown" style="--jersey:${teamColor(mine, s.teamId)}">
         <span class="rank">${s.shared ? `T${s.rank}` : s.rank}</span>
@@ -58,7 +57,7 @@ function teamRowsGame(app) {
         <div class="body">
           <div class="spread"><span class="row-title ellipsis">${esc(team.name)}${s.teamId === mine ? '<span class="me-dot" aria-label="your team"></span>' : ''}</span>${chip}</div>
           ${teamBar(isPM, s, scale)}
-          <div class="detail ellipsis">${names ? `${esc(names)} · ` : ''}${rec.w}-${rec.l}-${rec.h} · thru ${thru}</div>
+          <div class="detail ellipsis">${names ? `${esc(names)} · ` : ''}${recordLabel(g, s)} · thru ${thru}</div>
         </div><span class="chev" aria-hidden="true">${icon('fwd', 16)}</span></div>`;
     })
     .join('');
@@ -200,7 +199,9 @@ export default {
       const isPMfoot = g.type === 'rotationPlusMinus';
       foot = snap.roundComplete
         ? 'Final'
-        : snap.officialThrough
+        : g.type === 'splitPoint'
+          ? '1 point a hole · a tie for low splits it'
+          : snap.officialThrough
           ? `Official through hole ${snap.officialHole}${prov.length ? ` · ${prov.length > 1 ? 'holes' : 'hole'} ${prov.join(', ')} provisional (${isPMfoot ? 'lighter bar' : 'striped, past the line'})` : ''}`
           : `Points count now and go official once both foursomes finish hole ${holeAt(snap.settings, 1)}`;
     }

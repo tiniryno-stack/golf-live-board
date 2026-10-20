@@ -171,13 +171,12 @@ export default {
     const myTeam = app.myTeam();
     const rot = rotationFor(st, h);
     let matchLine = '';
-    if (snap.game && myTeam && st.solo) {
-      // Solo: where you stand against each player ("vs Sean +1 · vs Mike AS").
-      matchLine = `<span class="teams">${snap.game.matches.filter((m) => m.teams.includes(myTeam)).map((m) => {
-        const opp = m.teams[0] === myTeam ? m.teams[1] : m.teams[0];
-        const v = m.points[myTeam] - m.points[opp];
-        return `<span class="faint">vs</span> ${esc(snap.teamById.get(opp).name)} <span class="status">${m.played ? (v === 0 ? 'AS' : fmtSigned(v)) : '–'}</span>`;
-      }).join(' · ')}</span>`;
+    if (snap.game && st.solo) {
+      // Split point: everyone's points so far, leader first ("Josh 3 · You 2⅓ · Sean ⅔").
+      matchLine = `<span class="teams">${snap.game.liveStandings.map((s) => {
+        const who = s.teamId === myTeam ? 'You' : esc(snap.teamById.get(s.teamId).name);
+        return `${who} <span class="status">${fmtPts(s.points)}</span>`;
+      }).join(' <span class="faint">·</span> ')}</span>`;
     } else if (snap.game && myTeam) {
       const m = matchFor(snap, myTeam, h);
       const opp = m ? snap.teamById.get(m.teams[0] === myTeam ? m.teams[1] : m.teams[0]) : null;

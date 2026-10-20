@@ -3,7 +3,7 @@
 // pips; the other matchup collapsed below.
 
 import { esc, seg, reducedMotion } from '../ui.js';
-import { fmtPts, fmtSigned, rotationIndexFor, holeAt, HOLES } from '../scoring.js';
+import { fmtPts, fmtSigned, rotationIndexFor, holeAt, HOLES, playOrder } from '../scoring.js';
 import { teamColor } from '../teams.js';
 
 const lastFill = new Map(); // matchId → { l, r } previous points, for the slide-in
@@ -96,6 +96,53 @@ function teamSide(app, t, align) {
   return `<div class="mh-side ${align}"><div class="mh-name ellipsis" style="color:${teamColor(app.myTeam(), t)}">${esc(team.name)}</div><div class="mh-players ellipsis">${esc(names)}</div>`;
 }
 
+/** Split point (2–4 players, each their own): totals up top, then a hole-by-hole table of who
+ *  took the point and how it split. Kept simple on purpose. */
+function splitView(app) {
+  const snap = app.snapshot;
+  const g = snap.game;
+  const mine = app.myTeam();
+  const ids = g.teamIds;
+  const order = playOrder(snap.settings);
+  const color = (t) => teamColor(mine, t);
+  const pname = (t) => snap.teamById.get(t).name;
+  const pid = (t) => snap.teamById.get(t).playerIds[0];
+  const net = snap.hasStrokes;
+  const live = g.liveStandings;
+  const totals = live
+    .map((s) => `<div class="sp-tot" style="--jersey:${color(s.teamId)}">
+      <div class="sp-name ellipsis">${esc(pname(s.teamId))}${s.teamId === mine ? ' <span class="faint">(you)</span>' : ''}</div>
+      <div class="sp-pts num">${fmtPts(s.points)}</div>
+      <div class="sp-rec">${s.won} won · ${s.split} split</div></div>`)
+    .join('');
+  const rows = order
+    .filter((h) => ids.some((t) => snap.playerById.get(pid(t)).gross[h - 1] != null))
+    .map((h) => {
+      const hh = g.holes[h - 1];
+      const cells = ids.map((t) => {
+        const p = snap.playerById.get(pid(t));
+        const v = net ? p.net[h - 1] : p.gross[h - 1];
+        const pts = hh.complete ? hh.points[t] : 0;
+        const win = hh.complete && pts > 0;
+        return `<td class="${win ? 'win' : ''}" style="--jersey:${color(t)}"><span class="sc">${v ?? '–'}</span>${win ? `<span class="pt">${fmtPts(pts)}</span>` : ''}</td>`;
+      }).join('');
+      return `<tr><th scope="row">${h}<small>Par ${snap.holes[h - 1].par}</small></th>${cells}</tr>`;
+    })
+    .join('');
+  const head = ids.map((t) => `<th scope="col" class="ellipsis" style="color:${color(t)}">${esc(pname(t))}</th>`).join('');
+  const foot = live.length ? `<tr class="sp-sum"><th scope="row">Pts</th>${ids.map((t) => `<td style="color:${color(t)}">${fmtPts(live.find((s) => s.teamId === t).points)}</td>`).join('')}</tr>` : '';
+  return `<div class="hero split-hero">
+      <div class="micro" style="text-align:center;margin:6px 0 12px">Split point · 1 point a hole</div>
+      <div class="sp-tots" style="grid-template-columns:repeat(${ids.length},1fr)">${totals}</div>
+    </div>
+    <div class="sheet">
+      <p class="meta" style="margin:0 0 12px">Low ${net ? 'net ' : ''}score takes the hole’s point. A tie for low splits it: 2 tied = ½ each, 3 = ⅓, 4 = ¼.</p>
+      ${rows
+        ? `<table class="sp-table"><thead><tr><th scope="col">Hole</th>${head}</tr></thead><tbody>${rows}</tbody><tfoot>${foot}</tfoot></table>`
+        : '<p class="empty-state">Points show up once everyone has a score on the first hole.</p>'}
+    </div>`;
+}
+
 export default {
   hero: true,
 
@@ -103,10 +150,17 @@ export default {
     const snap = app.snapshot;
     const g = snap.game;
     if (!g) {
+      const n = snap.players.length;
+      const casual = !(snap.roster.teams || []).length && n >= 2 && n <= 4;
+      const why = casual
+        ? ` The organizer can turn on Match play under ${app.isOrganizer() ? '<b>Host</b> → Rules' : 'Host → Rules'}: 1 point a hole, a tie for low splits it. It counts back from hole 1.`
+        : snap.roster.teams?.length === 4 ? '' : ' (the cart game needs 4 carts of 2)';
       return `<div class="plain"><h1 class="title">Matches</h1>
-        <p class="soft">No team game this round${snap.roster.teams?.length === 4 ? '' : ' (it needs 4 carts of 2)'}. The live leaderboard is on the Board.</p>
+        <p class="soft">No game on this round.${why} The live leaderboard is on the Board.</p>
+        ${casual && app.isOrganizer() ? '<button class="btn block" style="margin:0 0 10px" data-act="tab" data-v="host">Turn on Match play</button>' : ''}
         <button class="btn primary block" data-act="tab" data-v="board">See the Board</button></div>`;
     }
+    if (g.type === 'splitPoint') return splitView(app);
     const ri = pickRotation(app);
     const rot = g.rotations[ri];
     const mine = app.myTeam();

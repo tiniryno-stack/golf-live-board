@@ -70,6 +70,11 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
   `halvedHolePoints` (½ default). **Matchup win bonus** `matchBonus` (default 1; halved splits like a
   push; official once both foursomes finish that matchup). Plus/Minus: stroke margins, optional cap.
 - Official line = holes every foursome has finished (play order); beyond it is provisional.
+- **Small groups:** any roster that isn't 4 carts of 2 is a scorecard round (no teams, ≤4 = one group).
+  With 2–4 players, `settings.solo` = **split point** (`game.type 'splitPoint'`): 1 point a hole to the
+  low net score, ties for low split it 1/k. Teams A–D are made in `soloView`, so Host can switch it on
+  mid-round and it recounts from hole 1. Matches tab: totals + hole-by-hole table (kept simple; Andrew
+  may redesign it).
 - Settings are normalized from `DEFAULT_SETTINGS`, so new settings must default sensibly for old
   rounds.
 
@@ -119,9 +124,9 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
 
 ```bash
 npm install
-npm test               # 57 unit tests: scoring + headlines + course data (spec examples, bonus, back nine)
+npm test               # 59 unit tests: scoring + headlines + course data (spec examples, bonus, back nine, split point)
 npm run test:fit       # 128 checks: every screen at SE / 13 mini / 15-16 / Pro Max, no scroll on Enter
-npm run test:smoke     # 170 checks: multi-phone flows against the mock (join, swap, offline, rejoin,
+npm run test:smoke     # 179 checks: multi-phone flows against the mock (join, swap, offline, rejoin,
                        # reset/delete, back nine, Next waits for every score, grid/locks, recap,
                        # finalize + PIN unlock, add a course, test phones, blank-screen guards)
 ```

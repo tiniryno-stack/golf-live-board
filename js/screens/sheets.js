@@ -3,7 +3,7 @@
 // organizer PIN (unlock a finalized round).
 
 import { esc, icon, scoreClass, clock } from '../ui.js';
-import { fmtToPar, fmtPts, fmtSigned, maxHoleScore, componentNames, posOf, holeAt, holesLabel, matchFor } from '../scoring.js';
+import { fmtToPar, fmtPts, fmtSigned, maxHoleScore, componentNames, posOf, holeAt, holesLabel, matchFor, playOrder } from '../scoring.js';
 import { teamColor, headlineColor } from '../teams.js';
 
 let lastHtml = '';
@@ -217,6 +217,7 @@ const BODIES = {
     const s = g.standings.find((x) => x.teamId === teamId);
     const mine = app.myTeam();
     const color = teamColor(mine, teamId);
+    if (g.type === 'splitPoint') return splitBreakdown(app, team, s, color);
     const names = team.playerIds.map((id) => snap.playerById.get(id)?.name).join(' + ');
     const rec = s.record;
     const rows = g.matches
@@ -318,6 +319,34 @@ const BODIES = {
   },
 };
 
+
+/** Split point: one player's holes, each with the points they took and who they split with. */
+function splitBreakdown(app, team, s, color) {
+  const snap = app.snapshot;
+  const g = snap.game;
+  const t = team.id;
+  const p = snap.playerById.get(team.playerIds[0]);
+  const rows = playOrder(snap.settings)
+    .map((h) => g.holes[h - 1])
+    .filter((hh) => hh.complete)
+    .map((hh) => {
+      const pts = hh.points[t];
+      const others = hh.winners.filter((x) => x !== t).map((x) => snap.teamById.get(x)?.name || x);
+      const v = snap.hasStrokes ? `net ${hh.net[t]}` : `${hh.net[t]}`;
+      const what = !pts ? 'no point' : others.length ? `split with ${others.join(' & ')}` : 'won it';
+      return `<div class="row bd-row"><div class="body"><div class="row-title">Hole ${hh.hole} <span class="faint">· par ${snap.holes[hh.hole - 1].par}</span></div>
+        <div class="detail">${esc(v)} · ${esc(what)}</div></div>
+        <div class="bd-n"${pts ? '' : ' style="opacity:.4"'}>${pts ? fmtPts(pts) : '0'}</div></div>`;
+    })
+    .join('');
+  const rank = `${s.shared ? 'T' : ''}${s.rank}${['th', 'st', 'nd', 'rd'][(s.rank % 100 >= 11 && s.rank % 100 <= 13) || s.rank % 10 > 3 ? 0 : s.rank % 10]}`;
+  return `${head(team.name)}
+    <p class="meta" style="margin:-4px 0 14px">${rank} · ${s.won} won · ${s.split} split${p ? ` · thru ${p.thru}` : ''}</p>
+    <div class="list bd">${rows || '<p class="empty-state">No holes finished yet.</p>'}
+      <div class="row bd-row bd-total"><div class="body"><div class="row-title">Total</div></div><div class="bd-n" style="color:${color}">${fmtPts(s.points)}</div></div>
+    </div>
+    <p class="meta" style="margin:10px 0 0">Each hole: 1 point to the low ${snap.hasStrokes ? 'net ' : ''}score. A tie for low splits it (½, ⅓ or ¼ each).</p>`;
+}
 
 function editValue(app, d) {
   const { pid, hole } = app.sheet.props;

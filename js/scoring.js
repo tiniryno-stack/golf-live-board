@@ -75,11 +75,15 @@ export function holesLabel(settings, fromPos, toPos) {
 /** 4.5 → "4½", 0.5 → "½", -1.5 → "−1½" */
 export function fmtPts(n) {
   if (n == null || Number.isNaN(n)) return '–';
-  const neg = n < 0;
+  const neg = n < -1e-9;
   const a = Math.abs(n);
   const whole = Math.floor(a + 1e-9);
-  const half = a - whole >= 0.25;
-  const body = half ? (whole ? `${whole}½` : '½') : `${whole}`;
+  const f = a - whole;
+  // Halves from pushes; thirds and quarters from split-point ties (3 or 4 players tied).
+  const glyph = [[0, ''], [0.25, '¼'], [1 / 3, '⅓'], [0.5, '½'], [2 / 3, '⅔'], [0.75, '¾']].find(([v]) => Math.abs(f - v) < 1e-6);
+  const body = glyph
+    ? glyph[1] ? (whole ? `${whole}${glyph[1]}` : glyph[1]) : `${whole}`
+    : String(Math.round(a * 100) / 100); // e.g. 1/3 + 1/4 → 0.58
   return (neg ? '−' : '') + body;
 }
 
@@ -252,10 +256,10 @@ function roundRobin(ids) {
 }
 
 /**
- * Solo match play (settings.solo, 2–4 players in one group): each player is their own "team"
- * (ids A–D in roster order, so jersey colors work), and every pair plays an 18-hole match: each
- * hole, beat a player for 1 point, tie for the halved points, plus the matchup win bonus. The
- * stored roster has no teams; they're made here, so a casual round can switch it on mid-round.
+ * Split point (settings.solo, 2–4 players in one group): each player is their own "team" (ids A–D
+ * in roster order, so jersey colors work). Every hole is worth 1 point: the low net score takes it
+ * outright; players tied for low split it (½, ⅓ or ¼ each). The stored roster has no teams;
+ * they're made here, so a casual round can switch it on mid-round and recount from hole 1.
  */
 export function soloView(roster, settings) {
   const ids = 'ABCD';
@@ -267,7 +271,7 @@ export function soloView(roster, settings) {
   };
   const st = {
     ...settings,
-    game: settings.game === 'none' ? 'rotationMatch' : settings.game,
+    game: 'splitPoint',
     teamScore: 'bestBall',
     rotationMode: 'fixed',
     rotation: [{ holes: [1, HOLES], matches: roundRobin(r.teams.map((t) => t.id)) }],
@@ -351,7 +355,7 @@ export function compute(event, scores) {
   let game = null;
   let holeComplete = allPosted;
   if (gameIsValid(roster, settings)) {
-    game = computeGame(settings, teams, teamById, holes);
+    game = settings.game === 'splitPoint' ? computeSplit(settings, teams, holes) : computeGame(settings, teams, teamById, holes);
     holeComplete = game.holeComplete;
   }
   // Official line: how many holes, in play order, every foursome has finished.
@@ -361,7 +365,9 @@ export function compute(event, scores) {
   if (game) finishGame(game, settings, teams, officialThrough);
 
   const anyPosted = players.some((p) => p.thru > 0);
-  const roundComplete = game ? game.matches.every((m) => m.final) : players.length > 0 && allPosted.every(Boolean);
+  const roundComplete = game
+    ? game.type === 'splitPoint' ? game.holeComplete.every(Boolean) : game.matches.every((m) => m.final)
+    : players.length > 0 && allPosted.every(Boolean);
 
   return {
     course, roster, settings, holes, parTotal: parFront + parBack, parFront, parBack,
@@ -457,6 +463,50 @@ function computeGame(settings, teams, teamById, holes) {
   return { type, ncomp, halves, cap, bonus, rotations, matches, holeComplete, pointsByHole, teamIds: teams.map((t) => t.id) };
 }
 
+/**
+ * Split point: once every player has a score on a hole, the low net score takes its 1 point;
+ * k players tied for low get 1/k each. No matchups, so `matches` and `rotations` are empty.
+ */
+function computeSplit(settings, teams, holes) {
+  const ids = teams.map((t) => t.id);
+  const byHole = holes.map((h) => {
+    const pos = posOf(settings, h.n);
+    const net = {};
+    for (const t of teams) net[t.id] = t.comps[h.n - 1] ? t.comps[h.n - 1][0] : null;
+    const complete = ids.every((t) => net[t] != null);
+    if (!complete) return { hole: h.n, pos, complete: false, net, points: null, winners: [] };
+    const low = Math.min(...ids.map((t) => net[t]));
+    const winners = ids.filter((t) => net[t] === low);
+    const points = Object.fromEntries(ids.map((t) => [t, winners.includes(t) ? 1 / winners.length : 0]));
+    return { hole: h.n, pos, complete: true, net, points, winners };
+  });
+  const pointsByHole = byHole.map((hh) =>
+    hh.complete ? { points: hh.points, margin: Object.fromEntries(ids.map((t) => [t, 0])), total: { ...hh.net } } : null
+  );
+  return {
+    type: 'splitPoint', ncomp: 1, halves: 0, cap: null, bonus: 0, rotations: [], matches: [],
+    holes: byHole, holeComplete: byHole.map((hh) => hh.complete), pointsByHole, teamIds: ids,
+  };
+}
+
+/** Split point: points / holes on offer / holes won outright / holes shared, through play-order position `through`. */
+function splitThrough(game, teamId, through) {
+  const r = { points: 0, available: 0, won: 0, split: 0 };
+  for (const hh of game.holes) {
+    if (!hh.complete || hh.pos > through) continue;
+    r.points += hh.points[teamId];
+    r.available += 1;
+    if (hh.winners.includes(teamId)) hh.winners.length === 1 ? r.won++ : r.split++;
+  }
+  return r;
+}
+
+/** "2-1-0" (matchups won-lost-halved), or for split point "3 won · 2 split" (holes). */
+export function recordLabel(game, s) {
+  if (game?.type === 'splitPoint') return `${s.won} won · ${s.split} split`;
+  return `${s.record.w}-${s.record.l}-${s.record.h}`;
+}
+
 /** Plus/Minus total for a team over holes ≤ through (each rotation capped). */
 function pmThrough(game, teamId, through) {
   let total = 0;
@@ -506,6 +556,17 @@ function recordOf(game, teamId, through = HOLES) {
 function finishGame(game, settings, teams, officialThrough) {
   game.officialThrough = officialThrough;
   const rows = teams.map((t) => {
+    if (game.type === 'splitPoint') {
+      const all = splitThrough(game, t.id, HOLES), off = splitThrough(game, t.id, officialThrough);
+      return {
+        teamId: t.id, name: t.name, playerIds: t.playerIds,
+        points: all.points, officialPoints: off.points, provisionalPoints: Math.round((all.points - off.points) * 1e9) / 1e9,
+        available: all.available, officialAvailable: off.available,
+        pm: 0, officialPm: 0, provisionalPm: 0,
+        record: { w: 0, l: 0, h: 0 }, officialRecord: { w: 0, l: 0, h: 0 },
+        won: all.won, split: all.split, holesPlayed: all.available, currentMatchId: null,
+      };
+    }
     const points = pointsThrough(game, t.id, HOLES);
     const officialPoints = pointsThrough(game, t.id, officialThrough);
     const pm = pmThrough(game, t.id, HOLES);
@@ -638,7 +699,7 @@ export function seasonStandings(rounds) {
       row.rounds.add(event.id || event.code);
       people.set(k, row);
     }
-    if (!snap.game) continue;
+    if (!snap.game || snap.game.type === 'splitPoint') continue; // season = the cart game
     counted++;
     const pts = (m, t) => (snap.game.type === 'rotationPlusMinus' ? m.margin[t] : m.points[t] + (m.bonus?.[t] || 0));
     for (const m of snap.game.matches) {

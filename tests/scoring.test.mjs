@@ -317,6 +317,9 @@ test('formatting', () => {
   assert.equal(fmtPts(0), '0');
   assert.equal(fmtPts(13), '13');
   assert.equal(fmtPts(-1.5), '−1½');
+  assert.equal(fmtPts(2 / 3), '⅔');
+  assert.equal(fmtPts(1 + 1 / 3 + 1 / 3 + 1 / 3), '2');
+  assert.equal(fmtPts(1 / 3 + 1 / 4), '0.58');
   assert.equal(fmtToPar(0), 'E');
   assert.equal(fmtToPar(3), '+3');
   assert.equal(fmtToPar(-2), '−2');
@@ -454,19 +457,49 @@ test('Board bars: 3 holes, 4 of 6 points = two-thirds of the bar; holes played a
   assert.ok(lb.rank <= 2, 'B moves up on its provisional points');
 });
 
-test('Solo match play: 3 players, each their own team, every pair plays every hole', () => {
+test('Split point: 1 point a hole to the low score, ties split it (½, ⅓)', () => {
   const players = [['a1', 'Andrew'], ['b1', 'Sean'], ['c1', 'Mike']].map(([id, name]) => ({ id, personId: id, name, teamId: null, groupId: 'g1', strokes: null }));
   const ev = makeEvent({ game: 'rotationMatch', solo: true });
   ev.roster = { groups: [{ id: 'g1', name: 'Group 1' }], teams: [], players };
   const sb = scorebook();
-  sb.post(1, { a1: 4, b1: 5, c1: 5 }); // Andrew beats both: 2 pts; Sean/Mike halve: ½ each
-  sb.post(2, { a1: 5, b1: 5, c1: 4 }); // Mike beats both; Andrew/Sean halve
+  sb.post(1, { a1: 4, b1: 5, c1: 5 }); // Andrew alone: 1
+  sb.post(2, { a1: 4, b1: 4, c1: 5 }); // Andrew + Sean tie: ½ each
+  sb.post(3, { a1: 3, b1: 3, c1: 3 }); // all three: ⅓ each
+  sb.post(4, { a1: 5, b1: 6 }); // Mike hasn't posted: no point yet
   const snap = compute(ev, sb.rows());
   const g = snap.game;
-  assert.ok(g, 'a game is on with no teams in the roster');
-  assert.equal(g.matches.length, 3, 'A-B, A-C, B-C');
-  const pts = Object.fromEntries(g.liveStandings.map((s) => [snap.teamById.get(s.teamId).name, s.points]));
-  assert.deepEqual(pts, { Andrew: 2.5, Sean: 1, Mike: 2.5 });
+  assert.equal(g.type, 'splitPoint');
+  assert.equal(g.matches.length, 0);
+  const by = Object.fromEntries(g.liveStandings.map((s) => [snap.teamById.get(s.teamId).name, s]));
+  assert.ok(Math.abs(by.Andrew.points - (1 + 0.5 + 1 / 3)) < 1e-9);
+  assert.ok(Math.abs(by.Sean.points - (0.5 + 1 / 3)) < 1e-9);
+  assert.ok(Math.abs(by.Mike.points - 1 / 3) < 1e-9);
+  assert.equal(fmtPts(by.Andrew.points), '1.83');
+  assert.equal(fmtPts(by.Sean.points), '0.83');
+  assert.equal(fmtPts(by.Mike.points), '⅓');
+  assert.equal(by.Andrew.won, 1);
+  assert.equal(by.Andrew.split, 2);
+  assert.equal(by.Andrew.available, 3, 'one point on offer per finished hole');
+  assert.equal(by.Andrew.rank, 1);
+  assert.equal(snap.officialThrough, 3);
+  assert.equal(g.holes[3].complete, false);
   assert.equal(snap.playerById.get('a1').teamId, 'A', 'players wear jerseys A–D');
-  assert.equal(g.liveStandings.find((s) => s.teamId === 'A').available, 4, '2 opponents x 2 holes on offer');
+  assert.equal(snap.roundComplete, false);
+  // The points always add up to the holes played.
+  const sum = g.liveStandings.reduce((a, s) => a + s.points, 0);
+  assert.ok(Math.abs(sum - 3) < 1e-9);
+});
+
+test('Split point: 4 players, a 4-way tie is ¼ each; Scorecard only has no game', () => {
+  const players = [['a1', 'A'], ['b1', 'B'], ['c1', 'C'], ['d1', 'D']].map(([id, name]) => ({ id, personId: id, name, teamId: null, groupId: 'g1', strokes: null }));
+  const ev = makeEvent({ game: 'rotationMatch', solo: true });
+  ev.roster = { groups: [{ id: 'g1', name: 'Group 1' }], teams: [], players };
+  const sb = scorebook();
+  sb.post(1, { a1: 4, b1: 4, c1: 4, d1: 4 });
+  const g = compute(ev, sb.rows()).game;
+  for (const s of g.liveStandings) assert.equal(fmtPts(s.points), '¼');
+  assert.ok(g.liveStandings.every((s) => s.rank === 1 && s.shared));
+  const off = makeEvent({ game: 'none', solo: false });
+  off.roster = ev.roster;
+  assert.equal(compute(off, sb.rows()).game, null);
 });

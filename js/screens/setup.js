@@ -406,11 +406,9 @@ const VIEWS = {
       const solo = canSolo && !!st.solo;
       return `${canSolo ? `<div class="field"><span class="label">Game</span>${seg('setup-solo', [['off', 'Scorecard only'], ['on', 'Match play']], solo ? 'on' : 'off')}</div>
         <p class="help">${solo
-          ? 'Every player is their own team and plays everyone else, every hole: beat a player for 1 point, tie for half each. Win your match against a player over 18 for +1. Most points wins.'
+          ? 'Everyone plays their own ball. Each hole is worth 1 point: low score takes it, a tie for low splits it (½, ⅓ or ¼ each). Most points after 18 wins.'
           : 'Straight scorecard and leaderboard (gross and net).'}</p>`
         : `<p class="soft" style="margin:0 0 8px">With ${s.players.length} player${s.players.length === 1 ? '' : 's'} it\u2019s a straight scorecard and leaderboard (gross and net). The cart game needs 8 players in 4 carts of 2.</p>`}
-        ${solo ? `<div class="field"><span class="label">Halved points</span>${seg('setup-set', [['0.5', '½ each'], ['0', 'Nothing']], String(st.halvedHolePoints), 'data-k="halvedHolePoints"')}</div>
-        <div class="field"><span class="label">Match win bonus</span>${seg('setup-set', [['1', '+1 point'], ['0', 'None']], String(st.matchBonus ?? 1), 'data-k="matchBonus"')}</div>` : ''}
         <div class="field"><span class="label">Max hole score (pick-up)</span>${seg('setup-set', [['doublePar', 'Double par'], ['netDoubleBogey', 'Net dbl bogey'], ['none', 'None']], st.maxHoleScore, 'data-k="maxHoleScore"')}</div>`;
     }
     return `<div class="field"><span class="label">Game</span>${seg('setup-set', [['none', 'None'], ['rotationMatch', 'Match Play'], ['rotationPlusMinus', 'Plus/Minus']], st.game, 'data-k="game"')}</div>
@@ -442,7 +440,7 @@ const VIEWS = {
         <div class="micro">First tee</div><div style="margin:2px 0 10px">Hole ${s.settings.startHole === 10 ? '10 (back nine first)' : '1'}</div>
         <div class="micro">Game</div><div style="margin:2px 0 0">${casualRound(s)
           ? soloOn(s)
-            ? 'Match play · every player vs every player · one group'
+            ? 'Match play · split point (1 point a hole, ties split) · one group'
             : `Scorecard + leaderboard${s.players.length <= 4 ? ' · one group' : ''}<div class="meta" style="margin-top:2px">The cart game needs 8 players in 4 carts of 2.</div>`
           : `${{ none: 'Scorecard only', rotationMatch: 'Rotation Match Play', rotationPlusMinus: 'Rotation Plus/Minus' }[s.settings.game]}${s.settings.rotationMode === 'swap' ? ' · carts swap' : ' · fixed foursomes'}`}</div>
       </div>

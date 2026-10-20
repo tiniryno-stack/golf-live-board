@@ -5,7 +5,7 @@
 // Always the dark Sundown look, so a saved image reads the same in anyone's camera roll.
 // Jerseys follow the app: your cart green, everyone else their away color.
 
-import { fmtPts, fmtSigned, fmtToPar, HOLES } from '../scoring.js';
+import { fmtPts, fmtSigned, fmtToPar, HOLES, recordLabel } from '../scoring.js';
 import { prettyDate } from '../ui.js';
 
 const W = 1080;
@@ -156,7 +156,7 @@ function leaderboard(app) {
   const st = g.standings;
   const val = (s) => (isPM ? fmtSigned(s.officialPm, 'E') : fmtPts(s.officialPoints));
   const rowsH = st.length * 124;
-  const matchesH = 70 + g.matches.length * 50;
+  const matchesH = g.matches.length ? 70 + g.matches.length * 50 : 0;
   const H = 230 + 200 + 40 + rowsH + 40 + matchesH + 120;
   const { cv, ctx } = canvasOf(H);
   header(ctx, `Final · ${[I.course, I.date].filter(Boolean).join(' · ')}`, I.ev.name || 'Round');
@@ -171,7 +171,7 @@ function leaderboard(app) {
   text(ctx, top.length > 1 ? 'SHARE THE DAY' : 'WIN THE DAY', PAD + 40, y + 52, { size: 24, weight: 800, color: C.sun });
   const winName = top.map((s) => I.tname(s.teamId)).join(' & ');
   text(ctx, winName, PAD + 40, y + 122, { size: 64, weight: 800, color: top.length === 1 ? I.jersey(top[0].teamId) : C.ink, max: W - PAD * 2 - 320 });
-  text(ctx, top.length === 1 ? I.pnames(top[0].teamId) : '', PAD + 40, y + 164, { size: 28, weight: 500, color: C.soft, max: W - PAD * 2 - 320 });
+  text(ctx, top.length === 1 && !snap.settings.solo ? I.pnames(top[0].teamId) : '', PAD + 40, y + 164, { size: 28, weight: 500, color: C.soft, max: W - PAD * 2 - 320 });
   text(ctx, val(top[0]), W - PAD - 36, y + 128, { size: 96, weight: 700, color: C.sun, align: 'right', mono: true });
   text(ctx, isPM ? 'margin' : 'points', W - PAD - 36, y + 164, { size: 24, weight: 600, color: C.soft, align: 'right' });
 
@@ -184,7 +184,7 @@ function leaderboard(app) {
     fillRect(ctx, PAD + 64, y + 14, 8, 84, 4, col);
     text(ctx, I.tname(s.teamId), PAD + 96, y + 50, { size: 40, weight: 750, color: C.ink, max: 560 });
     const r = s.record;
-    text(ctx, `${I.pnames(s.teamId)} · ${r.w}-${r.l}-${r.h}`, PAD + 96, y + 88, { size: 26, weight: 500, color: C.soft, max: 560 });
+    text(ctx, snap.settings.solo ? recordLabel(g, s) : `${I.pnames(s.teamId)} · ${r.w}-${r.l}-${r.h}`, PAD + 96, y + 88, { size: 26, weight: 500, color: C.soft, max: 560 });
     const v = isPM ? s.officialPm : s.officialPoints;
     fillRect(ctx, PAD + 96, y + 104, 600, 10, 5, C.card2);
     // Match Play: share of the points on offer (same as the Board). Plus/Minus: size vs the biggest margin.
@@ -195,9 +195,11 @@ function leaderboard(app) {
   }
 
   // Matchups
-  y += 40;
-  text(ctx, 'MATCHUPS', PAD, y + 24, { size: 24, weight: 800, color: C.soft });
-  y += 70;
+  if (g.matches.length) {
+    y += 40;
+    text(ctx, 'MATCHUPS', PAD, y + 24, { size: 24, weight: 800, color: C.soft });
+    y += 70;
+  }
   for (const m of g.matches) {
     const [a, b] = m.teams;
     const res = m.result;
@@ -337,7 +339,7 @@ function cartCard(app) {
   const { cv, ctx } = canvasOf(H);
   header(ctx, `Cart · ${[I.course, I.date].filter(Boolean).join(' · ')}`, team.name, I.jersey(tid));
   const s = g?.standings.find((x) => x.teamId === tid);
-  const sub = [players.map((p) => p.name).join(' + '), s ? `${s.shared ? 'T-' : ''}${ordinal(s.rank)}` : '', s ? (g.type === 'rotationPlusMinus' ? fmtSigned(s.officialPm, 'E') : `${fmtPts(s.officialPoints)} pts`) : '', s ? `${s.record.w}-${s.record.l}-${s.record.h}` : '']
+  const sub = [players.map((p) => p.name).join(' + '), s ? `${s.shared ? 'T-' : ''}${ordinal(s.rank)}` : '', s ? (g.type === 'rotationPlusMinus' ? fmtSigned(s.officialPm, 'E') : `${fmtPts(s.officialPoints)} pts`) : '', s ? recordLabel(g, s) : '']
     .filter(Boolean).join(' · ');
   text(ctx, sub, PAD, 226, { size: 30, weight: 500, color: C.soft, max: W - PAD * 2 });
 
@@ -408,7 +410,7 @@ function fullReport(app) {
       fillRect(ctx, PAD, y + 12, 8, 40, 4, col);
       text(ctx, `${s.shared ? 'T' : ''}${s.rank}`, PAD + 26, y + 44, { size: 28, weight: 700, color: C.faint, mono: true });
       text(ctx, I.tname(s.teamId), PAD + 90, y + 44, { size: 32, weight: 750, color: C.ink, max: 420 });
-      text(ctx, `${s.record.w}-${s.record.l}-${s.record.h}`, W - PAD - 190, y + 44, { size: 28, weight: 600, color: C.soft, align: 'right', mono: true });
+      text(ctx, recordLabel(g, s), W - PAD - 190, y + 44, { size: g.type === 'splitPoint' ? 24 : 28, weight: 600, color: C.soft, align: 'right', mono: true });
       text(ctx, isPM ? fmtSigned(s.officialPm, 'E') : fmtPts(s.officialPoints), W - PAD, y + 44, { size: 40, weight: 700, color: col, align: 'right', mono: true });
       y += 64;
     }

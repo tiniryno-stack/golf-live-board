@@ -21,6 +21,7 @@
 //      Save, your group's card reused next time, enter it yourself, no signal
 //  15. Finalize: finished rounds open on the Board; the organizer finalizes (scores locked on
 //      server and screen); the organizer PIN unlocks a phone; Host can reopen
+//  18. Split point (2–4 players, no carts) switched on mid-round from Host: recounts from hole 1
 //   9. Headlines wear the jersey of the team on their positive end; two that land on the
 //      same score show together, then it's back to one (banner and Board).
 // Realtime isn't mocked, so "the other phone sees it" is driven by a refetch —
@@ -29,6 +30,8 @@
 
 import { chromium } from 'playwright';
 import { createBackend, attach, serve, seedRound, OGA_FIXTURES } from './mock-supabase.mjs';
+import { COURSES } from '../js/courses.js';
+const COURSES_TC = COURSES[0];
 
 const srv = await serve();
 const be = createBackend();
@@ -856,7 +859,62 @@ await TP.page.tap('#delete');
 await TP.page.waitForTimeout(800);
 ok(!be.tables.events.some((e) => e.id === pr2.id), 'deleted from the phone too');
 
-const errors = [A, C, A2, P, Q, O, F, R, X, Y, Z, G, T, TP, NL].flatMap((p) => p.page.errors);
+// 18. Split point, switched on mid-round: a 3-player round (no carts) started as a scorecard.
+//     Matches offers it (no "4 carts" talk), Host → Rules → Match play → Save, and it counts back
+//     from hole 1: 1 point a hole, ties split. Scores replayed from the Oct 20 Bridlewood round.
+const sp = be.rpc.create_event({
+  p_name: 'Split point test', p_course: { ...COURSES_TC, tee: COURSES_TC.tees[1] },
+  p_roster: { groups: [{ id: 'g1', name: 'Group 1' }], teams: [], players: ['Josh', 'Andrew', 'Sean'].map((name, i) => ({ id: `p${i + 1}`, personId: `person-sp-${i}`, name, teamId: null, groupId: 'g1', strokes: null })) },
+  p_settings: { handicapMode: 'full', allowancePct: 100, game: 'none', teamScore: 'bestBall', halvedHolePoints: 0.5, matchBonus: 1, plusMinusCap: null, maxHoleScore: 'doublePar', par3NoMax: false, rotationMode: 'fixed', startHole: 1,
+    rotation: [{ holes: [1, 6], matches: [['A', 'B'], ['C', 'D']] }, { holes: [7, 12], matches: [['A', 'C'], ['B', 'D']] }, { holes: [13, 18], matches: [['A', 'D'], ['B', 'C']] }] },
+});
+const spEv = be.tables.events.find((x) => x.code === sp.code);
+// [Josh, Andrew, Sean] holes 1–7
+[[5, 8, 5], [5, 7, 6], [4, 6, 4], [4, 6, 4], [5, 5, 5], [5, 5, 5], [4, 4, 4]].forEach((row, i) =>
+  row.forEach((strokes, k) => be.tables.scores.push({ event_id: spEv.id, player_id: `p${k + 1}`, hole: i + 1, strokes, updated_at: new Date(Date.now() - (60 - i) * 60000).toISOString(), updated_by: 'Sean' })));
+const DEVSP = '18181818-1818-4818-8818-181818181818';
+be.tables.claims.push({ event_id: spEv.id, player_id: 'p2', device_id: DEVSP });
+const SP = await presetPhone('Split point', sp.code, { pin: sp.admin_pin, me: 'p2', dev: DEVSP });
+await SP.page.goto(`${srv.origin}/#/e/${sp.code}/matches`);
+await SP.page.waitForTimeout(1000);
+await clearOverlays(SP.page);
+const spNoGame = await SP.page.textContent('#content');
+ok(/No game on this round/.test(spNoGame) && !/4 carts/.test(spNoGame) && !!(await SP.page.$('[data-act="tab"][data-v="host"].btn')), 'Matches (scorecard only, 3 players): offers Match play, no "4 carts" talk');
+await SP.page.tap('[data-act="tab"][data-v="host"].btn');
+await SP.page.waitForTimeout(500);
+await SP.page.tap('[data-act="host-solo"][data-v="on"]');
+await SP.page.waitForTimeout(200);
+ok(/ties? for low splits it/.test(await SP.page.textContent('#content')) && !(await SP.page.$('[data-k="matchBonus"]')), 'Host → Rules: Match play explains the split; no match bonus / halved points');
+await SP.page.tap('[data-act="host-save"]');
+await SP.page.waitForTimeout(900);
+ok(spEv.settings.solo === true && spEv.settings.game === 'rotationMatch', 'saved: no "needs 4 carts of 2" error');
+await SP.page.tap('[data-act="tab"][data-v="matches"]');
+await SP.page.waitForTimeout(500);
+await clearOverlays(SP.page);
+const tots = await SP.page.$$eval('.sp-tot', (els) => els.map((e) => `${e.querySelector('.sp-name').textContent.replace(' (you)', '')} ${e.querySelector('.sp-pts').textContent}`));
+ok(JSON.stringify(tots) === JSON.stringify(['Josh 3½', 'Sean 2½', 'Andrew 1']), `recounted from hole 1: ${tots.join(', ')}`);
+const spRows = await SP.page.$$eval('.sp-table tbody tr', (trs) => trs.map((tr) => [...tr.querySelectorAll('td')].map((td) => td.querySelector('.pt')?.textContent || '').join('|')));
+ok(spRows.length === 7 && spRows[0] === '½||½' && spRows[1] === '1||' && spRows[6] === '⅓|⅓|⅓', `Matches: hole by hole, who took the point and how it split (${spRows.join(' / ')})`);
+await SP.page.tap('[data-act="tab"][data-v="board"]');
+await SP.page.waitForTimeout(500);
+await clearOverlays(SP.page);
+if (await SP.page.$('[data-act="board-view"][data-v="teams"]')) await SP.page.tap('[data-act="board-view"][data-v="teams"]');
+await SP.page.waitForTimeout(300);
+const firstRow = await SP.page.textContent('.team-row');
+ok(/Josh/.test(firstRow) && /3½/.test(firstRow) && /1 won · 6 split/.test(firstRow), 'Board: Josh leads, 3½ pts, 1 won · 6 split');
+await SP.page.tap('.team-row');
+await SP.page.waitForTimeout(400);
+ok(/split with Sean/.test(await SP.page.textContent('#sheet')), 'tap a player: their holes and who they split with');
+await SP.page.evaluate(() => window.__glb.closeSheet?.());
+await SP.page.goto(`${srv.origin}/#/e/${sp.code}/enter`);
+await SP.page.waitForTimeout(900);
+await clearOverlays(SP.page);
+const spLine = await SP.page.textContent('.matchup-line');
+ok(/Josh\s*3½/.test(spLine) && /You\s*1/.test(spLine), `Enter: everyone's points under the hole (${spLine.replace(/\s+/g, ' ').trim()})`);
+const spBrief = await SP.page.evaluate(async () => (await import('/js/screens/brief.js')).briefPages(window.__glb).join(' '));
+ok(/Split point/.test(spBrief) && /⅓ point/.test(spBrief), 'Today’s game: one card for split point');
+
+const errors = [A, C, A2, P, Q, O, F, R, X, Y, Z, G, T, TP, NL, SP].flatMap((p) => p.page.errors);
 ok(errors.length === 0, `no page errors${errors.length ? `: ${errors.join('; ')}` : ''}`);
 
 await browser.close();

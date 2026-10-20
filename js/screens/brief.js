@@ -14,6 +14,7 @@ export function briefPages(app) {
   const snap = app.snapshot;
   const g = snap?.game;
   if (!g) return [];
+  if (g.type === 'splitPoint') return [splitPage(snap)];
   return [scoringPage(snap, g, !!app.myTeam()), dayPage(app, snap, g)];
 }
 
@@ -72,6 +73,26 @@ function scoringPage(snap, g, playing) {
     <div class="sub">${sub}</div>
     <div class="brief-big"><span class="n">${g.ncomp}</span><span>point${g.ncomp === 1 ? '' : 's'} every hole<small>Lower score wins ${g.ncomp === 1 ? 'it' : 'each one'}</small></span></div>
     ${defs(rows)}${ex}${net}`;
+}
+
+// Split point (2–4 players, no carts): one card.
+function splitPage(snap) {
+  const st = snap.settings;
+  const n = snap.teams.length;
+  const net = snap.hasStrokes ? '<p class="brief-note">Net scores: each dot by a name is a stroke off.</p>' : '';
+  const rows = [['Win it', 'Low score alone: <b>1 point</b>'], ['2 tied', '<b>½ point</b> each']];
+  if (n >= 3) rows.push(['3 tied', '<b>⅓ point</b> each']);
+  if (n >= 4) rows.push(['4 tied', '<b>¼ point</b> each']);
+  const defs = `<dl class="brief-defs">${rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${v}</dd>`).join('')}</dl>`;
+  const ex = n >= 3
+    ? exampleBox('Scores 4 · 4 · 5', ['Two tied for low at 4'], 'Hole: ½ · ½ · 0')
+    : exampleBox('Scores 4 · 5', ['Low score 4'], 'Hole: 1 · 0');
+  const max = st.maxHoleScore === 'none' ? '' : `<li>Pick up at <b>${st.maxHoleScore === 'netDoubleBogey' ? 'net double bogey' : 'double par'}</b>${st.par3NoMax ? ' (not on par 3s)' : ''}.</li>`;
+  return `<div class="fc-title">Split point</div>
+    <div class="sub">Everyone plays their own ball.</div>
+    <div class="brief-big"><span class="n">1</span><span>point every hole<small>Low score takes it, ties split it</small></span></div>
+    ${defs}${ex}${net}
+    <ul class="brief-rules"><li><b>Most points after 18</b> wins the day.</li>${max}</ul>`;
 }
 
 function exampleBox(line, steps, result) {
