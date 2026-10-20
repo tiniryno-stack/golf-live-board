@@ -267,27 +267,30 @@ function problems(s) {
   const names = s.players.map((p) => p.name.trim().toLowerCase()).filter(Boolean);
   if (!names.length) out.push('Add the players.');
   if (new Set(names).size !== names.length) out.push('Two players have the same name.');
-  const needsTeams = s.settings.game !== 'none' || s.settings.rotationMode === 'swap';
-  if (needsTeams && !hasFullTeams(s)) {
-    out.push(s.settings.game !== 'none'
-      ? 'The rotating game needs 4 carts of 2. Put every player in a cart on Teams.'
-      : 'Carts swapping foursomes needs 4 carts of 2. Fill the carts, or turn swapping off on Matchups.');
-  }
+  // Not 4 full carts of 2 (any other number of players): it saves as a plain scorecard +
+  // leaderboard round (see buildRound), so nothing to block here.
   return out;
+}
+
+/** Fewer or more than 8 players, or carts not filled: scorecard + leaderboard, no cart game.
+ *  Up to 4 players all play in one group. */
+function casualRound(s) {
+  return !hasFullTeams(s);
 }
 
 function buildRound(s) {
   const c = course(s);
   const full = hasFullTeams(s);
+  const casual = casualRound(s);
   const groupOfTeam = {};
   s.rotation[0].matches.forEach((m, i) => m.forEach((t) => (groupOfTeam[t] = `g${i + 1}`)));
   const players = s.players.map((p, i) => ({
     id: `p${i + 1}`, personId: p.personId || db.uuid(), name: p.name.trim(),
-    teamId: p.teamId || null,
-    groupId: full && p.teamId ? groupOfTeam[p.teamId] : p.groupId || 'g1',
+    teamId: casual ? null : p.teamId || null,
+    groupId: casual && s.players.length <= 4 ? 'g1' : full && p.teamId ? groupOfTeam[p.teamId] : p.groupId || 'g1',
     strokes: p.strokes === '' || p.strokes == null || Number.isNaN(Number(p.strokes)) ? null : Math.max(0, Math.round(Number(p.strokes))),
   }));
-  const teams = teamsUsed(s).map((id) => ({ id, name: teamName(s, id).slice(0, 20) }));
+  const teams = casual ? [] : teamsUsed(s).map((id) => ({ id, name: teamName(s, id).slice(0, 20) }));
   return {
     name: s.name.trim() || `${c.shortName || cd.shortCourseName(c.name)} · ${prettyDate(todayISO())}`,
     course: {
@@ -298,7 +301,9 @@ function buildRound(s) {
       par: c.par.map(Number), strokeIndex: c.strokeIndex.map(Number),
     },
     roster: { groups: [{ id: 'g1', name: 'Group 1' }, { id: 'g2', name: 'Group 2' }], teams, players },
-    settings: { ...s.settings, rotation: clone(s.rotation) },
+    settings: casual
+      ? { ...s.settings, game: 'none', rotationMode: 'fixed', rotation: clone(s.rotation) }
+      : { ...s.settings, rotation: clone(s.rotation) },
     playedOn: todayISO(),
     crewId: s.crewId,
   };
@@ -365,6 +370,10 @@ const VIEWS = {
   },
 
   Matchups(s) {
+    if (casualRound(s) && s.players.length <= 4) {
+      return `<p class="soft" style="margin:0 0 8px">${s.players.length || 'No'} player${s.players.length === 1 ? '' : 's'}: everyone plays in one group and enters scores together. Straight scorecard and leaderboard.</p>
+        <p class="meta">The rotating cart game needs 8 players in 4 carts of 2.</p>`;
+    }
     const swap = s.settings.rotationMode === 'swap';
     const full = hasFullTeams(s);
     const rot = s.rotation
@@ -388,6 +397,10 @@ const VIEWS = {
   Game(s) {
     const st = s.settings;
     const pm = st.game === 'rotationPlusMinus';
+    if (casualRound(s)) {
+      return `<p class="soft" style="margin:0 0 8px">With ${s.players.length} player${s.players.length === 1 ? '' : 's'} it\u2019s a straight scorecard and leaderboard (gross and net). The cart game needs 8 players in 4 carts of 2.</p>
+        <div class="field"><span class="label">Max hole score (pick-up)</span>${seg('setup-set', [['doublePar', 'Double par'], ['netDoubleBogey', 'Net dbl bogey'], ['none', 'None']], st.maxHoleScore, 'data-k="maxHoleScore"')}</div>`;
+    }
     return `<div class="field"><span class="label">Game</span>${seg('setup-set', [['none', 'None'], ['rotationMatch', 'Match Play'], ['rotationPlusMinus', 'Plus/Minus']], st.game, 'data-k="game"')}</div>
       <p class="help">${st.game === 'rotationMatch' ? 'Points bank every hole; most points after 18 wins the day.' : pm ? 'Zero-sum: each rotation starts even, margins carry all day.' : 'Just the live scorecard and leaderboard.'}</p>
       ${st.game !== 'none' ? `<div class="field"><span class="label">Team score</span>${seg('setup-set', [['bestBallAggregate', 'Low Ball/Total'], ['bestBall', 'Best ball'], ['aggregate', 'Aggregate']], st.teamScore, 'data-k="teamScore"')}</div>` : ''}
@@ -415,7 +428,9 @@ const VIEWS = {
         <div class="micro">Round</div><div style="margin:2px 0 10px">${esc(r?.name || s.name || '—')}</div>
         <div class="micro">Players</div><div style="margin:2px 0 10px">${s.players.length ? s.players.map((p) => `${esc(p.name)}${p.strokes !== '' && p.strokes != null ? ` <span class="soft">(${esc(p.strokes)})</span>` : ''}`).join(', ') : '—'}</div>
         <div class="micro">First tee</div><div style="margin:2px 0 10px">Hole ${s.settings.startHole === 10 ? '10 (back nine first)' : '1'}</div>
-        <div class="micro">Game</div><div style="margin:2px 0 0">${{ none: 'Scorecard only', rotationMatch: 'Rotation Match Play', rotationPlusMinus: 'Rotation Plus/Minus' }[s.settings.game]}${s.settings.rotationMode === 'swap' ? ' · carts swap' : ' · fixed foursomes'}</div>
+        <div class="micro">Game</div><div style="margin:2px 0 0">${casualRound(s)
+          ? `Scorecard + leaderboard${s.players.length <= 4 ? ' · one group' : ''}<div class="meta" style="margin-top:2px">The cart game needs 8 players in 4 carts of 2.</div>`
+          : `${{ none: 'Scorecard only', rotationMatch: 'Rotation Match Play', rotationPlusMinus: 'Rotation Plus/Minus' }[s.settings.game]}${s.settings.rotationMode === 'swap' ? ' · carts swap' : ' · fixed foursomes'}`}</div>
       </div>
       <button class="btn primary big block" data-act="setup-save" ${issues.length || s.saving ? 'disabled' : ''}>${s.saving ? 'Saving…' : 'Save round'}</button>
       <p class="meta" style="margin-top:10px">Saving makes this phone the organizer.</p>`;
