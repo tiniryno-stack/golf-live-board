@@ -42,7 +42,25 @@ function rules(app, d) {
   const st = d.settings;
   const pm = st.game === 'rotationPlusMinus';
   const par = d.course.par, si = d.course.strokeIndex;
-  return `<div class="field"><span class="label">Game</span>${seg('host-set', [['none', 'None'], ['rotationMatch', 'Match Play'], ['rotationPlusMinus', 'Plus/Minus']], st.game, 'data-k="game"')}</div>
+  // A round without carts (2–4 players): Scorecard only, or solo match play (every player vs
+  // every player). Switching recounts from hole 1; scores never change.
+  const noCarts = !(d.roster.teams || []).length;
+  const n = (d.roster.players || []).length;
+  const gameField = noCarts
+    ? n >= 2 && n <= 4
+      ? `<div class="field"><span class="label">Game</span>${seg('host-solo', [['off', 'Scorecard only'], ['on', 'Match play']], st.solo && st.game !== 'none' ? 'on' : 'off')}</div>
+        <p class="help">Match play: every player is their own team and plays everyone else, every hole (1 point a hole, tie = half each, +1 for winning a match over 18). Recounts from hole 1.</p>`
+      : ''
+    : `<div class="field"><span class="label">Game</span>${seg('host-set', [['none', 'None'], ['rotationMatch', 'Match Play'], ['rotationPlusMinus', 'Plus/Minus']], st.game, 'data-k="game"')}</div>`;
+  if (noCarts) {
+    const solo = !!st.solo && st.game !== 'none';
+    return `${gameField}
+      ${solo ? `<div class="field"><span class="label">Halved points</span>${seg('host-set', [['0.5', '½ each'], ['0', 'Nothing']], String(st.halvedHolePoints), 'data-k="halvedHolePoints"')}</div>
+      <div class="field"><span class="label">Match win bonus</span>${seg('host-set', [['1', '+1 point'], ['0', 'None']], String(st.matchBonus ?? 1), 'data-k="matchBonus"')}</div>` : ''}
+      <div class="field"><span class="label">Max hole score</span>${seg('host-set', [['doublePar', 'Double par'], ['netDoubleBogey', 'Net dbl bogey'], ['none', 'None']], st.maxHoleScore, 'data-k="maxHoleScore"')}</div>
+      ${courseAndFinish(app, d)}`;
+  }
+  return `${gameField}
     <div class="field"><span class="label">First tee</span>${seg('host-set', [['1', 'Hole 1'], ['10', 'Hole 10']], String(st.startHole || 1), 'data-k="startHole"')}</div>
     <div class="field"><span class="label">Team score</span>${seg('host-set', [['bestBallAggregate', 'Low Ball/Total'], ['bestBall', 'Best ball'], ['aggregate', 'Aggregate']], st.teamScore, 'data-k="teamScore"')}</div>
     <div class="field"><span class="label">Max hole score</span>${seg('host-set', [['doublePar', 'Double par'], ['netDoubleBogey', 'Net dbl bogey'], ['none', 'None']], st.maxHoleScore, 'data-k="maxHoleScore"')}</div>
@@ -57,7 +75,13 @@ function rules(app, d) {
       <div class="chips" style="margin:4px 0 12px"><button class="pill" data-act="host-lowman" aria-pressed="${st.handicapMode === 'offLow'}"><span class="dot"></span>Play off the low man</button></div>
       <div class="field"><label for="h-allow">Allowance %</label><input class="input num" id="h-allow" inputmode="numeric" maxlength="3" value="${esc(st.allowancePct ?? 100)}" data-input="host-allow" style="width:96px"></div>
     </details>
-    <details class="fold"><summary>Course: par + hole handicap</summary>
+    ${courseAndFinish(app, d)}`;
+}
+
+/** Course fixes + Finish the round + cleanup (shared by every round type). */
+function courseAndFinish(app, d) {
+  const par = d.course.par, si = d.course.strokeIndex;
+  return `<details class="fold"><summary>Course: par + hole handicap</summary>
       <p class="help" style="margin:0 0 10px">Fix a hole if the card at the course disagrees. Every score recomputes.</p>
       <div class="par-grid"><span class="micro">Hole</span><span class="micro">Par</span><span class="micro">Hcp</span>
       ${par.map((p, i) => `<span class="h">${i + 1}</span>
@@ -136,7 +160,10 @@ function validate(d) {
   if (si.some((x) => !(x >= 1 && x <= 18)) || new Set(si).size !== 18) return 'Hole handicaps must be 1–18, each used once.';
   const st = d.settings;
   const teams = d.roster.teams || [];
-  if (st.game !== 'none' && !(teams.length === 4 && teams.every((t) => d.roster.players.filter((p) => p.teamId === t.id).length === 2))) {
+  if (st.solo && st.game !== 'none') {
+    const n = d.roster.players.length;
+    if (teams.length || n < 2 || n > 4) return 'Match play (each player) is for 2–4 players with no carts.';
+  } else if (st.game !== 'none' && !(teams.length === 4 && teams.every((t) => d.roster.players.filter((p) => p.teamId === t.id).length === 2))) {
     return 'The rotating game needs 4 carts of 2.';
   }
   return null;
@@ -169,6 +196,14 @@ export default {
     'host-tab': (el, ev, app) => {
       app.ui.hostTab = el.dataset.v;
       if (el.dataset.v === 'activity') app.hostLog = null;
+      app.render();
+    },
+    'host-solo': (el, ev, app) => {
+      const st = draft(app).settings;
+      const on = el.dataset.v === 'on';
+      st.solo = on;
+      st.game = on ? 'rotationMatch' : 'none';
+      touch(app);
       app.render();
     },
     'host-set': (el, ev, app) => {

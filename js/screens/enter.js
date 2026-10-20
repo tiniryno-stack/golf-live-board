@@ -41,6 +41,8 @@ function currentHole(app) {
 function cartsFor(app, hole) {
   const snap = app.snapshot;
   const ids = foursomeFor(snap.roster, snap.settings, app.me, hole);
+  // Solo match play: everyone is in one group card (each player is their own "team").
+  if (snap.settings.solo) return [{ teamId: null, players: ids.map((id) => snap.playerById.get(id)) }];
   const carts = [];
   for (const id of ids) {
     const p = snap.playerById.get(id);
@@ -169,7 +171,14 @@ export default {
     const myTeam = app.myTeam();
     const rot = rotationFor(st, h);
     let matchLine = '';
-    if (snap.game && myTeam) {
+    if (snap.game && myTeam && st.solo) {
+      // Solo: where you stand against each player ("vs Sean +1 · vs Mike AS").
+      matchLine = `<span class="teams">${snap.game.matches.filter((m) => m.teams.includes(myTeam)).map((m) => {
+        const opp = m.teams[0] === myTeam ? m.teams[1] : m.teams[0];
+        const v = m.points[myTeam] - m.points[opp];
+        return `<span class="faint">vs</span> ${esc(snap.teamById.get(opp).name)} <span class="status">${m.played ? (v === 0 ? 'AS' : fmtSigned(v)) : '–'}</span>`;
+      }).join(' · ')}</span>`;
+    } else if (snap.game && myTeam) {
       const m = matchFor(snap, myTeam, h);
       const opp = m ? snap.teamById.get(m.teams[0] === myTeam ? m.teams[1] : m.teams[0]) : null;
       matchLine = m

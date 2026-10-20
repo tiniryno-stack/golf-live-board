@@ -45,7 +45,7 @@ function teamRowsGame(app) {
   return g.liveStandings
     .map((s) => {
       const team = snap.teamById.get(s.teamId);
-      const names = team.playerIds.map((id) => snap.playerById.get(id).name).join(' + ');
+      const names = snap.settings.solo ? '' : team.playerIds.map((id) => snap.playerById.get(id).name).join(' + ');
       const prov = isPM ? s.provisionalPm : s.provisionalPoints;
       const val = isPM ? fmtSigned(s.pm, 'E') : fmtPts(s.points);
       // "1½ prov." = how much of the number is provisional (already counted in it).
@@ -58,7 +58,7 @@ function teamRowsGame(app) {
         <div class="body">
           <div class="spread"><span class="row-title ellipsis">${esc(team.name)}${s.teamId === mine ? '<span class="me-dot" aria-label="your team"></span>' : ''}</span>${chip}</div>
           ${teamBar(isPM, s, scale)}
-          <div class="detail ellipsis">${esc(names)} · ${rec.w}-${rec.l}-${rec.h} · thru ${thru}</div>
+          <div class="detail ellipsis">${names ? `${esc(names)} · ` : ''}${rec.w}-${rec.l}-${rec.h} · thru ${thru}</div>
         </div><span class="chev" aria-hidden="true">${icon('fwd', 16)}</span></div>`;
     })
     .join('');
@@ -146,7 +146,7 @@ function finalCard(app) {
     const top = g.standings.filter((s) => s.rank === 1);
     who = top.map((s) => snap.teamById.get(s.teamId).name).join(' & ');
     const v = isPM ? fmtSigned(top[0].officialPm, 'E') : `${fmtPts(top[0].officialPoints)} pts`;
-    const names = top.length === 1 ? snap.teamById.get(top[0].teamId).playerIds.map((id) => snap.playerById.get(id).name).join(' + ') : '';
+    const names = top.length === 1 && !snap.settings.solo ? snap.teamById.get(top[0].teamId).playerIds.map((id) => snap.playerById.get(id).name).join(' + ') : '';
     sub = [top.length > 1 ? 'share the day' : 'win the day', v, names].filter(Boolean).join(' · ');
   } else {
     const lead = playerLeaderboard(snap, snap.hasStrokes ? 'net' : 'gross')[0];

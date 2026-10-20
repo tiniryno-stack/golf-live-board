@@ -453,3 +453,20 @@ test('Board bars: 3 holes, 4 of 6 points = two-thirds of the bar; holes played a
   assert.equal(lb.points, 4);
   assert.ok(lb.rank <= 2, 'B moves up on its provisional points');
 });
+
+test('Solo match play: 3 players, each their own team, every pair plays every hole', () => {
+  const players = [['a1', 'Andrew'], ['b1', 'Sean'], ['c1', 'Mike']].map(([id, name]) => ({ id, personId: id, name, teamId: null, groupId: 'g1', strokes: null }));
+  const ev = makeEvent({ game: 'rotationMatch', solo: true });
+  ev.roster = { groups: [{ id: 'g1', name: 'Group 1' }], teams: [], players };
+  const sb = scorebook();
+  sb.post(1, { a1: 4, b1: 5, c1: 5 }); // Andrew beats both: 2 pts; Sean/Mike halve: ½ each
+  sb.post(2, { a1: 5, b1: 5, c1: 4 }); // Mike beats both; Andrew/Sean halve
+  const snap = compute(ev, sb.rows());
+  const g = snap.game;
+  assert.ok(g, 'a game is on with no teams in the roster');
+  assert.equal(g.matches.length, 3, 'A-B, A-C, B-C');
+  const pts = Object.fromEntries(g.liveStandings.map((s) => [snap.teamById.get(s.teamId).name, s.points]));
+  assert.deepEqual(pts, { Andrew: 2.5, Sean: 1, Mike: 2.5 });
+  assert.equal(snap.playerById.get('a1').teamId, 'A', 'players wear jerseys A–D');
+  assert.equal(g.liveStandings.find((s) => s.teamId === 'A').available, 4, '2 opponents x 2 holes on offer');
+});

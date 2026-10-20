@@ -277,6 +277,10 @@ function problems(s) {
 function casualRound(s) {
   return !hasFullTeams(s);
 }
+/** Solo match play: 2–4 players, no carts, and the organizer picked Match play. */
+function soloOn(s) {
+  return casualRound(s) && s.players.length >= 2 && s.players.length <= 4 && !!s.settings.solo;
+}
 
 function buildRound(s) {
   const c = course(s);
@@ -302,8 +306,8 @@ function buildRound(s) {
     },
     roster: { groups: [{ id: 'g1', name: 'Group 1' }, { id: 'g2', name: 'Group 2' }], teams, players },
     settings: casual
-      ? { ...s.settings, game: 'none', rotationMode: 'fixed', rotation: clone(s.rotation) }
-      : { ...s.settings, rotation: clone(s.rotation) },
+      ? { ...s.settings, ...(soloOn(s) ? { game: 'rotationMatch', solo: true } : { game: 'none', solo: false }), rotationMode: 'fixed', rotation: clone(s.rotation) }
+      : { ...s.settings, solo: false, rotation: clone(s.rotation) },
     playedOn: todayISO(),
     crewId: s.crewId,
   };
@@ -371,7 +375,7 @@ const VIEWS = {
 
   Matchups(s) {
     if (casualRound(s) && s.players.length <= 4) {
-      return `<p class="soft" style="margin:0 0 8px">${s.players.length || 'No'} player${s.players.length === 1 ? '' : 's'}: everyone plays in one group and enters scores together. Straight scorecard and leaderboard.</p>
+      return `<p class="soft" style="margin:0 0 8px">${s.players.length || 'No'} player${s.players.length === 1 ? '' : 's'}: everyone plays in one group and enters scores together. Pick Match play or a straight scorecard on the next step.</p>
         <p class="meta">The rotating cart game needs 8 players in 4 carts of 2.</p>`;
     }
     const swap = s.settings.rotationMode === 'swap';
@@ -398,7 +402,15 @@ const VIEWS = {
     const st = s.settings;
     const pm = st.game === 'rotationPlusMinus';
     if (casualRound(s)) {
-      return `<p class="soft" style="margin:0 0 8px">With ${s.players.length} player${s.players.length === 1 ? '' : 's'} it\u2019s a straight scorecard and leaderboard (gross and net). The cart game needs 8 players in 4 carts of 2.</p>
+      const canSolo = s.players.length >= 2 && s.players.length <= 4;
+      const solo = canSolo && !!st.solo;
+      return `${canSolo ? `<div class="field"><span class="label">Game</span>${seg('setup-solo', [['off', 'Scorecard only'], ['on', 'Match play']], solo ? 'on' : 'off')}</div>
+        <p class="help">${solo
+          ? 'Every player is their own team and plays everyone else, every hole: beat a player for 1 point, tie for half each. Win your match against a player over 18 for +1. Most points wins.'
+          : 'Straight scorecard and leaderboard (gross and net).'}</p>`
+        : `<p class="soft" style="margin:0 0 8px">With ${s.players.length} player${s.players.length === 1 ? '' : 's'} it\u2019s a straight scorecard and leaderboard (gross and net). The cart game needs 8 players in 4 carts of 2.</p>`}
+        ${solo ? `<div class="field"><span class="label">Halved points</span>${seg('setup-set', [['0.5', '½ each'], ['0', 'Nothing']], String(st.halvedHolePoints), 'data-k="halvedHolePoints"')}</div>
+        <div class="field"><span class="label">Match win bonus</span>${seg('setup-set', [['1', '+1 point'], ['0', 'None']], String(st.matchBonus ?? 1), 'data-k="matchBonus"')}</div>` : ''}
         <div class="field"><span class="label">Max hole score (pick-up)</span>${seg('setup-set', [['doublePar', 'Double par'], ['netDoubleBogey', 'Net dbl bogey'], ['none', 'None']], st.maxHoleScore, 'data-k="maxHoleScore"')}</div>`;
     }
     return `<div class="field"><span class="label">Game</span>${seg('setup-set', [['none', 'None'], ['rotationMatch', 'Match Play'], ['rotationPlusMinus', 'Plus/Minus']], st.game, 'data-k="game"')}</div>
@@ -429,7 +441,9 @@ const VIEWS = {
         <div class="micro">Players</div><div style="margin:2px 0 10px">${s.players.length ? s.players.map((p) => `${esc(p.name)}${p.strokes !== '' && p.strokes != null ? ` <span class="soft">(${esc(p.strokes)})</span>` : ''}`).join(', ') : '—'}</div>
         <div class="micro">First tee</div><div style="margin:2px 0 10px">Hole ${s.settings.startHole === 10 ? '10 (back nine first)' : '1'}</div>
         <div class="micro">Game</div><div style="margin:2px 0 0">${casualRound(s)
-          ? `Scorecard + leaderboard${s.players.length <= 4 ? ' · one group' : ''}<div class="meta" style="margin-top:2px">The cart game needs 8 players in 4 carts of 2.</div>`
+          ? soloOn(s)
+            ? 'Match play · every player vs every player · one group'
+            : `Scorecard + leaderboard${s.players.length <= 4 ? ' · one group' : ''}<div class="meta" style="margin-top:2px">The cart game needs 8 players in 4 carts of 2.</div>`
           : `${{ none: 'Scorecard only', rotationMatch: 'Rotation Match Play', rotationPlusMinus: 'Rotation Plus/Minus' }[s.settings.game]}${s.settings.rotationMode === 'swap' ? ' · carts swap' : ' · fixed foursomes'}`}</div>
       </div>
       <button class="btn primary big block" data-act="setup-save" ${issues.length || s.saving ? 'disabled' : ''}>${s.saving ? 'Saving…' : 'Save round'}</button>
@@ -771,6 +785,11 @@ export default {
       if (k === 'plusMinusCap') v = v === '' ? null : Number(v);
       if (k === 'startHole') v = Number(v);
       st[k] = v;
+      persist(app.setup);
+      app.render();
+    },
+    'setup-solo': (el, ev, app) => {
+      app.setup.settings.solo = el.dataset.v === 'on';
       persist(app.setup);
       app.render();
     },

@@ -231,8 +231,9 @@ function gameIsValid(roster, settings) {
   if (settings.game === 'none') return false;
   const teams = roster?.teams || [];
   const players = roster?.players || [];
-  if (teams.length !== 4) return false;
-  if (!teams.every((t) => players.filter((p) => p.teamId === t.id).length === 2)) return false;
+  const size = settings.solo ? 1 : 2;
+  if (settings.solo ? teams.length < 2 || teams.length > 4 : teams.length !== 4) return false;
+  if (!teams.every((t) => players.filter((p) => p.teamId === t.id).length === size)) return false;
   const ids = new Set(teams.map((t) => t.id));
   return settings.rotation.every(
     (r) => Array.isArray(r.holes) && Array.isArray(r.matches) && r.matches.every((m) => m.length === 2 && m.every((t) => ids.has(t)))
@@ -243,10 +244,42 @@ function gameIsValid(roster, settings) {
  * The snapshot every screen renders from.
  * event: { course, roster, settings }   scores: [{ player_id, hole, strokes, updated_by, updated_at }]
  */
+/** Every pairing of the given ids, in order: [[A,B],[A,C],[B,C]…]. */
+function roundRobin(ids) {
+  const out = [];
+  for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) out.push([ids[i], ids[j]]);
+  return out;
+}
+
+/**
+ * Solo match play (settings.solo, 2–4 players in one group): each player is their own "team"
+ * (ids A–D in roster order, so jersey colors work), and every pair plays an 18-hole match: each
+ * hole, beat a player for 1 point, tie for the halved points, plus the matchup win bonus. The
+ * stored roster has no teams; they're made here, so a casual round can switch it on mid-round.
+ */
+export function soloView(roster, settings) {
+  const ids = 'ABCD';
+  const players = (roster?.players || []).slice(0, 4);
+  const r = {
+    ...roster,
+    teams: players.map((p, i) => ({ id: ids[i], name: p.name })),
+    players: (roster?.players || []).map((p, i) => ({ ...p, teamId: i < 4 ? ids[i] : null })),
+  };
+  const st = {
+    ...settings,
+    game: settings.game === 'none' ? 'rotationMatch' : settings.game,
+    teamScore: 'bestBall',
+    rotationMode: 'fixed',
+    rotation: [{ holes: [1, HOLES], matches: roundRobin(r.teams.map((t) => t.id)) }],
+  };
+  return { roster: r, settings: st };
+}
+
 export function compute(event, scores) {
   const course = event.course;
-  const roster = event.roster || { players: [], teams: [], groups: [] };
-  const settings = normalizeSettings(event.settings);
+  let roster = event.roster || { players: [], teams: [], groups: [] };
+  let settings = normalizeSettings(event.settings);
+  if (settings.solo) ({ roster, settings } = soloView(roster, settings));
   const par = course.par;
   const si = course.strokeIndex;
   const holes = Array.from({ length: HOLES }, (_, i) => ({ n: i + 1, par: par[i], si: si[i] }));
@@ -295,7 +328,8 @@ export function compute(event, scores) {
   const teams = (roster.teams || []).map((t) => {
     const ps = players.filter((p) => p.teamId === t.id);
     const comps = holes.map((h, i) =>
-      ps.length === 2 ? componentsFor(method, ps[0].net[i], ps[1].net[i]) : null
+      ps.length === 2 ? componentsFor(method, ps[0].net[i], ps[1].net[i])
+        : ps.length === 1 && settings.solo && ps[0].net[i] != null ? [ps[0].net[i]] : null
     );
     let thru = 0, toPar = 0, grossToPar = 0;
     comps.forEach((c, i) => {
@@ -304,7 +338,7 @@ export function compute(event, scores) {
       const k = method === 'bestBall' ? 0 : c.length - 1; // Low Total for bestBallAggregate
       const parMult = method === 'bestBall' ? 1 : 2;
       toPar += c[k] - parMult * par[i];
-      const g = componentsFor(method, ps[0].gross[i], ps[1].gross[i]);
+      const g = ps.length === 1 ? [ps[0].gross[i]] : componentsFor(method, ps[0].gross[i], ps[1].gross[i]);
       grossToPar += g[k] - parMult * par[i];
     });
     return { id: t.id, name: t.name || t.id, playerIds: ps.map((p) => p.id), comps, thru, toPar, grossToPar };
@@ -413,8 +447,9 @@ function computeGame(settings, teams, teamById, holes) {
       if (!hh.complete) continue;
       const slot = (pointsByHole[hh.hole - 1] ||= { points: {}, margin: {}, total: {} });
       for (const t of m.teams) {
-        slot.points[t] = hh.points[t];
-        slot.margin[t] = hh.margin[t];
+        // Solo: a player has several matches per hole, so points and margins add up.
+        slot.points[t] = (slot.points[t] || 0) + hh.points[t];
+        slot.margin[t] = (slot.margin[t] || 0) + hh.margin[t];
         slot.total[t] = hh.comps[t].reduce((a, b) => a + b, 0);
       }
     }
