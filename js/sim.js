@@ -116,7 +116,7 @@ function showPhones() {
     wrap.className = 'phone';
     const who = current.names[i - 1];
     wrap.innerHTML = `<div class="phone-label">Phone ${i} · <b>${who ? escapeHtml(who) : 'watching'}</b>${who && current.carts?.[i - 1] ? ` · cart ${current.carts[i - 1]}` : ''}${i === 1 && current.pin ? ' · organizer' : ''}</div>
-      <div class="frame"><iframe title="Test phone ${i}" width="375" height="667" src="index.html?sim=${i}#/e/${current.code}"></iframe></div>`;
+      <div class="frame"><iframe title="Test phone ${i}" width="375" height="667" allow="geolocation" src="index.html?sim=${i}#/e/${current.code}"></iframe></div>`;
     grid.appendChild(wrap);
   }
   sizePhones();

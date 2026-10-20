@@ -121,7 +121,7 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
 npm install
 npm test               # 57 unit tests: scoring + headlines + course data (spec examples, bonus, back nine)
 npm run test:fit       # 128 checks: every screen at SE / 13 mini / 15-16 / Pro Max, no scroll on Enter
-npm run test:smoke     # 169 checks: multi-phone flows against the mock (join, swap, offline, rejoin,
+npm run test:smoke     # 170 checks: multi-phone flows against the mock (join, swap, offline, rejoin,
                        # reset/delete, back nine, Next waits for every score, grid/locks, recap,
                        # finalize + PIN unlock, add a course, test phones, blank-screen guards)
 ```
@@ -150,6 +150,14 @@ npm run test:smoke     # 169 checks: multi-phone flows against the mock (join, s
   additive migration if wanted.
 - The recap images use the viewer's perspective (their cart green); a neutral "everyone's jersey"
   variant could be nicer for group-chat sharing.
+- **OpenGolfAPI coverage (checked Oct 19):** 25 of 29 courses in Flower Mound / Plano / Richardson /
+  Garland / Dallas have full cards (pars + hole handicaps + tee ratings); no green coordinates
+  anywhere. Multi-course clubs (Bear Creek, Dallas Athletic Club, Firewheel, Tenison, Sherrill Park,
+  Indian Creek) are one listing with extra holes mixed in (`fromOpenGolf` takes the first row per hole
+  number) — idea: warn "this club has more than one course, check the card". Search rows use
+  `course_name`, `lat`/`lng`, `distance_mi` under `courses`; `completeness` is 0 everywhere (useless).
+- **Near me on iPhone:** "blocking location" = Safari Websites location off in iOS Settings, or the
+  site's aA → Website Settings → Location. The app now lists those steps + Try again.
 - **Add a course, next steps** (Andrew's ideas): scan the scorecard from a photo and AI lookup when
   OpenGolfAPI lacks a course — kicked off at the start of Setup so it's ready by Save; needs an AI
   key in a Supabase function secret (never in the site, never pasted in chat). Not yet confirmed

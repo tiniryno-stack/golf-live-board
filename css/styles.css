@@ -718,6 +718,8 @@ a { color: inherit; }
 .sc-grid .input { min-height: 38px; }
 .link-btn.inline { min-height: 0; padding: 0; text-decoration: underline; text-underline-offset: 3px; font-size: inherit; color: var(--ink); }
 .attrib { font-size: 11px; opacity: .8; }
+.loc-help ol { margin: 0 0 10px; padding-left: 20px; }
+.loc-help li { margin: 0 0 4px; }
 .player-row { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--line); }
 .player-row .pname { flex: 1; min-width: 0; font-weight: 600; font-size: 16px; }
 .player-row .x { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; color: var(--ink-soft); }

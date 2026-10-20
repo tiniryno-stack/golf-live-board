@@ -182,9 +182,14 @@ function courseList(s) {
   switch (s.nearStatus) {
     case 'locating': near = '<p class="meta">Finding where you are…</p>'; break;
     case 'loading': near = '<p class="meta">Looking for courses near you…</p>'; break;
-    case 'denied': near = '<p class="meta">Location is off for this site, so search by name instead. (To turn it on: your browser\u2019s settings for this site.)</p>'; break;
+    case 'denied': near = `<div class="loc-help"><p class="meta" style="margin:0 0 6px">Your phone is blocking location for this site. Search by name above, or turn it on:</p>
+      <ol class="meta">${/iPhone|iPad|iPod/.test(navigator.userAgent)
+        ? '<li>Settings \u2192 Privacy &amp; Security \u2192 Location Services \u2192 <b>Safari Websites</b> \u2192 While Using the App</li><li>In Safari, tap <b>aA</b> in the address bar \u2192 Website Settings \u2192 Location \u2192 Allow</li>'
+        : '<li>Turn on location for your browser in your phone\u2019s settings</li><li>Allow location for this site (the icon by the address)</li>'}</ol>
+      <button class="btn small" data-act="setup-near">Try again</button></div>`; break;
+    case 'noloc': near = '<p class="meta">Couldn\u2019t get your location (weak GPS indoors, maybe).</p><button class="btn small" data-act="setup-near">Try again</button>'; break;
     case 'unavailable': near = '<p class="meta">This phone can\u2019t share its location here. Search by name instead.</p>'; break;
-    case 'error': near = '<p class="meta">Couldn\u2019t reach course search.</p><button class="btn small" data-act="setup-near">Try again</button>'; break;
+    case 'error': near = '<p class="meta">Couldn\u2019t reach course search. Check your signal.</p><button class="btn small" data-act="setup-near">Try again</button>'; break;
     case 'ok': {
       const rows = (s.near || []).filter((r) => !mineIds.has(r.ogaId));
       near = rows.length ? `<div class="stack">${rows.map((r) => courseRow(r, 'setup-pick', r.ogaId)).join('')}</div>` : '<p class="meta">No courses within 25 miles. Search by name instead.</p>';
@@ -480,10 +485,11 @@ function findNear(app) {
     },
     (err) => {
       if (app.setup !== s) return;
-      s.nearStatus = err?.code === 1 ? 'denied' : 'error';
+      s.nearStatus = err?.code === 1 ? 'denied' : 'noloc'; // 2 = position unavailable, 3 = timeout
+
       paintCourses(app);
     },
-    { enableHighAccuracy: false, timeout: 10000, maximumAge: 600000 },
+    { enableHighAccuracy: false, timeout: 15000, maximumAge: 600000 },
   );
 }
 

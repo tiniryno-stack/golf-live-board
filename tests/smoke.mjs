@@ -762,6 +762,25 @@ ok(/Couldn’t reach course search/.test(await listText()) && !!(await G.page.$(
 be.oga.down = false;
 be.oga.blocked = false;
 
+// 16b. Location blocked by the phone: say how to turn it on (iPhone steps) + Try again.
+const NL = await (async () => {
+  const ctx = await browser.newContext({
+    viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true,
+    userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.6.1 Mobile/15E148 Safari/604.1',
+  });
+  await attach(ctx, be, srv.origin);
+  const page = await ctx.newPage();
+  page.errors = [];
+  page.on('pageerror', (e) => page.errors.push(`No-location phone: ${e.message}`));
+  return { ctx, page };
+})();
+await NL.page.goto(`${srv.origin}/#/setup`);
+await NL.page.waitForTimeout(800);
+await NL.page.tap('[data-act="setup-near"]');
+await NL.page.waitForTimeout(800);
+const locMsg = (await NL.page.textContent('#course-results')).replace(/\s+/g, ' ');
+ok(/blocking location/.test(locMsg) && /Safari Websites/.test(locMsg) && /Website Settings/.test(locMsg) && !!(await NL.page.$('#course-results [data-act="setup-near"]')), 'location blocked: iPhone steps to turn it on + Try again');
+
 // 17. Test phones (sim.html): make a practice round, 8 phones each signed in as their own player,
 //     "Play a hole" enters a score on every phone and moves them on, "Other group only" puts one
 //     foursome ahead (provisional points), Delete cleans it up.
@@ -837,7 +856,7 @@ await TP.page.tap('#delete');
 await TP.page.waitForTimeout(800);
 ok(!be.tables.events.some((e) => e.id === pr2.id), 'deleted from the phone too');
 
-const errors = [A, C, A2, P, Q, O, F, R, X, Y, Z, G, T, TP].flatMap((p) => p.page.errors);
+const errors = [A, C, A2, P, Q, O, F, R, X, Y, Z, G, T, TP, NL].flatMap((p) => p.page.errors);
 ok(errors.length === 0, `no page errors${errors.length ? `: ${errors.join('; ')}` : ''}`);
 
 await browser.close();
