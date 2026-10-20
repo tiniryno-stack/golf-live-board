@@ -18,6 +18,7 @@ const $ = (id) => document.getElementById(id);
 
 let current = null; // { code, pin, names[] }
 let busy = false;
+let shown = 1; // phone layout: which test phone is on screen
 
 // ───────────────────────────────────────────── per-phone storage (same keys the app uses)
 
@@ -121,7 +122,34 @@ function showPhones() {
   sizePhones();
   $('controls').hidden = false;
   $('reset').hidden = $('delete').hidden = !current.pin;
+  document.body.classList.add('has-round');
+  document.body.classList.remove('more-open');
+  renderSwitcher();
+  showPhone(shown);
 }
+
+/** Phone layout: buttons 1–8 (with names) to pick the phone on screen. */
+function renderSwitcher() {
+  $('switcher').innerHTML = current
+    ? current.names.map((n, k) => `<button data-phone="${k + 1}" aria-pressed="${shown === k + 1}">${k + 1}<small>${escapeHtml(n || 'watching')}</small></button>`).join('')
+    : '';
+}
+function showPhone(i) {
+  shown = i;
+  document.querySelectorAll('.phone').forEach((p, k) => p.classList.toggle('on', k + 1 === i));
+  document.querySelectorAll('#switcher button').forEach((b) => b.setAttribute('aria-pressed', String(Number(b.dataset.phone) === i)));
+}
+
+// Laptop: all 8 side by side. Narrow screens: one full-size phone + the 1–8 switcher.
+const narrow = window.matchMedia('(max-width: 700px)');
+function applyLayout() {
+  document.body.classList.toggle('narrow', narrow.matches);
+}
+narrow.addEventListener?.('change', applyLayout);
+applyLayout();
+new ResizeObserver(() => {
+  document.documentElement.style.setProperty('--head', `${document.querySelector('header').offsetHeight}px`);
+}).observe(document.querySelector('header'));
 
 function sizePhones() {
   const s = Number($('zoom').value) / 100;
@@ -262,6 +290,14 @@ $('play-all').onclick = () => playHole('all');
 $('play-mine').onclick = () => playHole('mine');
 $('play-other').onclick = () => playHole('other');
 $('zoom').oninput = sizePhones;
+$('switcher').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-phone]');
+  if (b) showPhone(Number(b.dataset.phone));
+});
+$('more-btn').onclick = () => {
+  const open = document.body.classList.toggle('more-open');
+  $('more-btn').setAttribute('aria-expanded', String(open));
+};
 $('reset').onclick = () => run(async () => {
   if (!current?.pin) return;
   const res = await api.resetRound(current.code, current.pin);
@@ -281,6 +317,8 @@ $('delete').onclick = () => run(async () => {
   current = null;
   $('grid').innerHTML = '';
   $('controls').hidden = true;
+  document.body.classList.remove('has-round', 'more-open');
+  renderSwitcher();
   showReopen();
 });
 showReopen();

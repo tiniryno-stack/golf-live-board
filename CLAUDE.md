@@ -34,7 +34,7 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
 | `js/app.js` | router/state, render loop (wrapped in an error boundary → "Something went wrong"), round loading (12 s timeout → "No signal / Try again"), join flow (name → cart-name picker → Today's game), realtime handlers, actions |
 | `js/ui.js` | `esc`, `icon` (SVG set), `seg`, formatting helpers |
 | `js/screens/*.js` | `enter` (score entry), `matches`, `board` (+ final card), `card`, `host` (organizer), `home`, `setup`, `season`, `sheets` (all bottom sheets incl. hole grid, team breakdown, menu), `toasts` (toasts, banners, full-screen cards, picker, Today's game pager, recap pager, coach tips), `brief` (Today's game content), `recap` (canvas-drawn keepsake PNGs) |
-| `sim.html` + `js/sim.js` | **Test with 8 phones** (laptop): makes a practice round (own crew → never in Season standings), 8 iframes `index.html?sim=N`, each its own device signed in as player N (phone 1 = organizer), **Play a hole** (random realistic score per phone, then taps Next hole), one-group-only buttons, reset/delete. `?sim=N` prefixes every storage key with `simN.` (`db.local`, `local.keys()`) |
+| `sim.html` + `js/sim.js` | **Test with 8 phones** (laptop: 8 side by side; phone ≤700px: one full-size phone + 1–8 switcher, extras under More): makes a practice round (own crew → never in Season standings), 8 iframes `index.html?sim=N`, each its own device signed in as player N (phone 1 = organizer), **Play a hole** (random realistic score per phone, then taps Next hole), one-group-only buttons, reset/delete. `?sim=N` prefixes every storage key with `simN.` (`db.local`, `local.keys()`) |
 | `supabase/schema.sql` | **source of truth for the DB**; keep it in sync with what's live |
 | `supabase/functions/course-search/index.ts` | Edge Function (deployed, `verify_jwt` off): GET-only backup route to OpenGolfAPI search + one course, our origins only. Redeploy with `deploy_edge_function` after edits |
 | `tests/` | unit tests (`*.test.mjs`), `fit-the-screen.mjs`, `smoke.mjs`, `mock-supabase.mjs` (in-memory stand-in mirroring every RPC, plus OpenGolfAPI + the backup route from `fixtures/opengolf.json`: Twin Creeks' real record and fictional test courses; `be.oga.blocked` / `be.oga.down`), `helpers.mjs` |
@@ -121,7 +121,7 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
 npm install
 npm test               # 57 unit tests: scoring + headlines + course data (spec examples, bonus, back nine)
 npm run test:fit       # 128 checks: every screen at SE / 13 mini / 15-16 / Pro Max, no scroll on Enter
-npm run test:smoke     # 161 checks: multi-phone flows against the mock (join, swap, offline, rejoin,
+npm run test:smoke     # 169 checks: multi-phone flows against the mock (join, swap, offline, rejoin,
                        # reset/delete, back nine, Next waits for every score, grid/locks, recap,
                        # finalize + PIN unlock, add a course, test phones, blank-screen guards)
 ```

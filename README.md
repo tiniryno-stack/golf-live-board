@@ -29,9 +29,9 @@ No build step: push to `main` and Pages serves it. The browser only ever holds t
 
 Any browser counts as a phone. Each browser (and each private/incognito window) gets its own device ID, so a laptop, your phone, and an incognito window can be three different players. Create the round on one, open the share link on the others, and tap a different name on each. To test "Let them in", open the link in a new incognito window and tap a name that's already taken.
 
-## Test with 8 phones (on a laptop)
+## Test with 8 phones (laptop or phone)
 
-Open **https://tiniryno-stack.github.io/golf-live-board/sim.html**. **Make a practice round** creates a real round (Twin Creeks, 8 players in 4 carts, named "Practice · date time", on its own crew so it never shows up in your group's Season standings) and shows 8 small phones, each its own device signed in as a different player. Phone 1 is the organizer (its PIN is shown at the top).
+Open **https://tiniryno-stack.github.io/golf-live-board/sim.html**. On a laptop you see all 8 side by side; on a phone you see one test phone at full size with buttons **1–8** (with names) to switch between them — the other 7 keep running, and **Play a hole** still plays all 8 (Reset / Delete / the Next-hole checkbox are under **More**). **Make a practice round** creates a real round (Twin Creeks, 8 players in 4 carts, named "Practice · date time", on its own crew so it never shows up in your group's Season standings) and shows 8 small phones, each its own device signed in as a different player. Phone 1 is the organizer (its PIN is shown at the top).
 
 - Tap scores on any phone like a real player, or **Play a hole**: every phone enters a realistic score for its own player, then taps Next hole (uncheck "Tap Next hole after" to do that yourself).
 - **Other group only** / **Phone 1's group only** puts one foursome ahead, so you can see provisional points, swap cards and headlines land.

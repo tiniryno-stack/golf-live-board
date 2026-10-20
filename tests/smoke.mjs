@@ -15,7 +15,8 @@
 //      cart name, Today's game, Enter (the first tip waits until the cards are gone)
 //  11. Never a blank screen: a stalled connection shows "Opening…" then Try again; a
 //      drawing error shows "Something went wrong" + Reload
-//  17. Test phones (sim.html): practice round, 8 phones, Play a hole, one group ahead, delete
+//  17. Test phones (sim.html): practice round, 8 phones, Play a hole, one group ahead, delete;
+//      on a phone: one full-size test phone + 1–8 switcher
 //  16. Add a course: near me (via the backup route), search, background scorecard, fix it at
 //      Save, your group's card reused next time, enter it yourself, no signal
 //  15. Finalize: finished rounds open on the Board; the organizer finalizes (scores locked on
@@ -801,7 +802,42 @@ await T.page.waitForTimeout(800);
 ok(!be.tables.events.some((e) => e.id === pr.id) && !(await T.page.$('.frame')), 'Delete round: gone, phones cleared');
 ok(!(await T.page.evaluate(() => Object.keys(localStorage).some((k) => /^sim\d+\..*\.[A-Z0-9]{5}$/.test(k) && k.includes('glb.me.')))), 'the test phones forget the deleted round');
 
-const errors = [A, C, A2, P, Q, O, F, R, X, Y, Z, G, T].flatMap((p) => p.page.errors);
+// 17b. Test phones on a phone: one full-size test phone, buttons 1–8 to switch, Play a hole still
+//      plays all 8.
+const TP = await (async () => {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  await attach(ctx, be, srv.origin);
+  const page = await ctx.newPage();
+  page.errors = [];
+  page.on('pageerror', (e) => page.errors.push(`Test phones (phone): ${e.message}`));
+  return { ctx, page };
+})();
+await TP.page.goto(`${srv.origin}/sim.html`);
+await TP.page.waitForTimeout(500);
+await TP.page.tap('#make');
+await TP.page.waitForTimeout(4500);
+const pr2 = be.tables.events[be.tables.events.length - 1];
+const visibleFrames = () => TP.page.$$eval('.phone', (els) => els.map((e, k) => (getComputedStyle(e).display !== 'none' ? k + 1 : 0)).filter(Boolean));
+const frameBox = await TP.page.$eval('.phone.on .frame', (e) => { const r = e.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height), Math.round(r.bottom)]; });
+ok(JSON.stringify(await visibleFrames()) === '[1]' && frameBox[0] === 390 && frameBox[1] >= 540, `phone layout: one test phone at full width (${frameBox[0]}×${frameBox[1]})`);
+ok((await TP.page.$$('#switcher button')).length === 8 && /1\s*Andrew/.test(await TP.page.textContent('#switcher')), 'buttons 1–8 with names to switch phones');
+await TP.page.tap('#switcher [data-phone="5"]');
+await TP.page.waitForTimeout(300);
+ok(JSON.stringify(await visibleFrames()) === '[5]', 'tap 5 → phone 5 (Sam) on screen');
+await TP.page.tap('#play-all');
+await TP.page.waitForTimeout(4500);
+ok(be.tables.scores.filter((x) => x.event_id === pr2.id && x.hole === 1 && x.strokes != null).length === 8, 'Play a hole still plays all 8 phones, shown or not');
+const phone5 = TP.page.frames().find((f) => /[?&]sim=5(#|&|$)/.test(f.url()));
+ok(((await phone5.textContent('.hole-title').catch(() => '')) || '').startsWith('Hole 2'), 'and phone 5 moved on to hole 2');
+ok(!(await TP.page.isVisible('#reset')), 'Reset / Delete tucked under More');
+await TP.page.tap('#more-btn');
+ok(await TP.page.isVisible('#reset') && await TP.page.isVisible('#delete'), 'More shows them');
+TP.page.once('dialog', (d) => d.accept());
+await TP.page.tap('#delete');
+await TP.page.waitForTimeout(800);
+ok(!be.tables.events.some((e) => e.id === pr2.id), 'deleted from the phone too');
+
+const errors = [A, C, A2, P, Q, O, F, R, X, Y, Z, G, T, TP].flatMap((p) => p.page.errors);
 ok(errors.length === 0, `no page errors${errors.length ? `: ${errors.join('; ')}` : ''}`);
 
 await browser.close();
