@@ -177,8 +177,8 @@ function freshStart(wasPlaying) {
   const seen = db.local.get(`glb.seen.${app.code}`);
   if (seen?.ids?.length) db.local.set(`glb.seen.${app.code}`, { last: Date.now(), ids: [] });
   try {
-    for (const k of Object.keys(localStorage)) {
-      if (k.startsWith(`glb.alert.${app.code}.`) || k.startsWith(`glb.switch.${app.code}.`)) localStorage.removeItem(k);
+    for (const k of db.local.keys()) {
+      if (k.startsWith(`glb.alert.${app.code}.`) || k.startsWith(`glb.switch.${app.code}.`)) db.local.del(k);
     }
   } catch { /* storage unavailable */ }
   if (wasPlaying) {

@@ -15,6 +15,7 @@
 //      cart name, Today's game, Enter (the first tip waits until the cards are gone)
 //  11. Never a blank screen: a stalled connection shows "Opening…" then Try again; a
 //      drawing error shows "Something went wrong" + Reload
+//  17. Test phones (sim.html): practice round, 8 phones, Play a hole, one group ahead, delete
 //  16. Add a course: near me (via the backup route), search, background scorecard, fix it at
 //      Save, your group's card reused next time, enter it yourself, no signal
 //  15. Finalize: finished rounds open on the Board; the organizer finalizes (scores locked on
@@ -760,7 +761,47 @@ ok(/Couldn’t reach course search/.test(await listText()) && !!(await G.page.$(
 be.oga.down = false;
 be.oga.blocked = false;
 
-const errors = [A, C, A2, P, Q, O, F, R, X, Y, Z, G].flatMap((p) => p.page.errors);
+// 17. Test phones (sim.html): make a practice round, 8 phones each signed in as their own player,
+//     "Play a hole" enters a score on every phone and moves them on, "Other group only" puts one
+//     foursome ahead (provisional points), Delete cleans it up.
+const T = await (async () => {
+  const ctx = await browser.newContext({ viewport: { width: 1400, height: 900 } });
+  await attach(ctx, be, srv.origin);
+  const page = await ctx.newPage();
+  page.errors = [];
+  page.on('pageerror', (e) => page.errors.push(`Test phones: ${e.message}`));
+  return { ctx, page };
+})();
+const nEvents = be.tables.events.length;
+await T.page.goto(`${srv.origin}/sim.html`);
+await T.page.waitForTimeout(500);
+await T.page.click('#make');
+await T.page.waitForTimeout(4500);
+const pr = be.tables.events[be.tables.events.length - 1];
+ok(be.tables.events.length === nEvents + 1 && /^Practice/.test(pr.name) && pr.crew_id && !be.tables.events.slice(0, -1).some((e) => e.crew_id === pr.crew_id), `practice round made (${pr.name}), on its own crew so Season standings stay clean`);
+const prClaims = be.tables.claims.filter((c) => c.event_id === pr.id);
+ok(prClaims.length === 8 && new Set(prClaims.map((c) => c.device_id)).size === 8, '8 phones, 8 different devices, each signed in as its own player');
+const phoneFrame = (i) => T.page.frames().find((f) => new RegExp(`[?&]sim=${i}(#|&|$)`).test(f.url()));
+const titleOf = async (i) => (await phoneFrame(i)?.textContent('.hole-title').catch(() => '')) || '';
+ok((await titleOf(1)).startsWith('Hole 1') && (await titleOf(8)).startsWith('Hole 1'), 'every phone opens on Enter, hole 1 (no join cards in the way)');
+ok(!!(await phoneFrame(1).evaluate(() => window.__glb.isOrganizer())) && !(await phoneFrame(2).evaluate(() => window.__glb.isOrganizer())), 'phone 1 is the organizer, the others aren’t');
+await T.page.click('#play-all');
+await T.page.waitForTimeout(4500);
+const h1 = be.tables.scores.filter((x) => x.event_id === pr.id && x.hole === 1 && x.strokes != null);
+ok(h1.length === 8 && new Set(h1.map((x) => x.updated_by)).size === 8, `Play a hole: all 8 entered hole 1 from their own phone (${h1.map((x) => x.strokes).join(' ')})`);
+ok((await titleOf(1)).startsWith('Hole 2') && (await titleOf(5)).startsWith('Hole 2'), '…and every phone moved on to hole 2');
+await T.page.click('#play-other');
+await T.page.waitForTimeout(4500);
+const h2 = be.tables.scores.filter((x) => x.event_id === pr.id && x.hole === 2 && x.strokes != null);
+const prov = await phoneFrame(1).evaluate(() => window.__glb.snapshot.game.liveStandings.some((s) => s.provisionalPoints > 0));
+ok(h2.length === 4 && prov && (await titleOf(1)).startsWith('Hole 2') && (await titleOf(5)).startsWith('Hole 3'), 'Other group only: that foursome plays hole 2 and goes ahead (provisional points on the Board)');
+T.page.once('dialog', (d) => d.accept());
+await T.page.click('#delete');
+await T.page.waitForTimeout(800);
+ok(!be.tables.events.some((e) => e.id === pr.id) && !(await T.page.$('.frame')), 'Delete round: gone, phones cleared');
+ok(!(await T.page.evaluate(() => Object.keys(localStorage).some((k) => /^sim\d+\..*\.[A-Z0-9]{5}$/.test(k) && k.includes('glb.me.')))), 'the test phones forget the deleted round');
+
+const errors = [A, C, A2, P, Q, O, F, R, X, Y, Z, G, T].flatMap((p) => p.page.errors);
 ok(errors.length === 0, `no page errors${errors.length ? `: ${errors.join('; ')}` : ''}`);
 
 await browser.close();

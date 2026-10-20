@@ -6,10 +6,22 @@ import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from './config.js';
 
 // ───────────────────────────────────────────── local storage (never throws)
 
+// Test phones (sim.html): `?sim=3` gives this page its own storage space ("sim3.glb.…"), so
+// 8 copies of the app in one browser act like 8 phones (own device ID, own name, own PIN).
+export const SIM = (() => {
+  try {
+    const m = /[?&]sim=([1-9]|1[0-6])(&|$)/.exec(location.search);
+    return m ? Number(m[1]) : 0;
+  } catch {
+    return 0;
+  }
+})();
+const PREFIX = SIM ? `sim${SIM}.` : '';
+
 export const local = {
   get(key, fallback = null) {
     try {
-      const v = localStorage.getItem(key);
+      const v = localStorage.getItem(PREFIX + key);
       return v == null ? fallback : JSON.parse(v);
     } catch {
       return fallback;
@@ -17,13 +29,22 @@ export const local = {
   },
   set(key, value) {
     try {
-      localStorage.setItem(key, JSON.stringify(value));
+      localStorage.setItem(PREFIX + key, JSON.stringify(value));
     } catch { /* private mode / full: in-memory only */ }
   },
   del(key) {
     try {
-      localStorage.removeItem(key);
+      localStorage.removeItem(PREFIX + key);
     } catch { /* ignore */ }
+  },
+  /** This phone's keys (without the test-phone prefix). */
+  keys() {
+    try {
+      const all = Object.keys(localStorage);
+      return PREFIX ? all.filter((k) => k.startsWith(PREFIX)).map((k) => k.slice(PREFIX.length)) : all.filter((k) => !/^sim\d+\./.test(k));
+    } catch {
+      return [];
+    }
   },
 };
 
@@ -84,7 +105,7 @@ export function forgetRound(code) {
   recent.remove(code);
   try {
     const re = new RegExp(`^glb\\.[A-Za-z]+\\.${code}(\\.|$)`);
-    for (const k of Object.keys(localStorage)) if (re.test(k)) localStorage.removeItem(k);
+    for (const k of local.keys()) if (re.test(k)) local.del(k);
   } catch { /* storage unavailable */ }
 }
 
