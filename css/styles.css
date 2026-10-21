@@ -1205,3 +1205,19 @@ details.fold summary::-webkit-details-marker { display: none; }
 .sec-link .mono { flex: 1; font-size: 13px; }
 .sec-link .btn.small { min-height: 48px; background: var(--surface-2); }
 .nr-setup .saved-box .nr-two .btn { font-size: 15px; white-space: nowrap; padding: 0 10px; }
+
+/* ───────────────────────────────────────────── home screen app (standalone: no Safari bars)
+   The home line's safe area is ~34px; the floating tab bar can sit inside its top part instead of
+   leaving the whole strip empty. */
+.standalone .tabbar { padding-bottom: max(10px, calc(var(--sab) - 14px)); }
+.standalone .nr-foot { padding-bottom: max(16px, calc(var(--sab) - 10px)); }
+.standalone .nr-manual-wrap { padding-bottom: max(18px, calc(var(--sab) - 10px)); }
+.standalone .panel { padding-bottom: max(20px, calc(var(--sab) - 6px)); }
+
+/* Add to Home Screen sheet */
+.hs-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.hs-steps li { display: flex; gap: 12px; align-items: flex-start; font-size: 16px; line-height: 22px; }
+.hs-steps li svg { vertical-align: -3px; }
+.hs-n { flex: none; width: 28px; height: 28px; border-radius: var(--radius-pill); background: var(--surface-2); display: grid; place-items: center; font: 600 14px/1 var(--font-mono); }
+.hs-warn { margin-top: 16px; display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: var(--radius-xl); border: 1.5px solid var(--warn); background: var(--warn-bg); font-size: 14px; line-height: 20px; }
+.hs-warn svg { flex: none; color: var(--warn); margin-top: 1px; }

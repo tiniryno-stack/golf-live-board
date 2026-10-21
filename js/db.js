@@ -60,6 +60,58 @@ export function uuid() {
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+// ───────────────────────────────────────────── moving to the home screen app
+// iPhone gives a home screen app its own storage, apart from Safari's, so it would start as a new
+// phone. Home's "Add to Home Screen" button puts this phone's keys into the page link
+// (`#move=…`, after the # so it never reaches a server); iPhone saves that link with the icon, and
+// on its first open the home screen app copies the keys in and clears the link. Safari ignores it,
+// so a link sent by mistake does nothing in a friend's browser.
+
+/** Running as a home screen app (no Safari bars)? Tests set `__GLB_STANDALONE`. */
+export const STANDALONE = (() => {
+  try {
+    if (typeof globalThis.__GLB_STANDALONE === 'boolean') return globalThis.__GLB_STANDALONE;
+    return navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
+  } catch {
+    return false;
+  }
+})();
+
+const MOVE_KEYS = /^glb\.(device|recent|theme|me\.|admin\.|brief\.|who\.|coach\.|seen\.)/;
+const toB64 = (s) => btoa(String.fromCharCode(...new TextEncoder().encode(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const fromB64 = (s) => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0)));
+
+/** The link that carries this phone over: `#move=…` (device ID, rounds, crew, organizer PINs). */
+export function moveLink() {
+  const keys = {};
+  for (const k of local.keys()) if (MOVE_KEYS.test(k)) keys[k] = local.get(k);
+  return `#move=${toB64(JSON.stringify({ v: 1, keys }))}`;
+}
+
+/** On load: take a `#move=` link (home screen app only, and only if it isn't set up yet), then clear it. */
+export const moved = (() => {
+  try {
+    const m = /^#move=([A-Za-z0-9_-]+)$/.exec(location.hash);
+    if (!m) return false;
+    history.replaceState(null, '', `${location.pathname}${location.search}#/`);
+    if (!STANDALONE) return false;
+    if (local.keys().some((k) => k.startsWith('glb.me.'))) return false;
+    const data = JSON.parse(fromB64(m[1]));
+    if (data?.v !== 1 || !data.keys || typeof data.keys !== 'object') return false;
+    let n = 0;
+    for (const [k, v] of Object.entries(data.keys)) {
+      if (!MOVE_KEYS.test(k)) continue;
+      if (k === 'glb.device' && !(typeof v === 'string' && UUID_RE.test(v))) continue;
+      local.set(k, v);
+      n++;
+    }
+    if (data.keys['glb.theme'] === 'light') document.documentElement.dataset.theme = 'light';
+    return n > 0;
+  } catch {
+    return false;
+  }
+})();
+
 /** Random per-phone ID, generated once and kept in localStorage. Never sent back to other phones. */
 export const deviceId = (() => {
   let id = local.get('glb.device');

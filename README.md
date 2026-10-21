@@ -48,6 +48,13 @@ npm run test:smoke     # two-phone run: blocked edit, hole-7 swap, offline queue
 npm run design:compare # design mockups vs the app, side by side → tests/screenshots/design/vs-*.png
 ```
 
+## Home screen app
+
+On iPhone, Home shows **Add to Home Screen** in Safari. Use that button (then Share → Add to Home Screen):
+it carries this phone's sign-in, rounds and crew into the home screen app, which otherwise starts fresh
+(iPhone keeps its storage separate from Safari's). Round links and join codes are always safe to share;
+only the link shown during that step carries your sign-in.
+
 ## Design
 
 The look ("Night Round") is defined by the design system in `docs/design/system/`: colors (dark + light),

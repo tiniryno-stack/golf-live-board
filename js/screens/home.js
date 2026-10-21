@@ -1,7 +1,13 @@
 // home.js — join by code, new round, run it back, recent rounds on this phone, season standings.
 
 import { esc, icon, prettyDate } from '../ui.js';
-import { recent, normCode } from '../db.js';
+import { recent, normCode, STANDALONE, moveLink } from '../db.js';
+
+/** iPhone or iPad in Safari (iPadOS says it's a Mac, but has touch). Tests set `__GLB_IOS`. */
+const isIOS = () => {
+  if (typeof globalThis.__GLB_IOS === 'boolean') return globalThis.__GLB_IOS;
+  return /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+};
 
 let draftCode = '';
 
@@ -37,6 +43,10 @@ export default {
       </div>
       <button class="btn primary big block" data-act="go" data-v="#/setup">${icon('plus', 18)} New round</button>
       <p class="meta" style="margin:8px 2px 22px">Whoever starts a round is its organizer.</p>
+      ${!STANDALONE && isIOS() ? `<button class="row hs-row" data-act="home-add" style="margin:0 0 18px">
+          <span class="numcol">${icon('phone', 26)}</span>
+          <span class="body"><span class="row-title">Add to Home Screen</span><span class="detail" style="display:block">Opens like an app, no Safari bars. Your rounds come with it.</span></span>
+          ${icon('fwd', 18)}</button>` : ''}
       ${crew ? `<button class="row" data-act="go" data-v="#/season/${esc(crew)}" style="margin:0 0 18px">
           <span class="numcol">${icon('trophy', 26)}</span>
           <span class="body"><span class="row-title">Season standings</span><span class="detail" style="display:block">Player and pair records across your crew’s rounds</span></span>
@@ -49,6 +59,11 @@ export default {
     'home-code': (el) => {
       draftCode = normCode(el.value).slice(0, 5);
       if (el.value !== draftCode) el.value = draftCode;
+    },
+    'home-add': (el, ev, app) => {
+      // Put this phone's keys in the link iPhone saves with the icon (see db.moveLink).
+      history.replaceState(null, '', `${location.pathname}${location.search}${moveLink()}`);
+      app.openSheet('homescreen', {});
     },
     'home-join': (el, ev, app) => {
       const code = normCode(document.getElementById('join-code')?.value || draftCode);

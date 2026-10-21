@@ -114,6 +114,17 @@ const BODIES = {
       <button class="btn ghost block" data-act="sheet-close">Watch while I wait</button>`;
   },
 
+  homescreen() {
+    return `${head('Add to Home Screen')}
+      <ol class="hs-steps">
+        <li><span class="hs-n">1</span><span>Tap <b>Share</b> ${icon('share', 18)} in Safari’s bar. On newer iPhones it’s under <b>•••</b> first.</span></li>
+        <li><span class="hs-n">2</span><span>Scroll down and tap <b>Add to Home Screen</b>, then <b>Add</b>.</span></li>
+        <li><span class="hs-n">3</span><span>Open <b>Golf Board</b> from your home screen. You’ll still be you: same rounds, same crew.</span></li>
+      </ol>
+      <div class="hs-warn">${icon('lock', 18)}<span>Right now this page’s link signs in as you. Use <b>Add to Home Screen</b> only. Don’t copy or send this link.</span></div>
+      <button class="btn ghost block" data-act="sheet-close" style="margin-top:14px">Not now</button>`;
+  },
+
   menu(app) {
     const p = app.myPlayer();
     const meta = [app.code, app.event?.course?.shortName || app.event?.course?.name].filter(Boolean).join(' · ');

@@ -1148,7 +1148,72 @@ ok(/Josh\s*3½/.test(spLine) && /YOU 3RD · 1 PT\b/.test(spLine), `Enter: the ot
 const spBrief = await SP.page.evaluate(async () => (await import('/js/screens/brief.js')).briefPages(window.__glb).join(' '));
 ok(/Split point/.test(spBrief) && /⅓ point/.test(spBrief), 'Today’s game: one card for split point');
 
-const errors = [A, C, A2, P, Q, O, F, R, X, Y, Z, G, T, TP, NL, SP].flatMap((p) => p.page.errors);
+// 19. Add to Home Screen: iPhone gives the home screen app its own storage. Home's button puts this
+//     phone's keys in the link (#move=…); the home screen app takes them on first open (same device
+//     ID, rounds, who you are), Safari ignores them, and an already set-up home screen app ignores them.
+async function hsPhone(name, { ios = true, standalone = false, seed = null } = {}) {
+  const p = await phone(name);
+  await p.ctx.addInitScript(([ios, standalone, seed]) => {
+    window.__GLB_IOS = ios;
+    window.__GLB_STANDALONE = standalone;
+    if (seed && !sessionStorage.getItem('seeded')) {
+      for (const [k, v] of Object.entries(seed)) localStorage.setItem(k, JSON.stringify(v));
+      sessionStorage.setItem('seeded', '1');
+    }
+  }, [ios, standalone, seed]);
+  return p;
+}
+const HS_DEV = '77777777-7777-4777-8777-777777777777';
+const hsSeed = {
+  'glb.device': HS_DEV, 'glb.me.ABCDE': 'p3', 'glb.admin.ABCDE': '1234', 'glb.theme': 'dark',
+  'glb.recent': [{ code: 'ABCDE', name: 'Practice · Twin Creeks', course: 'Twin Creeks', crew_id: 'crew-1', at: 1 }],
+  'glb.queue.ABCDE': [{ hole: 1 }], 'glb.setupDraft': { x: 1 },
+};
+const HA = await hsPhone('HS-safari', { seed: hsSeed });
+await HA.page.goto(`${srv.origin}/#/`);
+await HA.page.waitForTimeout(600);
+ok(!!(await HA.page.$('[data-act="home-add"]')), 'iPhone Safari: Home shows Add to Home Screen');
+await HA.page.tap('[data-act="home-add"]');
+await HA.page.waitForTimeout(300);
+const moveHash = await HA.page.evaluate(() => location.hash);
+ok(moveHash.startsWith('#move=') && moveHash.length > 40, 'tap it: the link now carries this phone (#move=…)');
+ok(/Don’t copy or send this link/.test(await HA.page.textContent('#sheet')), 'the sheet warns: Add to Home Screen only, don’t send the link');
+await HA.page.locator('#sheet button[data-act="sheet-close"]', { hasText: 'Not now' }).tap();
+await HA.page.waitForTimeout(200);
+ok((await HA.page.evaluate(() => location.hash)) === '#/', 'Not now: the link is clean again');
+
+const HB = await hsPhone('HS-app', { standalone: true });
+await HB.page.goto(`${srv.origin}/${moveHash}`);
+await HB.page.waitForTimeout(700);
+const hb = await HB.page.evaluate(() => ({
+  hash: location.hash, dev: JSON.parse(localStorage.getItem('glb.device')), me: JSON.parse(localStorage.getItem('glb.me.ABCDE')),
+  pin: JSON.parse(localStorage.getItem('glb.admin.ABCDE')), recent: JSON.parse(localStorage.getItem('glb.recent') || '[]').length,
+  queue: localStorage.getItem('glb.queue.ABCDE'), draft: localStorage.getItem('glb.setupDraft'),
+  standalone: document.documentElement.classList.contains('standalone'), button: !!document.querySelector('[data-act="home-add"]'),
+}));
+ok(hb.dev === HS_DEV && hb.me === 'p3' && hb.pin === '1234' && hb.recent === 1, 'home screen app, first open: same device ID, same player, organizer PIN, recent rounds');
+ok(hb.queue === null && hb.draft === null, 'not carried: unsent scores and the setup draft stay in Safari');
+ok(hb.hash === '#/', 'the link is cleared right away');
+ok(/You’re all set/.test(await toastText(HB.page)), 'says so: “You’re all set”');
+ok(hb.standalone && !hb.button, 'home screen app: full-screen layout, no Add to Home Screen button');
+
+const HC = await hsPhone('HS-friend', { standalone: false });
+await HC.page.goto(`${srv.origin}/${moveHash}`);
+await HC.page.waitForTimeout(600);
+const hc = await HC.page.evaluate(() => ({ hash: location.hash, dev: JSON.parse(localStorage.getItem('glb.device')), me: localStorage.getItem('glb.me.ABCDE') }));
+ok(hc.dev !== HS_DEV && hc.me === null && hc.hash === '#/', 'a friend opens the link in Safari: ignored and cleared (their own new ID)');
+
+const HD = await hsPhone('HS-setup', { standalone: true, seed: { 'glb.device': '88888888-8888-4888-8888-888888888888', 'glb.me.ZZZZZ': 'p1' } });
+await HD.page.goto(`${srv.origin}/${moveHash}`);
+await HD.page.waitForTimeout(600);
+ok((await HD.page.evaluate(() => JSON.parse(localStorage.getItem('glb.device')))) === '88888888-8888-4888-8888-888888888888', 'a home screen app already in use keeps its own ID');
+
+const HE = await hsPhone('HS-android', { ios: false });
+await HE.page.goto(`${srv.origin}/#/`);
+await HE.page.waitForTimeout(500);
+ok(!(await HE.page.$('[data-act="home-add"]')), 'not an iPhone: no button');
+
+const errors = [A, C, A2, P, Q, O, F, R, X, Y, Z, G, T, TP, NL, SP, HA, HB, HC, HD, HE].flatMap((p) => p.page.errors);
 ok(errors.length === 0, `no page errors${errors.length ? `: ${errors.join('; ')}` : ''}`);
 
 await browser.close();

@@ -132,6 +132,8 @@ app.openSheet = (type, props = {}) => {
 };
 app.closeSheet = () => {
   app.sheet = null;
+  // Leaving the Add to Home Screen sheet: take this phone's keys back out of the address bar.
+  if (location.hash.startsWith('#move=')) history.replaceState(null, '', `${location.pathname}${location.search}#/`);
   renderSheet();
 };
 
@@ -1317,5 +1319,7 @@ $('content').addEventListener('touchend', (ev) => {
 window.__glb = app; // handy for debugging from the console
 // Realtime handlers, reachable from the console / headless checks to simulate a push.
 app._remote = { score: onRemoteScore, event: onRemoteEvent, joinRequest: onRemoteJoinRequest, note: onRemoteNote };
+document.documentElement.classList.toggle('standalone', db.STANDALONE); // home screen app: no Safari bars
 route();
+if (db.moved) app.toast({ title: 'You’re all set', sub: 'Same phone as in Safari: your rounds and crew came with you.' });
 setTimeout(hideSplash, 4000); // never strand anyone on the launch screen
