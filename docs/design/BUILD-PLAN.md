@@ -277,8 +277,12 @@ remembered per group (shared courses table = V2); "start now, finish the card du
 built; mid-round Host still edits the cart game / split point the old way.
 
 New questions from this handoff (default in bold):
-6. **Home's "Settings" button** has no mockup. **Default: leave it out**; theme stays on Home's top bar
-   and in the round ⋯ menu.
+6. **Home's header** ("AD · Andrew" + a "Settings" button) has no mockup behind it, and the phone has
+   no single "me": names are per round (`glb.me.CODE`). **Default: name and initials from the newest
+   round you joined (hidden on a phone that never joined one); leave Settings out**, so theme stays on
+   Home's top bar and in the round ⋯ menu. Also: the mockup has two primary-style buttons (Back to
+   hole 11 in the card, New round at the bottom). **Default: Back to hole 11 as secondary**, so New round
+   is the one primary.
 7. **Where Run it back, Season standings and Add to Home Screen go on the new Home.** **Default: Season
    and Add to Home Screen stay as rows under Recent rounds; Run it back moves into a finished round's
    ⋯ menu.**
