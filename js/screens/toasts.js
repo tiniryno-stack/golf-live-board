@@ -208,7 +208,7 @@ export function renderPicker(app) {
       return `<button class="pick-btn" data-act="team-pick" data-v="${esc(n)}" aria-pressed="${mine}" ${other || picker.busy ? 'disabled' : ''}>
         ${esc(n)}${other ? `<small>taken</small>` : mine ? '<small>yours</small>' : ''}</button>`;
     }).join('')}</div>
-    <button class="btn ghost block" data-act="team-later" style="color:var(--hero-ink);border-color:rgba(255,255,255,.2)">${isDefaultTeamName(team) ? `Keep “${esc(team.name)}” for now` : 'Done'}</button>
+    <button class="btn ghost block" data-act="team-later">${isDefaultTeamName(team) ? `Keep “${esc(team.name)}” for now` : 'Done'}</button>
   </div>`;
   if (html === picker.html && root.classList.contains('open')) return; // nothing changed: don't redraw
   picker.html = html;

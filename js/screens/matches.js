@@ -42,7 +42,7 @@ function mineIn(app, ri) {
 
 function colorFor(app, mine, t) {
   const snap = app.snapshot;
-  if (snap.settings.pairs) return t === mine ? 'var(--good)' : mine ? 'var(--t-B)' : teamColor(null, t);
+  if (snap.settings.pairs) return t === mine ? 'var(--cart-you)' : mine ? 'var(--t-B)' : teamColor(null, t);
   return teamColor(mine, t);
 }
 

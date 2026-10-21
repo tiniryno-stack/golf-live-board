@@ -14,7 +14,7 @@ const C = {
   // design system dark theme (docs/design/design-system/tokens.css)
   bg: '#0a0b0d', card: '#15171b', card2: '#1f2227', line: '#2b2f36',
   ink: '#f4f5f7', soft: '#a7acb4', faint: 'rgba(167,172,180,.55)',
-  sun: '#f5c64a', good: '#3ddc84', bad: '#ff6b6b',
+  good: '#3ddc84', bad: '#ff6b6b', // good = cart-you (your cart only), bad = double (double bogey only)
   A: '#ff9f43', B: '#5b9bff', C: '#ff6fb5', D: '#b18cff',
 };
 const SANS = 'Geist, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
@@ -82,7 +82,7 @@ function scoreMark(ctx, g, par, cx, cy, size) {
     return;
   }
   const d = g - par;
-  const color = d < 0 ? C.good : d >= 2 ? C.bad : C.ink;
+  const color = d >= 2 ? C.bad : C.ink; // red only for double bogey; birdies aren't green
   text(ctx, String(g), cx, cy + size * 0.36, { size, weight: 700, color, align: 'center', mono: true });
   const r = size * 0.72;
   ctx.lineWidth = Math.max(1.5, size / 16);
@@ -165,15 +165,18 @@ function leaderboard(app) {
   // Winner
   let y = 228;
   const top = st.filter((s) => s.rank === 1);
+  // The winner's colors (green if it's you), as a full outline: never an edge stripe, never amber.
+  const win = top.length === 1 ? I.jersey(top[0].teamId) : C.ink;
   fillRect(ctx, PAD, y, W - PAD * 2, 190, 28, C.card);
-  ctx.fillStyle = C.sun;
-  rrect(ctx, PAD, y, 10, 190, 5);
-  ctx.fill();
-  text(ctx, top.length > 1 ? 'SHARE THE DAY' : 'WIN THE DAY', PAD + 40, y + 52, { size: 24, weight: 800, color: C.sun });
+  ctx.strokeStyle = win;
+  ctx.lineWidth = 3;
+  rrect(ctx, PAD + 1.5, y + 1.5, W - PAD * 2 - 3, 187, 27);
+  ctx.stroke();
+  text(ctx, top.length > 1 ? 'SHARE THE DAY' : 'WIN THE DAY', PAD + 40, y + 52, { size: 24, weight: 800, color: win });
   const winName = top.map((s) => I.tname(s.teamId)).join(' & ');
   text(ctx, winName, PAD + 40, y + 122, { size: 64, weight: 800, color: top.length === 1 ? I.jersey(top[0].teamId) : C.ink, max: W - PAD * 2 - 320 });
   text(ctx, top.length === 1 && !snap.settings.solo ? I.pnames(top[0].teamId) : '', PAD + 40, y + 164, { size: 28, weight: 500, color: C.soft, max: W - PAD * 2 - 320 });
-  text(ctx, val(top[0]), W - PAD - 36, y + 128, { size: 96, weight: 700, color: C.sun, align: 'right', mono: true });
+  text(ctx, val(top[0]), W - PAD - 36, y + 128, { size: 96, weight: 700, color: win, align: 'right', mono: true });
   text(ctx, isPM ? 'margin' : 'points', W - PAD - 36, y + 164, { size: 24, weight: 600, color: C.soft, align: 'right' });
 
   // Standings with bars
@@ -211,7 +214,7 @@ function leaderboard(app) {
     x += text(ctx, score, x, y, { size: 28, weight: 700, color: C.ink, mono: true }) + 16;
     text(ctx, I.tname(b), x, y, { size: 28, weight: res === b ? 800 : 500, color: res === b ? I.jersey(b) : C.ink, max: W - PAD - 90 - x });
     const bonus = res && res !== 'halved' ? m.bonus?.[res] : res === 'halved' ? m.bonus?.[a] : 0;
-    if (bonus) text(ctx, res === 'halved' ? `${fmtPts(bonus)} each` : `+${fmtPts(bonus)}`, W - PAD, y, { size: 26, weight: 800, color: C.sun, align: 'right', mono: true });
+    if (bonus) text(ctx, res === 'halved' ? `${fmtPts(bonus)} each` : `+${fmtPts(bonus)}`, W - PAD, y, { size: 26, weight: 800, color: C.soft, align: 'right', mono: true });
     y += 50;
   }
   return finish(cv, y, app);
@@ -229,7 +232,7 @@ function playersBoard(app) {
   let y = 250;
   list.forEach((p, i) => {
     text(ctx, String(i + 1), PAD + 8, y + 52, { size: 32, weight: 700, color: C.faint, mono: true });
-    text(ctx, p.name, PAD + 80, y + 52, { size: 40, weight: 700, color: i === 0 ? C.sun : C.ink, max: 600 });
+    text(ctx, p.name, PAD + 80, y + 52, { size: 40, weight: i === 0 ? 800 : 700, color: C.ink, max: 600 });
     text(ctx, `${p.grossTotal || '–'}`, W - PAD - 190, y + 52, { size: 40, weight: 700, color: C.soft, align: 'right', mono: true });
     text(ctx, fmtToPar(net ? p.netToPar : p.grossToPar), W - PAD, y + 52, { size: 44, weight: 700, color: C.ink, align: 'right', mono: true });
     y += 96;
@@ -286,7 +289,7 @@ function scorecard(app) {
   stats.forEach(([v, l], i) => {
     const x = PAD + i * (bw + 16);
     fillRect(ctx, x, 262, bw, 150, 24, C.card);
-    text(ctx, v, x + bw / 2, 352, { size: 72, weight: 700, color: i === 0 ? C.sun : C.ink, align: 'center', mono: true });
+    text(ctx, v, x + bw / 2, 352, { size: 72, weight: 700, color: C.ink, align: 'center', mono: true });
     text(ctx, l.toUpperCase(), x + bw / 2, 392, { size: 22, weight: 700, color: C.soft, align: 'center' });
   });
 
@@ -315,7 +318,7 @@ function scorecard(app) {
   keys.forEach((k, i) => {
     const x = PAD + i * (cw + 14);
     fillRect(ctx, x, y, cw, 130, 22, C.card);
-    const col = k === 'Birdie' || k === 'Eagle' ? C.good : k === 'Double+' ? C.bad : C.ink;
+    const col = k === 'Double+' ? C.bad : C.ink;
     text(ctx, String(counts[k]), x + cw / 2, y + 74, { size: 56, weight: 700, color: col, align: 'center', mono: true });
     const label = { Eagle: 'Eagles', Birdie: 'Birdies', Par: 'Pars', Bogey: 'Bogeys', 'Double+': 'Double+' }[k];
     text(ctx, label.toUpperCase(), x + cw / 2, y + 110, { size: 20, weight: 700, color: C.soft, align: 'center' });
@@ -373,9 +376,9 @@ function cartCard(app) {
       x += text(ctx, 'vs ', x, y, { size: 28, weight: 500, color: C.soft });
       x += text(ctx, I.tname(opp), x, y, { size: 28, weight: 700, color: I.jersey(opp), max: 300 }) + 18;
       x += text(ctx, sc, x, y, { size: 28, weight: 700, color: C.ink, mono: true }) + 18;
-      text(ctx, res, x, y, { size: 28, weight: 700, color: res === 'Won' ? C.good : C.soft });
+      text(ctx, res, x, y, { size: 28, weight: res === 'Won' ? 800 : 700, color: res === 'Won' ? C.ink : C.soft });
       const b = m.bonus?.[tid];
-      if (b) text(ctx, `+${fmtPts(b)}`, W - PAD, y, { size: 26, weight: 800, color: C.sun, align: 'right', mono: true });
+      if (b) text(ctx, `+${fmtPts(b)}`, W - PAD, y, { size: 26, weight: 800, color: C.soft, align: 'right', mono: true });
       y += 56;
     }
   }

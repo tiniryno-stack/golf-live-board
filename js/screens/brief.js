@@ -156,7 +156,7 @@ function dayPage(app, snap, g) {
   const start = st.startHole === 10 ? '<li>Tee off on <b>10</b>, finish on <b>9</b>.</li>' : '';
 
   const head = team
-    ? `<div class="fc-title" style="color:var(--good)">${esc(team.name)}</div><div class="sub">${players(mine)}</div>`
+    ? `<div class="fc-title" style="color:var(--cart-you)">${esc(team.name)}</div><div class="sub">${players(mine)}</div>`
     : '<div class="fc-title">The matchups</div>';
   const cls = team ? 'brief-rots' : 'brief-rots all';
   return `${head}

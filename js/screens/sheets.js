@@ -176,7 +176,7 @@ const BODIES = {
     const d = (h) => p.gross[h.n - 1] - h.par;
     const played = snap.holes.filter((h) => p.gross[h.n - 1] != null);
     const count = (f) => played.filter((h) => f(d(h))).length;
-    const stats = [[count((x) => x < 0), 'Birdies', 'var(--sun)'], [count((x) => x === 0), 'Pars', 'var(--ink-soft)'], [count((x) => x === 1), 'Bogeys', 'color-mix(in srgb, var(--ink-soft) 50%, transparent)'], [count((x) => x >= 2), 'Double+', 'var(--bad)']];
+    const stats = [[count((x) => x < 0), 'Birdies', 'var(--text)'], [count((x) => x === 0), 'Pars', 'var(--ink-soft)'], [count((x) => x === 1), 'Bogeys', 'color-mix(in srgb, var(--ink-soft) 50%, transparent)'], [count((x) => x >= 2), 'Double+', 'var(--double)']];
     // One highlight: a birdie run, else the swing between nines, else the birdies.
     const order = playOrder(snap.settings);
     let line = '';
@@ -198,7 +198,7 @@ const BODIES = {
     return `${head(p.name)}
       <div class="pc-top">
         <div style="min-width:0">
-          ${team ? `<div class="pc-team" style="color:${team.id === app.myTeam() ? 'var(--good-ink)' : tc}"><i class="jdot" style="--jersey:${tc}"></i>${esc(team.name)}</div>` : ''}
+          ${team ? `<div class="pc-team" style="color:${team.id === app.myTeam() ? 'var(--cart-you-text)' : tc}"><i class="jdot" style="--jersey:${tc}"></i>${esc(team.name)}</div>` : ''}
           <div class="meta">${p.strokes ? `Hcp ${p.strokes} · ` : ''}thru ${p.thru}${snap.hasStrokes && p.thru ? ` · net ${p.netTotal} (${ntp})` : ''}</div>
         </div>
         <div class="pc-total"><div class="mono">${p.grossTotal || '–'}</div><small class="mono">${p.thru ? `${gtp} gross` : ''}</small></div>

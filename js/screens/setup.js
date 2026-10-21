@@ -566,7 +566,7 @@ function pairsView(s) {
     ${bottom(s.saving ? 'Starting…' : 'Start round · 2v2', 'setup-save', { disabled: s.saving })}`;
 }
 
-const CART_TINT = { A: 'var(--good)', B: 'var(--t-B)', C: 'var(--t-C)', D: 'var(--t-D)' };
+const CART_TINT = { A: 'var(--cart-you)', B: 'var(--t-B)', C: 'var(--t-C)', D: 'var(--t-D)' };
 
 /** ④ Partner “Rider” Cup: 8 players in 4 carts, or 6 in 3. */
 function cartsView(s) {

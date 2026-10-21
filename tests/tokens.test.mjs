@@ -26,3 +26,14 @@ test('the 6 type styles, and only those, as .ts-*', () => {
   assert.ok(!/\.ts-/.test(read('css/styles.css').replace(/\/\*[\s\S]*?\*\//g, '').match(/^\.ts-[a-z-]+\s*\{/m)?.[0] || ''), 'styles.css defines no text styles of its own');
   assert.ok(read('index.html').indexOf('css/tokens.css') < read('index.html').indexOf('css/styles.css'), 'tokens load before styles');
 });
+
+test('retired color names stay retired (green = you, red = double bogey / errors, amber = warnings)', () => {
+  const files = ['css/styles.css', ...['app', 'ui', 'teams', 'db'].map((f) => `js/${f}.js`),
+    ...['enter', 'matches', 'board', 'card', 'host', 'home', 'setup', 'season', 'sheets', 'toasts', 'brief', 'recap'].map((f) => `js/screens/${f}.js`)];
+  for (const f of files) {
+    const src = read(f).replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+    const hit = src.match(/--(good|good-ink|bad|sun|dbl-bg)\b|var\(--tint\)/);
+    assert.equal(hit, null, `${f} uses a retired color name (${hit?.[0]}): use --cart-you, --cart-you-text, --tint-you, --double, --double-bg, --warn`);
+    assert.ok(!/#F4C95D|#14161A/i.test(src), `${f} has a hard-coded amber / ink color`);
+  }
+});

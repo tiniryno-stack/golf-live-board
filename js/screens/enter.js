@@ -42,7 +42,7 @@ export function matchStatusShort(snap, m, teamId) {
 /** Your side's color, and the other side's (2v2: always green vs blue). */
 function sideColor(app, teamId) {
   const snap = app.snapshot;
-  if (snap.settings.pairs) return teamId === app.myTeam(app.ui.hole) ? 'var(--good)' : 'var(--t-B)';
+  if (snap.settings.pairs) return teamId === app.myTeam(app.ui.hole) ? 'var(--cart-you)' : 'var(--t-B)';
   return teamColor(app.myTeam(), teamId);
 }
 
@@ -145,7 +145,7 @@ function cartCard(app, cart, hole, mine, locked) {
   const snap = app.snapshot;
   const team = cart.teamId ? snap.teamById.get(cart.teamId) : null;
   const label = cartLabel(app, cart);
-  const jersey = team ? sideColor(app, team.id) : 'var(--good)';
+  const jersey = team ? sideColor(app, team.id) : 'var(--cart-you)';
   const name = mine && team && !locked && !snap.settings.pairs
     ? `<button class="name name-btn" data-act="team-picker" aria-label="Name your cart"><i class="jd"></i><span class="ellipsis">${esc(label)}</span>${isDefaultTeamName(team) ? '<span class="pick">Name it</span>' : ''}</button>`
     : `<span class="name"><i class="jd"></i><span class="ellipsis">${esc(label)}</span></span>`;
@@ -268,7 +268,7 @@ function individualView(app, h, parts) {
   return `<div class="enter nr solo-enter">
       <div class="hero">${parts.holeRow}<div class="matchup-line">${strip}</div></div>
       <div class="sheet">
-        <section class="cart mine focus you-card${locked ? ' locked' : ''}" style="--jersey:var(--good)"${tap}>
+        <section class="cart mine focus you-card${locked ? ' locked' : ''}" style="--jersey:var(--cart-you)"${tap}>
           ${locked ? `<div class="cart-head"><span class="name">Your score</span><span class="focus-chip lock-chip">${icon('lock', 12)} Tap to edit</span></div>` : ''}
           <div class="tiles">${youTile}</div>
         </section>

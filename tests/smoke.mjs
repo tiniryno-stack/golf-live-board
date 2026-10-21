@@ -388,7 +388,7 @@ await P.page.evaluate((row) => window.__glb._remote.score(row), lastRow);
 await P.page.waitForTimeout(700);
 const bannersNow = await P.page.$$eval('#banners .headline-b', (els) => els.map((e) => [e.textContent.replace(/\s+/g, ' ').trim(), e.style.getPropertyValue('--jersey')]));
 ok(bannersNow.length === 2, `two headlines at once show together (${bannersNow.map((b) => b[0]).join(' | ')})`);
-ok(bannersNow[0]?.[0].startsWith('Charmander swept 3 straight') && bannersNow[0]?.[1] === 'var(--good)', 'your cart\u2019s headline is green on your phone');
+ok(bannersNow[0]?.[0].startsWith('Charmander swept 3 straight') && bannersNow[0]?.[1] === 'var(--cart-you)', 'your cart\u2019s headline is green on your phone');
 ok(bannersNow[1]?.[0].startsWith('Squirtle swept 3 straight') && bannersNow[1]?.[1] === 'var(--t-C)', 'another cart\u2019s headline wears its away jersey (pink)');
 const stripNow = await P.page.$$eval('.headlines.compact .headline', (els) => els.length);
 ok(stripNow === 2, `Board strip shows both for now (${stripNow})`);
@@ -400,7 +400,7 @@ ok(stripLater.length === 1, `and one headline on the Board (${stripLater.join(' 
 await P.page.tap('[data-act="board-headlines"]');
 await P.page.waitForTimeout(300);
 const feed = await P.page.$$eval('#sheet .headline', (els) => els.map((e) => e.style.getPropertyValue('--jersey')));
-ok(feed.includes('var(--good)') && feed.includes('var(--t-C)'), `the full list is color-coded too (${feed.join(', ')})`);
+ok(feed.includes('var(--cart-you)') && feed.includes('var(--t-C)'), `the full list is color-coded too (${feed.join(', ')})`);
 
 // 10. The organizer's path, from a phone that has never seen the app
 const O = await (async () => {

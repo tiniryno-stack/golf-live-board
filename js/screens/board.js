@@ -43,12 +43,12 @@ function peopleRows(app) {
     const isMe = r.playerId === app.me;
     const chip = r.provisionalPoints ? `<span class="prov" data-prov>+${fmtPts(r.provisionalPoints)} prov</span>` : '';
     const s = { points: r.points, officialPoints: r.officialPoints, provisionalPoints: r.provisionalPoints, available: r.available };
-    return `<button class="row team-row${isMe ? ' me' : ''}" data-act="board-player" data-v="${esc(r.playerId)}" style="--jersey:${isMe ? 'var(--good)' : 'var(--t-B)'}">
+    return `<button class="row team-row${isMe ? ' me' : ''}" data-act="board-player" data-v="${esc(r.playerId)}" style="--jersey:${isMe ? 'var(--cart-you)' : 'var(--t-B)'}">
       <span class="rank">${r.rank}</span>
       <div class="body"><div class="row-title ellipsis">${esc(p.name)}${isMe ? ' <span class="you-tag">YOU</span>' : ''}</div>
         <div class="detail ellipsis">thru ${p.thru} · ${fmtToPar(snap.hasStrokes ? p.netToPar : p.grossToPar)}${snap.hasStrokes ? ' net' : ''}</div>
         ${teamBar(false, s, scale)}</div>
-      <div class="tval"><div class="n" style="color:${isMe ? 'var(--good-ink)' : 'var(--ink)'}">${fmtPts(r.points)}</div>${chip}</div></button>`;
+      <div class="tval"><div class="n" style="color:${isMe ? 'var(--cart-you-text)' : 'var(--ink)'}">${fmtPts(r.points)}</div>${chip}</div></button>`;
   }).join('');
 }
 
@@ -78,7 +78,7 @@ function teamRowsGame(app) {
           <div class="detail ellipsis">${names ? `${esc(names)} · ` : ''}${recordLabel(g, s)} · thru ${thru}</div>
           ${teamBar(isPM, s, scale)}
         </div>
-        <div class="tval"><div class="n" style="color:${isMe ? 'var(--good-ink)' : 'var(--jersey)'}">${esc(val)}</div>${chip}</div></div>`;
+        <div class="tval"><div class="n" style="color:${isMe ? 'var(--cart-you-text)' : 'var(--jersey)'}">${esc(val)}</div>${chip}</div></div>`;
     })
     .join('');
 }
@@ -107,7 +107,7 @@ function playerRows(app, mode) {
       const jersey = p.teamId ? `style="--jersey:${teamColor(mine, p.teamId)}"` : '';
       return `<button class="prow" data-act="board-player" data-v="${esc(p.id)}" ${jersey}>
         <span class="rank">${p.thru ? i + 1 : ''}</span>
-        <span class="ptp${p.thru && v < 0 ? ' good' : ''}">${p.thru ? fmtToPar(v) : '–'}</span>
+        <span class="ptp">${p.thru ? fmtToPar(v) : '–'}</span>
         <span class="pwho">${p.teamId ? '<i class="jdot"></i>' : ''}<span class="pname">${esc(p.name)}</span>${p.id === app.me ? '<span class="me-dot"></span>' : ''}<span class="pteam">${esc(p.teamName || '')}${p.strokes ? ` · gets ${p.strokes}` : ''}</span></span>
         <span class="pnum r">${p.thru || '–'}</span>
         <span class="pnum r">${p.thru ? p.grossTotal : '–'}</span>
@@ -173,10 +173,11 @@ function hero(app, mode) {
 function finalCard(app) {
   const snap = app.snapshot;
   const g = snap.game;
-  let who, sub;
+  let who, sub, jersey = '';
   if (g) {
     const isPM = g.type === 'rotationPlusMinus';
     const top = g.standings.filter((s) => s.rank === 1);
+    if (top.length === 1) jersey = teamColor(app.myTeam(), top[0].teamId); // the winner's colors (green if it's you)
     who = top.map((s) => snap.teamById.get(s.teamId).name).join(' & ');
     const v = isPM ? fmtSigned(top[0].officialPm, 'E') : `${fmtPts(top[0].officialPoints)} pts`;
     const names = top.length === 1 && !snap.settings.solo ? snap.teamById.get(top[0].teamId).playerIds.map((id) => snap.playerById.get(id).name).join(' + ') : '';
@@ -193,7 +194,7 @@ function finalCard(app) {
     : app.isOrganizer()
       ? `<button class="btn primary block" style="margin:0 0 14px" data-act="board-finalize">${icon('lock', 16)} Finalize round</button>`
       : '<p class="meta final-note">Scores can still be fixed until the organizer finalizes the round.</p>';
-  return `<button class="final-card" data-act="recap-open">
+  return `<button class="final-card" data-act="recap-open"${jersey ? ` style="--jersey:${jersey}"` : ''}>
       <span class="fc-k">${icon('trophy', 15)} Final${locked ? ` · ${icon('lock', 13)} locked` : ''}</span>
       <span class="fc-w">${esc(who)}</span>
       <span class="fc-s">${esc(sub)}</span>
