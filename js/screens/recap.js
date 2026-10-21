@@ -11,7 +11,7 @@ import { prettyDate } from '../ui.js';
 const W = 1080;
 const PAD = 64;
 const C = {
-  // design system dark theme (docs/design/system/tokens.json)
+  // design system dark theme (docs/design/design-system/tokens.css)
   bg: '#0a0b0d', card: '#15171b', card2: '#1f2227', line: '#2b2f36',
   ink: '#f4f5f7', soft: '#a7acb4', faint: 'rgba(167,172,180,.55)',
   sun: '#f5c64a', good: '#3ddc84', bad: '#ff6b6b',

@@ -1,7 +1,7 @@
 /* Golf Live Board — Night Round (docs/design/designspec.md §1), dark by default */
 
 /* ───────────────────────────────────────────── tokens
-   Names and values come straight from the design system (docs/design/system/tokens.json + README.md).
+   Names and values come straight from the design system (docs/design/design-system/tokens.css + README.md).
    Use the system names in new CSS. The older short names below are aliases so existing rules follow. */
 :root, [data-theme="dark"] {
   --bg: #0a0b0d;

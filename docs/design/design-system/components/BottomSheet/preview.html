@@ -1,0 +1,27 @@
+<!-- @dsCard group="Overlays" height=440 subtitle="Side tasks that keep you in place" -->
+<div class="root">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600;700&display=swap');
+.root{font-family:var(--font-sans);color:var(--text);background:var(--bg);max-width:393px;height:420px;position:relative;overflow:hidden;box-sizing:border-box}
+.under{padding:20px;opacity:.9}.under div{height:52px;border-radius:var(--radius-lg);background:var(--surface-1);margin-bottom:8px}
+.scrim{position:absolute;inset:0;background:var(--scrim)}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:var(--surface-1);border-radius:var(--radius-sheet) var(--radius-sheet) 0 0;box-shadow:var(--shadow-sheet);padding:10px 16px 16px}
+.grab{width:40px;height:5px;border-radius:3px;background:var(--line);margin:0 auto 10px}
+.hd{display:flex;align-items:center;justify-content:space-between}
+.hd b{font-size:20px;font-weight:800;letter-spacing:-.5px}
+.x{width:48px;height:48px;border-radius:24px;border:0;background:var(--surface-2);color:var(--text);font-size:20px}
+.sub{font-size:13px;color:var(--text-muted);margin-top:2px}
+.st{display:flex;align-items:center;gap:12px;margin:18px 0}
+.sb{width:72px;height:72px;border-radius:18px;border:1px solid var(--line);background:var(--bg);font:inherit;font-size:32px;color:var(--text)}
+.v{flex:1;text-align:center;font-family:var(--font-mono);font-size:64px;font-weight:700;letter-spacing:-2px;line-height:1}
+.done{width:100%;height:56px;border-radius:var(--radius-xl);border:0;background:var(--button);color:var(--on-button);font:inherit;font-size:17px;font-weight:700}
+</style>
+<div class="under"><div></div><div></div><div></div><div></div></div>
+<div class="scrim"></div>
+<div class="sheet" role="dialog" aria-label="Sean's handicap">
+<div class="grab"></div>
+<div class="hd"><div><b>Sean’s handicap</b><div class="sub">Strokes he gets over 18 holes</div></div><button class="x" aria-label="Close">×</button></div>
+<div class="st"><button class="sb" aria-label="Minus one">−</button><span class="v">18</span><button class="sb" aria-label="Plus one">+</button></div>
+<button class="done">Done</button>
+</div>
+</div>

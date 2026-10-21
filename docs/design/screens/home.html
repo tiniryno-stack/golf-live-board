@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Home</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&amp;family=Geist+Mono:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+.t{--bg:#0A0B0D;--s1:#15171B;--s2:#1F2227;--s3:#2A2E35;--tx:#F4F5F7;--tx2:#A7ACB4;--ln:#2B2F36;--me:#3DDC84;--meT:#3DDC84;--org:#FF9A4A;--blue:#5B9BFF;--pink:#FF6FB5;--vio:#B18CFF;--warn:#F5C64A;--warnBg:rgba(245,198,74,0.08);--err:#FF5A5A;--btn:#F4F5F7;--btnT:#0A0B0D;--tint:rgba(61,220,132,0.10);--scrim:rgba(0,0,0,0.6);--shC:none;--shS:0 -8px 32px rgba(0,0,0,0.5)}
+.t.light{--bg:#F2F3F5;--s1:#FFFFFF;--s2:#E8EAEE;--s3:#DDE0E5;--tx:#0B0D10;--tx2:#4F555E;--ln:#D5D9DF;--me:#12A35C;--meT:#0A7A43;--org:#B85A00;--blue:#1A5FD0;--pink:#C02A70;--vio:#6E3FD0;--warn:#8A6000;--warnBg:rgba(138,96,0,0.07);--err:#C8282D;--btn:#0B0D10;--btnT:#FFFFFF;--tint:rgba(18,163,92,0.10);--scrim:rgba(11,13,16,0.35);--shC:0 1px 2px rgba(11,13,16,0.06),0 4px 12px rgba(11,13,16,0.05);--shS:0 -8px 32px rgba(11,13,16,0.16)}
+.mono{font-family:'Geist Mono',ui-monospace,monospace}
+.lbl{font-family:'Geist Mono',ui-monospace,monospace;font-size:12px;letter-spacing:1px;color:var(--tx2);font-weight:600}
+button{font:inherit;color:inherit;cursor:pointer}
+input{font:inherit}
+</style>
+</helmet>
+<div class="t {{mode}}" style="width: 393px; height: 852px; box-sizing: border-box; background: var(--bg); color: var(--tx); font-family: 'Geist', system-ui, sans-serif; display: flex; flex-direction: column; overflow: hidden; position: relative">
+
+<div style="display: flex; align-items: center; gap: 10px; padding: 14px 16px 0; height: 48px">
+<div style="width: 36px; height: 36px; border-radius: 18px; background: var(--s2); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700">AD</div>
+<div style="flex: 1; font-size: 15px; font-weight: 600">Andrew</div>
+<button style="height: 48px; padding: 0 16px; border-radius: 12px; border: 0; background: transparent; font-size: 15px; font-weight: 600">Settings</button>
+</div>
+<div style="padding: 18px 20px 0"><div style="font-size: 32px; font-weight: 800; letter-spacing: -1px; line-height: 1.1">Golf Live Board</div></div>
+
+<div class="lbl" style="margin: 22px 20px 8px">PLAYING NOW</div>
+<button style="margin: 0 16px; display: block; text-align: left; border-radius: 22px; border: 1.5px solid var(--me); background: var(--tint); padding: 16px; box-shadow: var(--shC)">
+<div style="display: flex; align-items: center; gap: 8px"><span style="width: 8px; height: 8px; border-radius: 4px; background: var(--me)"></span><span class="lbl" style="color: var(--meT)">LIVE · HOLE 11</span><span class="lbl" style="flex: 1; text-align: right">TC4821</span></div>
+<div style="display: flex; align-items: flex-end; gap: 12px; margin-top: 8px">
+<div style="flex: 1; min-width: 0"><div style="font-size: 22px; font-weight: 800; letter-spacing: -0.5px">Twin Creeks · Cart game</div><div style="font-size: 15px; color: var(--tx2); margin-top: 4px">Hogan’s Heroes · 2nd · 4½ back</div></div>
+<div class="mono" style="font-size: 40px; font-weight: 700; letter-spacing: -1.5px; line-height: 1; color: var(--meT)">9½</div>
+</div>
+<div style="margin-top: 14px; height: 52px; border-radius: 14px; background: var(--btn); color: var(--btnT); display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 17px; font-weight: 700">Back to hole 11</div>
+</button>
+
+<div class="lbl" style="margin: 24px 20px 4px">RECENT ROUNDS</div>
+<div style="padding: 0 16px"><button style="display: flex; align-items: center; gap: 12px; width: 100%; min-height: 72px; padding: 10px 4px; border: 0; border-bottom: 1px solid var(--ln); background: transparent; text-align: left">
+<div style="flex: 1; min-width: 0"><div style="font-size: 17px; font-weight: 600">Twin Creeks</div><div style="font-size: 13px; color: var(--tx2); margin-top: 3px">Fri Oct 16 · Cart game · You 4th</div></div>
+<div class="mono" style="font-size: 17px; font-weight: 700">9½</div><span style="color: var(--tx2)"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg></span></button><button style="display: flex; align-items: center; gap: 12px; width: 100%; min-height: 72px; padding: 10px 4px; border: 0; border-bottom: 1px solid var(--ln); background: transparent; text-align: left">
+<div style="flex: 1; min-width: 0"><div style="font-size: 17px; font-weight: 600">Old Mill Links</div><div style="font-size: 13px; color: var(--tx2); margin-top: 3px">Sat Oct 10 · 2v2 · Won with Sean</div></div>
+<div class="mono" style="font-size: 17px; font-weight: 700">+2</div><span style="color: var(--tx2)"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg></span></button><button style="display: flex; align-items: center; gap: 12px; width: 100%; min-height: 72px; padding: 10px 4px; border: 0;  background: transparent; text-align: left">
+<div style="flex: 1; min-width: 0"><div style="font-size: 17px; font-weight: 600">Twin Creeks</div><div style="font-size: 13px; color: var(--tx2); margin-top: 3px">Sun Oct 4 · Stroke play · You 1st · net 71</div></div>
+<div class="mono" style="font-size: 17px; font-weight: 700">71</div><span style="color: var(--tx2)"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg></span></button></div>
+
+<div style="margin: auto 16px 16px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px">
+<button style="height: 58px; border-radius: 18px; border: 0; background: var(--s2); font-size: 17px; font-weight: 600">Join with code</button>
+<button style="height: 58px; border-radius: 18px; border: 0; background: var(--btn); color: var(--btnT); font-size: 17px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>New round</button>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"mode":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":393,"height":852}}'>
+class Component extends DCLogic {
+  renderVals() { return { mode: this.props.mode ?? 'dark' }; }
+}
+</script>
+</body>
+</html>

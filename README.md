@@ -57,8 +57,9 @@ only the link shown during that step carries your sign-in.
 
 ## Design
 
-The look ("Night Round") is defined by the design system in `docs/design/system/`: colors (dark + light),
-type styles, spacing, corner sizes and one spec per component. `css/styles.css` uses those token names and
-values directly; the mockups it was drawn from are in `docs/design/screens/`.
+The look ("Night Round") is defined by the design system in `docs/design/design-system/`: `tokens.css`
+(colors for dark + light, spacing, corner sizes, sizes, shadows and the 6 type styles), the rules in its
+`README.md`, and one spec per component in `components/`. `css/styles.css` uses those token names and
+values; product rules are in `docs/design/designspec.md` and the mockups in `docs/design/screens/`.
 
 The fit and smoke checks run headless Chromium against an in-memory stand-in for Supabase (`tests/mock-supabase.mjs`) that mirrors the database functions.
