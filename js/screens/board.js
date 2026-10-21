@@ -9,7 +9,7 @@
 // Players: one compact line each.
 
 import { esc, icon, seg, clock } from '../ui.js';
-import { fmtPts, fmtToPar, fmtSigned, playerLeaderboard, teamLeaderboard, holeAt, recordLabel } from '../scoring.js';
+import { fmtPts, fmtToPar, fmtSigned, playerLeaderboard, teamLeaderboard, holeAt, recordLabel, teeClock, teeTimeName, groupIndex } from '../scoring.js';
 import { teamColor, headlineColor } from '../teams.js';
 import { latestMoment } from '../headlines.js';
 
@@ -204,12 +204,60 @@ function finalCard(app) {
     ${app.event.crew_id ? `<button class="btn ghost block" style="margin:0 0 14px" data-act="go" data-v="#/season/${esc(app.event.crew_id)}">See season standings</button>` : ''}`;
 }
 
+/** "tees off 8:40", or "1st tee time" when the organizer didn't set clock times. */
+function teeLine(snap, groupId) {
+  const i = groupIndex(groupId);
+  const c = teeClock(snap.settings, i);
+  return c ? `tees off ${c}` : teeTimeName(snap.settings, i);
+}
+
+/** Who's joined: "7 of 8 joined" / "Waiting on Tyler" (or "Tyler, Sam and 2 more"). */
+export function joinedLine(app) {
+  const snap = app.snapshot;
+  const missing = snap.players.filter((p) => !app.claimed.has(p.id));
+  const n = snap.players.length;
+  const head = missing.length ? `${n - missing.length} of ${n} joined` : `All ${n} joined`;
+  const names = missing.map((p) => p.name);
+  const sub = !missing.length ? 'Everyone has the round on their phone'
+    : names.length <= 2 ? `Waiting on ${names.join(' and ')}` : `Waiting on ${names.slice(0, 2).join(', ')} and ${names.length - 2} more`;
+  return { head, sub, all: !missing.length };
+}
+
+/** Board before anyone has a score (designspec §6b): the real structure with "–", not zeros. */
+function waitingView(app) {
+  const snap = app.snapshot;
+  const mine = app.myTeam();
+  const teams = (snap.roster.teams || []).length && !snap.settings.solo && !snap.settings.pairs ? snap.teams : null;
+  const j = joinedLine(app);
+  const rows = teams
+    ? teams.map((t) => {
+      const ps = t.playerIds.map((id) => snap.playerById.get(id));
+      const me = t.id === mine;
+      return `<div class="wait-row${me ? ' me' : ''}"><i class="jdot" style="--jersey:${teamColor(mine, t.id)}"></i>
+        <span class="wr-main"><span class="wr-name">${esc(t.name)}${me ? ' <span class="you-tag">YOU</span>' : ''}</span>
+        <span class="wr-sub">${esc(ps.map((p) => p.name).join(' + '))} · ${esc(teeLine(snap, ps[0]?.groupId))}</span></span>
+        <span class="wr-v mono" aria-label="no points yet">–</span></div>`;
+    }).join('')
+    : snap.players.map((p) => `<div class="wait-row${p.id === app.me ? ' me' : ''}"><span class="wr-main"><span class="wr-name">${esc(p.name)}${p.id === app.me ? ' <span class="you-tag">YOU</span>' : ''}</span>
+        <span class="wr-sub">${esc(teeLine(snap, p.groupId))}</span></span><span class="wr-v mono" aria-label="no score yet">–</span></div>`).join('');
+  return `<div class="plain wait">
+      <div class="ts-label wait-k">Before the first tee</div>
+      <h1 class="ts-title wait-t">Waiting for the first scores</h1>
+      <p class="wait-p">${teams ? 'Points show up here as soon as anyone enters hole 1. Every team starts at 0.' : 'Scores show up here as soon as anyone enters hole 1.'}</p>
+      <div class="joined"><span class="j-text"><b>${esc(j.head)}</b><span>${esc(j.sub)}</span></span>
+        <button class="btn" data-act="board-share">${icon('share', 18)} Send code</button></div>
+      <div class="ts-label wait-k">${teams ? 'Teams' : 'Players'}</div>
+      <div class="wait-list">${rows}</div>
+    </div>`;
+}
+
 export default {
   hero: true,
 
   render(app) {
     const snap = app.snapshot;
     const g = snap.game;
+    if (!snap.anyPosted && !app.isFinal()) return waitingView(app);
     const hasTeams = (snap.roster.teams || []).length > 0;
     const view = hasTeams ? app.ui.boardView : 'players';
     const mode = snap.hasStrokes ? app.ui.boardMode : 'gross';

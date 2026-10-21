@@ -515,8 +515,19 @@ await R6.page.tap('[data-act="brief-done"]').catch(() => {});
 await R6.page.waitForTimeout(500);
 const line6 = (await R6.page.textContent('.matchup-line').catch(() => '')).replace(/\s+/g, ' ');
 ok((line6.match(/vs /g) || []).length === 2, `Enter: the match line shows both matchups (${line6.trim()})`);
+await R6.page.goto(`${srv.origin}/#/e/${r6.code}/board`);
+await R6.page.waitForTimeout(900);
+const wait6 = (await R6.page.textContent('#content')).replace(/\s+/g, ' ');
+ok(/Waiting for the first scores/.test(wait6) && /1 of 6 joined/.test(wait6) && /1st tee time/.test(wait6) && (await R6.page.$$('.wait-row')).length === 3,
+  `Board before any scores: waiting, who's joined, 3 carts with their tee time (${wait6.slice(0, 90)}…)`);
 await R6.page.goto(`${srv.origin}/#/e/${r6.code}/matches`);
 await R6.page.waitForTimeout(900);
+ok(/Waiting for the first scores/.test(await R6.page.textContent('#content')) && (await R6.page.$$('.mu-item')).length === 2 && !(await R6.page.$('.ms-num')),
+  'Matches before any scores: your 2 matchups, not 0–0');
+// First score in → the match view: a segment for each of your matchups, the third one under ALSO.
+be.tables.scores.push({ event_id: r6.id, player_id: 'p1', hole: 1, strokes: 4, updated_by: 'Tara', updated_at: new Date().toISOString() });
+await R6.page.evaluate(() => window.__glb.refetch());
+await R6.page.waitForTimeout(700);
 ok((await R6.page.$$('.seg2 button')).length === 2 && (await R6.page.$$('.watch-box')).length === 1 && /MATCH 1 OF 2/.test(await R6.page.textContent('.m-kicker')),
   'Matches: a segment for each of your 2 matchups, the third (B v C) under ALSO');
 await R6.page.screenshot({ path: 'tests/screenshots/matches-3-carts.png' });

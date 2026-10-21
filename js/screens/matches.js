@@ -140,6 +140,28 @@ function liveHoleOf(m) {
   return m.holes.find((hh) => !hh.complete)?.hole ?? null;
 }
 
+/** Before anyone has a score: the matchups and "Waiting for the first scores", not 0–0 (designspec §6b). */
+function waitingView(app) {
+  const snap = app.snapshot;
+  const g = snap.game;
+  const list = matchList(app);
+  const mineAny = list.some((e) => e.my);
+  const items = (mineAny ? list : g.rotations.flatMap((r, ri) => r.matches.map((m) => ({ ri, m, my: null }))))
+    .map(({ m, my }) => {
+      const name = (t) => `<span style="color:${colorFor(app, my, t)}">${esc(shortTeam(snap.teamById.get(t).name))}</span>`;
+      const opp = my ? m.teams.find((t) => t !== my) : null;
+      const who = opp ? `vs ${name(opp)}<small>${esc(playersOf(app, opp))}</small>` : `${name(m.teams[0])} <span class="soft">vs</span> ${name(m.teams[1])}`;
+      return `<div class="mu-item"><span class="mi-h">${m.firstHole}–${m.lastHole}</span><span class="mi-v">${who}</span></div>`;
+    }).join('');
+  return `<div class="plain wait">
+      <div class="ts-label wait-k">Before the first tee</div>
+      <h1 class="ts-title wait-t">Waiting for the first scores</h1>
+      <p class="wait-p">Matchups fill in as soon as anyone enters hole 1.</p>
+      <div class="ts-label wait-k">${mineAny ? 'Your matchups' : 'Matchups'}</div>
+      <div class="mu-list">${items}</div>
+    </div>`;
+}
+
 export function teamGameView(app) {
   const snap = app.snapshot;
   const g = snap.game;
@@ -285,6 +307,7 @@ export default {
         <button class="btn primary block" data-act="tab" data-v="board">See the Board</button></div>`;
     }
     if (g.type === 'splitPoint') return splitView(app);
+    if (!snap.anyPosted && !app.isFinal()) return waitingView(app);
     return teamGameView(app);
   },
 

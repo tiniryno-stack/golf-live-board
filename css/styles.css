@@ -1221,3 +1221,28 @@ details.fold summary::-webkit-details-marker { display: none; }
 .empty-box .eb-h { font-size: 17px; line-height: 22px; font-weight: 600; }
 .empty-box .eb-p { font-size: 15px; line-height: 20px; color: var(--text-muted); max-width: 300px; }
 .empty-box .eb-a { margin-top: var(--space-2); width: 100%; display: flex; flex-direction: column; gap: var(--space-2); align-items: center; }
+
+/* ───────────────────────────────────────────── Board / Matches before the first scores (designspec §6b) */
+.wait { padding-top: var(--space-4); }
+.wait .wait-k { color: var(--text-muted); margin: 0 0 var(--space-2); }
+.wait .wait-t { margin: 0; }
+.wait .wait-p { margin: var(--space-2) 0 var(--space-5); font-size: 15px; line-height: 20px; color: var(--text-muted); }
+.joined { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4); margin: 0 0 var(--space-5);
+  background: var(--surface-1); border-radius: var(--radius-xl); box-shadow: var(--shadow-card); }
+.joined .j-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.joined .j-text b { font-size: 17px; line-height: 22px; font-weight: 600; }
+.joined .j-text span { font-size: 15px; line-height: 20px; color: var(--text-muted); }
+.wait-list { margin: 0 calc(-1 * var(--space-2)); }
+.wait-row { display: flex; align-items: center; gap: var(--space-3); min-height: 64px; padding: var(--space-3) var(--space-2); border-bottom: 1px solid var(--line); }
+.wait-row:last-child { border-bottom: 0; }
+.wait-row.me { background: var(--tint-you); border-radius: var(--radius-lg); border-bottom-color: transparent; }
+.wait-row .jdot { width: 10px; height: 10px; border-radius: 50%; background: var(--jersey); flex: none; }
+.wait-row .wr-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.wait-row .wr-name { font-size: 17px; line-height: 22px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wait-row .wr-sub { font-size: 15px; line-height: 20px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wait-row .wr-v { font-size: 17px; color: var(--text-muted); flex: none; }
+.wait .mu-list { display: flex; flex-direction: column; gap: var(--space-2); }
+.wait .mu-item { display: flex; align-items: center; gap: var(--space-3); min-height: 56px; padding: 0 var(--space-4); background: var(--surface-1); border-radius: var(--radius-lg); box-shadow: var(--shadow-card); }
+.wait .mu-item .mi-h { font-family: var(--font-mono); font-size: 13px; color: var(--text-muted); width: 64px; flex: none; }
+.wait .mu-item .mi-v { flex: 1; min-width: 0; font-size: 17px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wait .mu-item .mi-v small { font-size: 13px; font-weight: 500; color: var(--text-muted); margin-left: 6px; }

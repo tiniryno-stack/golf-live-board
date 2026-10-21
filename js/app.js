@@ -279,7 +279,12 @@ async function refreshClaimed() {
   if (!app.code) return;
   try {
     const res = await db.api.claimedPlayers(app.code);
-    if (res.ok) app.claimed = new Set(res.players);
+    if (res.ok) {
+      const before = [...app.claimed].sort().join();
+      app.claimed = new Set(res.players);
+      // The waiting Board says who's joined: redraw when that changes.
+      if (before !== [...app.claimed].sort().join() && app.snapshot && !app.snapshot.anyPosted) render();
+    }
     renderSheet();
   } catch { /* offline */ }
 }

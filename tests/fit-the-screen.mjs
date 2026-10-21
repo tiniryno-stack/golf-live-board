@@ -50,6 +50,11 @@ be.tables.claims.push({ event_id: r.id, player_id: 'p1', device_id: DEV });
 const rf = seedRound(be, { holesPlayed: 18 });
 be.tables.claims.push({ event_id: rf.id, player_id: 'p1', device_id: DEV });
 
+// A round nobody has scored yet (Board / Matches "Waiting for the first scores"); 7 of 8 joined, tee times set.
+const r0 = seedRound(be, { holesPlayed: 0, extra: { rotationMode: 'fixed', teeTimes: ['08:40', '08:50'] } });
+be.tables.claims.push({ event_id: r0.id, player_id: 'p1', device_id: DEV });
+for (let i = 2; i <= 7; i++) be.tables.claims.push({ event_id: r0.id, player_id: `p${i}`, device_id: `00000000-0000-4000-8000-00000000000${i}` });
+
 // A 4-player round with no carts ("you first" Enter), for the design comparison shots.
 const YP = ['Andrew', 'Sean', 'Sam', 'Jake'].map((n, i) => ({ id: `p${i + 1}`, personId: `yf${i}`, name: n, teamId: null, groupId: 'g1', strokes: null }));
 const yr = be.rpc.create_event({ p_name: 'You first', p_course: r.event.course, p_roster: { groups: [{ id: 'g1', name: 'Group 1' }], teams: [], players: YP }, p_settings: { game: 'none', solo: false, rotationMode: 'fixed' } });
@@ -334,6 +339,14 @@ for (const size of SIZES) {
   await page.waitForTimeout(300);
   await page.evaluate(() => { document.getElementById('toasts').innerHTML = ''; });
   await check(page, size, 'Enter (fixing a finalized round)', 'enter');
+  // Before the first scores: the real structure with "–" and "Waiting for the first scores", not zeros.
+  await page.evaluate((c) => {
+    localStorage.setItem('glb.me.' + c, '"p1"'); localStorage.setItem('glb.who.' + c, 'true'); localStorage.setItem('glb.brief.' + c, 'true');
+  }, r0.code);
+  await go(`#/e/${r0.code}/board`);
+  await check(page, size, 'Board (before the first scores)');
+  await go(`#/e/${r0.code}/matches`);
+  await check(page, size, 'Matches (before the first scores)');
   if (process.env.FIT_SIZE) {
     // Extra states the design mockups show (tests/design-pairs.py puts them side by side).
     const shot = (n) => page.screenshot({ path: `${OUT}${size[1]}x${size[2]}-design-${n}.png` });
