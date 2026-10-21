@@ -6,7 +6,7 @@
 
 export const TEAM_NAME_PICKS = ['Bulbasaur', 'Charmander', 'Squirtle', 'Chikorita', 'Cyndaquil', 'Totodile'];
 
-const AWAY = { A: '--t-A', B: '--t-B', C: '--t-C', D: '--t-D' };
+const AWAY = { A: '--t-A', B: '--t-B', C: '--t-C', D: '--t-D', E: '--t-E', F: '--t-F' };
 
 /** CSS color for a cart as seen from this phone. */
 export function teamColor(myTeamId, teamId) {
