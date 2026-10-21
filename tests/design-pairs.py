@@ -8,7 +8,7 @@ PAIRS={'enter-team':'enter.png','enter-individual':'design-solo.png','matches':'
  'setup-1-course':'setup-1-find-a-course-.png','setup-2-players':'setup-2-players-.png','setup-3-game':'setup-3-pick-a-game-.png',
  'setup-4-2v2':'setup-4-2v2-partners-.png','setup-4-carts':'setup-4-carts-.png','setup-4b-matchups':'setup-4b-matchups-.png',
  'setup-5-live':'setup-5-round-is-live-.png','scorecard-check':'setup-scorecard-check.png',
- 'board-empty':'board-before-the-first-scores-.png'}
+ 'board-empty':'board-before-the-first-scores-.png','home':'home-with-rounds-.png','home-empty':'home.png'}
 extra=dict(a.split('=') for a in sys.argv[1:])
 for k,v in {**PAIRS,**extra}.items():
   if not v: continue

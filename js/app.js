@@ -4,6 +4,7 @@
 
 import * as db from './db.js';
 import { compute, nextHoleFor, currentHoleOf, sameFoursome, matchFor, playOrder, posOf, holeAt, HOLES, sideOn, teeTimeName, groupIndex } from './scoring.js';
+import { roundSummary } from './screens/home.js';
 import { isDefaultTeamName } from './teams.js';
 import { replayHeadlines, latestMoment } from './headlines.js';
 import { esc, icon, initials, roundLink, copyText } from './ui.js';
@@ -127,6 +128,7 @@ app.coach = (key, target, text) => {
 };
 
 app.openSheet = (type, props = {}) => {
+  fx.clearCoach(); // never a coach tip over a sheet
   app.sheet = { type, props };
   renderSheet();
 };
@@ -165,6 +167,7 @@ function recompute({ headlines = 'soon' } = {}) {
   const hadScores = !!app.snapshot?.anyPosted;
   app.snapshot = compute(app.event, rows);
   if (!app.snapshot.anyPosted) freshStart(hadScores);
+  try { db.recent.note(app.code, roundSummary(app)); } catch { /* Home's summary is a nice-to-have */ }
   if (headlines === 'now') {
     clearTimeout(headlineTimer);
     app.headlines = replayHeadlines(app.event, rows);
@@ -266,6 +269,7 @@ function setMe(pid) {
   if ((pid || null) !== app.me) app.ui.hole = null;
   app.me = pid || null;
   db.me.set(app.code, app.me);
+  try { db.recent.note(app.code, roundSummary(app)); } catch { /* Home's summary is a nice-to-have */ }
   render();
 }
 function setAdmin(pin) {
@@ -1029,6 +1033,7 @@ function route() {
   const prev = app.route;
   app.route = parseHash();
   fx.closeOverlay();
+  fx.clearCoach();
   if (app.sheet && !app.sheet.props?.keep) app.closeSheet();
   if (app.route.round) {
     if (app.route.code !== app.code) {
@@ -1129,7 +1134,7 @@ function renderTopbar(screen, inRound) {
     const custom = screen.topBack?.(app); // e.g. Setup: back to the previous step
     const home = app.route.name === 'home';
     const back = home
-      ? '<div class="spacer"></div>'
+      ? screen.topLeft?.(app) || '<div class="spacer"></div>' // Home: your name
       : custom || `<button class="back" data-act="go" data-v="#/">${icon('back', 22)}<span>Home</span></button>`;
     // Light/dark lives on Home and in the round's ⋯ menu; Setup's top right shows its progress bars.
     return `${back}${home ? themeBtn : screen.topRight?.(app) || ''}`;

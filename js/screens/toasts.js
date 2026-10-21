@@ -323,6 +323,11 @@ function closeRecap() {
 
 // ───────────────────────────────────────────── coach marks (once per phone)
 
+/** Take any coach tip down (it points at something on the screen you're leaving, or a sheet is opening). */
+export function clearCoach() {
+  document.querySelectorAll('.coach-scrim, .coach').forEach((n) => n.remove());
+}
+
 export function coach(key, target, text) {
   const k = `glb.coach.${key}`;
   if (local.get(k)) return;

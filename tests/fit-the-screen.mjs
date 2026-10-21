@@ -347,6 +347,10 @@ for (const size of SIZES) {
   await check(page, size, 'Board (before the first scores)');
   await go(`#/e/${r0.code}/matches`);
   await check(page, size, 'Matches (before the first scores)');
+  // Home after playing: the live round as a card, finished ones as rows with how they went.
+  await go(`#/e/${r.code}/enter`);
+  await go('#/');
+  await check(page, size, 'Home (with rounds)');
   if (process.env.FIT_SIZE) {
     // Extra states the design mockups show (tests/design-pairs.py puts them side by side).
     const shot = (n) => page.screenshot({ path: `${OUT}${size[1]}x${size[2]}-design-${n}.png` });

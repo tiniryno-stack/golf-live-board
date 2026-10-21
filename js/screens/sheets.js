@@ -5,6 +5,7 @@
 import { esc, icon, scoreClass, clock, mark } from '../ui.js';
 import { fmtToPar, fmtPts, fmtSigned, maxHoleScore, componentNames, posOf, holeAt, holesLabel, matchesFor, playOrder, teeTimeName, groupIndex } from '../scoring.js';
 import { teamColor, headlineColor, shortTeam } from '../teams.js';
+import { codeField } from './home.js';
 
 let lastHtml = '';
 let closeTimer = null;
@@ -146,6 +147,12 @@ const BODIES = {
       <button class="btn ghost block" data-act="sheet-close">Watch while I wait</button>`;
   },
 
+  /** Home → Join with code. */
+  join() {
+    return `${head('Join a round', 'The code is in the group text')}
+      <div class="sheet-join">${codeField()}</div>`;
+  },
+
   homescreen() {
     return `${head('Add to Home Screen')}
       <ol class="hs-steps">
@@ -168,6 +175,7 @@ const BODIES = {
         ${app.snapshot?.game ? `<button class="btn block" data-act="menu-brief">${icon('spark', 18)} How today’s game works</button>` : ''}
         <button class="btn block" data-act="menu-share">${icon('share', 18)} Share round link</button>
         <button class="btn block" data-act="theme">${icon(document.documentElement.dataset.theme === 'light' ? 'moon' : 'sun', 18)} ${document.documentElement.dataset.theme === 'light' ? 'Dark mode' : 'Light mode'}</button>
+        <button class="btn block" data-act="go" data-v="#/setup/${esc(app.code)}">${icon('shuffle', 18)} Run it back as a new round</button>
         <button class="btn ghost block" data-act="menu-home">${icon('home', 18)} Go to Home</button>
         ${p ? '<button class="btn danger block" data-act="menu-leave">Switch to watching</button>' : ''}
       </div>

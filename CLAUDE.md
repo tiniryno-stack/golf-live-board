@@ -193,14 +193,16 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
   `glb.queue.CODE`, `glb.seen.CODE`, `glb.alert.CODE.H`, `glb.switch.CODE.H`, `glb.brief.CODE`,
   `glb.who.CODE`, `glb.cardOpen.CODE`, `glb.coach.{tile5,oppcart3,prov2}`, `glb.setupDraft`,
   `glb.theme`. Bump a coach key's suffix when its text changes so people see the new tip.
+  `glb.recent` entries also carry Home's summary for each round (`recent.note`, from
+  `home.roundSummary`: game, your name, live hole / place / points, or how it went).
 
 ## Testing (run before every push; all headless, no network needed)
 
 ```bash
 npm install
 npm test               # 76 unit tests: scoring + headlines + course data + names/crews + games (2v2, at the turn, 6-player match play, Partner “Rider” Cup for 6, tee times) + score marks + design tokens (drift, retired colors, type scale)
-npm run test:fit       # 132 checks: every screen at SE / 13 mini / 15-16 / Pro Max, no scroll on Enter
-npm run test:smoke     # 242 checks: multi-phone flows against the mock (join, swap, offline, rejoin,
+npm run test:fit       # 144 checks: every screen at SE / 13 mini / 15-16 / Pro Max, no scroll on Enter
+npm run test:smoke     # 247 checks: multi-phone flows against the mock (join, swap, offline, rejoin,
                        # reset/delete, back nine, Next waits for every score, grid/locks, recap,
                        # finalize + PIN unlock, add a course, which course?, names/nicknames/crew-mates, you-first pad,
                        # matches expand in place, 2v2, 3 carts for 6, own entry wins, Add to Home Screen move, test phones, blank-screen guards)

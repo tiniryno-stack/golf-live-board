@@ -531,6 +531,20 @@ await R6.page.waitForTimeout(700);
 ok((await R6.page.$$('.seg2 button')).length === 2 && (await R6.page.$$('.watch-box')).length === 1 && /MATCH 1 OF 2/.test(await R6.page.textContent('.m-kicker')),
   'Matches: a segment for each of your 2 matchups, the third (B v C) under ALSO');
 await R6.page.screenshot({ path: 'tests/screenshots/matches-3-carts.png' });
+await R6.page.evaluate(() => window.__glb.openSheet('menu', {}));
+await R6.page.waitForTimeout(300);
+ok(!!(await R6.page.$('#sheet [data-act="go"][data-v^="#/setup/"]')), 'the round’s ⋯ menu has Run it back as a new round');
+await R6.page.evaluate(() => window.__glb.closeSheet());
+// Home: the round you're playing is a green card with Back to hole N; Join with code opens a sheet.
+await R6.page.goto(`${srv.origin}/#/`);
+await R6.page.waitForTimeout(600);
+const live6 = (await R6.page.textContent('.live-card').catch(() => '')).replace(/\s+/g, ' ');
+ok(/Live · hole 1/i.test(live6) && /Partner “Rider” Cup/.test(live6) && /Back to hole 1/.test(live6) && /Tara/.test(await R6.page.textContent('#topbar')),
+  `Home: Playing now card, your name up top (${live6.trim().slice(0, 80)})`);
+await R6.page.tap('[data-act="home-joinsheet"]');
+await R6.page.waitForTimeout(400);
+ok(!!(await R6.page.$('#sheet #join-code')) && /Join a round/.test(await R6.page.textContent('#sheet')), 'Join with code → a sheet with the code field');
+await R6.page.evaluate(() => window.__glb.closeSheet());
 await R6.ctx.close();
 
 // 10b. Names: first + last name required; a full name someone else already has asks for a

@@ -149,6 +149,21 @@ export const recent = {
     });
     local.set('glb.recent', list.slice(0, 12));
   },
+  /** Home's summary for a round (game, your name, live hole / place, how it went): merged in, keeps its spot. */
+  note(code, patch) {
+    if (!code || !patch) return;
+    const list = recent.all();
+    const i = list.findIndex((r) => r.code === code);
+    if (i < 0) return;
+    const { live, result, ...rest } = list[i];
+    const next = { ...rest, ...patch, seen: Date.now() };
+    if (!patch.live) delete next.live;
+    if (!patch.result) delete next.result;
+    const strip = (o) => JSON.stringify({ ...o, seen: 0 });
+    if (strip(next) === strip(list[i])) return; // nothing new: don't rewrite storage on every redraw
+    list[i] = next;
+    local.set('glb.recent', list);
+  },
 };
 
 /** Forget everything this phone kept about a round (after it's deleted). */
