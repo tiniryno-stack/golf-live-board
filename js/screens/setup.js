@@ -37,8 +37,16 @@ function withName(p) {
   }
   p.lastName = p.lastName || '';
   p.nickname = p.nickname || '';
-  p.name = names.fullName(p, { withNick: true });
+  p.name = names.fullName(p);
   return p;
+}
+/** Setup labels: full names; the nickname only shows when two players share the full name. */
+function relabel(s) {
+  const full = s.players.map((p) => names.fullName(p).toLowerCase());
+  s.players.forEach((p, i) => {
+    const twin = full.some((f, j) => j !== i && f === full[i]);
+    p.name = names.fullName(p, { withNick: twin });
+  });
 }
 function newPlayer({ personId, firstName, lastName = '', nickname = '' }) {
   return withName({ key: db.uuid(), personId: personId || db.uuid(), firstName, lastName, nickname, strokes: '', teamId: null, groupId: 'g1' });
@@ -417,7 +425,7 @@ const VIEWS = {
       </div>
       ${s.nickAsk ? `<div class="card nick-ask">
         <p class="meta" style="margin:0 0 8px">Someone named ${esc(s.nickAsk.first)} ${esc(s.nickAsk.last)} already plays in another crew. Someone new? Add a nickname so they\u2019re their own player.</p>
-        <div class="join-row"><input class="input" id="new-nick" maxlength="24" placeholder="Nickname, e.g. Big ${esc(s.nickAsk.first)}" autocapitalize="words" autocomplete="off" data-enter="setup-add">
+        <div class="join-row"><input class="input" id="new-nick" maxlength="24" placeholder="Nickname, e.g. Tini Ryno" autocapitalize="words" autocomplete="off" data-enter="setup-add">
           <button class="btn primary" data-act="setup-add">Add</button></div>
         <button class="link-btn" style="margin-top:8px" data-act="setup-nick-cancel">Cancel</button>
       </div>` : ''}
@@ -427,7 +435,7 @@ const VIEWS = {
           ${p.lastName && !p.needsNick
             ? `<span class="pname ellipsis">${esc(p.name)}</span>`
             : `<span class="pname"><span class="ellipsis" style="display:block">${esc(p.name)}</span>${p.lastName
-              ? `<input class="input name-fill" maxlength="24" placeholder="Nickname (name\u2019s taken)" value="${esc(p.nickname)}" aria-label="Nickname for ${esc(p.name)}" data-input="setup-nick" data-i="${i}">`
+              ? `<input class="input name-fill" maxlength="24" placeholder="Nickname, e.g. Tini Ryno" value="${esc(p.nickname)}" aria-label="Nickname for ${esc(p.name)}" data-input="setup-nick" data-i="${i}">`
               : `<input class="input name-fill" maxlength="30" placeholder="Last name" autocapitalize="words" autocomplete="off" aria-label="Last name for ${esc(p.firstName)}" data-input="setup-last" data-i="${i}">`}</span>`}
           <input class="input num" inputmode="numeric" pattern="[0-9]*" maxlength="2" placeholder="even" aria-label="Strokes for ${esc(p.name)}" value="${esc(p.strokes ?? '')}" data-input="setup-strokes" data-i="${i}">
           <button class="x" data-act="setup-remove" data-i="${i}" aria-label="Remove ${esc(p.name)}">${icon('close', 18)}</button>
@@ -663,6 +671,7 @@ export default {
   render(app) {
     const s = app.setup;
     if (!s) return '';
+    relabel(s);
     const name = STEPS[s.step];
     const dots = STEPS.map((_, i) => `<i class="${i <= s.step ? 'on' : ''}"></i>`).join('');
     const c0 = course(s);

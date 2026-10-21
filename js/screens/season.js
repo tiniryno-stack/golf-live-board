@@ -19,6 +19,14 @@ async function load(app, crew) {
 
 const record = (r) => `${r.w}-${r.l}-${r.h}`;
 
+
+/** Full name; the nickname only when someone else in the standings has the same full name. */
+function seasonName(r, all) {
+  const n = r.fullName || r.name;
+  const twin = r.nickname && all.some((x) => x !== r && (x.fullName || x.name).toLowerCase() === n.toLowerCase());
+  return twin ? `${n} (${r.nickname})` : n;
+}
+
 export default {
   enter(app) {
     const crew = app.route.crew || db.recent.all().find((r) => r.crew_id)?.crew_id || null;
@@ -40,7 +48,7 @@ export default {
           <span class="rank">${i + 1}</span>
           <div class="numcol" style="width:84px"><div class="n" style="font-size:22px">${record(r)}</div><span class="micro">W-L-H</span></div>
           <div class="body">
-            ${view === 'pairs' ? `<div class="meta ellipsis">${esc(r.names.join(' + '))}</div><div class="row-title ellipsis">${esc(r.teamName)}</div>` : `<div class="row-title ellipsis">${esc(r.fullName || r.name)}</div>`}
+            ${view === 'pairs' ? `<div class="meta ellipsis">${esc(r.names.join(' + '))}</div><div class="row-title ellipsis">${esc(r.teamName)}</div>` : `<div class="row-title ellipsis">${esc(seasonName(r, d.players))}</div>`}
             <div class="detail">${r.rounds} round${r.rounds === 1 ? '' : 's'} · ${fmtPts(r.points)} pts${r.roundsWon ? ` · won ${r.roundsWon}` : ''}</div>
           </div></div>`)
         .join('');

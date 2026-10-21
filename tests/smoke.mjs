@@ -467,7 +467,7 @@ await N.page.fill('#new-player', 'Andrew Smith');
 await N.page.press('#new-player', 'Enter');
 await N.page.waitForTimeout(400);
 const rowsN = await N.page.$$eval('.player-row .pname', (els) => els.map((e) => e.innerText.trim()));
-ok(rowsN.join(' | ') === 'Andrew Duong (Drew) | Andrew Smith', `added with full names in Setup (${rowsN.join(' | ')})`);
+ok(rowsN.join(' | ') === 'Andrew Duong | Andrew Smith', `added with full names in Setup, no nickname shown when nobody shares the full name (${rowsN.join(' | ')})`);
 await N.page.screenshot({ path: 'tests/screenshots/setup-players-names.png' });
 for (let i = 0; i < 4; i++) await N.page.tap('[data-act="setup-next"]');
 await N.page.tap('[data-act="setup-save"]');
