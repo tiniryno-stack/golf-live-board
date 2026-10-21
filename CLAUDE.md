@@ -26,6 +26,11 @@ after the first playtest; section 13 is the V2 backlog.
   (double bogey only), jerseys `--t-A…F`. Score marks everywhere: `ui.mark(score, par, size)`.
   `ui.seg2` (2-line segments), `ui.foldIn(app.ui)` (fold animation only right after a tap — the
   render loop redraws constantly), `.mine-bar` / `.watch-box` = expand-in-place.
+- **Design system** in `docs/design/system/` (tokens.json, README.md, components/*/README.md) is the
+  reference for every visual choice: use its token names in CSS (`--surface-1`, `--text-muted`,
+  `--cart-you`, `--radius-xl`, `--space-4`, `.ts-*` text styles…; old names are aliases). Check a UI
+  change with `npm run design:compare` → `tests/screenshots/design/vs-*.png` (mockup left, app right).
+  Light/dark toggle: Home + round ⋯ menu only.
 
 ## Stack and file map
 

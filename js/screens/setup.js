@@ -283,8 +283,8 @@ export function hereCourses(s, mine) {
 }
 
 function listFoot() {
-  return `<p class="meta" style="margin:14px 0 4px">Can\u2019t find it? <button class="link-btn inline" data-act="setup-manual">Enter the scorecard yourself</button></p>
-    <p class="meta attrib">Course data ${esc(cd.ATTRIBUTION)}</p>`;
+  return `<p class="meta attrib">Course data ${esc(cd.ATTRIBUTION)}</p>
+    <div class="nr-manual-wrap"><button class="nr-manual" data-act="setup-manual">Can\u2019t find it? <span>Enter the scorecard yourself</span></button></div>`;
 }
 
 function teamName(s, id) {
@@ -388,8 +388,7 @@ function topBar() {
 
 let curState = null; // the setup being drawn (for the progress bars in each headline)
 function headline(kicker, title, sub = '') {
-  const bars = curState && curState.screen !== 'check' && curState.screen !== 'which' ? progress(curState) : '';
-  return `<div class="nr-head"><div class="nr-k"><span class="lbl">${kicker}</span>${bars}</div><h1 class="nr-title">${title}</h1>${sub ? `<div class="nr-sub">${sub}</div>` : ''}</div>`;
+  return `<div class="nr-head"><div class="nr-k"><span class="lbl">${kicker}</span></div><h1 class="nr-title">${title}</h1>${sub ? `<div class="nr-sub">${sub}</div>` : ''}</div>`;
 }
 
 function bottom(label, act, { disabled = false, v = '', arrow = false } = {}) {
@@ -410,7 +409,7 @@ function cardLine(s, c) {
 function courseView(s) {
   return `${topBar(s)}${headline('Step 1 · Course', s.from ? 'Run it back: where to?' : 'Where are you playing?')}
     <label class="nr-search">${icon('search', 20)}<input class="course-q" id="course-q" type="search" placeholder="Search courses by name" value="${esc(s.q)}" autocomplete="off" autocapitalize="words" enterkeyhint="search" aria-label="Search courses by name" data-input="setup-q"></label>
-    <div id="course-results">${courseList(s)}</div>`;
+    <div id="course-results" class="nr-fill">${courseList(s)}</div>`;
 }
 
 /** ①a This club has 2 courses. Which one are you playing? */
@@ -556,7 +555,7 @@ function pairsView(s) {
     <div class="nr-line"><span class="meta">${s.swapSel != null ? 'Now tap who to swap with.' : 'Tap two names to swap partners.'}</span><button class="btn small" data-act="setup-shuffle">Shuffle</button></div>
     <div class="lbl nr-lbl">Switch partners</div>
     ${seg('setup-pairswitch', [['never', 'Never'], ['six', 'Every 6'], ['turn', 'At the turn']], s.pairSwitch)}
-    <div class="nr-tip">${icon('spark', 16)}<span>${SWITCH_TIP[s.pairSwitch]}</span></div>
+    <div class="nr-tip">${icon('bulb', 16)}<span>${SWITCH_TIP[s.pairSwitch]}</span></div>
     ${rulesBlock(s)}
     ${bottom(s.saving ? 'Starting…' : 'Start round · 2v2', 'setup-save', { disabled: s.saving })}`;
 }
@@ -605,13 +604,13 @@ function matchupsView(s) {
   }).join('');
   const g1 = rot[0].matches[0].join(' + '), g2 = rot[0].matches[1].join(' + ');
   const groupLine = fixed ? `1st tee time: ${g1} · 2nd: ${g2}, all 18. Nobody moves.` : `Each matchup plays as a foursome. Groups re-form ${when}.`;
-  return `${topBar(s)}${headline('Step 5 · Optional', 'Game &amp; matchups', 'Defaults are set. Change anything, or just start.')}
+  return `${topBar(s)}${headline('Step 5 · Optional · Defaults are set', 'Game &amp; matchups')}
     <div class="lbl nr-lbl">Switch opponents</div>
     ${seg('setup-schedule', [['six', 'Every 6 holes'], ['turn', 'At the turn']], s.schedule)}
     <div class="nr-hint meta">${esc(tip)}</div>
     <div class="lbl nr-lbl">On the course</div>
     ${seg('setup-move', [['fixed', 'Keep tee times'], ['swap', 'Play together']], fixed ? 'fixed' : 'swap')}
-    <div class="nr-tip">${icon('spark', 16)}<span>${fixed ? 'Groups never change. The app keeps score against your opponent in the other group. Best for pace of play.' : `Carts swap foursomes ${when} so you play next to your opponent. Both groups need to meet up.`}</span></div>
+    <div class="nr-tip">${icon('bulb', 16)}<span>${fixed ? 'Groups never change. The app keeps score against your opponent in the other group. Best for pace of play.' : `Carts swap foursomes ${when} so you play next to your opponent. Both groups need to meet up.`}</span></div>
     <div class="nr-line"><span class="lbl" style="flex:1">Matchups</span><button class="btn small" data-act="setup-shuffle-mu">Shuffle</button><button class="btn small${s.custom ? ' primary' : ''}" data-act="setup-custom">${s.custom ? 'Done' : 'Custom'}</button></div>
     <div class="mu-card">${rows}<div class="mu-groups meta">${esc(groupLine)}</div></div>
     ${rulesBlock(s)}
@@ -811,6 +810,11 @@ export default {
     // Look for nearby courses straight away (the course you're standing at goes on top). If the
     // site doesn't have location yet the phone asks once; blocked → the turn-it-on steps show.
     findNear(app);
+  },
+
+  topRight(app) {
+    const s = app.setup;
+    return s && !s.saved && s.screen !== 'check' && s.screen !== 'which' ? progress(s) : '';
   },
 
   topBack(app) {

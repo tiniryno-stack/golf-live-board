@@ -124,6 +124,7 @@ const BODIES = {
         ${app.snapshot?.roundComplete ? `<button class="btn primary block" data-act="menu-recap">${icon('trophy', 18)} Round recap &amp; scorecards</button>` : ''}
         ${app.snapshot?.game ? `<button class="btn block" data-act="menu-brief">${icon('spark', 18)} How today’s game works</button>` : ''}
         <button class="btn block" data-act="menu-share">${icon('share', 18)} Share round link</button>
+        <button class="btn block" data-act="theme">${icon(document.documentElement.dataset.theme === 'light' ? 'moon' : 'sun', 18)} ${document.documentElement.dataset.theme === 'light' ? 'Dark mode' : 'Light mode'}</button>
         <button class="btn ghost block" data-act="menu-home">${icon('home', 18)} Go to Home</button>
         ${p ? '<button class="btn danger block" data-act="menu-leave">Switch to watching</button>' : ''}
       </div>

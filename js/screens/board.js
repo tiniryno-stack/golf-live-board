@@ -224,8 +224,7 @@ export default {
       : '';
     const segs = `<div class="segs board-segs">
       ${hasTeams ? seg('board-view', snap.settings.pairs ? [['teams', 'Points'], ['players', 'Strokes']] : [['teams', 'Teams'], ['players', 'Players']], view) : ''}
-      ${snap.hasStrokes ? seg('board-mode', [['gross', 'Gross'], ['net', 'Net']], mode) : ''}
-      <button class="icon-btn" data-act="board-share" aria-label="Share the round" style="width:46px;height:46px;border-radius:14px">${icon('share')}</button></div>`;
+      ${snap.hasStrokes ? seg('board-mode', [['gross', 'Gross'], ['net', 'Net']], mode) : ''}</div>`;
     const rows = view === 'teams' ? (g ? teamRowsGame(app) : teamRowsStroke(app, mode)) : playerRows(app, mode);
     let foot = '';
     if (g && view === 'teams') {

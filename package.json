@@ -6,7 +6,8 @@
   "scripts": {
     "test": "node --test",
     "test:fit": "node tests/fit-the-screen.mjs",
-    "test:smoke": "node tests/smoke.mjs"
+    "test:smoke": "node tests/smoke.mjs",
+    "design:compare": "node tests/design-mockups.mjs && FIT_SIZE=393x852 node tests/fit-the-screen.mjs && python3 tests/design-pairs.py"
   },
   "devDependencies": {
     "@supabase/supabase-js": "2.118.0",

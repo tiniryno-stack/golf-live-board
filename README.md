@@ -45,6 +45,13 @@ npm install            # test tooling only (Playwright, supabase-js, Geist fonts
 npm test               # scoring + headlines: section 7 worked examples and scenarios
 npm run test:fit       # every screen at iPhone SE / 13 mini / 15-16 / Pro Max sizes
 npm run test:smoke     # two-phone run: blocked edit, hole-7 swap, offline queue, rejoin, reset, delete
+npm run design:compare # design mockups vs the app, side by side → tests/screenshots/design/vs-*.png
 ```
+
+## Design
+
+The look ("Night Round") is defined by the design system in `docs/design/system/`: colors (dark + light),
+type styles, spacing, corner sizes and one spec per component. `css/styles.css` uses those token names and
+values directly; the mockups it was drawn from are in `docs/design/screens/`.
 
 The fit and smoke checks run headless Chromium against an in-memory stand-in for Supabase (`tests/mock-supabase.mjs`) that mirrors the database functions.

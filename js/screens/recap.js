@@ -11,10 +11,11 @@ import { prettyDate } from '../ui.js';
 const W = 1080;
 const PAD = 64;
 const C = {
-  bg: '#0B0C0E', card: '#16181C', card2: '#20232A', line: 'rgba(255,255,255,.10)',
-  ink: '#ECEEF1', soft: 'rgba(236,238,241,.62)', faint: 'rgba(236,238,241,.36)',
-  sun: '#F4C95D', good: '#34C281', bad: '#F0564B',
-  A: '#F2994A', B: '#4C9AFF', C: '#F06AB0', D: '#A78BFA',
+  // design system dark theme (docs/design/system/tokens.json)
+  bg: '#0a0b0d', card: '#15171b', card2: '#1f2227', line: '#2b2f36',
+  ink: '#f4f5f7', soft: '#a7acb4', faint: 'rgba(167,172,180,.55)',
+  sun: '#f5c64a', good: '#3ddc84', bad: '#ff6b6b',
+  A: '#ff9f43', B: '#5b9bff', C: '#ff6fb5', D: '#b18cff',
 };
 const SANS = 'Geist, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
 const MONO = '"Geist Mono", ui-monospace, "SF Mono", Menlo, monospace';

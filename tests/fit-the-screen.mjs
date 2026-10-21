@@ -20,6 +20,11 @@ const SIZES = [
   ['iPhone 15/16', 393, 659],
   ['iPhone Pro Max', 430, 739],
 ];
+// FIT_SIZE=393x852 runs one extra size only (used to compare against the design mockups).
+if (process.env.FIT_SIZE) {
+  const [w, h] = process.env.FIT_SIZE.split('x').map(Number);
+  SIZES.splice(0, SIZES.length, [`${w}x${h}`, w, h]);
+}
 const DEV = '11111111-1111-4111-8111-111111111111';
 const OUT = new URL('./screenshots/fit/', import.meta.url).pathname;
 mkdirSync(OUT, { recursive: true });
@@ -38,6 +43,11 @@ be.tables.claims.push({ event_id: r.id, player_id: 'p1', device_id: DEV });
 // A finished round (every score in) for the end-of-round screens: Finalize, then locked.
 const rf = seedRound(be, { holesPlayed: 18 });
 be.tables.claims.push({ event_id: rf.id, player_id: 'p1', device_id: DEV });
+
+// A 4-player round with no carts ("you first" Enter), for the design comparison shots.
+const YP = ['Andrew', 'Sean', 'Sam', 'Jake'].map((n, i) => ({ id: `p${i + 1}`, personId: `yf${i}`, name: n, teamId: null, groupId: 'g1', strokes: null }));
+const yr = be.rpc.create_event({ p_name: 'You first', p_course: r.event.course, p_roster: { groups: [{ id: 'g1', name: 'Group 1' }], teams: [], players: YP }, p_settings: { game: 'none', solo: false, rotationMode: 'fixed' } });
+be.tables.claims.push({ event_id: be.tables.events.find((e) => e.code === yr.code).id, player_id: 'p1', device_id: DEV });
 
 const browser = await chromium.launch();
 const failures = [];
@@ -318,6 +328,25 @@ for (const size of SIZES) {
   await page.waitForTimeout(300);
   await page.evaluate(() => { document.getElementById('toasts').innerHTML = ''; });
   await check(page, size, 'Enter (fixing a finalized round)', 'enter');
+  if (process.env.FIT_SIZE) {
+    // Extra states the design mockups show (tests/design-pairs.py puts them side by side).
+    const shot = (n) => page.screenshot({ path: `${OUT}${size[1]}x${size[2]}-design-${n}.png` });
+    await go(`#/e/${r.code}/matches`);
+    await page.tap('.watch-head');
+    await page.waitForTimeout(700);
+    await shot('watching');
+    await go(`#/e/${r.code}/card`);
+    await page.tap('[data-act="card-player"]');
+    await page.waitForTimeout(500);
+    await shot('player');
+    await page.evaluate((c) => {
+      localStorage.setItem('glb.me.' + c, '"p1"'); localStorage.setItem('glb.who.' + c, 'true'); localStorage.setItem('glb.brief.' + c, 'true');
+    }, yr.code);
+    await go(`#/e/${yr.code}/enter`);
+    await page.tap('[data-act="pad-toggle"][data-pid="p2"]').catch(() => {});
+    await page.waitForTimeout(400);
+    await shot('solo');
+  }
   if (errors.length) {
     failures.push(`${size[0]} · page errors`);
     rows.push([`${size[0]} · page errors`, `FAIL: ${errors.join('; ')}`]);

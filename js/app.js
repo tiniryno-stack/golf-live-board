@@ -1109,10 +1109,12 @@ function renderTopbar(screen, inRound) {
   const themeBtn = `<button class="icon-btn" data-act="theme" aria-label="Light or dark">${icon(theme)}</button>`;
   if (!inRound) {
     const custom = screen.topBack?.(app); // e.g. Setup: back to the previous step
-    const back = app.route.name === 'home'
+    const home = app.route.name === 'home';
+    const back = home
       ? '<div class="spacer"></div>'
       : custom || `<button class="back" data-act="go" data-v="#/">${icon('back', 22)}<span>Home</span></button>`;
-    return `${back}${themeBtn}`;
+    // Light/dark lives on Home and in the round's ⋯ menu; Setup's top right shows its progress bars.
+    return `${back}${home ? themeBtn : screen.topRight?.(app) || ''}`;
   }
   const name = app.event?.name || app.code || '';
   const p = app.myPlayer();
@@ -1123,7 +1125,9 @@ function renderTopbar(screen, inRound) {
     : '';
   // No back button inside a round: leaving is deliberate, through the ⋯ menu (or your name).
   const menuBtn = app.event ? `<button class="icon-btn" data-act="round-menu" aria-label="Round menu">${icon('more')}</button>` : '';
-  return `${chip}<div class="round-title ellipsis">${esc(name)}</div>${themeBtn}${menuBtn}`;
+  // Board: share sits top right, as in the design.
+  const share = app.event && app.route.tab === 'board' ? `<button class="icon-btn" data-act="board-share" aria-label="Share the round">${icon('share')}</button>` : '';
+  return `${chip}<div class="round-title ellipsis">${esc(name)}</div>${share}${menuBtn}`;
 }
 
 function renderTabbar() {
@@ -1193,7 +1197,7 @@ Object.assign(actions, {
     const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
     document.documentElement.dataset.theme = next;
     db.local.set('glb.theme', next);
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', next === 'light' ? '#0B0C0E' : '#000000');
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', next === 'light' ? '#f2f3f5' : '#0a0b0d');
     render();
   },
   'round-menu': () => app.openSheet('menu', {}),
