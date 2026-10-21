@@ -65,7 +65,7 @@ function rules(app, d) {
     <div class="field"><span class="label">Max hole score</span>${seg('host-set', [['doublePar', 'Double par'], ['netDoubleBogey', 'Net dbl bogey'], ['none', 'None']], st.maxHoleScore, 'data-k="maxHoleScore"')}</div>
     <div class="chips" style="margin:0 0 16px">
       <button class="pill" data-act="host-toggle" data-k="par3NoMax" aria-pressed="${!!st.par3NoMax}"><span class="dot"></span>No max on par 3s</button>
-      <button class="pill" data-act="host-swap" aria-pressed="${(st.rotationMode || 'swap') === 'swap'}"><span class="dot"></span>Carts swap every 6</button>
+      ${(d.roster.teams || []).length === 4 ? `<button class="pill" data-act="host-swap" aria-pressed="${(st.rotationMode || 'swap') === 'swap'}"><span class="dot"></span>Carts swap every 6</button>` : ''}
     </div>
     ${st.game === 'rotationMatch' ? `<div class="field"><span class="label">Halved points</span>${seg('host-set', [['0.5', '½ each'], ['0', 'Nothing']], String(st.halvedHolePoints), 'data-k="halvedHolePoints"')}</div>` : ''}
     ${st.game === 'rotationMatch' ? `<div class="field"><span class="label">Matchup win bonus</span>${seg('host-set', [['1', '+1 point'], ['0', 'None']], String(st.matchBonus ?? 1), 'data-k="matchBonus"')}</div>` : ''}
@@ -164,8 +164,8 @@ function validate(d) {
   } else if (st.solo && st.game !== 'none') {
     const n = d.roster.players.length;
     if (teams.length || n < 2 || n > 6) return 'Match play (split point) is for 2–6 players with no carts.';
-  } else if (st.game !== 'none' && !(teams.length === 4 && teams.every((t) => d.roster.players.filter((p) => p.teamId === t.id).length === 2))) {
-    return 'The rotating game needs 4 carts of 2.';
+  } else if (st.game !== 'none' && !((teams.length === 4 || teams.length === 3) && teams.every((t) => d.roster.players.filter((p) => p.teamId === t.id).length === 2))) {
+    return 'Partner “Rider” Cup needs 4 carts of 2 (or 3 carts with 6 players).';
   }
   return null;
 }

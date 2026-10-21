@@ -109,7 +109,7 @@ ok(be.tables.claims.length === 2, 'server holds two claims');
 const cartsA = await A.page.$$eval('.cart .name', (els) => els.map((e) => e.textContent));
 ok(cartsA.join() === 'Hogan’s Heroes,Shank Redemption', `hole 1 cards on Andrew’s phone: ${cartsA.join(' + ')}`);
 const briefA = await briefText(A.page);
-ok(briefA.length === 2 && /Rotation Match Play/.test(briefA[0]) && /2 points every hole/.test(briefA[0]) && /Push A tie: ½ point each/.test(briefA[0]),
+ok(briefA.length === 2 && /Partner “Rider” Cup/.test(briefA[0]) && /2 points every hole/.test(briefA[0]) && /Push A tie: ½ point each/.test(briefA[0]),
   `joining shows Today\u2019s game: how a hole is scored (${(briefA[0] || 'none').slice(0, 60)}\u2026)`);
 ok(/Holes 1–6 vs Shank Redemption/.test(briefA[1] || '') && /Holes 7–12 vs Fore Play/.test(briefA[1] || '') && /12 points per matchup, \+1 for winning it/.test(briefA[1] || ''),
   'card 2: Andrew\u2019s three matchups and what\u2019s up for grabs');
@@ -444,6 +444,71 @@ ok(!!(await O.page.$('.fullcard.brief')) && !(await O.page.$('.coach')), 'kept \
 await O.page.tap('[data-act="brief-done"]');
 await O.page.waitForTimeout(500);
 ok(!!(await O.page.$('.cart.mine')) && /dashed number is par/.test((await O.page.textContent('.coach').catch(() => '')) || ''), 'then Enter, and the first tip shows there');
+
+// 10a. Partner “Rider” Cup for 6: 3 carts, every cart plays both others all 18 (A + B tee off
+//      together, C is the second tee time). 7 players: the fix says add one or remove one.
+const R6 = await (async () => {
+  const ctx = await browser.newContext({ viewport: { width: 393, height: 852 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  await attach(ctx, be, srv.origin);
+  const page = await ctx.newPage();
+  page.errors = [];
+  page.on('pageerror', (e) => page.errors.push(`6-player organizer: ${e.message}`));
+  return { ctx, page };
+})();
+await R6.page.goto(`${srv.origin}/#/setup`);
+await R6.page.waitForTimeout(800);
+await R6.page.tap('[data-act="setup-mine"][data-v="twin-creeks-allen-tx"]');
+await R6.page.waitForTimeout(200);
+for (const n of ['Tara Quinn', 'Uma Reyes', 'Vic Stone', 'Wes Tran', 'Xia Upton', 'Yuri Vance', 'Zed Walsh']) {
+  await R6.page.fill('#new-player', n);
+  await R6.page.press('#new-player', 'Enter');
+  await R6.page.waitForTimeout(150);
+}
+await R6.page.tap('[data-act="setup-go"][data-v="game"]');
+ok(/Add 1 more player \(8\) or remove 1 \(6\) to play this/.test(await R6.page.textContent('[data-act="setup-game"][data-v="carts"]')),
+  '7 players: Partner “Rider” Cup is greyed with “add 1 (8) or remove 1 (6)”');
+await R6.page.tap('[data-act="setup-go"][data-v="players"]');
+await R6.page.waitForTimeout(200);
+await R6.page.locator('.player-row', { hasText: 'Zed' }).locator('[data-act="setup-remove"]').tap().catch(() => {});
+await R6.page.waitForTimeout(200);
+await R6.page.tap('[data-act="setup-go"][data-v="game"]');
+await R6.page.waitForTimeout(200);
+ok(!(await R6.page.$('[data-act="setup-game"][data-v="carts"][aria-disabled]')) && /3 carts of 2/.test(await R6.page.textContent('[data-act="setup-game"][data-v="carts"]')),
+  '6 players: Partner “Rider” Cup fits, described as 3 carts of 2');
+await R6.page.tap('[data-act="setup-game"][data-v="carts"]');
+await R6.page.tap('[data-act="setup-go"][data-v="teams"]');
+await R6.page.waitForTimeout(200);
+ok((await R6.page.$$('.cart-card')).length === 3 && (await R6.page.$$('.cart-card .swap-name')).length === 6 && /6 players, 3 carts/.test(await R6.page.textContent('#content')),
+  'Partner “Rider” Cup setup with 6: 3 carts of 2');
+await R6.page.tap('[data-act="setup-go"][data-v="matchups"]');
+await R6.page.waitForTimeout(200);
+const mu6 = await R6.page.$$eval('.mu-row', (els) => els.map((e) => e.textContent.replace(/\s+/g, ' ').trim()));
+ok(mu6.length === 3 && mu6.every((t) => t.startsWith('1–18')) && /A \+ B · 2nd: C/.test(await R6.page.textContent('.mu-card')) && !(await R6.page.$('[data-act="setup-schedule"]')),
+  `matchups: A v B, A v C, B v C, all 18, no switching (${mu6.join(' | ')})`);
+await R6.page.tap('[data-act="setup-save"]');
+await R6.page.waitForTimeout(800);
+const r6code = await R6.page.evaluate(() => window.__glb.setup?.saved?.code || location.hash.split('/')[2]);
+const r6 = be.tables.events.find((e) => e.code === r6code) || be.tables.events[be.tables.events.length - 1];
+ok(r6.roster.teams.length === 3 && r6.settings.rotation.length === 1 && r6.settings.rotation[0].matches.length === 3 && r6.settings.rotationMode === 'fixed'
+  && r6.roster.players.filter((p) => p.groupId === 'g1').length === 4 && r6.roster.players.filter((p) => p.groupId === 'g2').length === 2,
+  'saved: 3 carts, one 18-hole rotation of 3 matchups, groups of 4 + 2, fixed tee times');
+await R6.page.tap('[data-act="setup-open"]');
+await R6.page.waitForTimeout(1200);
+await R6.page.locator('.who-btn', { hasText: 'Tara' }).first().tap();
+await R6.page.waitForTimeout(900);
+await R6.page.tap('[data-act="team-later"]').catch(() => {});
+await R6.page.waitForTimeout(500);
+ok(/both other carts on every hole/.test(await R6.page.textContent('.fullcard.brief').catch(() => '')), 'Today’s game: your cart plays both other carts on every hole');
+await R6.page.tap('[data-act="brief-done"]').catch(() => {});
+await R6.page.waitForTimeout(500);
+const line6 = (await R6.page.textContent('.matchup-line').catch(() => '')).replace(/\s+/g, ' ');
+ok((line6.match(/vs /g) || []).length === 2, `Enter: the match line shows both matchups (${line6.trim()})`);
+await R6.page.goto(`${srv.origin}/#/e/${r6.code}/matches`);
+await R6.page.waitForTimeout(900);
+ok((await R6.page.$$('.seg2 button')).length === 2 && (await R6.page.$$('.watch-box')).length === 1 && /MATCH 1 OF 2/.test(await R6.page.textContent('.m-kicker')),
+  'Matches: a segment for each of your 2 matchups, the third (B v C) under ALSO');
+await R6.page.screenshot({ path: 'tests/screenshots/matches-3-carts.png' });
+await R6.ctx.close();
 
 // 10b. Names: first + last name required; a full name someone else already has asks for a
 //      nickname; two Andrews in one round show as "Andrew D." / "Andrew S."; people + crew saved.
@@ -1228,7 +1293,7 @@ await HE.page.goto(`${srv.origin}/#/`);
 await HE.page.waitForTimeout(500);
 ok(!(await HE.page.$('[data-act="home-add"]')), 'not an iPhone: no button');
 
-const errors = [A, C, A2, P, Q, O, F, R, X, Y, Z, G, T, TP, NL, SP, HA, HB, HC, HD, HE, HF].flatMap((p) => p.page.errors);
+const errors = [A, C, A2, P, Q, O, R6, F, R, X, Y, Z, G, T, TP, NL, SP, HA, HB, HC, HD, HE, HF].flatMap((p) => p.page.errors);
 ok(errors.length === 0, `no page errors${errors.length ? `: ${errors.join('; ')}` : ''}`);
 
 await browser.close();

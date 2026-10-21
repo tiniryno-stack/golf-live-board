@@ -9,11 +9,27 @@ import { esc, seg, seg2, icon, foldIn } from '../ui.js';
 import { fmtPts, fmtSigned, rotationIndexFor, holeAt, HOLES, playOrder, sideOn } from '../scoring.js';
 import { teamColor, shortTeam } from '../teams.js';
 
-function pickRotation(app) {
+/** The matches to switch between: yours (one per rotation, or two at once with 3 carts), or each
+ *  rotation's first match when you're watching. [{ ri, m, my }] */
+function matchList(app) {
+  const g = app.snapshot.game;
+  const out = [];
+  g.rotations.forEach((r, ri) => {
+    const my = mineIn(app, ri);
+    const mine = my ? r.matches.filter((m) => m.teams.includes(my)) : [];
+    if (mine.length) mine.forEach((m) => out.push({ ri, m, my }));
+    else out.push({ ri, m: r.matches[0], my: null });
+  });
+  return out;
+}
+
+/** Index into matchList: the one tapped, else the first match of the rotation being played now. */
+function pickMatch(app, list) {
   const snap = app.snapshot;
-  if (app.ui.matchesRot != null && app.ui.matchesRot < snap.game.rotations.length) return app.ui.matchesRot;
+  if (app.ui.matchesRot != null && app.ui.matchesRot < list.length) return app.ui.matchesRot;
   const hole = app.me ? app.nextHole() || holeAt(snap.settings, HOLES) : holeAt(snap.settings, Math.min(HOLES, snap.officialThrough + 1));
-  return Math.max(0, rotationIndexFor(snap.settings, hole));
+  const ri = Math.max(0, rotationIndexFor(snap.settings, hole));
+  return Math.max(0, list.findIndex((e) => e.ri === ri));
 }
 
 /** Your side in a rotation (2v2: your pairing changes with the rotation). */
@@ -127,37 +143,36 @@ function liveHoleOf(m) {
 export function teamGameView(app) {
   const snap = app.snapshot;
   const g = snap.game;
-  const ri = pickRotation(app);
+  const list = matchList(app);
+  const sel = pickMatch(app, list);
+  const { ri, m: hero, my: mine } = list[sel];
   const rot = g.rotations[ri];
-  const mine = mineIn(app, ri);
-  const hero = rot.matches.find((m) => m.teams.includes(mine)) || rot.matches[0];
-  const others = rot.matches.filter((m) => m !== hero);
+  // ALSO / WATCHING: the matches in this rotation you're not in (yours are segments).
+  const others = rot.matches.filter((m) => m !== hero && !(mine && m.teams.includes(mine)));
   const [left, right] = sides(hero, mine);
   const lc = colorFor(app, mine, left), rc = colorFor(app, mine, right);
   const [cl, cr] = counters(g, hero, left);
   const watching = !!app.ui.watchOther && others.length > 0;
   const name = (t) => snap.teamById.get(t).name;
 
-  // One segment per match: yours across the rotations (or each rotation's first match when watching).
-  const segs = g.rotations.map((r, i) => {
-    const my = mineIn(app, i);
-    const m = r.matches.find((x) => x.teams.includes(my)) || r.matches[0];
+  // One segment per match: yours (or each rotation's first match when watching).
+  const segs = list.map(({ ri: i, m, my }, k) => {
     const [l, rr] = sides(m, my);
     const [sub, live] = segSub(app, g, m, l);
     const label = my ? shortTeam(name(rr)) : `Rot ${i + 1}`;
-    return [String(i), label, sub, { dot: my ? colorFor(app, my, rr) : '', live }];
+    return [String(k), label, sub, { dot: my ? colorFor(app, my, rr) : '', live }];
   });
   const state = hero.final ? 'FINAL' : hero.played ? 'LIVE' : 'UP NEXT';
   const [st1, st2] = statusPair(app, g, hero, left, !!mine);
   const head = mine
-    ? `<div class="m-kicker mono">MATCH ${ri + 1} OF ${g.rotations.length} · ${state}</div>
+    ? `<div class="m-kicker mono">MATCH ${sel + 1} OF ${list.length} · ${state}</div>
        <div class="m-title">vs <span style="color:${rc}">${esc(name(right))}</span></div>
        <div class="m-sub">${esc(playersOf(app, right))} · holes ${hero.firstHole} → ${hero.lastHole}</div>`
     : `<div class="m-kicker mono">ROTATION ${ri + 1} OF ${g.rotations.length} · ${state}</div>
        <div class="m-title"><span style="color:${lc}">${esc(shortTeam(name(left)))}</span> <span class="soft">vs</span> <span style="color:${rc}">${esc(shortTeam(name(right)))}</span></div>
        <div class="m-sub">holes ${hero.firstHole} → ${hero.lastHole}</div>`;
   const heroFull = `<div class="m-hero">${head}
-      ${seg2('matches-rot', segs, String(ri))}
+      ${segs.length > 1 ? seg2('matches-rot', segs, String(sel)) : ''}
       <div class="m-score">
         <div class="ms-side r"><div style="color:${lc}">${esc(shortTeam(name(left)))}</div><small>${mine ? 'you' : esc(playersOf(app, left))}</small></div>
         <div class="ms-num mono"><span style="color:${lc}">${esc(cl)}</span><span class="dash">–</span><span style="color:${rc}">${esc(cr)}</span></div>
@@ -263,7 +278,7 @@ export default {
       const casual = !(snap.roster.teams || []).length && n >= 2 && n <= 6;
       const why = casual
         ? ` The organizer can turn on Match play under ${app.isOrganizer() ? '<b>Host</b> → Rules' : 'Host → Rules'}: 1 point a hole, a tie for low splits it. It counts back from hole 1.`
-        : snap.roster.teams?.length === 4 ? '' : ' (the cart game needs 4 carts of 2)';
+        : [3, 4].includes(snap.roster.teams?.length) ? '' : ' (Partner “Rider” Cup needs carts of 2)';
       return `<div class="plain"><h1 class="title">Matches</h1>
         <p class="soft">No game on this round.${why} The live leaderboard is on the Board.</p>
         ${casual && app.isOrganizer() ? '<button class="btn block" style="margin:0 0 10px" data-act="tab" data-v="host">Turn on Match play</button>' : ''}

@@ -34,8 +34,17 @@ export const GAMES = [
   { id: 'scorecard', name: 'Scorecard only', count: 'ANY NUMBER', min: 1, max: 99, desc: 'Everyone plays their own ball. One leaderboard, net or gross.' },
   { id: 'match', name: 'Match play', count: '2–6 PLAYERS', min: 2, max: 6, desc: 'Low net score wins each hole for 1 point. Ties split it.' },
   { id: '2v2', name: '2v2', count: 'EXACTLY 4', min: 4, max: 4, desc: 'Two teams of two in one foursome. Partners can switch every 6.' },
-  { id: 'carts', name: 'Cart game', count: 'EXACTLY 8', min: 8, max: 8, desc: '4 carts of 2. Opponents rotate every 6 holes across tee times.' },
+  {
+    id: 'carts', name: 'Partner “Rider” Cup', count: '6 OR 8 PLAYERS', min: 6, max: 8, sizes: [6, 8],
+    desc: '4 carts of 2. Opponents rotate every 6 holes across tee times.',
+    desc6: '3 carts of 2. Every cart plays both other carts, all 18 holes.',
+  },
 ];
+
+/** Carts in a Partner “Rider” Cup for this many players: 3 for 6, else 4. */
+export function cartIdsFor(n) {
+  return n === 6 ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
+}
 
 /** null when the game fits, else the fix spelled out ("Add 3 more players to play this."). */
 export function gameFix(gameId, n) {
@@ -44,6 +53,10 @@ export function gameFix(gameId, n) {
   const pl = (k) => (k === 1 ? 'player' : 'players');
   if (n < g.min) return `Add ${g.min - n} more ${pl(g.min - n)} to play this.`;
   if (n > g.max) return `Remove ${n - g.max} ${pl(n - g.max)} to play this.`;
+  if (g.sizes && !g.sizes.includes(n)) {
+    const up = g.sizes.find((k) => k > n), down = [...g.sizes].reverse().find((k) => k < n);
+    return `Add ${up - n} more ${pl(up - n)} (${up}) or remove ${n - down} (${down}) to play this.`;
+  }
   return null;
 }
 
@@ -70,6 +83,11 @@ export function cartRotation(schedule = 'six', opps = null, me = 'A') {
     const rest = others.filter((c) => c !== o);
     return { holes, matches: [[me, o], rest] };
   });
+}
+
+/** Partner “Rider” Cup with 6 players: 3 carts, every cart plays both others on every hole, all 18. */
+export function threeCartRotation() {
+  return [{ holes: [1, HOLES], matches: [['A', 'B'], ['A', 'C'], ['B', 'C']] }];
 }
 
 /** 2v2 pairings for 4 players (indexes into the roster): never / every 6 / at the turn. */
@@ -291,7 +309,7 @@ function gameIsValid(roster, settings) {
     if (players.length !== 4 || !teams.length || !teams.every((t) => t.members?.length === 2)) return false;
   } else {
     const size = settings.solo ? 1 : 2;
-    if (settings.solo ? teams.length < 2 || teams.length > 6 : teams.length !== 4) return false;
+    if (settings.solo ? teams.length < 2 || teams.length > 6 : teams.length !== 4 && teams.length !== 3) return false;
     if (!teams.every((t) => players.filter((p) => p.teamId === t.id).length === size)) return false;
   }
   const ids = new Set(teams.map((t) => t.id));
@@ -780,11 +798,16 @@ export function currentHoleOf(snapshot, pid) {
   return order.find((h) => p.gross[h - 1] == null) ?? order[HOLES - 1];
 }
 
-/** The match a team is in on a hole. */
+/** The match a team is in on a hole (the first one, when it has several: 3-cart rounds). */
 export function matchFor(snapshot, teamId, hole) {
-  if (!snapshot.game || !teamId) return null;
+  return matchesFor(snapshot, teamId, hole)[0] || null;
+}
+
+/** Every match a team is in on a hole: one in most games, two in a 3-cart Partner “Rider” Cup. */
+export function matchesFor(snapshot, teamId, hole) {
+  if (!snapshot.game || !teamId) return [];
   const pos = posOf(snapshot.settings, hole);
-  return snapshot.game.matches.find((m) => m.teams.includes(teamId) && pos >= m.from && pos <= m.to) || null;
+  return snapshot.game.matches.filter((m) => m.teams.includes(teamId) && pos >= m.from && pos <= m.to);
 }
 
 // ───────────────────────────────────────────── season (V1-lite)

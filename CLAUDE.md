@@ -7,8 +7,8 @@ after the first playtest; section 13 is the V2 backlog.
 ## What it is / where things stand
 
 - Mobile web app for Andrew's friend group: each foursome enters hole-by-hole scores on their
-  phones; everyone sees one live board across tee times, plus a rotating 2v2 cart game
-  (Rotation Match Play or Plus/Minus). Night Round design (docs/design/design-system), dark by default.
+  phones; everyone sees one live board across tee times, plus the rotating 2v2 cart game
+  **Partner “Rider” Cup** (Rotation Match Play or Plus/Minus; 8 players in 4 carts, or 6 in 3). Night Round design (docs/design/design-system), dark by default.
 - Live: https://tiniryno-stack.github.io/golf-live-board/ (GitHub Pages, `main`, root). Repo:
   `tiniryno-stack/golf-live-board`.
 - **Played for real on Oct 16, 2026** ("Chucks Bday", code `V4T3M`, Twin Creeks, 8 phones). It
@@ -115,8 +115,11 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
 - Official line = holes every foursome has finished (play order); beyond it is provisional.
 - **Games (Oct 21):** Scorecard only (any count, `autoGroups`), Match play 2–6 (`solo`, jerseys A–F),
   **2v2** (`settings.pairs` + `pairSwitch` never/six/turn: `pairView` makes one team per pairing with
-  `members`; `game.people` = each player's summed points; `sideOn()` = your pair on a hole), Cart
-  game (8; `cartRotation('six'|'turn', opps)`, `rotationMode` fixed = keep tee times = new default).
+  `members`; `game.people` = each player's summed points; `sideOn()` = your pair on a hole),
+  **Partner “Rider” Cup** (game id `carts`; 8 = 4 carts, `cartRotation('six'|'turn', opps)`,
+  `rotationMode` fixed = keep tee times = new default; **6 = 3 carts**, `threeCartRotation()`: one
+  18-hole rotation with A v B, A v C, B v C at once, groups A + B / C, always fixed; a cart has two
+  matches per hole, so use `matchesFor()`; `matchFor()` returns the first).
 - **Small groups:** any roster that isn't 4 carts of 2 is a scorecard round (no teams).
   With 2–6 players, `settings.solo` = **split point** (`game.type 'splitPoint'`): 1 point a hole to the
   low net score, ties for low split it 1/k. Teams A–D are made in `soloView`, so Host can switch it on
@@ -187,12 +190,12 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
 
 ```bash
 npm install
-npm test               # 70 unit tests: scoring + headlines + course data + names/crews + games (2v2, at the turn, 6-player match play) + score marks
+npm test               # 71 unit tests: scoring + headlines + course data + names/crews + games (2v2, at the turn, 6-player match play, Partner “Rider” Cup for 6) + score marks
 npm run test:fit       # 132 checks: every screen at SE / 13 mini / 15-16 / Pro Max, no scroll on Enter
-npm run test:smoke     # 225 checks: multi-phone flows against the mock (join, swap, offline, rejoin,
+npm run test:smoke     # 233 checks: multi-phone flows against the mock (join, swap, offline, rejoin,
                        # reset/delete, back nine, Next waits for every score, grid/locks, recap,
                        # finalize + PIN unlock, add a course, which course?, names/nicknames/crew-mates, you-first pad,
-                       # matches expand in place, 2v2, Add to Home Screen move, test phones, blank-screen guards)
+                       # matches expand in place, 2v2, 3 carts for 6, Add to Home Screen move, test phones, blank-screen guards)
 ```
 
 - Playwright 1.56 with Chromium at `PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers` (don't run
@@ -220,10 +223,10 @@ npm run test:smoke     # 225 checks: multi-phone flows against the mock (join, s
   groups as one-tap chips + ~8 frequent players + search within the crew, 5) team names reserved per
   pair **within a crew** + the first 151 Pokémon (`TEAM_NAME_PICKS`). Keep UI changes small until the
   Claude Design setup redesign lands.
-- **Design open items, decided Oct 21** (docs/design/BUILD-PLAN.md §8–9, not built yet): the cart game
-  is renamed **Partner Rider Cup**; **a player's own entry wins** over one entered for them (DB rule);
-  scorecard-check cells keep the keypad; Partner Rider Cup gets a **3-cart version for 6** (format to
-  confirm); optional **tee times** per round (`settings.teeTimes`, else "1st tee time"); the Rules sheet
+- **Design open items, decided Oct 21** (docs/design/BUILD-PLAN.md §8–9): the cart game is
+  **Partner “Rider” Cup** (built, quotes on purpose) with a **3-carts-for-6** version (built);
+  **a player's own entry wins** over one entered for them (DB rule); scorecard-check cells keep the
+  keypad; optional **tee times** per round (`settings.teeTimes`, else "1st tee time"); the Rules sheet
   shows the round's real settings. Naming a course in "Which course?" is remembered per group (shared
   courses table = V2). "Start now, finish the card during the round" not built.
 - **Split point played for real Oct 20** (Bridlewood, 3 players, switched on mid-round). Worked;

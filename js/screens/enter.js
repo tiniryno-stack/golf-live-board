@@ -10,11 +10,11 @@
 
 import { esc, icon, mark, scoreName, foldIn } from '../ui.js';
 import {
-  maxHoleScore, maxLabel, rotationFor, rotationIndexFor, foursomeFor, matchFor, componentNames,
+  maxHoleScore, maxLabel, rotationFor, rotationIndexFor, foursomeFor, matchFor, matchesFor, componentNames,
   fmtPts, fmtSigned, playOrder, posOf, holeAt, HOLES, sideOn,
 } from '../scoring.js';
 import { matchupAlert } from '../headlines.js';
-import { teamColor, isDefaultTeamName } from '../teams.js';
+import { teamColor, isDefaultTeamName, shortTeam } from '../teams.js';
 import { local } from '../db.js';
 
 /** "+2 thru 4" / "All square" from this team's side of its current matchup. */
@@ -330,11 +330,19 @@ export default {
         return `${who} <span class="status">${fmtPts(s.points)}</span>`;
       }).join(' <span class="faint">·</span> ')}</span>`;
     } else if (snap.game && myTeam) {
-      const m = matchFor(snap, myTeam, h);
-      const opp = m ? snap.teamById.get(m.teams[0] === myTeam ? m.teams[1] : m.teams[0]) : null;
-      matchLine = m
-        ? `<span class="teams">Rot ${m.rotation} · vs <b style="color:${sideColor(app, opp.id)}">${esc(opp.name)}</b></span><span class="status">${esc(matchStatusShort(snap, m, myTeam))}</span>`
-        : '';
+      const ms = matchesFor(snap, myTeam, h);
+      const oppOf = (m) => snap.teamById.get(m.teams[0] === myTeam ? m.teams[1] : m.teams[0]);
+      if (ms.length > 1) {
+        // 3 carts: you play both other carts at once ("vs Shank UP 1 · vs Fore AS").
+        const lead = (m) => { const o = oppOf(m).id; const d = m.points[myTeam] - m.points[o]; return !m.played ? '–' : d > 0 ? `UP ${fmtPts(d)}` : d < 0 ? `DN ${fmtPts(-d)}` : 'AS'; };
+        matchLine = `<span class="teams">${ms.map((m) => `vs <b style="color:${sideColor(app, oppOf(m).id)}">${esc(shortTeam(oppOf(m).name))}</b> <span class="status">${esc(lead(m))}</span>`).join(' <span class="faint">·</span> ')}</span>`;
+      } else {
+        const m = ms[0] || null;
+        const opp = m ? oppOf(m) : null;
+        matchLine = m
+          ? `<span class="teams">Rot ${m.rotation} · vs <b style="color:${sideColor(app, opp.id)}">${esc(opp.name)}</b></span><span class="status">${esc(matchStatusShort(snap, m, myTeam))}</span>`
+          : '';
+      }
     } else if (rot) {
       matchLine = `<span class="teams">${esc(rot.label)}</span>`;
     } else {

@@ -272,7 +272,21 @@ export function matchupAlert(snap, teamId, nextHole) {
   const g = snap.game;
   if (!g || g.type !== 'rotationMatch' || !teamId) return null;
   const pos = posOf(snap.settings, nextHole);
-  const m = g.matches.find((mm) => mm.teams.includes(teamId) && pos >= mm.from && pos <= mm.to);
+  // Usually one matchup; with 3 carts you play two at once: the first one with an alert wins,
+  // and its text names the other cart.
+  const ms = g.matches.filter((mm) => mm.teams.includes(teamId) && pos >= mm.from && pos <= mm.to);
+  for (const m of ms) {
+    const a = alertFor(g, m, teamId, nextHole);
+    if (a) {
+      if (ms.length < 2) return a;
+      const opp = m.teams[0] === teamId ? m.teams[1] : m.teams[0];
+      return { ...a, text: a.text.replace(' — ', ` vs ${snap.teamById.get(opp)?.name || opp} — `) };
+    }
+  }
+  return null;
+}
+
+function alertFor(g, m, teamId, nextHole) {
   if (!m || m.final || m.clinchedBy) return null;
   const opp = m.teams[0] === teamId ? m.teams[1] : m.teams[0];
   const d = m.points[opp] - m.points[teamId]; // > 0 means we're behind

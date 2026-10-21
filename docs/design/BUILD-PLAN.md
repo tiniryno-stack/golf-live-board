@@ -277,18 +277,21 @@ else lives in the round's settings JSON or on the phone.
 ## 9. Open items and questions
 
 From the spec's "Open items" (carried over from the first PLAN.md). **Andrew decided these Oct 21:**
-1. **Name for the cart game: "Partner Rider Cup".** Renames "Cart game" everywhere it shows (game
-   picker, Today's game, Rules sheet, Home, recap). Internal ids (`carts`) stay.
+1. **Name for the cart game: Partner “Rider” Cup**, with the quotes, on purpose (it's a pun: you ride
+   in a cart; it also steers clear of the Ryder Cup name). Renames "Cart game" everywhere it shows
+   (game picker, Today's game, Rules sheet, Home, recap). Internal ids (`carts`) stay.
 2. **Two phones enter different scores: the player's own entry wins** (section 8 has the exact rule).
 3. **Scorecard-check cells: keep typing with the number keypad** (Claude's call; faster than a stepper
    for 18 holes entered by hand). The cells get the TextField states (focus ring, amber problem
    border) and at least 48px tap height. Mid-round fixes use the Fix-a-hole sheet's stepper.
    **Closed.**
-4. **Partner Rider Cup for 6 players: build it** (3 carts of 2). **Ask, format:** default is
-   **every cart plays both other carts on every hole, all 18 holes** (A v B, A v C, B v C at once; Low
-   Ball + Low Total each, ties ½, +1 for winning each matchup), so there's no switching and nobody sits
-   out. Groups: carts A + B in the first tee time, C in the second. The other way (switching every 6)
-   leaves one cart idle each stretch. The game picker's count becomes "6 OR 8 PLAYERS".
+4. **Partner “Rider” Cup for 6 players: build it** (3 carts of 2). **Format confirmed Oct 21:** every
+   cart plays both other carts on every hole, all 18 holes (A v B, A v C, B v C at once), scored like
+   the 8-player game: Low Ball + Low Total against each cart, ties ½, +1 for winning each matchup. A
+   cart can win 0 to 4 points a hole. No switching, nobody sits out. Groups: carts A + B in the first
+   tee time, C in the second. The game picker's count becomes "6 OR 8 PLAYERS". (Andrew said "low ball
+   and high ball" once; built as Low Ball + Low Total like the 8-player game, the rules sheet's team
+   score setting still applies.)
 5. **Rules sheet: shows the round's real settings.** The mockup's lines were sample text. Defaults
    today: handicaps full, off zero; max score double par; tiebreak as in section 8. If the organizer
    changed a setting, the sheet shows that instead. **Closed.**

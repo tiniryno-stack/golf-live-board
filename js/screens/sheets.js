@@ -3,8 +3,8 @@
 // organizer PIN (unlock a finalized round).
 
 import { esc, icon, scoreClass, clock, mark } from '../ui.js';
-import { fmtToPar, fmtPts, fmtSigned, maxHoleScore, componentNames, posOf, holeAt, holesLabel, matchFor, playOrder } from '../scoring.js';
-import { teamColor, headlineColor } from '../teams.js';
+import { fmtToPar, fmtPts, fmtSigned, maxHoleScore, componentNames, posOf, holeAt, holesLabel, matchesFor, playOrder } from '../scoring.js';
+import { teamColor, headlineColor, shortTeam } from '../teams.js';
 
 let lastHtml = '';
 let closeTimer = null;
@@ -218,14 +218,15 @@ const BODIES = {
     const here = app.ui.hole;
     const me = app.myPlayer();
     const mine = app.myTeam();
+    // One row per matchup; a matchup longer than 9 holes (2v2 all 18, 3 carts) is split into rows of 6.
+    const sixes = [{ from: 1, to: 6 }, { from: 7, to: 12 }, { from: 13, to: 18 }];
     const groups = snap.game
-      ? snap.game.rotations.map((r) => ({ from: r.from, to: r.to }))
-      : [{ from: 1, to: 6 }, { from: 7, to: 12 }, { from: 13, to: 18 }];
+      ? snap.game.rotations.flatMap((r) => (r.to - r.from + 1 > 9 ? sixes.filter((x) => x.from >= r.from && x.to <= r.to) : [{ from: r.from, to: r.to }]))
+      : sixes;
     const rows = groups
       .map(({ from, to }) => {
-        const m = mine ? matchFor(snap, mine, holeAt(st, from)) : null;
-        const opp = m ? (m.teams[0] === mine ? m.teams[1] : m.teams[0]) : null;
-        const vs = opp ? ` · vs <span style="color:${teamColor(mine, opp)}">${esc(snap.teamById.get(opp)?.name || opp)}</span>` : '';
+        const opps = mine ? matchesFor(snap, mine, holeAt(st, from)).map((m) => (m.teams[0] === mine ? m.teams[1] : m.teams[0])) : [];
+        const vs = opps.length ? ` · vs ${opps.map((opp) => `<span style="color:${teamColor(mine, opp)}">${esc(opps.length > 1 ? shortTeam(snap.teamById.get(opp)?.name || opp) : snap.teamById.get(opp)?.name || opp)}</span>`).join(' &amp; ')}` : '';
         const cells = [];
         for (let pos = from; pos <= to; pos++) {
           const h = holeAt(st, pos);
