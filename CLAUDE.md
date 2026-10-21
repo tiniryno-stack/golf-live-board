@@ -151,6 +151,10 @@ npm run test:smoke     # 179 checks: multi-phone flows against the mock (join, s
 
 ## Open items / ideas
 
+- **Setup flow feels too long (Andrew, Oct 20):** too many steps/pages/swipes to start a round,
+  especially for a quick 2–4 player round. Not designed yet; revisit (fewer steps, smart defaults).
+- **Split point played for real Oct 20** (Bridlewood, 3 players, switched on mid-round). Worked;
+  Andrew may want some optimization later but asked for no changes for now.
 - `_setting_label` in the DB doesn't know `matchBonus` (audit log shows the raw key): one-line
   additive migration if wanted.
 - The recap images use the viewer's perspective (their cart green); a neutral "everyone's jersey"
