@@ -50,7 +50,7 @@ async function phone(name) {
   const ctx = await browser.newContext({ viewport: { width: 375, height: 548 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
   await attach(ctx, be, srv.origin);
   await ctx.addInitScript(() => {
-    for (const k of ['tile4', 'prov2', 'oppcart2']) localStorage.setItem('glb.coach.' + k, 'true');
+    for (const k of ['tile5', 'prov2', 'oppcart3']) localStorage.setItem('glb.coach.' + k, 'true');
   });
   const page = await ctx.newPage();
   page.errors = [];
@@ -311,7 +311,7 @@ ok(r2.event.roster.teams.find((t) => t.id === 'C').name === 'Squirtle', 'Sam\u20
 const taken = be.rpc.pick_team_name({ p_code: r2.code, p_device_id: await app(Q.page, () => JSON.parse(localStorage.getItem('glb.device'))), p_name: 'charmander' });
 ok(taken.error === 'taken', 'the server refuses a name another cart has (any capitals)');
 ok((await P.page.textContent('.hole-title')) === 'Hole 10', 'starting on 10: Enter opens on Hole 10');
-await P.page.evaluate(() => localStorage.removeItem('glb.coach.oppcart2'));
+await P.page.evaluate(() => localStorage.removeItem('glb.coach.oppcart3'));
 await P.page.tap('[data-act="tile-step"][data-pid="p1"][data-d="-1"]');
 await P.page.tap('[data-act="tile-step"][data-pid="p2"][data-d="1"]');
 await P.page.waitForTimeout(900);
@@ -327,7 +327,7 @@ const cartRatio = await P.page.evaluate(() => {
   const [a, b] = [...document.querySelectorAll('.cart')].map((c) => c.getBoundingClientRect().height);
   return a / (a + b);
 });
-ok(cartRatio > 0.64 && cartRatio < 0.76, `your cart gets ~70% of the space (${Math.round(cartRatio * 100)}%)`);
+ok(cartRatio > 0.75, `your cart is the big card (stacked rows), theirs one slim row (${Math.round(cartRatio * 100)}%)`);
 await P.page.evaluate(() => { document.getElementById('toasts').innerHTML = ''; });
 const t0 = Date.now();
 const push = async (pid, by, i) => {
@@ -342,17 +342,18 @@ await push('p7', 'Chris', 2); // Chris is in the other foursome
 await P.page.waitForTimeout(1900);
 ok((await toastText(P.page)).includes('Chris 4'), 'toast for the other foursome\u2019s score');
 
-// 8. Their cart: greyed until tapped, then 50/50; back to 60/40 by tapping yours or moving on
+// 8. Their cart: one slim row until tapped (Edit), then theirs is the big card and yours the slim
+//    row; back by tapping yours (Back) or moving on
 const shares = (page) => page.evaluate(() => {
   const [a, b] = [...document.querySelectorAll('.cart')].map((c) => c.getBoundingClientRect().height);
   return a / (a + b);
 });
-ok(!!(await P.page.$('.cart.opp.dim')) && !(await P.page.$('.cart.opp .step')), 'their cart starts greyed, with no − / +');
+ok(!!(await P.page.$('.cart.opp.dim')) && !(await P.page.$('.cart.opp .step')), 'their cart starts as one slim row, with no − / +');
 await P.page.tap('.cart.opp .face[data-pid="p4"]');
 await P.page.waitForTimeout(400);
 ok(!be.tables.scores.some((x) => x.event_id === r2.id && x.player_id === 'p4' && x.hole === 10), 'tapping it doesn\u2019t score anyone');
 const even = await shares(P.page);
-ok(!!(await P.page.$('.sheet.even .cart.mine.dim')) && Math.abs(even - 0.5) < 0.02, `tapped: 50/50 (${Math.round(even * 100)}%), theirs open, yours greyed`);
+ok(!!(await P.page.$('.cart.mine.dim')) && !!(await P.page.$('.cart.opp.focus')) && even > 0.75, `tapped: theirs open as the big card, yours the slim row (${Math.round(even * 100)}%)`);
 await P.page.tap('[data-act="tile-step"][data-pid="p4"][data-d="-1"]');
 await P.page.waitForTimeout(900);
 const s4 = be.tables.scores.find((x) => x.event_id === r2.id && x.player_id === 'p4' && x.hole === 10);
@@ -360,7 +361,7 @@ ok(s4?.strokes === par10, `entered their score while open (${s4?.strokes})`);
 await P.page.tap('.cart.mine.dim');
 await P.page.waitForTimeout(200);
 const back = await shares(P.page);
-ok(!!(await P.page.$('.cart.opp.dim')) && back > 0.64, `tap yours: back to 70/30 (${Math.round(back * 100)}%)`);
+ok(!!(await P.page.$('.cart.opp.dim')) && back > 0.75, `tap yours (Back): yours open again (${Math.round(back * 100)}%)`);
 await P.page.tap('.cart.opp.dim');
 await P.page.waitForTimeout(150);
 await P.page.tap('.next-btn');
@@ -435,7 +436,7 @@ await O.page.waitForTimeout(500);
 ok(!!(await O.page.$('.fullcard.brief')) && !(await O.page.$('.coach')), 'kept \u201cCart A\u201d \u2192 Today\u2019s game, still no tip on top');
 await O.page.tap('[data-act="brief-done"]');
 await O.page.waitForTimeout(500);
-ok(!!(await O.page.$('.cart.mine')) && /grey number is par/.test((await O.page.textContent('.coach').catch(() => '')) || ''), 'then Enter, and the first tip shows there');
+ok(!!(await O.page.$('.cart.mine')) && /dashed number is par/.test((await O.page.textContent('.coach').catch(() => '')) || ''), 'then Enter, and the first tip shows there');
 
 // 10b. Names: first + last name required; a full name someone else already has asks for a
 //      nickname; two Andrews in one round show as "Andrew D." / "Andrew S."; people + crew saved.
@@ -527,7 +528,7 @@ const F = await (async () => {
     localStorage.setItem('glb.me.' + code, '"p1"');
     localStorage.setItem('glb.who.' + code, 'true');
     localStorage.setItem('glb.brief.' + code, 'true');
-    for (const k of ['tile4', 'prov2', 'oppcart2']) localStorage.setItem('glb.coach.' + k, 'true');
+    for (const k of ['tile5', 'prov2', 'oppcart3']) localStorage.setItem('glb.coach.' + k, 'true');
   }, [r3.code, DEV3]);
   const page = await ctx.newPage();
   page.errors = [];
@@ -537,8 +538,8 @@ const F = await (async () => {
 await F.page.goto(`${srv.origin}/#/e/${r3.code}/enter`);
 await F.page.waitForTimeout(900);
 const par1 = r3.event.course.par[0];
-const ghosts = await F.page.$$eval('.score.ghost', (els) => els.map((e) => e.textContent.trim()));
-ok(ghosts.length === 4 && ghosts.every((g) => g === String(par1)), `blank tiles show a grey par (${ghosts.join(', ')})`);
+const ghosts = await F.page.$$eval('.tile .mk-ghost', (els) => els.map((e) => e.textContent.trim()));
+ok(ghosts.length === 2 && ghosts.every((g) => g === String(par1)), `blank rows show a dashed ghost of par (${ghosts.join(', ')})`);
 await F.page.tap('[data-act="tile-step"][data-pid="p1"][data-d="1"]'); // Andrew: first tap = par…
 await F.page.waitForTimeout(150);
 ok((await F.page.evaluate(() => window.__glb.scoreOf('p1', 1))) === par1, 'first tap on + is par, not bogey');
@@ -553,7 +554,7 @@ const at = (pid) => be.tables.scores.find((x) => x.event_id === r3.id && x.playe
 ok((await F.page.textContent('.hole-title')) === 'Hole 1' && at('p2') == null && at('p4') == null, 'Next with blanks: stays on hole 1 and saves nobody at par');
 ok(/Still need/.test(await toastText(F.page)) && (await F.page.$$('.cart.focus .tile.empty.nudge')).length > 0, `it points at the empty boxes (“${await toastText(F.page)}”)`);
 await F.page.waitForTimeout(1200);
-ok((await F.page.evaluate(() => window.__glb.scoreOf('p3', 1))) === 7 && /2 scores left/.test(await nextText()), 'and pulls the latest: Mike’s 7 from his phone shows up, 2 left');
+ok((await F.page.evaluate(() => window.__glb.scoreOf('p3', 1))) === 7 && /Sean, Tyler left/.test(await nextText()), `and pulls the latest: Mike’s 7 from his phone shows up, “Sean, Tyler left” (${await nextText()})`);
 await F.page.tap('.cart.mine .face[data-pid="p2"]'); // Sean: par
 await F.page.waitForTimeout(300);
 await F.page.evaluate(() => { document.getElementById('toasts').innerHTML = ''; });
@@ -615,7 +616,7 @@ const R = await (async () => {
     localStorage.setItem('glb.who.' + code, 'true');
     localStorage.setItem('glb.brief.' + code, 'true');
     localStorage.setItem('glb.seen.' + code, JSON.stringify({ last: Date.now(), ids: [] }));
-    for (const k of ['tile4', 'prov2', 'oppcart2']) localStorage.setItem('glb.coach.' + k, 'true');
+    for (const k of ['tile5', 'prov2', 'oppcart3']) localStorage.setItem('glb.coach.' + k, 'true');
   }, [r4.code, DEV4]);
   const page = await ctx.newPage();
   page.errors = [];
@@ -684,7 +685,7 @@ async function presetPhone(label, code, { dev, me, pin } = {}) {
     localStorage.setItem('glb.who.' + c, 'true');
     localStorage.setItem('glb.brief.' + c, 'true');
     localStorage.setItem('glb.seen.' + c, JSON.stringify({ last: Date.now(), ids: [] }));
-    for (const k of ['tile4', 'prov2', 'oppcart2']) localStorage.setItem('glb.coach.' + k, 'true');
+    for (const k of ['tile5', 'prov2', 'oppcart3']) localStorage.setItem('glb.coach.' + k, 'true');
   }, [code, dev || null, me || null, pin || null]);
   const page = await ctx.newPage();
   page.errors = [];
@@ -768,7 +769,7 @@ const G = await (async () => {
     geolocation: { latitude: 33.1084, longitude: -96.7181 }, permissions: ['geolocation'],
   });
   await attach(ctx, be, srv.origin);
-  await ctx.addInitScript(() => { for (const k of ['tile4', 'prov2', 'oppcart2']) localStorage.setItem('glb.coach.' + k, 'true'); });
+  await ctx.addInitScript(() => { for (const k of ['tile5', 'prov2', 'oppcart3']) localStorage.setItem('glb.coach.' + k, 'true'); });
   const page = await ctx.newPage();
   page.errors = [];
   page.on('pageerror', (e) => page.errors.push(`Course phone: ${e.message}`));

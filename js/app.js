@@ -3,7 +3,7 @@
 // Render flow: Supabase ─realtime─► app state ─► scoring.compute() ─► snapshot ─► active screen render
 
 import * as db from './db.js';
-import { compute, nextHoleFor, currentHoleOf, sameFoursome, matchFor, playOrder, posOf, holeAt, HOLES } from './scoring.js';
+import { compute, nextHoleFor, currentHoleOf, sameFoursome, matchFor, playOrder, posOf, holeAt, HOLES, sideOn } from './scoring.js';
 import { isDefaultTeamName } from './teams.js';
 import { replayHeadlines, latestMoment } from './headlines.js';
 import { esc, icon, initials, roundLink, copyText } from './ui.js';
@@ -67,7 +67,13 @@ app.go = (hash) => {
 app.tabHash = (tab) => `#/e/${app.code}/${tab}`;
 app.myPlayer = () => (app.me && app.snapshot ? app.snapshot.playerById.get(app.me) || null : null);
 app.myName = () => app.myPlayer()?.name || null;
-app.myTeam = () => app.myPlayer()?.teamId || null;
+/** Your cart — or in 2v2, the pairing you're in on a hole (default: the hole you're on). */
+app.myTeam = (hole) => {
+  const p = app.myPlayer();
+  if (!p) return null;
+  if (app.snapshot.settings.pairs) return sideOn(app.snapshot, p.id, hole ?? app.ui.hole ?? app.nextHole());
+  return p.teamId || null;
+};
 app.isOrganizer = () => !!app.adminPin;
 /** The organizer finalized the round: scores are locked (organizer PIN to edit). */
 app.isFinal = () => !!app.event?.finalized_at;

@@ -1,18 +1,17 @@
-// enter.js — the default tab. Compact hero (hole + matchup), your cart big on top
-// (~70%) and the cart you're playing below (~30%), greyed to one slim row of small
-// scores until you tap it; then it's 50/50 with theirs open and yours greyed (tap
-// yours to go back; any other hole opens on yours). An empty tile shows a
-// grey par. The first tap anywhere on an empty box (−, the number or +) is par; after
-// that − / + step (so bogey = tap, +). Next hole waits until every box in your group has a
-// score ("Next hole · 2 scores left"); tapping it then points at who's missing. Nothing is
-// ever saved as par without a tap. Long-press clears. ◀ back through the current matchup + Undo, Next hole →
-// (Switch it up, Lock in / Close it out). Holes follow play order (start on 1 or 10).
-// Must fit an iPhone SE with no scrolling.
+// enter.js — the default tab (designspec §2). Team game: your cart's two players as full-width
+// stacked rows (big − / +, the score in its score mark, a live BIRDIE / PAR label, a dashed ghost
+// of par until the first tap), the team line (Low Ball / Low Total), and the other cart in your
+// foursome as one slim row + Edit (tap it to enter theirs; yours collapses to the slim row).
+// The first tap on an empty box (−, the number or +) is par; after that − / + step. Next hole
+// waits until every box in your group has a score ("Next hole · Sean left"); tapping it then
+// points at who's missing. Nothing is ever saved as par without a tap. Long-press clears.
+// Holes two or more back open locked. Holes follow play order (start on 1 or 10).
+// Must fit an iPhone SE with no scrolling (rows and buttons shrink to the space).
 
-import { esc, icon, scoreClass } from '../ui.js';
+import { esc, icon, mark, scoreName } from '../ui.js';
 import {
   maxHoleScore, maxLabel, rotationFor, rotationIndexFor, foursomeFor, matchFor, componentNames,
-  fmtPts, fmtSigned, playOrder, posOf, holeAt, HOLES,
+  fmtPts, fmtSigned, playOrder, posOf, holeAt, HOLES, sideOn,
 } from '../scoring.js';
 import { matchupAlert } from '../headlines.js';
 import { teamColor, isDefaultTeamName } from '../teams.js';
@@ -26,6 +25,25 @@ export function matchStatus(snap, m, teamId) {
   const v = snap.game.type === 'rotationPlusMinus' ? m.margin[teamId] : m.points[teamId] - m.points[opp];
   const s = v === 0 ? 'All square' : fmtSigned(v);
   return m.final ? `${s} · final` : `${s} thru ${m.played}`;
+}
+
+/** "UP 2 · 5–3 · thru 4" / "AS · 2–2 · thru 2" / "+3 · thru 4" (Plus/Minus), your side first. */
+export function matchStatusShort(snap, m, teamId) {
+  if (!m) return '';
+  const opp = m.teams[0] === teamId ? m.teams[1] : m.teams[0];
+  if (!m.played) return 'NOT STARTED';
+  const tail = m.final ? 'FINAL' : `thru ${m.played}`;
+  if (snap.game.type === 'rotationPlusMinus') return `${fmtSigned(m.margin[teamId], 'E')} · ${tail}`;
+  const lead = m.points[teamId] - m.points[opp];
+  const word = lead > 0 ? `UP ${fmtPts(lead)}` : lead < 0 ? `DN ${fmtPts(-lead)}` : 'AS';
+  return `${word} · ${fmtPts(m.points[teamId])}–${fmtPts(m.points[opp])} · ${tail}`;
+}
+
+/** Your side's color, and the other side's (2v2: always green vs blue). */
+function sideColor(app, teamId) {
+  const snap = app.snapshot;
+  if (snap.settings.pairs) return teamId === app.myTeam(app.ui.hole) ? 'var(--good)' : 'var(--t-B)';
+  return teamColor(app.myTeam(), teamId);
 }
 
 /** Furthest hole you can step forward to: the next one your foursome hasn't finished. */
@@ -43,9 +61,13 @@ function cartsFor(app, hole) {
   const ids = foursomeFor(snap.roster, snap.settings, app.me, hole);
   // Solo match play: everyone is in one group card (each player is their own "team").
   if (snap.settings.solo) return [{ teamId: null, players: ids.map((id) => snap.playerById.get(id)) }];
+  // 2v2: you + your partner on this hole, then the other pair.
+  const side = (pid) => (snap.settings.pairs ? sideOn(snap, pid, hole) : snap.playerById.get(pid).teamId);
+  const mine = side(app.me);
+  const order = [...ids.filter((id) => side(id) === mine), ...ids.filter((id) => side(id) !== mine)];
   const carts = [];
-  for (const id of ids) {
-    const p = snap.playerById.get(id);
+  for (const id of order) {
+    const p = { ...snap.playerById.get(id), teamId: side(id) };
     let c = carts.find((x) => x.teamId === p.teamId);
     if (!c) carts.push((c = { teamId: p.teamId, players: [] }));
     c.players.push(p);
@@ -72,59 +94,82 @@ function isLocked(app, h) {
   return posOf(app.snapshot.settings, h) < frontierPos(app) - 1;
 }
 
-function tile(app, p, hole, dim, mini, locked) {
+function strokeDots(n) {
+  return n ? `<span class="dots" aria-label="gets ${n === 1 ? 'a stroke' : `${n} strokes`}">${'<i></i>'.repeat(n)}</span>` : '';
+}
+
+/** One player as a stacked row: name + live label, then − · score mark · +. */
+function tile(app, p, hole, locked) {
   const snap = app.snapshot;
   const par = snap.holes[hole - 1].par;
   const g = p.gross[hole - 1];
-  const editable = !dim && !locked && app.canEdit(p.id, hole);
-  if (mini) {
-    // Their cart, greyed: name + a small score on one line.
-    return `<div class="tile readonly mini${g == null ? ' empty' : ''}"><div class="face" data-pid="${esc(p.id)}">
-      <span class="who"><span class="ellipsis">${esc(p.name)}</span></span><span class="score ${g == null ? 'ghost' : scoreClass(g, par)}">${g ?? par}</span></div></div>`;
-  }
+  const editable = !locked && app.canEdit(p.id, hole);
   const max = maxHoleScore(snap.course, snap.settings, hole, p.dots[hole - 1]);
-  const dots = p.dots[hole - 1] ? `<span class="dots" aria-label="${p.dots[hole - 1]} stroke">${'<i></i>'.repeat(p.dots[hole - 1])}</span>` : '';
-  // Empty tile: a grey par, which is what the first tap records.
-  const shown = g ?? Math.min(par, max);
-  const face = `<span class="who"><span class="ellipsis">${esc(p.name)}</span>${dots}</span>
-    <span class="score ${g == null ? 'ghost' : scoreClass(g, par)}">${shown}</span>`;
+  const ghost = Math.min(par, max); // what the first tap records
+  const d = g == null ? null : g - par;
+  const label = g == null ? (editable ? 'TAP − / + · PAR' : 'NO SCORE YET') : scoreName(g, par);
+  const tone = g == null ? '' : d < 0 ? ' under' : d >= 2 ? ' dbl' : '';
+  const top = `<div class="t-top"><span class="who"><span class="ellipsis">${esc(p.name)}</span>${strokeDots(p.dots[hole - 1])}</span><span class="t-lbl mono${tone}">${label}</span></div>`;
+  const face = mark(g, par, 112, { ghost: editable ? ghost : '–' });
   if (!editable) {
-    return `<div class="tile readonly${g == null ? ' empty' : ''}"><div class="face" data-pid="${esc(p.id)}">${g == null ? face.replace(`>${shown}<`, '>–<') : face}</div></div>`;
+    return `<div class="tile readonly${g == null ? ' empty' : ''}">${top}
+      <div class="t-row"><div class="face" data-pid="${esc(p.id)}">${face}</div></div></div>`;
   }
   // Just tapped Next with this box empty: shake it (survives a redraw for a moment).
   const nudge = g == null && app.ui.nudge?.hole === hole && Date.now() < app.ui.nudge.until ? ' nudge' : '';
-  return `<div class="tile${g == null ? ' empty' : ''}${nudge}${p.id === app.me ? ' mine' : ''}">
-    <button class="step" data-act="tile-step" data-pid="${esc(p.id)}" data-d="-1" ${g != null && g <= 1 ? 'disabled' : ''} aria-label="${esc(p.name)} one less">${icon('minus', 22)}</button>
-    <button class="face" data-act="tile-tap" data-hold="tile-clear" data-pid="${esc(p.id)}" aria-label="${esc(p.name)}: ${g ?? 'no score yet'}">${face}</button>
-    <button class="step" data-act="tile-step" data-pid="${esc(p.id)}" data-d="1" ${g != null && g >= max ? 'disabled' : ''} aria-label="${esc(p.name)} one more">${icon('plus', 22)}</button>
-  </div>`;
+  return `<div class="tile${g == null ? ' empty' : ''}${nudge}${p.id === app.me ? ' mine' : ''}">${top}
+    <div class="t-row">
+      <button class="step" data-act="tile-step" data-pid="${esc(p.id)}" data-d="-1" ${g != null && g <= 1 ? 'disabled' : ''} aria-label="${esc(p.name)} minus one">−</button>
+      <button class="face" data-act="tile-tap" data-hold="tile-clear" data-pid="${esc(p.id)}" aria-label="${esc(p.name)}: ${g ?? 'no score yet'}">${face}</button>
+      <button class="step" data-act="tile-step" data-pid="${esc(p.id)}" data-d="1" ${g != null && g >= max ? 'disabled' : ''} aria-label="${esc(p.name)} plus one">+</button>
+    </div></div>`;
 }
 
-function cartCard(app, cart, hole, mine, dim, locked) {
+function teamLine(app, cart, hole) {
   const snap = app.snapshot;
   const team = cart.teamId ? snap.teamById.get(cart.teamId) : null;
-  const comps = team?.comps[hole - 1];
+  if (!team) return '';
+  const comps = team.comps[hole - 1];
   const short = snap.settings.teamScore === 'bestBallAggregate' ? ['LB', 'LT'] : componentNames(snap.settings.teamScore);
-  const lblt = team && comps ? short.map((n, i) => `${n} ${comps[i]}`).join(' · ') : team ? short.map((n) => `${n} –`).join(' · ') : '';
-  const label = team ? team.name : cart.players.length > 2 ? 'Your group' : 'Your cart';
-  const jersey = team ? teamColor(app.myTeam(), team.id) : '';
-  const name = mine && team && !dim && !locked
-    ? `<button class="name name-btn" data-act="team-picker" aria-label="Name your cart"><span class="ellipsis">${esc(label)}</span>${isDefaultTeamName(team) ? '<span class="pick">Name it</span>' : ''}</button>`
-    : `<span class="name ellipsis">${esc(label)}</span>`;
-  // A greyed cart is one big tap target: the first tap only switches which cart is open.
-  const side = mine ? 'mine' : 'opp';
+  return `${short.map((n, i) => `${n} ${comps ? comps[i] : '–'}`).join(' · ')}${snap.hasStrokes ? ' net' : ''}`;
+}
+
+function cartLabel(app, cart) {
+  const snap = app.snapshot;
+  const team = cart.teamId ? snap.teamById.get(cart.teamId) : null;
+  return team ? team.name : cart.players.length > 2 ? 'Your group' : 'Your cart';
+}
+
+/** The open cart: stacked rows in a card outlined in its color. */
+function cartCard(app, cart, hole, mine, locked) {
+  const snap = app.snapshot;
+  const team = cart.teamId ? snap.teamById.get(cart.teamId) : null;
+  const label = cartLabel(app, cart);
+  const jersey = team ? sideColor(app, team.id) : 'var(--good)';
+  const name = mine && team && !locked && !snap.settings.pairs
+    ? `<button class="name name-btn" data-act="team-picker" aria-label="Name your cart"><i class="jd"></i><span class="ellipsis">${esc(label)}</span>${isDefaultTeamName(team) ? '<span class="pick">Name it</span>' : ''}</button>`
+    : `<span class="name"><i class="jd"></i><span class="ellipsis">${esc(label)}</span></span>`;
   // A locked (finished) hole: the whole card is the tap target that unlocks it for editing.
-  const tap = dim
-    ? ` data-act="cart-focus" data-enter="cart-focus" data-v="${side}" role="button" tabindex="0" aria-label="${mine ? 'Back to your cart' : `Enter scores for ${esc(label)}`}"`
-    : locked
-      ? ` data-act="hole-unlock" data-enter="hole-unlock" role="button" tabindex="0" aria-label="Edit hole ${hole}"`
-      : '';
-  const chip = dim
-    ? `<span class="focus-chip">${mine ? 'Tap to go back' : 'Tap to enter'}</span>`
-    : locked ? `<span class="focus-chip lock-chip">${icon('lock', 12)} Tap to edit</span>` : '';
-  return `<section class="cart ${side}${dim ? ' dim' : locked ? ' focus locked' : ' focus'}" ${jersey ? `style="--jersey:${jersey}"` : ''}${tap}>
-    <div class="cart-head">${name}<span class="lblt">${esc(lblt)}</span>${chip}</div>
-    <div class="tiles">${cart.players.map((p) => tile(app, p, hole, dim, dim && !mine, locked)).join('')}</div>
+  const tap = locked ? ` data-act="hole-unlock" data-enter="hole-unlock" role="button" tabindex="0" aria-label="Edit hole ${hole}"` : '';
+  const chip = locked ? `<span class="focus-chip lock-chip">${icon('lock', 12)} Tap to edit</span>` : `<span class="lblt">${esc(teamLine(app, cart, hole))}</span>`;
+  return `<section class="cart ${mine ? 'mine' : 'opp'} focus${locked ? ' locked' : ''}" style="--jersey:${jersey}"${tap}>
+    <div class="cart-head">${name}${chip}</div>
+    <div class="tiles">${cart.players.map((p) => tile(app, p, hole, locked)).join('')}</div>
+  </section>`;
+}
+
+/** The other cart, collapsed to one slim row: name, their scores with marks, Edit / Back. */
+function slimCart(app, cart, hole, mine) {
+  const snap = app.snapshot;
+  const team = cart.teamId ? snap.teamById.get(cart.teamId) : null;
+  const label = cartLabel(app, cart);
+  const jersey = team ? sideColor(app, team.id) : 'var(--line-strong)';
+  const par = snap.holes[hole - 1].par;
+  const scores = cart.players.map((p) => `<span class="face" data-pid="${esc(p.id)}"><span class="ellipsis">${esc(p.name)}</span>${mark(p.gross[hole - 1], par, 28, { ghost: '–' })}</span>`).join('');
+  return `<section class="cart ${mine ? 'mine' : 'opp'} dim" style="--jersey:${jersey}" data-act="cart-focus" data-enter="cart-focus" data-v="${mine ? 'mine' : 'opp'}" role="button" tabindex="0" aria-label="${mine ? 'Back to your cart' : `Enter scores for ${esc(label)}`}">
+    <i class="jd"></i><span class="name ellipsis">${esc(label)}</span>
+    <span class="slim-scores mono">${scores}</span>
+    <span class="edit-btn">${mine ? 'Back' : 'Edit'}</span>
   </section>`;
 }
 
@@ -168,23 +213,25 @@ export default {
     const hole = snap.holes[h - 1];
     const limitPos = posOf(st, holeLimit(app));
     const lastHole = playOrder(st)[HOLES - 1];
-    const myTeam = app.myTeam();
+    const myTeam = app.myTeam(h);
     const rot = rotationFor(st, h);
     let matchLine = '';
     if (snap.game && st.solo) {
       // Split point: everyone's points so far, leader first ("Josh 3 · You 2⅓ · Sean ⅔").
       matchLine = `<span class="teams">${snap.game.liveStandings.map((s) => {
-        const who = s.teamId === myTeam ? 'You' : esc(snap.teamById.get(s.teamId).name);
+        const who = s.teamId === app.myTeam() ? 'You' : esc(snap.teamById.get(s.teamId).name);
         return `${who} <span class="status">${fmtPts(s.points)}</span>`;
       }).join(' <span class="faint">·</span> ')}</span>`;
     } else if (snap.game && myTeam) {
       const m = matchFor(snap, myTeam, h);
       const opp = m ? snap.teamById.get(m.teams[0] === myTeam ? m.teams[1] : m.teams[0]) : null;
       matchLine = m
-        ? `<span class="teams">Rot ${m.rotation} · ${esc(snap.teamById.get(myTeam).name)} <span class="faint">vs</span> ${esc(opp.name)}</span><span class="status">${esc(matchStatus(snap, m, myTeam))}</span>`
+        ? `<span class="teams">Rot ${m.rotation} · vs <b style="color:${sideColor(app, opp.id)}">${esc(opp.name)}</b></span><span class="status">${esc(matchStatusShort(snap, m, myTeam))}</span>`
         : '';
     } else if (rot) {
       matchLine = `<span class="teams">${esc(rot.label)}</span>`;
+    } else {
+      matchLine = `<span class="teams">${snap.hasStrokes ? 'Stroke play · net' : 'Stroke play'}</span>`;
     }
     // Fixing a finalized round: say so, with Done to lock this phone again.
     if (app.isFinal()) matchLine = `<span class="teams">${icon('lock', 13)} Fixing a finalized round</span><button class="link-btn relock" data-act="final-relock">Done</button>`;
@@ -193,30 +240,35 @@ export default {
     const locked = isLocked(app, h);
     const cur = app.nextHole();
     const done = app.foursomeDone();
-    const everyone = carts.flatMap((c) => c.players);
+    // 18-hole progress strip; a gap where the opponents switch (or at the turn).
+    const breaks = new Set(snap.game?.rotations?.length > 1 ? snap.game.rotations.slice(1).map((r) => r.from) : [10]);
     const dots = playOrder(st)
-      .map((n) => {
+      .map((n, i) => {
         const ids = foursomeFor(snap.roster, st, app.me, n);
-        const done = ids.length && ids.every((id) => snap.playerById.get(id).gross[n - 1] != null);
-        return `<i class="${n === h ? 'here' : done ? 'done' : ''}"></i>`;
+        const fin = ids.length && ids.every((id) => snap.playerById.get(id).gross[n - 1] != null);
+        return `<i class="${n === h ? 'here' : fin ? 'done' : ''}${breaks.has(i + 1) ? ' brk' : ''}"></i>`;
       })
       .join('');
-    // Every box needs a score before you move on; the button says how many are left.
-    const blanks = blankPlayers(app, h).length;
-    const left = blanks ? ` · ${blanks} score${blanks === 1 ? '' : 's'} left` : ' →';
+    // Every box needs a score before you move on; the button says who's left.
+    const blanks = blankPlayers(app, h);
+    const left = blanks.length
+      ? ` · ${blanks.length === 1 ? `${blanks[0].name} left` : blanks.length === 2 ? `${blanks[0].name}, ${blanks[1].name} left` : `${blanks.length} scores left`}`
+      : ' →';
     const nextLabel = `${h === lastHole ? 'Finish' : 'Next hole'}${left}`;
     // Looking back at a finished hole: the button takes you back to where you are.
     const footBtn = pos >= frontierPos(app) - 1
-      ? `<button class="btn primary block next-btn${blanks ? ' waiting' : ''}" data-act="next-hole">${nextLabel}</button>`
+      ? `<button class="btn primary block next-btn${blanks.length ? ' waiting' : ''}" data-act="next-hole">${esc(nextLabel)}</button>`
       : done
         ? '<button class="btn primary block next-btn" data-act="tab" data-v="board">See the Board →</button>'
         : `<button class="btn primary block next-btn" data-act="hole-current">Back to hole ${cur} →</button>`;
-    return `<div class="enter">
+    const open = focus === 'opp' ? carts[1] : carts[0];
+    const shut = carts.filter((c) => c !== open);
+    return `<div class="enter nr">
       <div class="hero">
         <div class="hole-row">
           <button class="arrow" data-act="hole-prev" aria-label="Previous hole" ${pos <= 1 ? 'disabled' : ''}>${icon('back')}</button>
           <button class="hole-head" data-act="hole-grid" aria-label="Hole ${h}: all holes">
-            <span class="hole-title">Hole ${h}<span class="grid-ico">${icon('grid', 15)}</span></span>
+            <span class="hole-title">Hole ${h}</span>
             <span class="hole-meta">Par ${hole.par} · Hcp ${hole.si} · ${esc(maxLabel(snap.course, st, h))}</span>
           </button>
           <button class="arrow" data-act="hole-next" aria-label="Next hole" ${pos >= limitPos ? 'disabled' : ''}>${icon('fwd')}</button>
@@ -224,7 +276,8 @@ export default {
         ${matchLine ? `<div class="matchup-line">${matchLine}</div>` : ''}
       </div>
       <div class="sheet${focus === 'opp' ? ' even' : ''}">
-        ${carts.map((c, i) => cartCard(app, c, h, i === 0, carts.length > 1 && (i === 0) === (focus === 'opp'), locked)).join('')}
+        ${cartCard(app, open, h, open === carts[0], locked)}
+        ${shut.map((c) => slimCart(app, c, h, c === carts[0])).join('')}
         <div class="enter-foot"><div class="holedots" aria-hidden="true">${dots}</div><span class="sync" data-sync>Synced</span></div>
         ${footBtn}
       </div>
@@ -238,10 +291,10 @@ export default {
     const mine = root.querySelector('.cart.mine.focus');
     const theirs = root.querySelector('.cart.opp.dim');
     // Once your cart is in and theirs isn't, point at the greyed cart.
-    if (mine && theirs && !mine.querySelector('.tile.empty') && theirs.querySelector('.tile.empty')) {
-      app.coach('oppcart2', theirs, 'You can enter scores for the other cart in your group too. Tap their card to open it, then tap yours to come back.');
+    if (mine && theirs && !mine.querySelector('.tile.empty') && theirs.querySelector('.mk-ghost')) {
+      app.coach('oppcart3', theirs, 'You can enter scores for the other cart in your group too. Tap their row to open it, then Back to come back.');
     } else if (first) {
-      app.coach('tile4', first, 'The grey number is par. Your first tap on the box makes it par, then + for bogey or − for birdie. Every box needs a score before Next hole.');
+      app.coach('tile5', first, 'The dashed number is par. Your first tap makes it par, then + for bogey or − for birdie. Every box needs a score before Next hole.');
     }
   },
 
@@ -332,7 +385,8 @@ function blankPlayers(app, h) {
 function nudgeBlanks(app, h, blanks) {
   const carts = cartsFor(app, h);
   const open = focusSide(app, h, carts) === 'opp' ? carts[1] : carts[0];
-  const openHasBlank = open.players.some((p) => blanks.includes(p));
+  const blankIds = new Set(blanks.map((p) => p.id));
+  const openHasBlank = open.players.some((p) => blankIds.has(p.id));
   // All the missing scores are in the greyed cart: open it so they can be entered.
   if (!openHasBlank && carts.length > 1) {
     app.ui.enterFocus = open === carts[0] ? h : null;

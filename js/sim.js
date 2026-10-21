@@ -87,7 +87,7 @@ async function signIn(i, code, pid) {
   if (mine) phoneSet(i, `glb.me.${code}`, mine);
   for (const k of ['who', 'brief']) phoneSet(i, `glb.${k}.${code}`, true);
   phoneSet(i, `glb.seen.${code}`, { last: Date.now(), ids: [] });
-  for (const k of ['tile4', 'oppcart2', 'prov2']) phoneSet(i, `glb.coach.${k}`, true);
+  for (const k of ['tile5', 'oppcart3', 'prov2']) phoneSet(i, `glb.coach.${k}`, true);
   return mine;
 }
 

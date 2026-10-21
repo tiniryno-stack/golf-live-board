@@ -81,38 +81,29 @@ async function check(page, size, screen, extra) {
       const next = document.querySelector('.next-btn');
       if (!next || !onScreen(next) || !within(next, content)) problems.push('Next hole off screen');
       document.querySelectorAll('.tile').forEach((t, i) => {
-        if (!within(t, content)) problems.push(`tile ${i + 1} cut off`);
-        // Score tiles you tap need 64px; the greyed cart's small rows aren't tap targets (the whole card is).
-        if (!t.classList.contains('mini') && box(t).height < 63.5) problems.push(`tile ${i + 1} only ${Math.round(box(t).height)}px tall`);
-        if (t.classList.contains('mini') && box(t).height < 36) problems.push(`their row ${i + 1} only ${Math.round(box(t).height)}px tall`);
-        if (!t.classList.contains('mini')) {
-          // The name sits above the score (clear of its circle / square), centered; the score is level with − / +.
-          const name = t.querySelector('.who .ellipsis'), sc = t.querySelector('.score'), face = t.querySelector('.face');
-          const nb = box(name), sb = box(sc), fb = box(face);
-          const deco = 0.08 * parseFloat(getComputedStyle(sc).fontSize); // how far a bogey square / birdie circle reaches above the number
-          if (nb.bottom > sb.top - deco - 1) problems.push(`tile ${i + 1}: name touches the score (${Math.round(nb.bottom)} vs ${Math.round(sb.top - deco)})`);
-          if (name.scrollWidth > name.clientWidth + 1) problems.push(`tile ${i + 1}: “${name.textContent}” cut off`);
-          const who = box(t.querySelector('.who'));
-          if (Math.abs((who.left + who.right) / 2 - (fb.left + fb.right) / 2) > 1.5) problems.push(`tile ${i + 1}: name off center`);
-          const step = t.querySelector('.step');
-          if (step && Math.abs((sb.top + sb.bottom) / 2 - (box(step).top + box(step).bottom) / 2) > 2) problems.push(`tile ${i + 1}: score not level with − / +`);
-        }
+        if (!within(t, content)) problems.push(`row ${i + 1} cut off`);
+        // Stacked row (designspec §2): name + label on top, then − · score mark · + level with each other.
+        const name = t.querySelector('.who .ellipsis'), mk = t.querySelector('.face .mk'), steps = t.querySelectorAll('.step');
+        if (name.scrollWidth > name.clientWidth + 1) problems.push(`row ${i + 1}: “${name.textContent}” cut off`);
+        const nb = box(name), mb = box(mk);
+        if (nb.bottom > mb.top + 1) problems.push(`row ${i + 1}: name touches the score mark`);
+        if (mb.height < 40) problems.push(`row ${i + 1}: score mark only ${Math.round(mb.height)}px`);
+        steps.forEach((st) => {
+          const sb = box(st);
+          if (Math.abs((sb.top + sb.bottom) / 2 - (mb.top + mb.bottom) / 2) > 2) problems.push(`row ${i + 1}: score not level with − / +`);
+        });
       });
-      document.querySelectorAll('.tile .step, .hole-row .arrow').forEach((s) => {
+      document.querySelectorAll('.tile .step, .hole-row .arrow, .cart.dim').forEach((s) => {
         const b = box(s);
         if (b.width < 47.5 || b.height < 47.5) problems.push(`tap target ${Math.round(b.width)}×${Math.round(b.height)} < 48`);
       });
-      if (!document.querySelectorAll('.tile').length) problems.push('no score tiles rendered');
-      const carts = [...document.querySelectorAll('.cart')].map((c) => box(c).height);
-      if (document.querySelector('.sheet.even')) {
-        if (carts.length === 2 && Math.abs(carts[0] - carts[1]) > 2) problems.push(`50/50 split is ${Math.round(carts[0])}/${Math.round(carts[1])}`);
-        if (document.querySelectorAll('.cart.opp.focus .tile .step').length < 4) problems.push('their cart is open but not editable');
-        if (!document.querySelector('.cart.mine.dim')) problems.push('your cart should be greyed while theirs is open');
-      } else if (carts.length === 2) {
-        const share = carts[0] / (carts[0] + carts[1]);
-        if (share < 0.62) problems.push(`your cart is only ${Math.round(share * 100)}% (want ~70)`);
-        if (!document.querySelector('.cart.opp.dim') || document.querySelector('.cart.opp .tile .step')) problems.push('their cart should be greyed and not editable');
-      }
+      if (!document.querySelectorAll('.tile').length) problems.push('no score rows rendered');
+      const open = document.querySelector('.cart.focus'), slim = document.querySelector('.cart.dim');
+      if (!open) problems.push('no open cart');
+      if (slim && box(slim).height > 60) problems.push(`the other cart should be one slim row (${Math.round(box(slim).height)}px)`);
+      if (document.querySelector('.cart.opp.focus') && document.querySelectorAll('.cart.opp.focus .tile .step').length < 4) problems.push('their cart is open but not editable');
+      if (document.querySelector('.cart.opp.focus') && !document.querySelector('.cart.mine.dim')) problems.push('your cart should be the slim row while theirs is open');
+      if (document.querySelector('.cart.opp.dim .step')) problems.push('their slim row should not be editable');
     }
     if (extra === 'board-players') {
       const rows = [...document.querySelectorAll('.prow')];
@@ -142,7 +133,7 @@ for (const size of SIZES) {
     localStorage.setItem('glb.device', JSON.stringify(dev));
     localStorage.setItem('glb.who.' + code, 'true');
     localStorage.setItem('glb.seen.' + code, JSON.stringify({ last: Date.now(), ids: [] }));
-    for (const k of ['tile4', 'prov2', 'oppcart2']) localStorage.setItem('glb.coach.' + k, 'true');
+    for (const k of ['tile5', 'prov2', 'oppcart3']) localStorage.setItem('glb.coach.' + k, 'true');
     localStorage.setItem('glb.me.' + code, '"p1"');
     localStorage.setItem('glb.admin.' + code, JSON.stringify(pin));
   }, [r.code, DEV, r.admin_pin]);
@@ -189,9 +180,9 @@ for (const size of SIZES) {
   await page.evaluate(() => { window.__glb.ui.hole = 6; window.__glb.ui.unlocked = 6; window.__glb.render(); }); // a past hole, unlocked for editing
   await check(page, size, 'Enter (hole 6)', 'enter');
   await page.tap('.cart.opp.dim');
-  await check(page, size, 'Enter (their cart open, 50/50)', 'enter');
+  await check(page, size, 'Enter (their cart open)', 'enter');
   await page.tap('.cart.mine.dim');
-  if (!(await page.$('.cart.opp.dim'))) { failures.push(`${size[0]} · tap back`); rows.push([`${size[0]} · Enter tap back to yours`, 'FAIL: still 50/50']); }
+  if (!(await page.$('.cart.opp.dim'))) { failures.push(`${size[0]} · tap back`); rows.push([`${size[0]} · Enter tap back to yours`, 'FAIL: theirs still open']); }
   // A finished hole two back: locked view still fits
   await page.evaluate(() => { window.__glb.ui.hole = 1; window.__glb.render(); });
   await check(page, size, 'Enter (hole 1, locked)', 'enter');

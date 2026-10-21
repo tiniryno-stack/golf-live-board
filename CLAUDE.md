@@ -129,7 +129,7 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
 - All storage goes through `db.local` (never `localStorage` directly) so `?sim=N` test phones stay
   separate. localStorage keys: `glb.device`, `glb.me.CODE`, `glb.admin.CODE`, `glb.recent`,
   `glb.queue.CODE`, `glb.seen.CODE`, `glb.alert.CODE.H`, `glb.switch.CODE.H`, `glb.brief.CODE`,
-  `glb.who.CODE`, `glb.cardOpen.CODE`, `glb.coach.{tile4,oppcart2,prov2}`, `glb.setupDraft`,
+  `glb.who.CODE`, `glb.cardOpen.CODE`, `glb.coach.{tile5,oppcart3,prov2}`, `glb.setupDraft`,
   `glb.theme`. Bump a coach key's suffix when its text changes so people see the new tip.
 
 ## Testing (run before every push; all headless, no network needed)
