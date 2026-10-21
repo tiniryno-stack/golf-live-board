@@ -239,3 +239,51 @@ export function fmtMiles(d) {
   if (d < 0.15) return 'here';
   return d < 10 ? `${d.toFixed(1)} mi` : `${Math.round(d)} mi`;
 }
+
+// ───────────────────────────────────────────── did you mean (course search, no results)
+
+const normName = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+
+/** Edit distance (insert / delete / substitute = 1). */
+export function editDistance(a, b) {
+  const row = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    let prev = row[0];
+    row[0] = i;
+    for (let j = 1; j <= b.length; j++) {
+      const tmp = row[j];
+      row[j] = Math.min(row[j] + 1, row[j - 1] + 1, prev + (a[i - 1] === b[j - 1] ? 0 : 1));
+      prev = tmp;
+    }
+  }
+  return row[b.length];
+}
+
+/**
+ * Courses whose name is a near miss for what was typed ("twin crek" → Twin Creeks), best first.
+ * Compares the words typed with each stretch of the name that starts at a word, allowing about one
+ * slip per 4 letters. Courses the search already found aren't repeated.
+ */
+export function didYouMean(q, courses, max = 2) {
+  const t = normName(q);
+  if (t.length < 3) return [];
+  const slack = Math.max(1, Math.floor(t.length / 4));
+  const seen = new Set();
+  const out = [];
+  for (const c of courses || []) {
+    const key = c.ogaId || c.id || c.name;
+    if (!c?.name || seen.has(key)) continue;
+    const name = normName(`${c.name} ${c.shortName || ''}`);
+    if (name.includes(t)) continue; // a real hit, not a near miss
+    let best = Infinity;
+    const starts = [0, ...[...name.matchAll(/ /g)].map((m) => m.index + 1)];
+    for (const st of starts) {
+      for (let len = Math.max(1, t.length - slack); len <= t.length + slack; len++) best = Math.min(best, editDistance(t, name.slice(st, st + len)));
+    }
+    if (best <= slack) {
+      seen.add(key);
+      out.push({ c, d: best });
+    }
+  }
+  return out.sort((a, b) => a.d - b.d).slice(0, max).map((x) => x.c);
+}

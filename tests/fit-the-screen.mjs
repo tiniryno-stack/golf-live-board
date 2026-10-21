@@ -183,6 +183,12 @@ for (const size of SIZES) {
   await check(page, size, 'Home');
   await go('#/setup');
   await check(page, size, 'Setup 1 (find a course)');
+  // A typo: no results → the empty state, "Did you mean" Twin Creeks, Enter the scorecard yourself.
+  await page.fill('#course-q', 'twin crek');
+  await page.waitForTimeout(900);
+  await check(page, size, 'Setup 1 (no results)');
+  await page.fill('#course-q', '');
+  await page.waitForTimeout(400);
   await page.tap('[data-act="setup-mine"][data-v="twin-creeks-allen-tx"]');
   for (const n of ['Andrew Duong', 'Sean Baker', 'Mike Ortiz', 'Tyler Nguyen', 'Sam Patel', 'Jake Miller', 'Chris Young', 'Christopher Abernathy-Wells']) {
     await page.fill('#new-player', n);

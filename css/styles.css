@@ -1030,7 +1030,8 @@ details.fold summary::-webkit-details-marker { display: none; }
 .nr-foot { margin-top: auto; padding: 16px 0 calc(16px + var(--sab)); position: sticky; bottom: 0; background: linear-gradient(to bottom, transparent, var(--bg) 16px); }
 .nr-cta { width: 100%; min-height: 60px; border-radius: 18px; font-size: 17px; font-weight: 700; gap: 8px; }
 .nr-cta:disabled { opacity: 1; background: var(--surface-2); color: var(--ink-soft); }
-.nr-search { margin: 14px 0 0; height: 52px; border-radius: 14px; background: var(--surface); display: flex; align-items: center; gap: 10px; padding: 0 14px; color: var(--ink-soft); }
+.nr-search { margin: 14px 0 0; height: 52px; border-radius: var(--radius-md); background: var(--surface-1); border: 1.5px solid var(--line); display: flex; align-items: center; gap: 10px; padding: 0 14px; color: var(--text-muted); }
+.nr-search:focus-within { border-color: var(--text); box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--focus); }
 .nr-search input { flex: 1; min-width: 0; border: 0; background: transparent; font-size: 17px; outline: none; color: var(--ink); }
 #course-results { margin-top: 4px; }
 #course-results .stack { gap: 0; background: var(--surface); border-radius: 18px; overflow: hidden; }
@@ -1282,3 +1283,11 @@ details.fold summary::-webkit-details-marker { display: none; }
 .home-two { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
 .home-two .btn { width: 100%; }
 .sheet-join { padding-bottom: var(--space-2); }
+
+/* Course search, no results: did you mean */
+.dym-k { color: var(--text-muted); margin: var(--space-5) 0 var(--space-1); }
+.dym-row { display: flex; align-items: center; gap: var(--space-3); min-height: 64px; padding: var(--space-2) 0; border-bottom: 1px solid var(--line); }
+.dym-row .dr-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.dym-row .dr-name { font-size: 17px; line-height: 22px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dym-row .dr-sub { font-size: 15px; line-height: 20px; color: var(--text-muted); }
+.dym-foot { margin-top: var(--space-6); }

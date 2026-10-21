@@ -10,7 +10,7 @@
 // never re-ask it. Nothing is required that has a sensible default.
 // "Run it back" (#/setup/CODE) copies players, team names, carts and settings (not the course).
 
-import { esc, icon, seg, todayISO, prettyDate, copyText, roundLink } from '../ui.js';
+import { esc, icon, seg, todayISO, prettyDate, copyText, roundLink, empty } from '../ui.js';
 import { COURSES } from '../courses.js';
 import * as cd from '../coursedata.js';
 import { DEFAULT_SETTINGS, DEFAULT_ROTATION, GAMES, gameFix, autoGroups, cartRotation, threeCartRotation, cartIdsFor } from '../scoring.js';
@@ -93,9 +93,13 @@ async function loadPast(app, crewId) {
     const rounds = await db.fetchCrewRounds(crewId);
     const people = new Map();
     const courses = new Map(); // course id → the copy from the group's latest round there (with any fixes)
+    const plays = new Map(); // course id → rounds your group played there
     for (const { event } of rounds) {
       for (const p of event.roster?.players || []) if (p.personId) people.set(p.personId, p.name);
-      if (event.course?.id) courses.set(event.course.id, event.course);
+      if (event.course?.id) {
+        courses.set(event.course.id, event.course);
+        plays.set(event.course.id, (plays.get(event.course.id) || 0) + 1);
+      }
     }
     let crew = null;
     try {
@@ -106,7 +110,7 @@ async function loadPast(app, crewId) {
       app.setup.past = crew
         ? crew.map((p) => withName({ personId: p.id, firstName: p.firstName, lastName: p.lastName || '', nickname: p.nickname || '', crewId }))
         : [...people].map(([personId, name]) => withName({ personId, name, crewId }));
-      app.setup.mine = yourCourses([...courses.values()].reverse());
+      app.setup.mine = yourCourses([...courses.values()].reverse().map((c) => ({ ...c, plays: plays.get(c.id) || 0 })));
       paintCourses(app);
     }
   } catch { /* offline: typing names still works */ }
@@ -213,6 +217,22 @@ function mineRows(list, here) {
     .join('');
 }
 
+/** Course search found nothing (designspec §6b): say what didn't match, offer near misses, and the way out. */
+function noResults(s, q, mine) {
+  const dym = cd.didYouMean(q, [...mine, ...(s.near || [])]);
+  const sub = (c) => {
+    const n = c.plays || 0;
+    const holes = Array.isArray(c.par) ? `${c.par.length} holes` : '';
+    return [n ? `Played ${n} time${n === 1 ? '' : 's'}` : c.location || '', cd.fmtMiles(c.distance), holes].filter(Boolean).join(' · ');
+  };
+  const rows = dym.map((c) => `<div class="dym-row"><span class="dr-main"><span class="dr-name">${esc(c.name)}</span><span class="dr-sub">${esc(sub(c))}</span></span>
+      <button class="btn" data-act="${c.ogaId && !c.plays && c.source !== 'builtin' ? 'setup-pick' : 'setup-mine'}" data-v="${esc(c.ogaId && !c.plays && c.source !== 'builtin' ? c.ogaId : c.id)}">Pick</button></div>`).join('');
+  return `<!--none-->${empty({ icon: 'search', headline: `No courses match \u201c${q}\u201d`, help: 'Check the spelling, or add the course yourself. It takes about a minute.' })}
+    ${rows ? `<div class="ts-label dym-k">Did you mean</div><div class="dym-list">${rows}</div>` : ''}
+    <div class="dym-foot"><button class="btn big block" data-act="setup-manual">Enter the scorecard yourself</button></div>
+    <p class="meta attrib">Course data ${esc(cd.ATTRIBUTION)}</p>`;
+}
+
 /** The list under the search box: results while searching, else your courses + near you. */
 function courseList(s) {
   const q = (s.q || '').trim();
@@ -227,8 +247,9 @@ function courseList(s) {
       : s.searchError
         ? `<p class="meta">${esc(s.searchError)}</p><button class="btn small" data-act="setup-search-retry">Try again</button>`
         : !myHits.length && !api.length
-          ? `<p class="meta">No courses match \u201c${esc(q)}\u201d. Try part of the name, or enter the scorecard yourself.</p>`
+          ? noResults(s, q, mine)
           : '';
+    if (body.startsWith('<!--none-->')) return body; // no results: its own layout (empty state, did you mean, the way out)
     return `<div class="stack">${mineRows(myHits, s.loc)}${api.map((r) => courseRow(r, 'setup-pick', r.ogaId)).join('')}</div>${body}${listFoot(s)}`;
   }
   // At the course (or right next to it): it goes on top, ready to tap.
