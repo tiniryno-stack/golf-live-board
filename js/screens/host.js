@@ -46,10 +46,12 @@ function rules(app, d) {
   // split it). Switching recounts from hole 1; scores never change.
   const noCarts = !(d.roster.teams || []).length;
   const n = (d.roster.players || []).length;
-  const gameField = noCarts
-    ? n >= 2 && n <= 4
+  const gameField = st.pairs
+    ? `<div class="field"><span class="label">Game</span><p class="soft" style="margin:0">2v2 · partners ${({ never: 'stay the same all 18', six: 'switch every 6 holes', turn: 'switch at the turn' })[st.pairSwitch] || 'stay the same all 18'}. Set when the round was made.</p></div>`
+    : noCarts
+    ? n >= 2 && n <= 6
       ? `<div class="field"><span class="label">Game</span>${seg('host-solo', [['off', 'Scorecard only'], ['on', 'Match play']], st.solo && st.game !== 'none' ? 'on' : 'off')}</div>
-        <p class="help">Match play: everyone plays their own ball. Each hole is worth 1 point: low score takes it, a tie for low splits it (½, ⅓ or ¼ each). Recounts from hole 1.</p>`
+        <p class="help">Match play: everyone plays their own ball. Each hole is worth 1 point: low score takes it, a tie for low splits it (½, ⅓, ¼ …). Recounts from hole 1.</p>`
       : ''
     : `<div class="field"><span class="label">Game</span>${seg('host-set', [['none', 'None'], ['rotationMatch', 'Match Play'], ['rotationPlusMinus', 'Plus/Minus']], st.game, 'data-k="game"')}</div>`;
   if (noCarts) {
@@ -157,9 +159,11 @@ function validate(d) {
   if (si.some((x) => !(x >= 1 && x <= 18)) || new Set(si).size !== 18) return 'Hole handicaps must be 1–18, each used once.';
   const st = d.settings;
   const teams = d.roster.teams || [];
-  if (st.solo && st.game !== 'none') {
+  if (st.pairs) {
+    if (d.roster.players.length !== 4) return '2v2 needs exactly 4 players.';
+  } else if (st.solo && st.game !== 'none') {
     const n = d.roster.players.length;
-    if (teams.length || n < 2 || n > 4) return 'Match play (split point) is for 2–4 players with no carts.';
+    if (teams.length || n < 2 || n > 6) return 'Match play (split point) is for 2–6 players with no carts.';
   } else if (st.game !== 'none' && !(teams.length === 4 && teams.every((t) => d.roster.players.filter((p) => p.teamId === t.id).length === 2))) {
     return 'The rotating game needs 4 carts of 2.';
   }

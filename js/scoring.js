@@ -27,6 +27,58 @@ export const DEFAULT_SETTINGS = {
   rotation: DEFAULT_ROTATION,
 };
 
+// ───────────────────────────────────────────── game plans (setup → stored settings)
+
+/** Which games fit a player count (designspec §6 ③). */
+export const GAMES = [
+  { id: 'scorecard', name: 'Scorecard only', count: 'ANY NUMBER', min: 1, max: 99, desc: 'Everyone plays their own ball. One leaderboard, net or gross.' },
+  { id: 'match', name: 'Match play', count: '2–6 PLAYERS', min: 2, max: 6, desc: 'Low net score wins each hole for 1 point. Ties split it.' },
+  { id: '2v2', name: '2v2', count: 'EXACTLY 4', min: 4, max: 4, desc: 'Two teams of two in one foursome. Partners can switch every 6.' },
+  { id: 'carts', name: 'Cart game', count: 'EXACTLY 8', min: 8, max: 8, desc: '4 carts of 2. Opponents rotate every 6 holes across tee times.' },
+];
+
+/** null when the game fits, else the fix spelled out ("Add 3 more players to play this."). */
+export function gameFix(gameId, n) {
+  const g = GAMES.find((x) => x.id === gameId);
+  if (!g) return 'Unknown game.';
+  const pl = (k) => (k === 1 ? 'player' : 'players');
+  if (n < g.min) return `Add ${g.min - n} more ${pl(g.min - n)} to play this.`;
+  if (n > g.max) return `Remove ${n - g.max} ${pl(n - g.max)} to play this.`;
+  return null;
+}
+
+/** Foursomes for any number of players, as even as possible: 5 → 3+2, 6 → 3+3, 9 → 3+3+3. */
+export function autoGroups(n) {
+  const k = Math.max(1, Math.ceil(n / 4));
+  const base = Math.floor(n / k), extra = n % k;
+  const out = [];
+  for (let g = 0; g < k; g++) for (let i = 0; i < base + (g < extra ? 1 : 0); i++) out.push(g);
+  return out; // group index per player, in roster order
+}
+
+/**
+ * Cart-game rotations. schedule 'six' = 3 rotations of 6 holes (you face all 3 other carts),
+ * 'turn' = 2 rotations of 9 (you face 2 of the 3). opps = cart `me` faces in each rotation
+ * (custom matchups; repeats allowed); the other matchup is the remaining two carts.
+ */
+export function cartRotation(schedule = 'six', opps = null, me = 'A') {
+  const carts = ['A', 'B', 'C', 'D'];
+  const others = carts.filter((c) => c !== me);
+  const ranges = schedule === 'turn' ? [[1, 9], [10, 18]] : [[1, 6], [7, 12], [13, 18]];
+  return ranges.map((holes, i) => {
+    const o = opps?.[i] && others.includes(opps[i]) ? opps[i] : others[i % others.length];
+    const rest = others.filter((c) => c !== o);
+    return { holes, matches: [[me, o], rest] };
+  });
+}
+
+/** 2v2 pairings for 4 players (indexes into the roster): never / every 6 / at the turn. */
+export function pairRotation(pairSwitch = 'never') {
+  const P = [[[0, 1], [2, 3]], [[0, 2], [1, 3]], [[0, 3], [1, 2]]];
+  const ranges = pairSwitch === 'six' ? [[1, 6], [7, 12], [13, 18]] : pairSwitch === 'turn' ? [[1, 9], [10, 18]] : [[1, 18]];
+  return ranges.map((holes, i) => ({ holes, pairs: P[i] }));
+}
+
 export function normalizeSettings(s) {
   const out = { ...DEFAULT_SETTINGS, ...(s || {}) };
   if (!Array.isArray(out.rotation) || !out.rotation.length) out.rotation = DEFAULT_ROTATION;
@@ -235,9 +287,13 @@ function gameIsValid(roster, settings) {
   if (settings.game === 'none') return false;
   const teams = roster?.teams || [];
   const players = roster?.players || [];
-  const size = settings.solo ? 1 : 2;
-  if (settings.solo ? teams.length < 2 || teams.length > 4 : teams.length !== 4) return false;
-  if (!teams.every((t) => players.filter((p) => p.teamId === t.id).length === size)) return false;
+  if (settings.pairs) {
+    if (players.length !== 4 || !teams.length || !teams.every((t) => t.members?.length === 2)) return false;
+  } else {
+    const size = settings.solo ? 1 : 2;
+    if (settings.solo ? teams.length < 2 || teams.length > 6 : teams.length !== 4) return false;
+    if (!teams.every((t) => players.filter((p) => p.teamId === t.id).length === size)) return false;
+  }
   const ids = new Set(teams.map((t) => t.id));
   return settings.rotation.every(
     (r) => Array.isArray(r.holes) && Array.isArray(r.matches) && r.matches.every((m) => m.length === 2 && m.every((t) => ids.has(t)))
@@ -256,18 +312,18 @@ function roundRobin(ids) {
 }
 
 /**
- * Split point (settings.solo, 2–4 players in one group): each player is their own "team" (ids A–D
+ * Split point (settings.solo, 2–6 players; 5–6 play as two groups): each player is their own "team" (ids A–D
  * in roster order, so jersey colors work). Every hole is worth 1 point: the low net score takes it
  * outright; players tied for low split it (½, ⅓ or ¼ each). The stored roster has no teams;
  * they're made here, so a casual round can switch it on mid-round and recount from hole 1.
  */
 export function soloView(roster, settings) {
-  const ids = 'ABCD';
-  const players = (roster?.players || []).slice(0, 4);
+  const ids = 'ABCDEF';
+  const players = (roster?.players || []).slice(0, 6);
   const r = {
     ...roster,
     teams: players.map((p, i) => ({ id: ids[i], name: p.name })),
-    players: (roster?.players || []).map((p, i) => ({ ...p, teamId: i < 4 ? ids[i] : null })),
+    players: (roster?.players || []).map((p, i) => ({ ...p, teamId: i < 6 ? ids[i] : null })),
   };
   const st = {
     ...settings,
@@ -279,11 +335,51 @@ export function soloView(roster, settings) {
   return { roster: r, settings: st };
 }
 
+/**
+ * 2v2 (settings.pairs, exactly 4 players in one group): the stored roster has no carts. Each
+ * pairing is its own "team" (id like 'AB', with explicit members), and the rotation pairs them up:
+ * never = AB v CD all 18; every 6 = AB v CD, AC v BD, AD v BC; at the turn = the first two.
+ * Match play scoring (Low Ball / Low Total per hole). Players add up the points of every pairing
+ * they were in (game.people).
+ */
+export function pairView(roster, settings) {
+  const L = 'ABCD';
+  const players = (roster?.players || []).slice(0, 4);
+  const plan = pairRotation(settings.pairSwitch);
+  const teams = [];
+  const idOf = (pair) => pair.map((i) => L[i]).join('');
+  for (const r of plan) {
+    for (const pair of r.pairs) {
+      const id = idOf(pair);
+      if (players.length === 4 && !teams.some((t) => t.id === id)) {
+        teams.push({ id, name: pair.map((i) => players[i].name).join(' + '), members: pair.map((i) => players[i].id) });
+      }
+    }
+  }
+  const st = {
+    ...settings,
+    game: 'rotationMatch',
+    rotationMode: 'fixed',
+    rotation: plan.map((r) => ({ holes: r.holes, matches: [r.pairs.map(idOf)] })),
+  };
+  return { roster: { ...roster, teams, players: (roster?.players || []).map((p) => ({ ...p, teamId: null })) }, settings: st };
+}
+
+/** The 2v2 pairing (team) this player is in on a hole, or their cart in any other game. */
+export function sideOn(snapshot, pid, hole) {
+  if (!snapshot.settings.pairs) return snapshot.playerById.get(pid)?.teamId || null;
+  const r = rotationFor(snapshot.settings, hole);
+  if (!r) return null;
+  const ids = r.matches.flat();
+  return ids.find((t) => snapshot.teamById.get(t)?.playerIds.includes(pid)) || null;
+}
+
 export function compute(event, scores) {
   const course = event.course;
   let roster = event.roster || { players: [], teams: [], groups: [] };
   let settings = normalizeSettings(event.settings);
-  if (settings.solo) ({ roster, settings } = soloView(roster, settings));
+  if (settings.pairs) ({ roster, settings } = pairView(roster, settings));
+  else if (settings.solo) ({ roster, settings } = soloView(roster, settings));
   const par = course.par;
   const si = course.strokeIndex;
   const holes = Array.from({ length: HOLES }, (_, i) => ({ n: i + 1, par: par[i], si: si[i] }));
@@ -331,7 +427,7 @@ export function compute(event, scores) {
 
   const method = settings.teamScore;
   const teams = (roster.teams || []).map((t) => {
-    const ps = players.filter((p) => p.teamId === t.id);
+    const ps = t.members ? t.members.map((id) => playerById.get(id)).filter(Boolean) : players.filter((p) => p.teamId === t.id);
     const comps = holes.map((h, i) =>
       ps.length === 2 ? componentsFor(method, ps[0].net[i], ps[1].net[i])
         : ps.length === 1 && settings.solo && ps[0].net[i] != null ? [ps[0].net[i]] : null
@@ -586,6 +682,21 @@ function finishGame(game, settings, teams, officialThrough) {
   });
   game.standings = rankStandings(game, rows, true);
   game.liveStandings = rankStandings(game, rows.map((r) => ({ ...r })), false);
+  if (settings.pairs) {
+    // 2v2: each player adds up the points of every pairing they were in.
+    const sum = (pid, key) => rows.filter((r) => r.playerIds.includes(pid)).reduce((a, r) => a + r[key], 0);
+    const pids = [...new Set(rows.flatMap((r) => r.playerIds))];
+    const people = pids.map((pid) => ({
+      playerId: pid, points: sum(pid, 'points'), officialPoints: sum(pid, 'officialPoints'),
+      available: sum(pid, 'available'),
+    }));
+    people.forEach((r) => { r.provisionalPoints = Math.round((r.points - r.officialPoints) * 1e9) / 1e9; });
+    people.sort((a, b) => b.points - a.points || a.playerId.localeCompare(b.playerId));
+    people.forEach((r, i) => {
+      r.rank = i > 0 && Math.abs(people[i - 1].points - r.points) < 1e-9 ? people[i - 1].rank : i + 1;
+    });
+    game.people = people;
+  }
   game.provisionalHoles = []; // real hole numbers past the official line that already have points
   for (let pos = officialThrough + 1; pos <= HOLES; pos++) {
     const h = holeAt(settings, pos);
