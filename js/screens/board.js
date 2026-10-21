@@ -1,4 +1,5 @@
-// board.js — today's leaderboard. Hero: the leader + official line. Headlines strip,
+// board.js — today's leaderboard (designspec §4, Night Round). Hero: the leader + official line
+// + "up 4½ on you". Headline card,
 // Teams | Players, Gross | Net (only once someone has strokes).
 // Teams: ranked by ALL points won so far (live standings), the big number included; the part
 // won on holes the other foursome hasn't played yet is provisional: "2 prov." chip (already in the number),
@@ -25,13 +26,11 @@ function teamBar(isPM, s, scale) {
   }
   // scale = the most points any team could have won so far (same for every team), so bar
   // length follows the points and the ranking. Solid = confirmed (holes all 8 have finished),
-  // striped past the divider = provisional (holes only this foursome has played).
+  // hatched after it = provisional (holes only this foursome has played).
   const pct = (v) => `${(Math.max(0, Math.min(1, v / scale)) * 100).toFixed(1)}%`;
   const label = `${fmtPts(s.points)} of ${s.available} points${s.provisionalPoints ? `, ${fmtPts(s.provisionalPoints)} provisional` : ''}`;
-  const prov = s.provisionalPoints
-    ? `<span class="fill prov" style="width:${pct(s.points)}"></span><span class="cut" style="left:${pct(s.officialPoints)}"></span>`
-    : '';
-  return `<div class="tbar" role="img" aria-label="${label}">${prov}<span class="fill" style="width:${pct(s.officialPoints)}"></span></div>`;
+  const provW = Math.max(0, Math.min(1, s.points / scale) - Math.min(1, s.officialPoints / scale));
+  return `<div class="tbar" role="img" aria-label="${label}"><span class="fill" style="width:${pct(s.officialPoints)}"></span>${s.provisionalPoints ? `<span class="fill prov hatch" style="width:${(provW * 100).toFixed(1)}%"></span><span class="cut" style="left:${pct(s.officialPoints)}"></span>` : ''}</div>`;
 }
 
 function teamRowsGame(app) {
@@ -48,17 +47,18 @@ function teamRowsGame(app) {
       const names = snap.settings.solo ? '' : team.playerIds.map((id) => snap.playerById.get(id).name).join(' + ');
       const prov = isPM ? s.provisionalPm : s.provisionalPoints;
       const val = isPM ? fmtSigned(s.pm, 'E') : fmtPts(s.points);
-      // "1½ prov." = how much of the number is provisional (already counted in it).
-      const chip = prov ? `<span class="prov" data-prov aria-label="${isPM ? fmtSigned(prov, '') : fmtPts(prov)} of this is provisional">${isPM ? fmtSigned(prov, '') : fmtPts(prov)} prov.</span>` : '';
+      // "+1½ prov" = how much of the number is provisional (already counted in it).
+      const chip = prov ? `<span class="prov" data-prov aria-label="${isPM ? fmtSigned(prov, '') : fmtPts(prov)} of this is provisional">${isPM ? fmtSigned(prov, '') : `+${fmtPts(prov)}`} prov</span>` : '';
       const thru = Math.min(...team.playerIds.map((id) => snap.playerById.get(id).thru));
-      return `<div class="row team-row tap" role="button" tabindex="0" data-act="board-team" data-enter="board-team" data-v="${esc(s.teamId)}" aria-label="${esc(team.name)}: breakdown" style="--jersey:${teamColor(mine, s.teamId)}">
+      const isMe = s.teamId === mine;
+      return `<div class="row team-row tap${isMe ? ' me' : ''}" role="button" tabindex="0" data-act="board-team" data-enter="board-team" data-v="${esc(s.teamId)}" aria-label="${esc(team.name)}: breakdown" style="--jersey:${teamColor(mine, s.teamId)}">
         <span class="rank">${s.shared ? `T${s.rank}` : s.rank}</span>
-        <div class="numcol"><div class="n" style="color:var(--jersey)">${esc(val)}</div><span class="micro">${isPM ? 'Margin' : 'Pts'}</span></div>
         <div class="body">
-          <div class="spread"><span class="row-title ellipsis">${esc(team.name)}${s.teamId === mine ? '<span class="me-dot" aria-label="your team"></span>' : ''}</span>${chip}</div>
-          ${teamBar(isPM, s, scale)}
+          <div class="row-title ellipsis">${esc(team.name)}${isMe ? ' <span class="you-tag">YOU</span>' : ''}</div>
           <div class="detail ellipsis">${names ? `${esc(names)} · ` : ''}${recordLabel(g, s)} · thru ${thru}</div>
-        </div><span class="chev" aria-hidden="true">${icon('fwd', 16)}</span></div>`;
+          ${teamBar(isPM, s, scale)}
+        </div>
+        <div class="tval"><div class="n" style="color:${isMe ? 'var(--good-ink)' : 'var(--jersey)'}">${esc(val)}</div>${chip}</div></div>`;
     })
     .join('');
 }
@@ -112,26 +112,29 @@ function hero(app, mode) {
       : 'Nobody yet';
     const leadColor = started && top.length === 1 ? teamColor(app.myTeam(), top[0].teamId) : 'var(--hero-ink)';
     const mine = app.myTeam() ? st.find((s) => s.teamId === app.myTeam()) : null;
-    const you = mine && started
-      ? `You: ${mine.shared ? 'T-' : ''}${ordinal(mine.rank)} · ${val(mine)}${isPM ? '' : ' pts'}`
-      : '';
+    const leadNames = started && top.length === 1 && !snap.settings.solo ? snap.teamById.get(top[0].teamId).playerIds.map((id) => snap.playerById.get(id).name).join(' + ') : '';
+    const gap = mine && started && top.length === 1 && top[0].teamId !== mine.teamId
+      ? `up ${isPM ? fmtSigned(top[0].pm - mine.pm, '') : fmtPts(top[0].points - mine.points)} on you`
+      : mine && started && top.some((t) => t.teamId === mine.teamId) ? 'that’s you' : '';
+    const you = [leadNames, gap].filter(Boolean).join(' · ')
+      || (mine && started ? `You: ${mine.shared ? 'T-' : ''}${ordinal(mine.rank)} · ${val(mine)}${isPM ? '' : ' pts'}` : '');
     const anyProv = st.some((s) => (isPM ? s.provisionalPm : s.provisionalPoints));
     return `<div class="hero board-hero">
-      <div class="micro">${snap.roundComplete ? 'Final' : snap.officialThrough ? `Leader · official thru ${snap.officialHole}${anyProv ? ' + provisional' : ''}` : 'Leader'}${top.length > 1 && started ? ' · tied' : ''}</div>
+      <div class="lbl">${snap.roundComplete ? 'Final' : snap.officialThrough ? `Leader · official thru ${snap.officialHole}` : 'Leader'}${top.length > 1 && started ? ' · tied' : ''}</div>
       <div class="spread" style="align-items:flex-end">
-        <div class="leader-name ellipsis" style="flex:1;color:${leadColor}">${esc(lead)}</div>
+        <div style="flex:1;min-width:0"><div class="leader-name" style="color:${leadColor}">${esc(lead)}</div>
+        ${you ? `<div class="you">${esc(you)}</div>` : ''}</div>
         ${started ? `<div class="leader-pts">${esc(val(top[0]))}</div>` : ''}
       </div>
-      ${you ? `<div class="you">${esc(you)}</div>` : ''}
     </div>`;
   }
   const board = playerLeaderboard(snap, mode);
   const lead = board[0];
   return `<div class="hero board-hero">
-    <div class="micro">Leader${lead?.thru ? ` · thru ${lead.thru}` : ''}</div>
-    <div class="spread" style="align-items:flex-end"><div class="leader-name ellipsis" style="flex:1">${lead?.thru ? esc(lead.name) : 'Nobody yet'}</div>
+    <div class="lbl">Leader${lead?.thru ? ` · thru ${lead.thru}` : ''}</div>
+    <div class="spread" style="align-items:flex-end"><div style="flex:1;min-width:0"><div class="leader-name">${lead?.thru ? esc(lead.name) : 'Nobody yet'}</div>
+    ${app.myPlayer()?.thru ? `<div class="you">You: ${fmtToPar(mode === 'gross' ? app.myPlayer().grossToPar : app.myPlayer().netToPar)} thru ${app.myPlayer().thru}</div>` : ''}</div>
     ${lead?.thru ? `<div class="leader-pts">${fmtToPar(mode === 'gross' ? lead.grossToPar : lead.netToPar)}</div>` : ''}</div>
-    ${app.myPlayer()?.thru ? `<div class="you">You: ${fmtToPar(mode === 'gross' ? app.myPlayer().grossToPar : app.myPlayer().netToPar)} thru ${app.myPlayer().thru}</div>` : ''}
   </div>`;
 }
 
@@ -186,7 +189,7 @@ export default {
     const two = pair && pair.until > Date.now() && moment.length > 1 && pair.id === moment[0].id;
     const recent = moment.slice(0, two ? 2 : 1);
     const headlines = recent.length
-      ? `<div class="headlines compact">${recent.map((h) => `<button class="headline" data-act="board-headlines" style="--jersey:${headlineColor(app.myTeam(), h)}"><span class="spark">${icon('spark', 14)}</span><span style="flex:1;min-width:0">${esc(h.text)}</span><span class="meta">${clock(h.at)}</span></button>`).join('')}</div>`
+      ? `<div class="headlines compact">${recent.map((h) => `<button class="headline" data-act="board-headlines" style="--jersey:${headlineColor(app.myTeam(), h)}"><span class="spark">${icon('spark', 18)}</span><span class="h-text">${esc(h.text)}</span><span class="meta mono">${clock(h.at)}</span></button>`).join('')}</div>`
       : '';
     const segs = `<div class="segs board-segs">
       ${hasTeams ? seg('board-view', [['teams', 'Teams'], ['players', 'Players']], view) : ''}
@@ -213,6 +216,8 @@ export default {
       <div class="sheet">
         ${final}${headlines}${segs}
         <div class="list">${rows}</div>
+        ${g && view === 'teams' && g.type !== 'splitPoint' && !snap.roundComplete && g.provisionalHoles.length && g.type !== 'rotationPlusMinus'
+          ? '<div class="board-legend"><span class="lg solid"></span>Official<span class="lg hatch"></span>Provisional: rotation still in play</div>' : ''}
         ${foot ? `<div class="board-foot">${esc(foot)}</div>` : ''}
       </div>`;
   },
