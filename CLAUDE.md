@@ -8,7 +8,7 @@ after the first playtest; section 13 is the V2 backlog.
 
 - Mobile web app for Andrew's friend group: each foursome enters hole-by-hole scores on their
   phones; everyone sees one live board across tee times, plus a rotating 2v2 cart game
-  (Rotation Match Play or Plus/Minus). Night Round design (docs/design/system), dark by default.
+  (Rotation Match Play or Plus/Minus). Night Round design (docs/design/design-system), dark by default.
 - Live: https://tiniryno-stack.github.io/golf-live-board/ (GitHub Pages, `main`, root). Repo:
   `tiniryno-stack/golf-live-board`.
 - **Played for real on Oct 16, 2026** ("Chucks Bday", code `V4T3M`, Twin Creeks, 8 phones). It
@@ -19,17 +19,23 @@ after the first playtest; section 13 is the V2 backlog.
 
 ## Night Round redesign (Oct 21, live on `main`)
 
-- Design handoff in `docs/design/` (`designspec.md` = source of truth, `screens/` = mockups, `PLAN.md`
-  = the plan + open items). Built on `design/night-round`, merged to `main` Oct 21 (both real rounds
-  replayed through the new engine first: identical results).
+- Design handoff in `docs/design/` (`HANDOFF.md`, `designspec.md` = product rules, `screens/` = mockups,
+  `design-system/` = the look, `BUILD-PLAN.md` = the current build plan + open items). First pass built
+  on `design/night-round`, merged to `main` Oct 21 (both real rounds replayed through the new engine
+  first: identical results). The second handoff (design system, Home, sheets, empty states) is being
+  built on `design/design-system`.
 - Tokens in `css/styles.css` `:root` (dark + light): `--bg/--surface/--surface-2/--surface-3`,
   `--good` (me) + `--good-ink` (green text), `--warn` amber (warnings only), `--bad` + `--dbl-bg`
   (double bogey only), jerseys `--t-A…F`. Score marks everywhere: `ui.mark(score, par, size)`.
   `ui.seg2` (2-line segments), `ui.foldIn(app.ui)` (fold animation only right after a tap — the
   render loop redraws constantly), `.mine-bar` / `.watch-box` = expand-in-place.
-- **Design system** in `docs/design/system/` (tokens.json, README.md, components/*/README.md) is the
-  reference for every visual choice: use its token names in CSS (`--surface-1`, `--text-muted`,
-  `--cart-you`, `--radius-xl`, `--space-4`, `.ts-*` text styles…; old names are aliases). Check a UI
+
+## Design
+- All UI follows docs/design/design-system/ (README.md rules, tokens.css variables, components/*/README.md).
+- Product rules live in docs/design/designspec.md; mockups are in docs/design/screens/ (reference only, rebuild in our components).
+- New features: reuse existing components and tokens; no new colors, sizes or type styles. Flag anything that needs a new pattern.
+- In this repo: CSS uses the design system's token names (`--surface-1`, `--text-muted`, `--cart-you`,
+  `--radius-xl`, `--space-4`…; older names are aliases until `BUILD-PLAN.md` retires them). Check a UI
   change with `npm run design:compare` → `tests/screenshots/design/vs-*.png` (mockup left, app right).
   Light/dark toggle: Home + round ⋯ menu only.
 
@@ -214,7 +220,7 @@ npm run test:smoke     # 225 checks: multi-phone flows against the mock (join, s
   groups as one-tap chips + ~8 frequent players + search within the crew, 5) team names reserved per
   pair **within a crew** + the first 151 Pokémon (`TEAM_NAME_PICKS`). Keep UI changes small until the
   Claude Design setup redesign lands.
-- **Night Round open items** (docs/design/PLAN.md): cart-game name (shipping as "Cart game"), conflict
+- **Night Round open items** (docs/design/BUILD-PLAN.md): cart-game name (shipping as "Cart game"), conflict
   rule when two phones enter different scores (still last entry wins), stepper for scorecard-check
   cells, 3-cart game for 6. Naming a course in "Which course?" is remembered per group (shared
   courses table = V2). "Start now, finish the card during the round" not built.
