@@ -1,0 +1,37 @@
+<!-- @dsCard group="Scoring" height=300 subtitle="Enter for someone else in one tap" -->
+<div class="root">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600;700&display=swap');
+.root{font-family:var(--font-sans);color:var(--text);background:var(--bg);padding:16px;max-width:393px;box-sizing:border-box}
+.list{border-radius:var(--radius-xl);background:var(--surface-1);overflow:hidden}
+.r{display:flex;align-items:center;gap:10px;min-height:58px;padding:0 14px}
+.r+.r,.open{border-top:1px solid var(--line)}
+.dot{width:10px;height:10px;border-radius:5px;background:var(--text-muted)}
+.n{flex:1}.n b{display:block;font-size:16px;font-weight:600}.n i{display:block;font-style:normal;font-size:12px;color:var(--text-muted);margin-top:2px}
+.n i.ok{color:var(--cart-you-text)}
+.open{background:var(--surface-2)}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;padding:0 12px 12px}
+.chip{height:52px;border-radius:var(--radius-md);border:0;background:var(--surface-1);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font:inherit;color:inherit}
+.chip.par{border:2px solid var(--text-muted)}
+.chip small{font-size:11px;color:var(--text-muted)}
+.m{font-family:var(--font-mono);font-weight:700;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;width:30px;height:30px;font-size:17px}
+.birdie{border-radius:50%;border:1.5px solid var(--text)}
+.bogey{border-radius:5px;border:1.5px solid var(--text-muted)}
+.double{border-radius:5px;border:4px double var(--double);background:var(--double-bg);color:var(--double)}
+.big{width:40px;height:40px;font-size:22px}
+</style>
+<div class="list">
+<div class="r"><span class="dot"></span><span class="n"><b>Sam</b><i class="ok">✓ From Sam’s phone</i></span><span class="m big">3</span></div>
+<div class="open">
+<div class="r"><span class="dot"></span><span class="n"><b>Jake</b><i>Waiting on Jake · tap to enter</i></span></div>
+<div class="grid">
+<button class="chip"><span class="m birdie">2</span><small>Birdie</small></button>
+<button class="chip par"><span class="m">3</span><small>Par</small></button>
+<button class="chip"><span class="m bogey">4</span><small>Bogey</small></button>
+<button class="chip"><span class="m double">5</span><small>Double</small></button>
+<button class="chip"><span class="m double">6</span><small>Triple</small></button>
+<button class="chip"><span class="m double" style="font-size:14px">7+</span><small>Max</small></button>
+</div>
+</div>
+</div>
+</div>

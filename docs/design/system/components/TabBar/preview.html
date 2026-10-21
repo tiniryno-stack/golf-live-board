@@ -1,0 +1,16 @@
+<!-- @dsCard group="Navigation" height=110 subtitle="Bottom tabs on game screens" -->
+<div class="root">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600;700&display=swap');
+.root{font-family:var(--font-sans);color:var(--text);background:var(--bg);padding:16px 12px;max-width:393px;box-sizing:border-box}
+nav{display:flex;gap:4px;padding:5px;background:var(--surface-1);border:1px solid var(--line);border-radius:22px}
+a{flex:1;height:50px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border-radius:17px;color:var(--text-muted);text-decoration:none;font-size:12px;font-weight:600}
+a.on{background:var(--button);color:var(--on-button);font-weight:700}
+</style>
+<nav>
+<a class="on" href="#"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4h11l-2 4 2 4H5"></path></svg>Enter</a>
+<a href="#"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8.5" cy="12" r="5"></circle><circle cx="15.5" cy="12" r="5"></circle></svg>Matches</a>
+<a href="#"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h11M4 18h7"></path></svg>Board</a>
+<a href="#"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M3 10h18M3 15h18M9 4v16M15 4v16"></path></svg>Card</a>
+</nav>
+</div>

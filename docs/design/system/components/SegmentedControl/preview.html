@@ -1,0 +1,26 @@
+<!-- @dsCard group="Controls" height=200 subtitle="Pick one view or option" -->
+<div class="root">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600;700&display=swap');
+.root{font-family:var(--font-sans);color:var(--text);background:var(--bg);padding:16px;max-width:393px;box-sizing:border-box;display:flex;flex-direction:column;gap:14px}
+.seg{display:flex;gap:4px;padding:4px;border-radius:16px;background:var(--surface-1)}
+.s{flex:1;border:0;border-radius:var(--radius-md);background:transparent;color:var(--text-muted);font:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
+.s.on{background:var(--surface-3);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.tall .s{height:54px}.short .s{height:48px;font-size:14px}
+.short .s.on{font-weight:700}
+.nm{display:flex;align-items:center;gap:6px;font-size:14px;font-weight:600}
+.on .nm{font-weight:700}
+.d{width:7px;height:7px;border-radius:4px}
+.sub{font-family:var(--font-mono);font-size:11px}
+.on .sub{color:var(--cart-you-text);font-weight:600}
+</style>
+<div class="seg tall">
+<button class="s"><span class="nm"><span class="d" style="background:var(--cart-b)"></span>Shank</span><span class="sub">1–6 · L</span></button>
+<button class="s on"><span class="nm"><span class="d" style="background:var(--cart-c)"></span>Fore Play</span><span class="sub">7–12 · LIVE</span></button>
+<button class="s"><span class="nm"><span class="d" style="background:var(--cart-d)"></span>Bogey</span><span class="sub">13–18</span></button>
+</div>
+<div class="seg short">
+<button class="s on">Every 6 holes</button>
+<button class="s">At the turn</button>
+</div>
+</div>

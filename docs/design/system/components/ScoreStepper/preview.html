@@ -1,0 +1,34 @@
+<!-- @dsCard group="Scoring" height=360 subtitle="Stacked player row on the team Enter screen" -->
+<div class="root">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600;700&display=swap');
+.root{font-family:var(--font-sans);color:var(--text);background:var(--bg);padding:16px;max-width:393px;box-sizing:border-box}
+.card{border-radius:var(--radius-2xl);background:var(--surface-1);border:1.5px solid var(--cart-you);padding:12px}
+.head{display:flex;justify-content:space-between;align-items:center;padding:0 4px;font-size:15px;font-weight:700;color:var(--cart-you-text)}
+.head .mono{font-family:var(--font-mono);font-size:13px;color:var(--text-muted);font-weight:500}
+.row{margin-top:10px;border-radius:18px;background:var(--surface-2);padding:12px}
+.row.pending{outline:2px dashed var(--line);outline-offset:-2px}
+.top{display:flex;justify-content:space-between;align-items:center}
+.name{font-size:17px;font-weight:700;display:flex;align-items:center;gap:6px}
+.dot{width:7px;height:7px;border-radius:4px;background:var(--text)}
+.lab{font-family:var(--font-mono);font-size:12px;font-weight:700;letter-spacing:.6px;color:var(--text-muted)}
+.lab.good{color:var(--cart-you-text)}
+.ctl{display:flex;align-items:center;gap:12px;margin-top:10px}
+button{font:inherit;color:inherit;width:var(--stepper);height:var(--stepper);border-radius:20px;border:1px solid var(--line);background:var(--bg);font-size:38px;cursor:pointer}
+.mid{flex:1;display:flex;justify-content:center}
+.m{font-family:var(--font-mono);font-weight:700;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;width:112px;height:112px;font-size:72px;letter-spacing:-2px}
+.birdie{border-radius:50%;border:3.5px solid var(--text)}
+.ghost{border-radius:50%;border:2px dashed var(--line);color:var(--text-muted);opacity:.6}
+</style>
+<div class="card">
+<div class="head"><span>Hogan’s Heroes</span><span class="mono">LB 2 · LT –</span></div>
+<div class="row">
+<div class="top"><span class="name">Andrew B.</span><span class="lab good">BIRDIE</span></div>
+<div class="ctl"><button aria-label="Andrew minus one">−</button><div class="mid"><span class="m birdie">2</span></div><button aria-label="Andrew plus one">+</button></div>
+</div>
+<div class="row pending">
+<div class="top"><span class="name">Sean <span class="dot" aria-label="gets a stroke"></span></span><span class="lab">TAP − / + · PAR</span></div>
+<div class="ctl"><button aria-label="Sean minus one">−</button><div class="mid"><span class="m ghost">3</span></div><button aria-label="Sean plus one">+</button></div>
+</div>
+</div>
+</div>

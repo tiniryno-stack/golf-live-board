@@ -1,0 +1,21 @@
+<!-- @dsCard group="Scoring" height=150 subtitle="Eagle, birdie, par, bogey, double+, not entered" -->
+<div class="root">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600;700&display=swap');
+.root{font-family:var(--font-sans);color:var(--text);background:var(--bg);padding:20px;display:flex;gap:24px;flex-wrap:wrap;align-items:flex-end}
+.item{display:flex;flex-direction:column;align-items:center;gap:8px}
+.m{font-family:var(--font-mono);font-weight:700;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;width:56px;height:56px;font-size:28px}
+.eagle{border-radius:50%;border:6px double var(--text)}
+.birdie{border-radius:50%;border:2.5px solid var(--text)}
+.bogey{border-radius:9px;border:2.5px solid var(--text-muted)}
+.double{border-radius:9px;border:6px double var(--double);background:var(--double-bg);color:var(--double)}
+.empty{border-radius:50%;border:2px dashed var(--line);color:var(--text-muted)}
+.cap{font-size:12px;color:var(--text-muted)}
+</style>
+<div class="item"><span class="m eagle">3</span><span class="cap">Eagle</span></div>
+<div class="item"><span class="m birdie">4</span><span class="cap">Birdie</span></div>
+<div class="item"><span class="m">5</span><span class="cap">Par</span></div>
+<div class="item"><span class="m bogey">6</span><span class="cap">Bogey</span></div>
+<div class="item"><span class="m double">7</span><span class="cap">Double+</span></div>
+<div class="item"><span class="m empty">5</span><span class="cap">Not entered</span></div>
+</div>

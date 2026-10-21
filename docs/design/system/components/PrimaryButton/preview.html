@@ -1,0 +1,12 @@
+<!-- @dsCard group="Controls" height=170 subtitle="One per screen, at the bottom" -->
+<div class="root">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600;700&display=swap');
+.root{font-family:var(--font-sans);color:var(--text);background:var(--bg);padding:16px;max-width:393px;box-sizing:border-box;display:flex;flex-direction:column;gap:10px}
+.b{height:var(--button-primary);border-radius:var(--radius-xl);border:0;font:inherit;font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px}
+.on{background:var(--button);color:var(--on-button)}
+.off{background:var(--surface-2);color:var(--text-muted)}
+</style>
+<button class="b on">Start round · 5 players</button>
+<button class="b off" aria-disabled="true">Next hole · Sean left</button>
+</div>

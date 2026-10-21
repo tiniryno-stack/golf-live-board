@@ -1,0 +1,19 @@
+<!-- @dsCard group="Setup" height=260 subtitle="Radio cards in the game picker" -->
+<div class="root">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600;700&display=swap');
+.root{font-family:var(--font-sans);color:var(--text);background:var(--bg);padding:16px;max-width:393px;box-sizing:border-box;display:flex;flex-direction:column;gap:8px}
+.o{min-height:84px;border-radius:var(--radius-xl);display:flex;align-items:flex-start;gap:14px;padding:14px 16px;box-sizing:border-box;background:var(--surface-1);border:2px solid transparent}
+.o.on{background:var(--surface-2);border-color:var(--text)}
+.o.dis{opacity:.55}
+.rd{width:22px;height:22px;flex:none;margin-top:2px;border-radius:11px;box-sizing:border-box;border:2px solid var(--line)}
+.on .rd{border:7px solid var(--text)}
+.b{flex:1;min-width:0}
+.t{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.t b{font-size:17px;font-weight:700}.t span{font-family:var(--font-mono);font-size:11px;color:var(--text-muted);white-space:nowrap}
+.d{font-size:13px;color:var(--text-muted);margin-top:4px;line-height:1.35}
+.w{font-size:13px;font-weight:600;margin-top:6px}
+</style>
+<div class="o on"><span class="rd"></span><div class="b"><div class="t"><b>Scorecard only</b><span>ANY NUMBER</span></div><div class="d">Everyone plays their own ball. One leaderboard, net or gross.</div></div></div>
+<div class="o dis" aria-disabled="true"><span class="rd"></span><div class="b"><div class="t"><b>Cart game</b><span>EXACTLY 8</span></div><div class="d">4 carts of 2. Opponents rotate every 6 holes.</div><div class="w">Add 3 more players to play this.</div></div></div>
+</div>

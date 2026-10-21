@@ -1,0 +1,29 @@
+<!-- @dsCard group="Patterns" height=330 subtitle="Watching another match or group without leaving the screen" -->
+<div class="root">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600;700&display=swap');
+.root{font-family:var(--font-sans);color:var(--text);background:var(--bg);padding:16px;max-width:393px;box-sizing:border-box}
+.mono{font-family:var(--font-mono)}
+.bar{width:100%;height:60px;border-radius:var(--radius-lg);border:1.5px solid var(--cart-you);background:var(--tint-you);display:flex;align-items:center;gap:10px;padding:0 14px;box-sizing:border-box;font:inherit;color:var(--text);text-align:left}
+.bar .k{display:block;font-family:var(--font-mono);font-size:10px;letter-spacing:1.1px;color:var(--cart-you-text);font-weight:600}
+.bar .v{display:block;font-size:15px;font-weight:700;margin-top:2px}
+.box{margin-top:10px;border-radius:20px;border:1px solid var(--line);overflow:hidden}
+.hd{display:flex;align-items:center;gap:8px;min-height:52px;padding:0 14px;font-size:14px}
+.lab{font-family:var(--font-mono);font-size:11px;letter-spacing:1px;color:var(--text-muted)}
+.sc{display:flex;align-items:center;justify-content:center;gap:16px;padding:6px 0 14px}
+.sc b{font-family:var(--font-mono);font-size:44px;font-weight:700;letter-spacing:-2px}
+.tb{background:var(--surface-1);border-top:1px solid var(--line);padding:0 14px}
+.tr{display:grid;grid-template-columns:44px minmax(0,1fr) minmax(0,1fr) 54px;gap:8px;align-items:center;height:40px;font-size:14px;font-weight:600}
+.tr+.tr{border-top:1px solid var(--line)}
+.dot{display:inline-block;width:10px;height:10px;border-radius:5px;margin-right:6px;vertical-align:-1px}
+</style>
+<button class="bar"><span style="flex:1"><span class="k">YOUR MATCH · THRU 4</span><span class="v"><span style="color:var(--cart-you-text)">Hogan’s</span> <span class="mono">5–3</span> <span style="color:var(--cart-c)">Fore Play</span></span></span>⌄</button>
+<div class="box">
+<div class="hd"><span class="lab">WATCHING</span><b style="color:var(--cart-b)">Shank</b><span class="mono" style="font-weight:700">5½–½</span><b style="color:var(--cart-d);flex:1">Bogey Brigade</b>⌃</div>
+<div class="sc"><b><span style="color:var(--cart-b)">5½</span><span style="color:var(--text-muted);font-size:26px;padding:0 6px">–</span><span style="color:var(--cart-d)">½</span></b></div>
+<div class="tb">
+<div class="tr"><span class="mono">7</span><span style="color:var(--cart-b)"><span class="dot" style="background:var(--cart-b)"></span>Shank</span><span style="color:var(--cart-b)"><span class="dot" style="background:var(--cart-b)"></span>Shank</span><span class="mono" style="text-align:right">2–0</span></div>
+<div class="tr"><span class="mono">9</span><span style="color:var(--text-muted)"><span class="dot" style="border:2px solid var(--text-muted);box-sizing:border-box"></span>Push</span><span style="color:var(--cart-b)"><span class="dot" style="background:var(--cart-b)"></span>Shank</span><span class="mono" style="text-align:right">1½–½</span></div>
+</div>
+</div>
+</div>
