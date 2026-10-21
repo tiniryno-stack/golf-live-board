@@ -40,7 +40,7 @@ export default {
           <span class="rank">${i + 1}</span>
           <div class="numcol" style="width:84px"><div class="n" style="font-size:22px">${record(r)}</div><span class="micro">W-L-H</span></div>
           <div class="body">
-            ${view === 'pairs' ? `<div class="meta ellipsis">${esc(r.names.join(' + '))}</div><div class="row-title ellipsis">${esc(r.teamName)}</div>` : `<div class="row-title ellipsis">${esc(r.name)}</div>`}
+            ${view === 'pairs' ? `<div class="meta ellipsis">${esc(r.names.join(' + '))}</div><div class="row-title ellipsis">${esc(r.teamName)}</div>` : `<div class="row-title ellipsis">${esc(r.fullName || r.name)}</div>`}
             <div class="detail">${r.rounds} round${r.rounds === 1 ? '' : 's'} · ${fmtPts(r.points)} pts${r.roundsWon ? ` · won ${r.roundsWon}` : ''}</div>
           </div></div>`)
         .join('');

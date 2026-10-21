@@ -832,3 +832,5 @@ details.fold summary::-webkit-details-marker { display: none; }
 .sp-table td.win { color: var(--ink); background: color-mix(in srgb, var(--jersey) 18%, transparent); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--jersey) 60%, transparent); }
 .sp-table td .pt { display: block; font-size: 13px; font-weight: 800; color: var(--jersey); line-height: 1.1; }
 .sp-table .sp-sum th, .sp-table .sp-sum td { border-top: 1px solid var(--line-strong); font-size: 18px; font-weight: 800; padding-top: 10px; }
+.player-row .name-fill { margin-top: 6px; height: 40px; font-size: 15px; }
+.nick-ask { margin: 0 0 10px; }

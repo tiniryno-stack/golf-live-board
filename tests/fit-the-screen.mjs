@@ -173,9 +173,10 @@ for (const size of SIZES) {
   await check(page, size, 'Setup 1 (find a course)');
   for (let i = 0; i < 6; i++) {
     if (i === 0) await page.tap('[data-act="setup-mine"][data-v="twin-creeks-allen-tx"]');
-    if (i === 1) for (const n of ['Andrew', 'Sean', 'Mike', 'Tyler', 'Sam', 'Jake', 'Chris', 'Christopher']) {
+    if (i === 1) for (const n of ['Andrew Duong', 'Sean Baker', 'Mike Ortiz', 'Tyler Nguyen', 'Sam Patel', 'Jake Miller', 'Chris Young', 'Christopher Abernathy-Wells']) {
       await page.fill('#new-player', n);
       await page.press('#new-player', 'Enter');
+      await page.waitForTimeout(150);
     }
     if (i === 2) for (let p = 0; p < 8; p++) await page.tap(`[data-act="setup-team"][data-i="${p}"][data-v="${'AABBCCDD'[p]}"]`);
     await check(page, size, `Setup ${i + 1}`);

@@ -319,7 +319,8 @@ export function compute(event, scores) {
       else { half.grossBack += g; half.netBack += net[i]; half.thruBack++; }
     });
     return {
-      id: p.id, personId: p.personId || null, name: p.name, teamId: p.teamId || null, groupId: p.groupId || null,
+      id: p.id, personId: p.personId || null, name: p.name, firstName: p.firstName || null, lastName: p.lastName || null,
+      teamId: p.teamId || null, groupId: p.groupId || null,
       teamName: p.teamId ? teamName.get(p.teamId) || p.teamId : null,
       strokes: s, dots, gross, net, meta: rows.map((r) => (r ? { by: r.updated_by || null, at: r.updated_at || null } : null)),
       thru, lastHole, grossToPar, netToPar, grossTotal, netTotal, ...half,
@@ -696,6 +697,7 @@ export function seasonStandings(rounds) {
       const k = personKey(p);
       const row = people.get(k) || { key: k, name: p.name, rounds: new Set(), w: 0, l: 0, h: 0, points: 0, roundsWon: 0 };
       row.name = p.name;
+      if (p.lastName) row.fullName = [p.firstName || String(p.name).split(' ')[0], p.lastName].join(' '); // season shows full names
       row.rounds.add(event.id || event.code);
       people.set(k, row);
     }

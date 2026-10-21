@@ -414,9 +414,10 @@ await O.page.goto(`${srv.origin}/#/setup`);
 await O.page.waitForTimeout(800);
 await O.page.tap('[data-act="setup-mine"][data-v="twin-creeks-allen-tx"]');
 await O.page.tap('[data-act="setup-next"]');
-for (const n of ['Andrew', 'Justin', 'Sean', 'Mitchell', 'Ryan', 'Joseph', 'Chuck', 'Peter']) {
+for (const n of ['Andrew Duong', 'Justin Lee', 'Sean Baker', 'Mitchell Ray', 'Ryan Cole', 'Joseph Park', 'Chuck Wells', 'Peter Shaw']) {
   await O.page.fill('#new-player', n);
   await O.page.press('#new-player', 'Enter');
+  await O.page.waitForTimeout(150);
 }
 await O.page.tap('[data-act="setup-next"]');
 for (let p = 0; p < 8; p++) await O.page.tap(`[data-act="setup-team"][data-i="${p}"][data-v="${'ABADCCBD'[p]}"]`);
@@ -435,6 +436,84 @@ ok(!!(await O.page.$('.fullcard.brief')) && !(await O.page.$('.coach')), 'kept \
 await O.page.tap('[data-act="brief-done"]');
 await O.page.waitForTimeout(500);
 ok(!!(await O.page.$('.cart.mine')) && /grey number is par/.test((await O.page.textContent('.coach').catch(() => '')) || ''), 'then Enter, and the first tip shows there');
+
+// 10b. Names: first + last name required; a full name someone else already has asks for a
+//      nickname; two Andrews in one round show as "Andrew D." / "Andrew S."; people + crew saved.
+const N = await (async () => {
+  const ctx = await browser.newContext({ viewport: { width: 393, height: 852 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  await attach(ctx, be, srv.origin);
+  const page = await ctx.newPage();
+  page.errors = [];
+  page.on('pageerror', (e) => page.errors.push(`Names phone: ${e.message}`));
+  return { ctx, page };
+})();
+await N.page.goto(`${srv.origin}/#/setup`);
+await N.page.waitForTimeout(800);
+await N.page.tap('[data-act="setup-mine"][data-v="twin-creeks-allen-tx"]');
+await N.page.tap('[data-act="setup-next"]');
+await N.page.fill('#new-player', 'Sean');
+await N.page.press('#new-player', 'Enter');
+await N.page.waitForTimeout(300);
+ok(/Add their last name too/.test(await N.page.textContent('body')) && !(await N.page.$('.player-row')), 'just a first name → “Add their last name too”, nobody added');
+await N.page.fill('#new-player', 'andrew duong');
+await N.page.press('#new-player', 'Enter');
+await N.page.waitForTimeout(400);
+ok(!!(await N.page.$('#new-nick')) && /already plays in another crew/.test(await N.page.textContent('.nick-ask')), 'Andrew Duong is taken (another crew) → asks for a nickname');
+await N.page.screenshot({ path: 'tests/screenshots/setup-players-nickname.png' });
+await N.page.fill('#new-nick', 'Drew');
+await N.page.press('#new-nick', 'Enter');
+await N.page.waitForTimeout(400);
+await N.page.fill('#new-player', 'Andrew Smith');
+await N.page.press('#new-player', 'Enter');
+await N.page.waitForTimeout(400);
+const rowsN = await N.page.$$eval('.player-row .pname', (els) => els.map((e) => e.innerText.trim()));
+ok(rowsN.join(' | ') === 'Andrew Duong (Drew) | Andrew Smith', `added with full names in Setup (${rowsN.join(' | ')})`);
+await N.page.screenshot({ path: 'tests/screenshots/setup-players-names.png' });
+for (let i = 0; i < 4; i++) await N.page.tap('[data-act="setup-next"]');
+await N.page.tap('[data-act="setup-save"]');
+await N.page.waitForTimeout(900);
+const madeN = be.tables.events[be.tables.events.length - 1];
+ok(madeN.roster.players.map((p) => p.name).join(',') === 'Andrew D.,Andrew S.' && madeN.roster.players[0].nickname === 'Drew' && madeN.roster.players[1].lastName === 'Smith',
+  `in the round: “Andrew D.” / “Andrew S.”, full names kept (${madeN.roster.players.map((p) => p.name).join(', ')})`);
+const peopleN = be.rpc.crew_people({ p_crew_id: madeN.crew_id }).people;
+ok(peopleN.length === 2 && peopleN.some((p) => p.nickname === 'Drew') && peopleN.every((p) => p.lastName), 'both saved as people in the new crew (with last names)');
+await N.ctx.close();
+
+// 10c. Crew-mates from before last names: tap Sean and type his last name, or type
+//      "josh reyes" → both stay the same person (season history kept), last names saved.
+const LC = '3519327b-6bad-4467-b561-a6b01c111224';
+const LIDS = ['eeae7a48-33fa-4052-ad0c-fc7623173fe6', '7ee08322-7d37-4dec-bb96-c9e781836500', '11be6384-781c-42c7-a574-b79e5767e431'];
+const lr = be.rpc.create_event({ p_name: 'Bridlewood', p_course: { name: 'Bridlewood' }, p_roster: { teams: [], players: ['Andrew', 'Sean', 'Josh'].map((n, i) => ({ id: `p${i + 1}`, personId: LIDS[i], name: n })) }, p_settings: {}, p_played_on: '2026-10-20', p_crew_id: LC });
+const L = await (async () => {
+  const ctx = await browser.newContext({ viewport: { width: 393, height: 852 }, isMobile: true, hasTouch: true });
+  await attach(ctx, be, srv.origin);
+  await ctx.addInitScript(([code, crew]) => { localStorage.setItem('glb.recent', JSON.stringify([{ code, name: 'Bridlewood', played_on: '2026-10-20', crew_id: crew }])); }, [lr.code, LC]);
+  const page = await ctx.newPage();
+  page.errors = [];
+  page.on('pageerror', (e) => page.errors.push(`Crew phone: ${e.message}`));
+  return { ctx, page };
+})();
+await L.page.goto(`${srv.origin}/#/setup`);
+await L.page.waitForTimeout(900);
+await L.page.tap('[data-act="setup-mine"][data-v="twin-creeks-allen-tx"]');
+await L.page.tap('[data-act="setup-next"]');
+await L.page.waitForTimeout(300);
+await L.page.tap(`[data-act="setup-past"][data-v="${LIDS[1]}"]`);
+await L.page.waitForTimeout(200);
+ok(!!(await L.page.$('[data-input="setup-last"]')), 'a crew-mate from before last names gets a “Last name” box');
+await L.page.fill('#new-player', 'josh reyes');
+await L.page.press('#new-player', 'Enter');
+await L.page.waitForTimeout(500);
+await L.page.fill('[data-input="setup-last"]', 'mills');
+await L.page.tap('.title');
+for (let i = 0; i < 4; i++) await L.page.tap('[data-act="setup-next"]');
+await L.page.tap('[data-act="setup-save"]');
+await L.page.waitForTimeout(900);
+const madeL = be.tables.events[be.tables.events.length - 1];
+ok(madeL.crew_id === LC && madeL.roster.players.map((p) => `${p.personId}:${p.firstName} ${p.lastName}`).join(',') === `${LIDS[1]}:Sean Mills,${LIDS[2]}:Josh Reyes`,
+  'Sean (tapped) and Josh (typed) are the same people as before, now with last names, same crew');
+ok(JSON.stringify(be.rpc.crew_people({ p_crew_id: LC }).people.map((p) => [p.firstName, p.lastName, p.rounds])) === '[["Josh","Reyes",2],["Sean","Mills",2],["Andrew",null,1]]', 'crew list: 2 rounds each for Sean and Josh');
+await L.ctx.close();
 
 // 12. Every box needs a score: Next hole waits, points at who's missing, never saves par on its own
 const r3 = seedRound(be);
@@ -718,9 +797,10 @@ const teeNames = await G.page.$$eval('[data-act="setup-tee"]', (els) => els.map(
 ok(teeNames.join(',') === 'Black,White (M),White (W)', `tees from the course (${teeNames.join(', ')})`);
 await G.page.tap('[data-act="setup-tee"][data-v="Black"]');
 await G.page.tap('[data-act="setup-next"]');
-for (const n of ['Andrew', 'Justin', 'Sean', 'Mitchell', 'Ryan', 'Joseph', 'Chuck', 'Peter']) {
+for (const n of ['Andy Hall', 'Jay Lin', 'Shawn Bell', 'Mitch Ford', 'Rob Kim', 'Joe Diaz', 'Charlie Webb', 'Pete Ross']) {
   await G.page.fill('#new-player', n);
   await G.page.press('#new-player', 'Enter');
+  await G.page.waitForTimeout(150);
 }
 await G.page.tap('[data-act="setup-next"]');
 for (let p = 0; p < 8; p++) await G.page.tap(`[data-act="setup-team"][data-i="${p}"][data-v="${'ABADCCBD'[p]}"]`);

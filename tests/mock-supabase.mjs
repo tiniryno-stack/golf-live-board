@@ -21,7 +21,10 @@ export const OGA_FIXTURES = JSON.parse(readFileSync(path.join(path.dirname(fileU
 const ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 
 export function createBackend() {
-  const t = { events: [], secrets: new Map(), claims: [], joins: [], jdev: new Map(), audit: [], scores: [] };
+  const t = {
+    events: [], secrets: new Map(), claims: [], joins: [], jdev: new Map(), audit: [], scores: [],
+    crews: new Set(), people: new Map(), members: new Map(), // crews + people (mirrors _sync_crew)
+  };
   let auditId = 1;
   const now = () => new Date().toISOString();
   const ev = (code) => t.events.find((e) => e.code === String(code || '').trim().toUpperCase()) || null;
@@ -33,6 +36,33 @@ export function createBackend() {
   const lastHole = (e, pid) =>
     Math.max(0, ...t.scores.filter((s) => s.event_id === e.id && s.player_id === pid && s.strokes != null).map((s) => s.hole));
   const no = (error, extra = {}) => ({ ok: false, error, ...extra });
+
+  // Mirrors the events_sync_crew trigger: people / crews / crew_members follow every roster.
+  const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const trimmed = (v, n) => (String(v ?? '').trim() || null)?.slice(0, n) ?? null;
+  const fullKey = (x) => [x.first_name, x.last_name, x.nickname || ''].map((v) => String(v).toLowerCase()).join('|');
+  function syncCrew(e, oldRoster = null) {
+    if (!e.crew_id || String(e.settings?.practice) === 'true') return;
+    t.crews.add(e.crew_id);
+    for (const p of e.roster?.players || []) {
+      if (!UUID.test(p.personId || '')) continue;
+      const first = trimmed(p.firstName ?? String(p.name || '').trim().split(' ')[0], 24);
+      if (!first) continue;
+      const next = { id: p.personId, first_name: first, last_name: trimmed(p.lastName, 30), nickname: trimmed(p.nickname, 24) };
+      const cur = t.people.get(p.personId);
+      const clash = next.last_name && [...t.people.values()].some((x) => x.id !== next.id && x.last_name && fullKey(x) === fullKey(next));
+      if (!cur) t.people.set(next.id, clash ? { ...next, last_name: null, nickname: null } : next);
+      else if ('firstName' in p && !clash) Object.assign(cur, next);
+      const isNew = !oldRoster || !(oldRoster.players || []).some((o) => o.personId === p.personId);
+      const k = `${e.crew_id}|${p.personId}`;
+      const m = t.members.get(k);
+      if (!m) t.members.set(k, { crew_id: e.crew_id, person_id: p.personId, last_played: e.played_on, rounds: 1 });
+      else {
+        if (String(e.played_on) > String(m.last_played)) m.last_played = e.played_on;
+        if (isNew) m.rounds += 1;
+      }
+    }
+  }
 
   function approver(e, pid, dev, pin) {
     if (pin != null && adminOk(e, pin)) return 'Organizer';
@@ -78,6 +108,7 @@ export function createBackend() {
       };
       t.events.push(e);
       t.secrets.set(id, pin);
+      syncCrew(e);
       log(e, 'System', `Round created at ${p_course?.name || 'a course'}`);
       return { ok: true, id, code, admin_pin: pin, crew_id: crew };
     },
@@ -196,7 +227,9 @@ export function createBackend() {
       const e = ev(p_code);
       if (!e) return no('not_found');
       if (!adminOk(e, p_admin_pin)) return no('bad_pin');
+      const oldRoster = e.roster;
       Object.assign(e, { course: p_course, roster: p_roster, settings: p_settings, name: p_name || e.name, updated_at: now() });
+      syncCrew(e, oldRoster);
       log(e, 'Organizer', 'Settings saved');
       return { ok: true, changes: 1 };
     },
@@ -268,6 +301,21 @@ export function createBackend() {
       t.audit = t.audit.filter((x) => x.event_id !== e.id);
       t.secrets.delete(e.id);
       return { ok: true };
+    },
+    crew_people({ p_crew_id }) {
+      const people = [...t.members.values()].filter((m) => m.crew_id === p_crew_id)
+        .map((m) => ({ m, pe: t.people.get(m.person_id) })).filter((x) => x.pe)
+        .sort((a, b) => String(b.m.last_played || '').localeCompare(String(a.m.last_played || '')) || b.m.rounds - a.m.rounds || a.pe.first_name.localeCompare(b.pe.first_name))
+        .map(({ m, pe }) => ({ id: pe.id, firstName: pe.first_name, lastName: pe.last_name, nickname: pe.nickname, lastPlayed: m.last_played, rounds: m.rounds }));
+      return { ok: true, people };
+    },
+    person_name_check({ p_first, p_last, p_nickname = null, p_crew_id = null, p_person_id = null }) {
+      if (!String(p_first || '').trim() || !String(p_last || '').trim()) return no('name_required');
+      const want = fullKey({ first_name: String(p_first).trim(), last_name: String(p_last).trim(), nickname: String(p_nickname || '').trim() });
+      const hit = [...t.people.values()].find((x) => x.last_name && fullKey(x) === want && x.id !== p_person_id);
+      if (!hit) return { ok: true, taken: false };
+      const crewMate = !!p_crew_id && t.members.has(`${p_crew_id}|${hit.id}`);
+      return { ok: true, taken: true, crewMate, ...(crewMate ? { id: hit.id } : {}) };
     },
     get_audit_log({ p_code, p_admin_pin }) {
       const e = ev(p_code);

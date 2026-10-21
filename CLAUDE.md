@@ -29,6 +29,7 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
 | `js/coursedata.js` | course search + scorecards from **OpenGolfAPI** (free, keyless, ODbL — show `ATTRIBUTION`): direct from the phone, falling back to the `course-search` Edge Function; pure shaping (`fromOpenGolf`, `scorecardProblems`, `shortCourseName`, distances) |
 | `js/scoring.js` | **pure** engine: `compute(event, scores)` → snapshot; play order (start on 1 or 10), rotations, Low Ball/Low Total, halves, clinch, official line, matchup win bonus, standings + tiebreakers, season |
 | `js/headlines.js` | **pure**: replays scores by `updated_at` → headlines (each has a `hero` team for color); `latestMoment`; Lock in / Close it out alerts |
+| `js/names.js` | **pure**: `splitName`, `fullName`, `nameKey`, `displayNames` (first names; "Andrew D." on a clash) |
 | `js/teams.js` | jersey colors (`teamColor`), `headlineColor`, Pokémon quick names |
 | `js/db.js` | localStorage helpers, device ID, RPC wrappers (`api.*`), reads, offline queue (latest wins; `fill` flag), realtime subscribe |
 | `js/app.js` | router/state, render loop (wrapped in an error boundary → "Something went wrong"), round loading (12 s timeout → "No signal / Try again"), join flow (name → cart-name picker → Today's game), realtime handlers, actions |
@@ -42,11 +43,14 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
 ## Database (Supabase project `yxreupqzwgjzhfosnjbj`, via the Supabase connector)
 
 - Tables: `events`, `event_secrets`, `claims`, `join_requests`, `join_request_devices`, `audit_log`,
-  `scores`. RLS: anon may only `select` events / scores / join_requests. **All writes go through
+  `scores`, and (Oct 21) `crews`, `people`, `crew_members` — no anon access at all; kept in sync with
+  every roster by trigger `events_sync_crew` → `_sync_crew()` (skips `settings.practice`; a clashing
+  full name never blocks a round). RLS: anon may only `select` events / scores / join_requests. **All writes go through
   SECURITY DEFINER RPCs** returning `{ ok, error }`.
 - RPCs: `create_event, verify_admin, claimed_players, whoami, claim_player, leave_round,
   request_join, approve_join, deny_join, upsert_score, admin_upsert_score, fill_score,
-  update_event, release_player, get_audit_log, reset_round, finalize_round, delete_round, pick_team_name`.
+  update_event, release_player, get_audit_log, reset_round, finalize_round, delete_round, pick_team_name,
+  crew_people, person_name_check`.
   Helpers `_same_foursome`, `_play_pos`, `_hole_at`, `_join_approver`, `_write_score`, … are not
   executable by anon.
 - **Finalize:** `events.finalized_at` (set/cleared by `finalize_round` with the organizer PIN). While
@@ -75,6 +79,11 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
   low net score, ties for low split it 1/k. Teams A–D are made in `soloView`, so Host can switch it on
   mid-round and it recounts from hole 1. Matches tab: totals + hole-by-hole table (kept simple; Andrew
   may redesign it).
+- **Crews + people (Oct 21):** a crew = a friend group (`events.crew_id`; Andrew wants the word
+  "crew", not "league"). A person = `personId`, with first + last name (+ nickname when that full
+  name is taken; unique app-wide). Roster players carry `firstName`/`lastName`/`nickname`; `name` is
+  the display name (`names.displayNames`: first name, "Andrew D." when two share it). Season shows
+  full names. Old rounds only have `name` — everything must still work with that.
 - Settings are normalized from `DEFAULT_SETTINGS`, so new settings must default sensibly for old
   rounds.
 
@@ -124,11 +133,11 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
 
 ```bash
 npm install
-npm test               # 59 unit tests: scoring + headlines + course data (spec examples, bonus, back nine, split point)
+npm test               # 62 unit tests: scoring + headlines + course data + names/crews (spec examples, bonus, back nine, split point)
 npm run test:fit       # 128 checks: every screen at SE / 13 mini / 15-16 / Pro Max, no scroll on Enter
-npm run test:smoke     # 179 checks: multi-phone flows against the mock (join, swap, offline, rejoin,
+npm run test:smoke     # 187 checks: multi-phone flows against the mock (join, swap, offline, rejoin,
                        # reset/delete, back nine, Next waits for every score, grid/locks, recap,
-                       # finalize + PIN unlock, add a course, test phones, blank-screen guards)
+                       # finalize + PIN unlock, add a course, names/nicknames/crew-mates, test phones, blank-screen guards)
 ```
 
 - Playwright 1.56 with Chromium at `PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers` (don't run
@@ -151,6 +160,11 @@ npm run test:smoke     # 179 checks: multi-phone flows against the mock (join, s
 
 ## Open items / ideas
 
+- **Crews roadmap (agreed Oct 21, step 1 built):** 2) crew name + invite link + "Start a crew",
+  3) seasons = date ranges per crew (standings default to the current one), 4) Players step: recent
+  groups as one-tap chips + ~8 frequent players + search within the crew, 5) team names reserved per
+  pair **within a crew** + the first 151 Pokémon (`TEAM_NAME_PICKS`). Keep UI changes small until the
+  Claude Design setup redesign lands.
 - **Setup flow feels too long (Andrew, Oct 20):** too many steps/pages/swipes to start a round,
   especially for a quick 2–4 player round. Not designed yet; revisit (fewer steps, smart defaults).
 - **Split point played for real Oct 20** (Bridlewood, 3 players, switched on mid-round). Worked;

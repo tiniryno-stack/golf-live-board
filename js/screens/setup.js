@@ -14,6 +14,7 @@ import * as cd from '../coursedata.js';
 import { DEFAULT_SETTINGS, DEFAULT_ROTATION, holesLabel } from '../scoring.js';
 import { TEAM_NAME_PICKS } from '../teams.js';
 import * as db from '../db.js';
+import * as names from '../names.js';
 
 const STEPS = ['Course', 'Players', 'Teams', 'Matchups', 'Game', 'Save'];
 const TEAM_IDS = ['A', 'B', 'C', 'D'];
@@ -26,6 +27,24 @@ const DRAFT_KEY = 'glb.setupDraft';
 
 const clone = (x) => JSON.parse(JSON.stringify(x));
 
+// People have a first + last name (and a nickname when that full name is already taken).
+// In Setup a player shows by full name; the round itself shows first names (js/names.js).
+function withName(p) {
+  if (!p.firstName) {
+    const { first, last } = names.splitName(p.name || '');
+    p.firstName = first;
+    p.lastName = p.lastName ?? last;
+  }
+  p.lastName = p.lastName || '';
+  p.nickname = p.nickname || '';
+  p.name = names.fullName(p, { withNick: true });
+  return p;
+}
+function newPlayer({ personId, firstName, lastName = '', nickname = '' }) {
+  return withName({ key: db.uuid(), personId: personId || db.uuid(), firstName, lastName, nickname, strokes: '', teamId: null, groupId: 'g1' });
+}
+const same = (a, b) => String(a || '').toLowerCase() === String(b || '').toLowerCase();
+
 function blank(from = null) {
   const { rotation, ...settings } = DEFAULT_SETTINGS;
   return {
@@ -34,7 +53,7 @@ function blank(from = null) {
     near: null, nearStatus: 'idle', loc: null, editCard: false,
     players: [], teams: TEAM_IDS.map((id) => ({ id, name: '' })),
     rotation: clone(DEFAULT_ROTATION), settings: { ...settings, rotationMode: 'swap' },
-    crewId: null, crewFromSource: false, past: [], newName: '',
+    crewId: null, crewFromSource: false, past: [], newName: '', nickAsk: null,
     saving: false, saved: null,
   };
 }
@@ -59,8 +78,15 @@ async function loadPast(app, crewId) {
       for (const p of event.roster?.players || []) if (p.personId) people.set(p.personId, p.name);
       if (event.course?.id) courses.set(event.course.id, event.course);
     }
+    let crew = null;
+    try {
+      const r = await db.api.crewPeople(crewId);
+      if (r?.ok) crew = r.people;
+    } catch { /* database without crews yet: names from past rounds */ }
     if (app.setup) {
-      app.setup.past = [...people].map(([personId, name]) => ({ personId, name, crewId }));
+      app.setup.past = crew
+        ? crew.map((p) => withName({ personId: p.id, firstName: p.firstName, lastName: p.lastName || '', nickname: p.nickname || '', crewId }))
+        : [...people].map(([personId, name]) => withName({ personId, name, crewId }));
       app.setup.mine = yourCourses([...courses.values()].reverse());
       paintCourses(app);
     }
@@ -79,8 +105,9 @@ async function loadFrom(app, code) {
       return;
     }
     s.players = (ev.roster.players || []).map((p, i) => ({
-      key: `k${i}`, personId: p.personId || db.uuid(), name: p.name, strokes: p.strokes ?? '', teamId: p.teamId || null, groupId: p.groupId || 'g1',
-    }));
+      key: `k${i}`, personId: p.personId || db.uuid(), name: p.name, firstName: p.firstName, lastName: p.lastName, nickname: p.nickname,
+      strokes: p.strokes ?? '', teamId: p.teamId || null, groupId: p.groupId || 'g1',
+    })).map(withName);
     s.teams = TEAM_IDS.map((id) => ({ id, name: (ev.roster.teams || []).find((t) => t.id === id)?.name || '' }));
     const { rotation, ...settings } = ev.settings || {};
     s.settings = { ...s.settings, ...settings };
@@ -297,9 +324,14 @@ function problems(s) {
     if (c.source === 'manual' && !(c.name || '').trim()) out.push('Name the course (on the Course step).');
     out.push(...cd.scorecardProblems(c));
   }
-  const names = s.players.map((p) => p.name.trim().toLowerCase()).filter(Boolean);
-  if (!names.length) out.push('Add the players.');
-  if (new Set(names).size !== names.length) out.push('Two players have the same name.');
+  if (!s.players.length) out.push('Add the players.');
+  const keys = s.players.map((p) => names.nameKey(p));
+  if (new Set(keys).size !== keys.length) out.push('Two players have the same name.');
+  const noLast = s.players.filter((p) => !p.lastName);
+  if (noLast.length) out.push(`Add a last name for ${noLast.map((p) => p.firstName).join(', ')} (on Players).`);
+  for (const p of s.players.filter((x) => x.needsNick && !x.nickname)) {
+    out.push(`Someone else is already called ${names.fullName(p)}. Add a nickname for them (on Players).`);
+  }
   // Not 4 full carts of 2 (any other number of players): it saves as a plain scorecard +
   // leaderboard round (see buildRound), so nothing to block here.
   return out;
@@ -321,8 +353,10 @@ function buildRound(s) {
   const casual = casualRound(s);
   const groupOfTeam = {};
   s.rotation[0].matches.forEach((m, i) => m.forEach((t) => (groupOfTeam[t] = `g${i + 1}`)));
+  const shown = names.displayNames(s.players);
   const players = s.players.map((p, i) => ({
-    id: `p${i + 1}`, personId: p.personId || db.uuid(), name: p.name.trim(),
+    id: `p${i + 1}`, personId: p.personId || db.uuid(), name: shown[i],
+    firstName: p.firstName, lastName: p.lastName || '', ...(p.nickname ? { nickname: p.nickname } : {}),
     teamId: casual ? null : p.teamId || null,
     groupId: casual && s.players.length <= 4 ? 'g1' : full && p.teamId ? groupOfTeam[p.teamId] : p.groupId || 'g1',
     strokes: p.strokes === '' || p.strokes == null || Number.isNaN(Number(p.strokes)) ? null : Math.max(0, Math.round(Number(p.strokes))),
@@ -378,12 +412,23 @@ const VIEWS = {
     return `${past.length ? `<div class="micro" style="margin:0 0 8px">From past rounds</div>
       <div class="chips" style="margin:0 0 16px">${past.map((p) => `<button class="chip" data-act="setup-past" data-v="${esc(p.personId)}">${icon('plus', 14)} ${esc(p.name)}</button>`).join('')}</div>` : ''}
       <div class="join-row" style="margin:0 0 8px">
-        <input class="input" id="new-player" maxlength="24" placeholder="Type a name" value="${esc(s.newName)}" autocapitalize="words" data-input="setup-newname" data-enter="setup-add">
-        <button class="btn primary" data-act="setup-add">Add</button>
+        <input class="input" id="new-player" maxlength="48" placeholder="First and last name" value="${esc(s.newName)}" autocapitalize="words" autocomplete="off" data-input="setup-newname" data-enter="setup-add">
+        <button class="btn primary" data-act="setup-add"${s.nickAsk ? ' disabled' : ''}>Add</button>
       </div>
+      ${s.nickAsk ? `<div class="card nick-ask">
+        <p class="meta" style="margin:0 0 8px">Someone named ${esc(s.nickAsk.first)} ${esc(s.nickAsk.last)} already plays in another crew. Someone new? Add a nickname so they\u2019re their own player.</p>
+        <div class="join-row"><input class="input" id="new-nick" maxlength="24" placeholder="Nickname, e.g. Big ${esc(s.nickAsk.first)}" autocapitalize="words" autocomplete="off" data-enter="setup-add">
+          <button class="btn primary" data-act="setup-add">Add</button></div>
+        <button class="link-btn" style="margin-top:8px" data-act="setup-nick-cancel">Cancel</button>
+      </div>` : ''}
+      <p class="help" style="margin:4px 0 0">Only first names show during the round. Last names keep two Andrews apart in the season standings.</p>
       <p class="help" style="margin:4px 0 10px">Strokes are optional. Blank = plays even. Giving a newer player 15 strokes = 1 stroke on the 15 hardest holes.</p>
       <div>${s.players.map((p, i) => `<div class="player-row">
-          <span class="pname ellipsis">${esc(p.name)}</span>
+          ${p.lastName && !p.needsNick
+            ? `<span class="pname ellipsis">${esc(p.name)}</span>`
+            : `<span class="pname"><span class="ellipsis" style="display:block">${esc(p.name)}</span>${p.lastName
+              ? `<input class="input name-fill" maxlength="24" placeholder="Nickname (name\u2019s taken)" value="${esc(p.nickname)}" aria-label="Nickname for ${esc(p.name)}" data-input="setup-nick" data-i="${i}">`
+              : `<input class="input name-fill" maxlength="30" placeholder="Last name" autocapitalize="words" autocomplete="off" aria-label="Last name for ${esc(p.firstName)}" data-input="setup-last" data-i="${i}">`}</span>`}
           <input class="input num" inputmode="numeric" pattern="[0-9]*" maxlength="2" placeholder="even" aria-label="Strokes for ${esc(p.name)}" value="${esc(p.strokes ?? '')}" data-input="setup-strokes" data-i="${i}">
           <button class="x" data-act="setup-remove" data-i="${i}" aria-label="Remove ${esc(p.name)}">${icon('close', 18)}</button>
         </div>`).join('') || '<p class="meta">No players yet.</p>'}</div>
@@ -590,6 +635,8 @@ export default {
     if (!from && draft && !draft.saved && (draft.players?.length || draft.courseId)) {
       app.setup = { ...blank(null), ...draft, step: Math.min(draft.step || 0, 4), saving: false };
       const s = app.setup;
+      s.players = (s.players || []).map(withName);
+      s.nickAsk = null;
       if (!s.course && s.courseId) s.course = clone(COURSES.find((c) => c.id === s.courseId) || null);
       if (!s.course) s.courseId = null;
       if (s.courseStatus === 'loading' && s.course?.ogaId) loadCourse(app, s.course.ogaId);
@@ -727,31 +774,96 @@ export default {
       persist(app.setup);
     },
     'setup-newname': (el, ev, app) => {
-      app.setup.newName = el.value;
-    },
-    'setup-add': (el, ev, app) => {
       const s = app.setup;
-      const input = document.getElementById('new-player');
-      const name = (input?.value || s.newName || '').trim().replace(/\s+/g, ' ').slice(0, 24);
-      if (!name) return;
-      if (s.players.some((p) => p.name.toLowerCase() === name.toLowerCase())) {
-        app.toast({ title: `${name} is already in`, error: true });
+      s.newName = el.value;
+      if (s.nickAsk) { // typed a different name: forget the nickname question
+        const { first, last } = names.splitName(el.value);
+        if (!same(first, s.nickAsk.first) || !same(last, s.nickAsk.last)) {
+          s.nickAsk = null;
+          app.render();
+          const box = document.getElementById('new-player');
+          if (box) { box.focus(); box.setSelectionRange(box.value.length, box.value.length); }
+        }
+      }
+    },
+    'setup-add': async (el, ev, app) => {
+      const s = app.setup;
+      if (s.adding) return;
+      const raw = document.getElementById('new-player')?.value ?? s.newName ?? '';
+      const { first, last } = names.splitName(raw);
+      if (!first) return;
+      if (!last) {
+        app.toast({ title: 'Add their last name too', sub: `e.g. ${first} Smith. Only first names show during the round.`, error: true });
         return;
       }
-      const past = s.past.find((p) => p.name.toLowerCase() === name.toLowerCase());
-      if (past) s.crewId = s.crewId || past.crewId;
-      s.players.push({ key: db.uuid(), personId: past?.personId || db.uuid(), name, strokes: '', teamId: null, groupId: 'g1' });
+      const nick = s.nickAsk ? (document.getElementById('new-nick')?.value || '').trim().replace(/\s+/g, ' ').slice(0, 24) : '';
+      if (s.nickAsk && !nick) {
+        app.toast({ title: 'Add a nickname', sub: `Someone else is already called ${first} ${last}.`, error: true });
+        return;
+      }
+      const inRound = s.players.find((p) => same(p.firstName, first) && same(p.lastName, last) && same(p.nickname, nick));
+      if (inRound) {
+        app.toast({ title: `${inRound.name} is already in`, error: true });
+        return;
+      }
+      const free = (p) => !s.players.some((x) => x.personId === p.personId);
+      // Someone from your crew: the same person (full name), or a crew-mate from before last names.
+      let pick = s.past.find((p) => free(p) && same(p.firstName, first) && same(p.lastName, last) && same(p.nickname, nick)) || null;
+      if (!pick && !nick) {
+        const legacy = s.past.filter((p) => free(p) && same(p.firstName, first) && !p.lastName);
+        if (legacy.length === 1) pick = legacy[0];
+      }
+      if (!pick) {
+        s.adding = true;
+        try {
+          const r = await db.api.personNameCheck({ first, last, nickname: nick || null, crewId: s.crewId });
+          if (r?.ok && r.taken) {
+            if (r.crewMate && r.id) pick = { personId: r.id };
+            else {
+              s.adding = false;
+              s.nickAsk = { first, last };
+              s.newName = raw;
+              app.render({ force: true }); // after the lookup, so it isn't a tap any more
+              document.getElementById('new-nick')?.focus();
+              return;
+            }
+          }
+        } catch { /* offline: checked again on Save */ }
+        s.adding = false;
+      }
+      if (pick?.crewId) s.crewId = s.crewId || pick.crewId;
+      s.players.push(newPlayer({ personId: pick?.personId, firstName: first, lastName: last, nickname: nick }));
       s.newName = '';
+      s.nickAsk = null;
       persist(s);
-      app.render();
+      app.render({ force: true });
       document.getElementById('new-player')?.focus();
+    },
+    'setup-nick-cancel': (el, ev, app) => {
+      app.setup.nickAsk = null;
+      app.render();
+    },
+    'setup-last': (el, ev, app) => {
+      const p = app.setup.players[Number(el.dataset.i)];
+      if (!p) return;
+      p.lastName = names.splitName(`x ${el.value}`).last;
+      p.needsNick = false;
+      withName(p);
+      persist(app.setup);
+    },
+    'setup-nick': (el, ev, app) => {
+      const p = app.setup.players[Number(el.dataset.i)];
+      if (!p) return;
+      p.nickname = el.value.trim().replace(/\s+/g, ' ').slice(0, 24);
+      withName(p);
+      persist(app.setup);
     },
     'setup-past': (el, ev, app) => {
       const s = app.setup;
       const p = s.past.find((x) => x.personId === el.dataset.v);
       if (!p || s.players.some((x) => x.personId === p.personId)) return;
       s.crewId = s.crewId || p.crewId;
-      s.players.push({ key: db.uuid(), personId: p.personId, name: p.name, strokes: '', teamId: null, groupId: 'g1' });
+      s.players.push(newPlayer({ personId: p.personId, firstName: p.firstName, lastName: p.lastName, nickname: p.nickname }));
       persist(s);
       app.render();
     },
@@ -860,6 +972,27 @@ export default {
       if (problems(s).length || s.saving) return;
       s.saving = true;
       app.render();
+      // Full names are one per person app-wide: a clash with a crew-mate is that person;
+      // anyone else needs a nickname. (Offline / older database: skip, the server stays safe.)
+      try {
+        const checks = await Promise.all(s.players.map((p) => db.api.personNameCheck({
+          first: p.firstName, last: p.lastName, nickname: p.nickname || null, crewId: s.crewId, personId: p.personId,
+        }).catch(() => null)));
+        let blocked = false;
+        checks.forEach((r, i) => {
+          const p = s.players[i];
+          if (!r?.ok || !r.taken) return;
+          if (r.crewMate && r.id && !s.players.some((x) => x.personId === r.id)) p.personId = r.id;
+          else { p.needsNick = true; p.nickname = ''; withName(p); blocked = true; }
+        });
+        if (blocked) {
+          s.saving = false;
+          persist(s);
+          app.render();
+          app.toast({ title: 'That name\u2019s taken', sub: 'Add a nickname on Players so they\u2019re their own player.', error: true });
+          return;
+        }
+      } catch { /* keep going */ }
       let res;
       try {
         res = await db.api.createEvent(buildRound(s));

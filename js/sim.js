@@ -66,7 +66,7 @@ async function makeRound() {
         id: `p${k + 1}`, personId: uuid(), name, teamId: CARTS[k], groupId: k < 4 ? 'g1' : 'g2', strokes: null,
       })),
     },
-    settings: { ...DEFAULT_SETTINGS, rotation: JSON.parse(JSON.stringify(DEFAULT_ROTATION)) },
+    settings: { ...DEFAULT_SETTINGS, practice: true, rotation: JSON.parse(JSON.stringify(DEFAULT_ROTATION)) }, // practice: never added to crews / people
     playedOn: new Date().toISOString().slice(0, 10),
     crewId: null, // its own crew: practice never shows up in your group's Season standings
   };

@@ -217,6 +217,10 @@ export const api = {
   finalizeRound: (code, pin, final = true) => rpc('finalize_round', { p_code: code, p_admin_pin: pin, p_final: final }),
   pickTeamName: (code, name) => rpc('pick_team_name', { p_code: code, p_device_id: deviceId, p_name: name }),
   deleteRound: (code, pin) => rpc('delete_round', { p_code: code, p_admin_pin: pin }),
+  // Crews + people (Oct 21): who's in a crew, and whether a full name is free.
+  crewPeople: (crewId) => rpc('crew_people', { p_crew_id: crewId }),
+  personNameCheck: ({ first, last, nickname = null, crewId = null, personId = null }) =>
+    rpc('person_name_check', { p_first: first, p_last: last, p_nickname: nickname, p_crew_id: crewId, p_person_id: personId }),
   upsertScore: (code, playerId, hole, strokes) =>
     rpc('upsert_score', { p_code: code, p_device_id: deviceId, p_player_id: playerId, p_hole: hole, p_strokes: strokes }),
   fillScore: (code, playerId, hole, strokes) =>
