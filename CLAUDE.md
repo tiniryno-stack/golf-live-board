@@ -17,6 +17,16 @@ after the first playtest; section 13 is the V2 backlog.
   **mid-round**, replay the live round's data through the new code before pushing (see Testing),
   and never make destructive DB changes.
 
+## Night Round redesign (Oct 21, branch `design/night-round`)
+
+- Design handoff in `docs/design/` (`designspec.md` = source of truth, `screens/` = mockups, `PLAN.md`
+  = the plan + open items). Built on the branch, **not merged to `main` yet**.
+- Tokens in `css/styles.css` `:root` (dark + light): `--bg/--surface/--surface-2/--surface-3`,
+  `--good` (me) + `--good-ink` (green text), `--warn` amber (warnings only), `--bad` + `--dbl-bg`
+  (double bogey only), jerseys `--t-A…F`. Score marks everywhere: `ui.mark(score, par, size)`.
+  `ui.seg2` (2-line segments), `ui.foldIn(app.ui)` (fold animation only right after a tap — the
+  render loop redraws constantly), `.mine-bar` / `.watch-box` = expand-in-place.
+
 ## Stack and file map
 
 Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UMD from jsdelivr).
@@ -74,8 +84,12 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
   `halvedHolePoints` (½ default). **Matchup win bonus** `matchBonus` (default 1; halved splits like a
   push; official once both foursomes finish that matchup). Plus/Minus: stroke margins, optional cap.
 - Official line = holes every foursome has finished (play order); beyond it is provisional.
-- **Small groups:** any roster that isn't 4 carts of 2 is a scorecard round (no teams, ≤4 = one group).
-  With 2–4 players, `settings.solo` = **split point** (`game.type 'splitPoint'`): 1 point a hole to the
+- **Games (Oct 21):** Scorecard only (any count, `autoGroups`), Match play 2–6 (`solo`, jerseys A–F),
+  **2v2** (`settings.pairs` + `pairSwitch` never/six/turn: `pairView` makes one team per pairing with
+  `members`; `game.people` = each player's summed points; `sideOn()` = your pair on a hole), Cart
+  game (8; `cartRotation('six'|'turn', opps)`, `rotationMode` fixed = keep tee times = new default).
+- **Small groups:** any roster that isn't 4 carts of 2 is a scorecard round (no teams).
+  With 2–6 players, `settings.solo` = **split point** (`game.type 'splitPoint'`): 1 point a hole to the
   low net score, ties for low split it 1/k. Teams A–D are made in `soloView`, so Host can switch it on
   mid-round and it recounts from hole 1. Matches tab: totals + hole-by-hole table (kept simple; Andrew
   may redesign it).
@@ -92,8 +106,11 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
 
 ## UI conventions (don't regress these)
 
-- **Enter:** your cart ~70% with full tiles; the other cart greyed to one slim row of small scores
-  ("Tap to enter" → 50/50, yours greyed, "Tap to go back"). Empty box shows a **grey par**; the
+- **Enter (team game):** your cart's players as stacked rows (− · score mark · +, 88px / 112px on tall
+  screens, shrinking by height tiers; ≥48px on an SE); the other cart = one slim row + Edit (then
+  theirs is the card and yours the slim row with Back). **Individual (no carts):** "you first" hero
+  card + compact rows with where each score came from + one-tap pad (`pad-toggle` / `pad-pick`,
+  jumps to the next player waiting). Empty box shows a **dashed ghost par**; the
   **first tap on any button (−, number, +) = par**, then − / + step. **Next hole** waits until every
   box in the foursome has a score ("Next hole · 2 scores left", greyed); a tap then shakes the
   empty boxes, names who's missing, and opens the other cart if only theirs are blank. Nothing is
@@ -115,6 +132,11 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
 - Board: tap a team → breakdown sheet. When final: big trophy card → **Round recap** (4 canvas
   PNGs: leaderboard, your scorecard, your cart, full report; Save or share via share sheet).
   Organizer gets **Finalize round** under it (also Host → Rules); then the card says `Final · locked`.
+- **Setup (designspec §6):** screens `course → which? → players → (check) → game → teams → matchups`,
+  `s.screen`, back button in the app top bar (`screen.topBack`). Games by count: `scoring.GAMES` /
+  `gameFix`; `s.game` scorecard | match | 2v2 | carts. Start (`setup-save`) with a broken card opens
+  the Scorecard check. Multi-course club: `coursedata.splitCourses` → "Which course?" → saved as
+  `oga:<id>#N`, name "Club · Label".
 - **Setup → Course:** search box, **Your courses** (built-ins + courses from your group's past rounds,
   latest copy wins so fixes stick), **Near you** (looked up as soon as Setup opens; the phone asks once).
   A course ≤1 mi away goes on top as **Looks like you're at** (`hereCourses`, max 3, your copy wins). Picking loads the scorecard in the background (`s.courseStatus`). **Save** has a
@@ -136,11 +158,12 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
 
 ```bash
 npm install
-npm test               # 62 unit tests: scoring + headlines + course data + names/crews (spec examples, bonus, back nine, split point)
-npm run test:fit       # 128 checks: every screen at SE / 13 mini / 15-16 / Pro Max, no scroll on Enter
-npm run test:smoke     # 187 checks: multi-phone flows against the mock (join, swap, offline, rejoin,
+npm test               # 70 unit tests: scoring + headlines + course data + names/crews + games (2v2, at the turn, 6-player match play) + score marks
+npm run test:fit       # 132 checks: every screen at SE / 13 mini / 15-16 / Pro Max, no scroll on Enter
+npm run test:smoke     # 212 checks: multi-phone flows against the mock (join, swap, offline, rejoin,
                        # reset/delete, back nine, Next waits for every score, grid/locks, recap,
-                       # finalize + PIN unlock, add a course, names/nicknames/crew-mates, test phones, blank-screen guards)
+                       # finalize + PIN unlock, add a course, which course?, names/nicknames/crew-mates, you-first pad,
+                       # matches expand in place, 2v2, test phones, blank-screen guards)
 ```
 
 - Playwright 1.56 with Chromium at `PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers` (don't run
@@ -168,8 +191,10 @@ npm run test:smoke     # 187 checks: multi-phone flows against the mock (join, s
   groups as one-tap chips + ~8 frequent players + search within the crew, 5) team names reserved per
   pair **within a crew** + the first 151 Pokémon (`TEAM_NAME_PICKS`). Keep UI changes small until the
   Claude Design setup redesign lands.
-- **Setup flow feels too long (Andrew, Oct 20):** too many steps/pages/swipes to start a round,
-  especially for a quick 2–4 player round. Not designed yet; revisit (fewer steps, smart defaults).
+- **Night Round open items** (docs/design/PLAN.md): cart-game name (shipping as "Cart game"), conflict
+  rule when two phones enter different scores (still last entry wins), stepper for scorecard-check
+  cells, 3-cart game for 6. Naming a course in "Which course?" is remembered per group (shared
+  courses table = V2). "Start now, finish the card during the round" not built.
 - **Split point played for real Oct 20** (Bridlewood, 3 players, switched on mid-round). Worked;
   Andrew may want some optimization later but asked for no changes for now.
 - `_setting_label` in the DB doesn't know `matchBonus` (audit log shows the raw key): one-line
