@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Night Round · Enter, foursome (you first)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&amp;family=Geist+Mono:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+.t{--bg:#0A0B0D;--s1:#15171B;--s2:#1F2227;--s3:#2A2E35;--tx:#F4F5F7;--tx2:#A7ACB4;--ln:#2B2F36;--me:#3DDC84;--meT:#3DDC84;--pink:#FF6FB5;--dbl:#FF6B6B;--dblBg:rgba(255,107,107,0.16);--btn:#F4F5F7;--btnT:#0A0B0D;--tint:rgba(61,220,132,0.10)}
+.t.light{--bg:#F2F3F5;--s1:#FFFFFF;--s2:#E8EAEE;--s3:#FFFFFF;--tx:#0B0D10;--tx2:#4F555E;--ln:#D5D9DF;--me:#12A35C;--meT:#0A7A43;--pink:#C02A70;--dbl:#B42318;--dblBg:rgba(180,35,24,0.10);--btn:#0B0D10;--btnT:#FFFFFF;--tint:rgba(18,163,92,0.10)}
+.mono{font-family:'Geist Mono',ui-monospace,monospace}
+button{font:inherit;color:inherit;cursor:pointer}
+.fold{overflow:hidden;transition:max-height 380ms cubic-bezier(.2,.8,.2,1),opacity 260ms ease}
+</style>
+</helmet>
+<div class="t {{mode}}" style="width: 393px; height: 852px; box-sizing: border-box; background: var(--bg); color: var(--tx); font-family: 'Geist', system-ui, sans-serif; display: flex; flex-direction: column; overflow: hidden">
+
+<div style="display: flex; align-items: center; padding: 10px 8px 0">
+<button aria-label="Previous hole" style="width: 52px; height: 52px; border: 0; background: transparent; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg></button>
+<div style="flex: 1; text-align: center">
+<div style="font-size: 36px; font-weight: 800; letter-spacing: -1.2px; line-height: 1">Hole 11</div>
+<div style="font-size: 14px; color: var(--tx2); margin-top: 4px">Par 3 · Hcp 16 · 168 yds</div>
+</div>
+<button aria-label="Next hole" style="width: 52px; height: 52px; border: 0; background: transparent; display: flex; align-items: center; justify-content: center; opacity: 0.35"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"></path></svg></button>
+</div>
+
+<div style="margin: 10px 16px 0; height: 40px; border-radius: 12px; background: var(--s1); display: flex; align-items: center; justify-content: space-between; padding: 0 14px; font-size: 14px">
+<div style="color: var(--tx2)">Stroke play · net</div>
+<div class="mono" style="color: var(--meT); font-weight: 700">YOU 2ND · +3</div>
+</div>
+
+<div style="margin: 12px 16px 0; border-radius: 24px; background: var(--s1); border: 1.5px solid var(--me); padding: 14px 14px 14px">
+<div style="display: flex; align-items: center; justify-content: space-between">
+<div style="display: flex; align-items: center; gap: 8px"><span class="mono" style="font-size: 11px; font-weight: 700; letter-spacing: 1px; color: var(--btnT); background: var(--me); padding: 2px 7px; border-radius: 6px">YOU</span><span style="font-size: 17px; font-weight: 700">Andrew B.</span></div>
+<div class="mono" style="font-size: 12px; font-weight: 700; color: var(--meT); letter-spacing: 0.6px">{{myLabel}}</div>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; margin-top: 10px">
+<button onClick="{{myMinus}}" aria-label="Your score minus one" style="width: 84px; height: 84px; border-radius: 20px; border: 1px solid var(--ln); background: var(--bg); font-size: 36px">−</button>
+<div style="flex: 1; display: flex; justify-content: center"><span class="mono" style="{{myShapeSt}}">{{myScore}}</span></div>
+<button onClick="{{myPlus}}" aria-label="Your score plus one" style="width: 84px; height: 84px; border-radius: 20px; border: 1px solid var(--ln); background: var(--bg); font-size: 36px">+</button>
+</div>
+</div>
+
+<div style="display: flex; justify-content: space-between; align-items: baseline; margin: 16px 20px 8px">
+<div class="mono" style="font-size: 11px; letter-spacing: 1.1px; color: var(--tx2); font-weight: 600">YOUR GROUP</div>
+<div style="font-size: 13px; color: var(--tx2)">{{groupNote}}</div>
+</div>
+
+<div style="margin: 0 16px; border-radius: 18px; background: var(--s1); overflow: hidden">
+<sc-for list="{{others}}" as="p" hint-placeholder-count="3">
+<div style="{{p.wrapSt}}">
+<button onClick="{{p.toggle}}" style="width: 100%; height: 58px; border: 0; background: transparent; display: flex; align-items: center; gap: 10px; padding: 0 14px; text-align: left">
+<span style="{{p.dotSt}}"></span>
+<span style="flex: 1; min-width: 0">
+<span style="display: block; font-size: 16px; font-weight: 600">{{p.name}}</span>
+<span style="{{p.subSt}}">{{p.sub}}</span>
+</span>
+<span class="mono" style="{{p.scoreSt}}">{{p.scoreTx}}</span>
+</button>
+<div class="fold" style="{{p.foldSt}}">
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; padding: 0 12px 12px">
+<sc-for list="{{p.chips}}" as="c" hint-placeholder-count="6">
+<button onClick="{{c.pick}}" style="{{c.st}}"><span class="mono" style="{{c.numSt}}">{{c.v}}</span><span style="font-size: 11px; color: var(--tx2)">{{c.label}}</span></button>
+</sc-for>
+</div>
+</div>
+</div>
+</sc-for>
+</div>
+
+<button style="{{nextSt}}">{{nextLabel}}</button>
+
+<nav style="margin: auto 12px 10px; display: flex; gap: 4px; padding: 5px; background: var(--s1); border: 1px solid var(--ln); border-radius: 22px">
+<a href="A-Enter-Foursome.dc.html" style="flex: 1; height: 50px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border-radius: 17px; background: var(--btn); color: var(--btnT); text-decoration: none; font-size: 12px; font-weight: 700"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4h11l-2 4 2 4H5"></path></svg>Enter</a>
+<a href="A-Matches-v3a-expand.dc.html" style="flex: 1; height: 50px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border-radius: 17px; color: var(--tx2); text-decoration: none; font-size: 12px; font-weight: 600"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8.5" cy="12" r="5"></circle><circle cx="15.5" cy="12" r="5"></circle></svg>Matches</a>
+<a href="A-Board.dc.html" style="flex: 1; height: 50px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border-radius: 17px; color: var(--tx2); text-decoration: none; font-size: 12px; font-weight: 600"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h11M4 18h7"></path></svg>Board</a>
+<a href="A-Card.dc.html" style="flex: 1; height: 50px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border-radius: 17px; color: var(--tx2); text-decoration: none; font-size: 12px; font-weight: 600"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M3 10h18M3 15h18M9 4v16M15 4v16"></path></svg>Card</a>
+</nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"mode":{"editor":"enum","options":["dark","light"],"default":"dark"},"startOpen":{"editor":"enum","options":["sean","jake","none"],"default":"sean"},"$preview":{"width":393,"height":852}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { open: undefined, my: 2, scores: { sean: null, sam: 3, jake: null }, src: { sean: null, sam: 'phone', jake: null } };
+  }
+  renderVals() {
+    var self = this;
+    var st = this.state;
+    var open = st.open === undefined ? (this.props.startOpen ?? 'sean') : st.open;
+    var PAR = 3;
+    var names = { '-2': 'ACE', '-1': 'BIRDIE', '0': 'PAR', '1': 'BOGEY', '2': 'DOUBLE', '3': 'TRIPLE' };
+    var order = ['sean', 'sam', 'jake'];
+    var info = {
+      sean: { name: 'Sean', c: 'var(--tx2)', who: '', stroke: true },
+      sam: { name: 'Sam', c: 'var(--tx2)', who: '' },
+      jake: { name: 'Jake', c: 'var(--tx2)', who: '' }
+    };
+    function shape(s, size, fs, w1, w2) {
+      var b = 'display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; width: ' + size + 'px; height: ' + size + 'px; font-size: ' + fs + 'px; font-weight: 700; line-height: 1; ';
+      if (s === null || s === undefined) return b;
+      var d = s - PAR, r = Math.round(size * 0.16);
+      if (d <= -2) return b + 'border-radius: 50%; border: ' + w2 + 'px double var(--tx)';
+      if (d === -1) return b + 'border-radius: 50%; border: ' + w1 + 'px solid var(--tx)';
+      if (d === 1) return b + 'border-radius: ' + r + 'px; border: ' + w1 + 'px solid var(--tx2)';
+      if (d >= 2) return b + 'border-radius: ' + r + 'px; border: ' + w2 + 'px double var(--dbl); background: var(--dblBg); color: var(--dbl)';
+      return b;
+    }
+    var chipDefs = [[2, 'Birdie'], [3, 'Par'], [4, 'Bogey'], [5, 'Double'], [6, 'Triple'], [7, 'Max']];
+    var remaining = order.filter(function (k) { return st.scores[k] === null; }).length;
+    var others = order.map(function (k, idx) {
+      var s = st.scores[k], src = st.src[k], isOpen = open === k, inf = info[k];
+      var sub, subColor = 'var(--tx2)';
+      if (s === null) sub = 'Waiting on ' + inf.name + ' · tap to enter';
+      else if (src === 'phone') { sub = '✓ From ' + inf.name + '’s phone'; subColor = 'var(--meT)'; }
+      else sub = 'Entered by you · ' + inf.name + ' can still edit';
+      var chips = chipDefs.map(function (d) {
+        var sel = s === d[0];
+        return { v: d[0] === 7 ? '7+' : String(d[0]), label: d[1], numSt: shape(d[0], 30, d[0] === 7 ? 14 : 17, 1.5, 4),
+          st: 'height: 52px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; ' + (sel ? 'border: 2px solid var(--me); background: var(--tint)' : (d[0] === PAR ? 'border: 2px solid var(--tx2); background: var(--s2)' : 'border: 0; background: var(--s2)')),
+          pick: function () {
+            var sc = Object.assign({}, self.state.scores); sc[k] = d[0];
+            var sr = Object.assign({}, self.state.src); sr[k] = 'you';
+            var next = order.filter(function (o) { return sc[o] === null; })[0] || null;
+            self.setState({ scores: sc, src: sr, open: next });
+          } };
+      });
+      return {
+        name: inf.name, sub: sub, chips: chips,
+        subSt: 'display: block; font-size: 12px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: ' + subColor,
+        dotSt: 'width: 10px; height: 10px; border-radius: 5px; flex: none; background: ' + inf.c,
+        scoreTx: s === null ? (isOpen ? '' : 'Enter') : String(s),
+        scoreSt: s === null ? 'font-size: 13px; font-weight: 600; color: var(--tx2); padding: 6px 10px; border-radius: 8px; border: 1px dashed var(--ln)' + (isOpen ? '; display: none' : '') : shape(s, 40, 22, 2, 5),
+        wrapSt: (idx ? 'border-top: 1px solid var(--ln); ' : '') + (isOpen ? 'background: var(--s2)' : ''),
+        foldSt: 'max-height: ' + (isOpen ? '140px' : '0px') + '; opacity: ' + (isOpen ? 1 : 0),
+        toggle: function () { self.setState({ open: isOpen ? null : k }); }
+      };
+    });
+    var d = st.my - PAR;
+    return {
+      mode: this.props.mode ?? 'dark',
+      myScore: String(st.my),
+      myShapeSt: shape(st.my, 124, 84, 3.5, 9) + '; letter-spacing: -3px',
+      myLabel: names[String(d)] || ('+' + d),
+      myMinus: function () { self.setState({ my: Math.max(1, self.state.my - 1) }); },
+      myPlus: function () { self.setState({ my: Math.min(9, self.state.my + 1) }); },
+      others: others,
+      groupNote: remaining ? remaining + ' still to go · tap to enter for them' : 'All in',
+      nextLabel: remaining ? 'Next hole · ' + remaining + ' left' : 'Next hole →',
+      nextSt: 'margin: 12px 16px 0; height: 56px; border-radius: 16px; border: 0; font-size: 17px; font-weight: 700; ' + (remaining ? 'background: var(--s2); color: var(--tx2)' : 'background: var(--btn); color: var(--btnT)')
+    };
+  }
+}
+</script>
+</body>
+</html>

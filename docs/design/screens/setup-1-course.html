@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>New round · Course</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&amp;family=Geist+Mono:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+.t{--bg:#0A0B0D;--s1:#15171B;--s2:#1F2227;--s3:#2A2E35;--tx:#F4F5F7;--tx2:#A7ACB4;--ln:#2B2F36;--me:#3DDC84;--meT:#3DDC84;--btn:#F4F5F7;--btnT:#0A0B0D}
+.t.light{--bg:#F2F3F5;--s1:#FFFFFF;--s2:#E8EAEE;--s3:#FFFFFF;--tx:#0B0D10;--tx2:#4F555E;--ln:#D5D9DF;--me:#12A35C;--meT:#0A7A43;--btn:#0B0D10;--btnT:#FFFFFF}
+.mono{font-family:'Geist Mono',ui-monospace,monospace}
+.lbl{font-family:'Geist Mono',ui-monospace,monospace;font-size:11px;letter-spacing:1.1px;color:var(--tx2);font-weight:600}
+button{font:inherit;color:inherit;cursor:pointer}
+input{font:inherit;color:inherit}
+input::placeholder{color:var(--tx2)}
+</style>
+</helmet>
+<div class="t {{mode}}" style="width: 393px; height: 852px; box-sizing: border-box; background: var(--bg); color: var(--tx); font-family: 'Geist', system-ui, sans-serif; display: flex; flex-direction: column; overflow: hidden">
+
+<div style="display: flex; align-items: center; justify-content: space-between; padding: 4px 12px 0; height: 52px">
+<a href="#" style="height: 48px; display: flex; align-items: center; gap: 2px; color: var(--tx2); text-decoration: none; font-size: 16px"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg>Home</a>
+<div style="display: flex; gap: 4px"><span style="width: 22px; height: 4px; border-radius: 2px; background: var(--tx)"></span><span style="width: 22px; height: 4px; border-radius: 2px; background: var(--ln)"></span></div>
+</div>
+<div style="padding: 2px 20px 0">
+<div class="lbl">STEP 1 · COURSE</div>
+<div style="font-size: 32px; font-weight: 800; letter-spacing: -1px; margin-top: 2px">Where are you playing?</div>
+</div>
+
+<label style="margin: 14px 16px 0; height: 52px; border-radius: 14px; background: var(--s1); display: flex; align-items: center; gap: 10px; padding: 0 14px">
+<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="color: var(--tx2)"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"></path></svg>
+<input placeholder="Search courses by name" aria-label="Search courses by name" style="flex: 1; border: 0; background: transparent; font-size: 16px; outline: none">
+</label>
+
+<div class="lbl" style="margin: 18px 20px 8px">LOOKS LIKE YOU’RE AT</div>
+<a href="Setup-2-Round.dc.html" style="margin: 0 16px; min-height: 76px; border-radius: 18px; background: var(--s2); border: 1.5px solid var(--tx); display: flex; align-items: center; gap: 12px; padding: 12px 12px 12px 16px; color: var(--tx); text-decoration: none; box-sizing: border-box">
+<svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex: none"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"></path><circle cx="12" cy="9.5" r="2.5"></circle></svg>
+<span style="flex: 1">
+<span style="display: block; font-size: 17px; font-weight: 700">The Golf Club at Twin Creeks</span>
+<span style="display: block; font-size: 13px; color: var(--tx2); margin-top: 3px">Allen, TX · played 4 times · card checked</span>
+</span>
+<span style="height: 44px; padding: 0 14px; border-radius: 12px; background: var(--btn); color: var(--btnT); display: flex; align-items: center; font-size: 14px; font-weight: 700">Pick</span>
+</a>
+
+<div class="lbl" style="margin: 20px 20px 8px">YOUR COURSES</div>
+<div style="margin: 0 16px; border-radius: 18px; background: var(--s1); overflow: hidden">
+<a href="Setup-Which-Course.dc.html" style="min-height: 60px; display: flex; align-items: center; gap: 10px; padding: 8px 14px; color: var(--tx); text-decoration: none; box-sizing: border-box">
+<span style="flex: 1"><span style="display: block; font-size: 16px; font-weight: 600">Bear Creek Golf Club</span><span style="display: block; font-size: 12px; color: var(--tx2); margin-top: 2px">2 courses · played before</span></span>
+<span class="mono" style="font-size: 13px; color: var(--tx2)">14.2 mi</span>
+</a>
+<a href="#" style="min-height: 60px; display: flex; align-items: center; gap: 10px; padding: 8px 14px; color: var(--tx); text-decoration: none; border-top: 1px solid var(--ln); box-sizing: border-box">
+<span style="flex: 1"><span style="display: block; font-size: 16px; font-weight: 600">Indian Creek · Creeks</span><span style="display: block; font-size: 12px; color: var(--tx2); margin-top: 2px">card checked · played before</span></span>
+<span class="mono" style="font-size: 13px; color: var(--tx2)">16.8 mi</span>
+</a>
+<a href="#" style="min-height: 60px; display: flex; align-items: center; gap: 10px; padding: 8px 14px; color: var(--tx); text-decoration: none; border-top: 1px solid var(--ln); box-sizing: border-box">
+<span style="flex: 1"><span style="display: block; font-size: 16px; font-weight: 600">Bridlewood Golf Club</span><span style="display: block; font-size: 12px; color: var(--tx2); margin-top: 2px">card checked · played before</span></span>
+<span class="mono" style="font-size: 13px; color: var(--tx2)">21.5 mi</span>
+</a>
+</div>
+
+<div class="lbl" style="margin: 20px 20px 8px">NEAR YOU</div>
+<div style="margin: 0 16px; border-radius: 18px; background: var(--s1); overflow: hidden">
+<a href="#" style="min-height: 56px; display: flex; align-items: center; gap: 10px; padding: 8px 14px; color: var(--tx); text-decoration: none; box-sizing: border-box">
+<span style="flex: 1; font-size: 16px; font-weight: 600">[Nearby course]</span>
+<span class="mono" style="font-size: 13px; color: var(--tx2)">2.8 mi</span>
+</a>
+<div aria-disabled="true" style="min-height: 56px; display: flex; align-items: center; gap: 10px; padding: 8px 14px; border-top: 1px solid var(--ln); box-sizing: border-box; color: var(--tx2)">
+<span style="flex: 1"><span style="display: block; font-size: 16px; font-weight: 600">[9-hole course]</span><span style="display: block; font-size: 12px; margin-top: 2px">9 holes · not supported yet</span></span>
+<span class="mono" style="font-size: 13px">3.4 mi</span>
+</div>
+</div>
+
+<a href="Setup-Card-Hand.dc.html" style="margin: auto 16px 18px; height: 52px; border-radius: 14px; border: 1px dashed var(--ln); display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 15px; font-weight: 600; color: var(--tx); text-decoration: none">Can’t find it? <span style="color: var(--meT)">Enter the scorecard yourself</span></a>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"mode":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":393,"height":852}}'>
+class Component extends DCLogic {
+  renderVals() { return { mode: this.props.mode ?? 'dark' }; }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>New round · Pick a game</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&amp;family=Geist+Mono:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+.t{--bg:#0A0B0D;--s1:#15171B;--s2:#1F2227;--tx:#F4F5F7;--tx2:#A7ACB4;--ln:#2B2F36;--me:#3DDC84;--meT:#3DDC84;--btn:#F4F5F7;--btnT:#0A0B0D}
+.t.light{--bg:#F2F3F5;--s1:#FFFFFF;--s2:#E8EAEE;--tx:#0B0D10;--tx2:#4F555E;--ln:#D5D9DF;--me:#12A35C;--meT:#0A7A43;--btn:#0B0D10;--btnT:#FFFFFF}
+.mono{font-family:'Geist Mono',ui-monospace,monospace}
+.lbl{font-family:'Geist Mono',ui-monospace,monospace;font-size:11px;letter-spacing:1.1px;color:var(--tx2);font-weight:600}
+button{font:inherit;color:inherit;cursor:pointer}
+</style>
+</helmet>
+<div class="t {{mode}}" style="width: 393px; height: 852px; box-sizing: border-box; background: var(--bg); color: var(--tx); font-family: 'Geist', system-ui, sans-serif; display: flex; flex-direction: column; overflow: hidden">
+
+<div style="display: flex; align-items: center; padding: 4px 12px 0; height: 52px">
+<a href="Setup-2-Round.dc.html" style="height: 48px; display: flex; align-items: center; gap: 2px; color: var(--tx2); text-decoration: none; font-size: 16px"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg>Players</a>
+</div>
+<div style="padding: 2px 20px 0">
+<div class="lbl">STEP 3 · GAME · 5 PLAYERS</div>
+<div style="font-size: 32px; font-weight: 800; letter-spacing: -1px; margin-top: 2px">Pick a game</div>
+<div style="font-size: 14px; color: var(--tx2); margin-top: 4px">Games that don’t fit your player count are greyed out.</div>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 8px; margin: 16px 16px 0">
+<sc-for list="{{games}}" as="g" hint-placeholder-count="4">
+<a href="{{g.href}}" aria-disabled="{{g.dis}}" style="{{g.st}}">
+<span style="{{g.radioSt}}"></span>
+<span style="flex: 1; min-width: 0">
+<span style="display: flex; justify-content: space-between; align-items: baseline; gap: 8px"><span style="font-size: 17px; font-weight: 700">{{g.name}}</span><span class="mono" style="font-size: 11px; color: var(--tx2); white-space: nowrap">{{g.count}}</span></span>
+<span style="display: block; font-size: 13px; color: var(--tx2); margin-top: 4px; line-height: 1.35">{{g.desc}}</span>
+<sc-if value="{{g.hasWhy}}" hint-placeholder-val="{{ false }}"><span style="display: block; font-size: 13px; font-weight: 600; margin-top: 6px">{{g.why}}</span></sc-if>
+</span>
+</a>
+</sc-for>
+</div>
+
+<button style="margin: 12px 16px 0; min-height: 56px; border-radius: 16px; border: 0; background: var(--s1); display: flex; align-items: center; gap: 10px; padding: 0 14px; text-align: left">
+<span style="flex: 1; font-size: 15px">Max score per hole</span>
+<span style="font-size: 14px; font-weight: 600">Double par</span>
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="color: var(--tx2)"><path d="M9 5l7 7-7 7"></path></svg>
+</button>
+
+<div style="margin: auto 20px 8px; font-size: 13px; color: var(--tx2); text-align: center">2v2 and the cart game go to one more screen to set teams.</div>
+<a href="Setup-Share.dc.html" style="margin: 0 16px 16px; height: 60px; border-radius: 18px; background: var(--btn); color: var(--btnT); font-size: 18px; font-weight: 700; display: flex; align-items: center; justify-content: center; text-decoration: none">Start round · 5 players</a>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"mode":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":393,"height":852}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var defs = [
+      { name: 'Scorecard only', count: 'ANY NUMBER', desc: 'Everyone plays their own ball. One leaderboard, net or gross.', on: true, href: 'Setup-2-Round.dc.html' },
+      { name: 'Match play', count: '2–6 PLAYERS', desc: 'Low net score wins each hole for 1 point. Ties split it.', href: 'Setup-2-Round.dc.html' },
+      { name: '2v2', count: 'EXACTLY 4', desc: 'Two teams of two in one foursome. Partners can switch every 6.', dis: true, why: 'Remove 1 player to play this.', href: 'Setup-2-Round-2v2.dc.html' },
+      { name: 'Cart game', count: 'EXACTLY 8', desc: '4 carts of 2. Opponents rotate every 6 holes across tee times.', dis: true, why: 'Add 3 more players to play this.', href: 'Setup-F2-Carts.dc.html' }
+    ];
+    var games = defs.map(function (g) {
+      return {
+        name: g.name, count: g.count, desc: g.desc, why: g.why || '', hasWhy: !!g.why, dis: g.dis ? 'true' : 'false', href: g.href,
+        st: 'min-height: 84px; border-radius: 18px; display: flex; align-items: flex-start; gap: 14px; padding: 14px 16px; box-sizing: border-box; color: var(--tx); text-decoration: none; ' + (g.on ? 'background: var(--s2); border: 2px solid var(--tx)' : 'background: var(--s1); border: 2px solid transparent') + (g.dis ? '; opacity: 0.55' : ''),
+        radioSt: 'width: 22px; height: 22px; flex: none; margin-top: 2px; border-radius: 11px; box-sizing: border-box; ' + (g.on ? 'border: 7px solid var(--tx)' : 'border: 2px solid var(--ln)')
+      };
+    });
+    return { mode: this.props.mode ?? 'dark', games: games };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>New round · Players</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&amp;family=Geist+Mono:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+.t{--bg:#0A0B0D;--s1:#15171B;--s2:#1F2227;--s3:#2A2E35;--tx:#F4F5F7;--tx2:#A7ACB4;--ln:#2B2F36;--me:#3DDC84;--meT:#3DDC84;--btn:#F4F5F7;--btnT:#0A0B0D}
+.t.light{--bg:#F2F3F5;--s1:#FFFFFF;--s2:#E8EAEE;--s3:#FFFFFF;--tx:#0B0D10;--tx2:#4F555E;--ln:#D5D9DF;--me:#12A35C;--meT:#0A7A43;--btn:#0B0D10;--btnT:#FFFFFF}
+.mono{font-family:'Geist Mono',ui-monospace,monospace}
+.lbl{font-family:'Geist Mono',ui-monospace,monospace;font-size:11px;letter-spacing:1.1px;color:var(--tx2);font-weight:600}
+button{font:inherit;color:inherit;cursor:pointer}
+input{font:inherit;color:inherit}
+input::placeholder{color:var(--tx2)}
+</style>
+</helmet>
+<div class="t {{mode}}" style="width: 393px; height: 852px; box-sizing: border-box; background: var(--bg); color: var(--tx); font-family: 'Geist', system-ui, sans-serif; display: flex; flex-direction: column; overflow: hidden">
+
+<div style="display: flex; align-items: center; justify-content: space-between; padding: 4px 12px 0; height: 52px">
+<a href="Setup-1-Course.dc.html" style="height: 48px; display: flex; align-items: center; gap: 2px; color: var(--tx2); text-decoration: none; font-size: 16px"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg>Course</a>
+<div style="display: flex; gap: 4px"><span style="width: 22px; height: 4px; border-radius: 2px; background: var(--tx)"></span><span style="width: 22px; height: 4px; border-radius: 2px; background: var(--tx)"></span></div>
+</div>
+<div style="padding: 2px 20px 0">
+<div class="lbl">STEP 2 · PLAYERS</div>
+<div style="font-size: 32px; font-weight: 800; letter-spacing: -1px; margin-top: 2px">Who’s playing?</div>
+</div>
+
+<div style="margin: 14px 16px 0; min-height: 60px; border-radius: 16px; background: var(--s1); display: flex; align-items: center; gap: 10px; padding: 6px 6px 6px 14px; box-sizing: border-box">
+<a href="Setup-Card-Good.dc.html" style="flex: 1; min-width: 0; color: var(--tx); text-decoration: none">
+<span style="display: block; font-size: 15px; font-weight: 700">Twin Creeks · Blue tees</span>
+<span style="display: block; font-size: 12px; color: var(--meT); margin-top: 2px">✓ Card ready · par 72 · tap to check</span>
+</a>
+<button style="height: 48px; padding: 0 12px; border: 0; border-radius: 12px; background: var(--s2); font-size: 14px; font-weight: 600">Change</button>
+</div>
+
+<div style="display: flex; align-items: flex-end; margin: 18px 16px 8px 20px">
+<span class="lbl" style="flex: 1">PLAYERS · 5</span>
+<span class="lbl" style="width: 64px; text-align: center">HCP</span>
+<span style="width: 50px"></span>
+</div>
+<div style="margin: 0 16px; border-radius: 18px; background: var(--s1); overflow: hidden">
+<sc-for list="{{players}}" as="p" hint-placeholder-count="5">
+<div style="{{p.rowSt}}">
+<span style="flex: 1; min-width: 0">
+<span style="display: block; font-size: 16px; font-weight: 600">{{p.name}}</span>
+<sc-if value="{{p.hasSub}}" hint-placeholder-val="{{ false }}"><span style="{{p.subSt}}">{{p.sub}}</span></sc-if>
+</span>
+<button aria-label="{{p.hcpAria}}" class="mono" style="{{p.hcpSt}}">{{p.hcp}}</button>
+<sc-if value="{{p.removable}}" hint-placeholder-val="{{ true }}"><button aria-label="{{p.rmAria}}" style="width: 48px; height: 48px; border: 0; background: transparent; color: var(--tx2); display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button></sc-if>
+<sc-if value="{{p.isYou}}" hint-placeholder-val="{{ false }}"><span style="width: 48px"></span></sc-if>
+</div>
+</sc-for>
+<div style="height: 60px; display: flex; align-items: center; gap: 8px; padding: 0 8px 0 14px; border-top: 1px solid var(--ln)">
+<input placeholder="Add a name" aria-label="Add a player name" style="flex: 1; height: 48px; border: 0; background: transparent; font-size: 16px; outline: none">
+<button style="height: 48px; padding: 0 18px; border-radius: 12px; border: 0; background: var(--btn); color: var(--btnT); font-size: 14px; font-weight: 700">Add</button>
+</div>
+</div>
+<div style="display: flex; gap: 6px; margin: 8px 16px 0; overflow: hidden">
+<span class="lbl" style="align-self: center; margin: 0 4px">RECENT</span>
+<button style="height: 48px; padding: 0 14px; border-radius: 24px; border: 1px solid var(--ln); background: transparent; font-size: 15px; white-space: nowrap">+ Jake</button>
+<button style="height: 48px; padding: 0 14px; border-radius: 24px; border: 1px solid var(--ln); background: transparent; font-size: 15px; white-space: nowrap">+ Chris</button>
+<button style="height: 48px; padding: 0 14px; border-radius: 24px; border: 1px solid var(--ln); background: transparent; font-size: 15px; white-space: nowrap">+ Christopher</button>
+</div>
+
+<a href="Setup-Game-Pick.dc.html" style="margin: auto 16px 16px; height: 60px; border-radius: 18px; background: var(--btn); color: var(--btnT); font-size: 18px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none">Next: pick a game<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"></path></svg></a>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"mode":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":393,"height":852}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var list = [
+      { name: 'Andrew B.', hcp: '14', sub: 'You · organizer', you: true },
+      { name: 'Sean', hcp: '18', sub: '' },
+      { name: 'Mike', hcp: '12', sub: '' },
+      { name: 'Tyler', hcp: '16', sub: '' },
+      { name: 'Sam', hcp: null, sub: 'New player' }
+    ];
+    var players = list.map(function (p, i) {
+      var empty = p.hcp === null;
+      return {
+        name: p.name, sub: p.sub, hasSub: !!p.sub,
+        subSt: 'display: block; font-size: 12px; margin-top: 2px; color: ' + (p.you ? 'var(--meT)' : 'var(--tx2)'),
+        hcp: empty ? 'Add' : p.hcp,
+        hcpAria: p.name + ' handicap',
+        hcpSt: 'width: 64px; height: 44px; flex: none; border-radius: 12px; font-size: ' + (empty ? '13px' : '16px') + '; font-weight: 600; ' + (empty ? 'border: 1.5px dashed var(--ln); background: transparent; color: var(--tx2)' : 'border: 0; background: var(--s2)'),
+        removable: !p.you, isYou: !!p.you, rmAria: 'Remove ' + p.name,
+        rowSt: 'min-height: 58px; display: flex; align-items: center; gap: 2px; padding: 0 2px 0 14px' + (i ? '; border-top: 1px solid var(--ln)' : '')
+      };
+    });
+    return { mode: this.props.mode ?? 'dark', players: players };
+  }
+}
+</script>
+</body>
+</html>
