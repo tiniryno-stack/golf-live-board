@@ -24,6 +24,7 @@ export const DEFAULT_SETTINGS = {
   par3NoMax: false,
   rotationMode: 'swap',
   startHole: 1, // 1 = front nine first; 10 = start on the back nine
+  teeTimes: [], // optional clock time per tee time (group order), "HH:MM"; '' = not set
   rotation: DEFAULT_ROTATION,
 };
 
@@ -101,7 +102,33 @@ export function normalizeSettings(s) {
   const out = { ...DEFAULT_SETTINGS, ...(s || {}) };
   if (!Array.isArray(out.rotation) || !out.rotation.length) out.rotation = DEFAULT_ROTATION;
   out.startHole = Number(out.startHole) === 10 ? 10 : 1;
+  out.teeTimes = Array.isArray(out.teeTimes) ? out.teeTimes.map((t) => (/^\d{1,2}:\d{2}$/.test(String(t || '')) ? String(t) : '')) : [];
   return out;
+}
+
+// ───────────────────────────────────────────── tee times
+
+const ORD = ['1st', '2nd', '3rd'];
+const ordinal = (n) => ORD[n - 1] || `${n}th`;
+
+/** Index of a group ("g2" → 1) in tee-time order. */
+export function groupIndex(groupId) {
+  const n = Number(String(groupId || '').replace(/^g/, ''));
+  return Number.isInteger(n) && n > 0 ? n - 1 : 0;
+}
+
+/** "8:40" for a group's tee time ("14:05" → "2:05", like the app's clocks), or null when not set. */
+export function teeClock(settings, i) {
+  const t = normalizeSettings(settings).teeTimes[i];
+  if (!t) return null;
+  const [h, m] = t.split(':').map(Number);
+  return `${((h + 11) % 12) + 1}:${String(m).padStart(2, '0')}`;
+}
+
+/** "8:40 tee time" when the organizer set one, else "1st tee time", "2nd tee time"… */
+export function teeTimeName(settings, i) {
+  const c = teeClock(settings, i);
+  return c ? `${c} tee time` : `${ordinal(i + 1)} tee time`;
 }
 
 // ───────────────────────────────────────────── play order

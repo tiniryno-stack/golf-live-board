@@ -210,6 +210,9 @@ returns text language sql immutable set search_path = public as $$
     when 'maxHoleScore'     then 'Max hole score'
     when 'par3NoMax'        then 'No max on par 3s'
     when 'rotationMode'     then 'Foursomes'
+    when 'matchBonus'       then 'Matchup win bonus'
+    when 'startHole'        then 'First tee'
+    when 'teeTimes'         then 'Tee times'
     else p_key end
 $$;
 

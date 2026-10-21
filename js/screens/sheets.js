@@ -3,7 +3,7 @@
 // organizer PIN (unlock a finalized round).
 
 import { esc, icon, scoreClass, clock, mark } from '../ui.js';
-import { fmtToPar, fmtPts, fmtSigned, maxHoleScore, componentNames, posOf, holeAt, holesLabel, matchesFor, playOrder } from '../scoring.js';
+import { fmtToPar, fmtPts, fmtSigned, maxHoleScore, componentNames, posOf, holeAt, holesLabel, matchesFor, playOrder, teeTimeName, groupIndex } from '../scoring.js';
 import { teamColor, headlineColor, shortTeam } from '../teams.js';
 
 let lastHtml = '';
@@ -55,7 +55,7 @@ function playersByCart(app) {
   } else {
     for (const g of snap.roster.groups || []) {
       const ps = snap.players.filter((p) => p.groupId === g.id);
-      if (ps.length) groups.push({ label: g.name, players: ps });
+      if (ps.length) groups.push({ label: teeTimeName(snap.settings, groupIndex(g.id)), players: ps });
     }
     const loose = snap.players.filter((p) => !snap.roster.groups?.some((g) => g.id === p.groupId));
     if (loose.length) groups.push({ label: 'Players', players: loose });

@@ -2,7 +2,7 @@
 // 2v2 (switching partners), cart game at the turn + custom matchups, Partner “Rider” Cup for 6 (3 carts).
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { compute, gameFix, autoGroups, cartRotation, pairRotation, sideOn, sameFoursome, fmtPts, threeCartRotation, cartIdsFor, matchesFor, matchFor, GAMES } from '../js/scoring.js';
+import { compute, gameFix, autoGroups, cartRotation, pairRotation, sideOn, sameFoursome, fmtPts, threeCartRotation, cartIdsFor, matchesFor, matchFor, GAMES, normalizeSettings, teeTimeName, teeClock, groupIndex } from '../js/scoring.js';
 import { makeEvent, scorebook, parFor, COURSE } from './helpers.mjs';
 
 const solo = (ids) => ids.map((id) => ({ id, personId: id, name: id.toUpperCase(), teamId: null, groupId: 'g1', strokes: null }));
@@ -148,4 +148,16 @@ test('Partner “Rider” Cup for 6: 3 carts, every cart plays both others on ev
   // Holes 2–18 all pushed: ½ + ½ a hole in each of a cart's 2 matches = 34. A: 3 + 34 + 2 wins = 39;
   // B and C: 1½ + 34 + ½ (their halved matchup splits the bonus) = 36.
   assert.deepEqual(fin, { A: [39, 1, '2-0-0'], B: [36, 2, '0-1-1'], C: [36, 2, '0-1-1'] });
+});
+
+test('Tee times: optional clock per tee time, else 1st / 2nd tee time; old rounds unaffected', () => {
+  assert.deepEqual(normalizeSettings({}).teeTimes, [], 'a round from before tee times');
+  assert.deepEqual(normalizeSettings({ teeTimes: ['08:40', 'soon', '13:05'] }).teeTimes, ['08:40', '', '13:05'], 'junk is dropped');
+  const st = { teeTimes: ['08:40', '', '13:05'] };
+  assert.equal(teeTimeName(st, 0), '8:40 tee time');
+  assert.equal(teeTimeName(st, 1), '2nd tee time');
+  assert.equal(teeClock(st, 2), '1:05', 'afternoon times read like the app’s other clocks');
+  assert.equal(teeTimeName({}, 3), '4th tee time');
+  assert.equal(groupIndex('g2'), 1);
+  assert.equal(groupIndex(null), 0);
 });

@@ -250,11 +250,11 @@ else lives in the round's settings JSON or on the phone.
 - **Tiebreak:** stays the engine's fixed order (`rankStandings`); the Rules sheet just says it: "Tie on
   points: better matchup record (wins minus losses, then most wins), then who won between the two,
   then the stroke margin. Still tied = shared." No `settings.tiebreak`.
-- **Tee times (decided Oct 21):** new `settings.teeTimes`, a list of clock times, one per tee time in
-  group order (`["8:40", "8:50"]`). Default `[]` → every screen says "1st tee time", "2nd tee time"…
-  Old rounds normalize to `[]`, so nothing changes for them. Set in Host → round settings (and in
-  Setup where the first tee and round name are). Shown on the waiting Board, matchup lines and the
-  Rules sheet. Input: the TextField with the phone's time picker (no new pattern).
+- **Tee times (decided Oct 21, built):** `settings.teeTimes`, one `"HH:MM"` per tee time in group
+  order (`["08:40", "08:50"]`). Default `[]` → "1st tee time", "2nd tee time"… Old rounds normalize to
+  `[]`. Set in Host → Rules (one time picker per tee time). `teeTimeName()` / `teeClock()` in
+  `scoring.js`; shown on the Who sheet and incoming-score toasts now, and on the waiting Board and the
+  Rules sheet when those are built.
 - **Entered by:** already stored (`scores.updated_by` = the writer's name or "Organizer", `meta.by`).
 - **Player's own entry wins (decided Oct 21, needs the database):** in `upsert_score`, when someone
   writes a score for another player and the saved score was entered **by that player themselves**
@@ -267,8 +267,13 @@ else lives in the round's settings JSON or on the phone.
   with smoke tests for each case. Older phones on the live site drop a refused write (the queue settles
   it and calls `onReject`) rather than retrying, so applying it early is safe; still, it goes live with
   the merge to `main`, after the mid-round check.
-- **Partner Rider Cup for 6 (decided Oct 21: build it):** 3 carts of 2 (A, B, C). Format: see
-  section 9, item 4. Stored like the 8-player game (`settings` + 3 teams), no migration.
+- **Partner “Rider” Cup for 6 (built Oct 21):** 3 carts of 2 (A, B, C). Format: section 9, item 4.
+  Stored like the 8-player game (`settings` + 3 teams), no migration.
+
+**Database changes waiting for the merge to `main`** (additive `create or replace` only; already in
+`supabase/schema.sql`; apply with `apply_migration` right before merging, after the mid-round check):
+1. `_setting_label`: plain names for `matchBonus`, `startHole`, `teeTimes` in the audit log.
+2. The own-entry rule in `upsert_score` (below, when built).
 - **Home result line, last handicap, times played:** derived on the phone (section 6).
 - **Per-hole yards** for the Fix-a-hole sheet: not stored; only if asked later (course JSON, no migration).
 

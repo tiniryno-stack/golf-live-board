@@ -3,7 +3,7 @@
 // Render flow: Supabase ─realtime─► app state ─► scoring.compute() ─► snapshot ─► active screen render
 
 import * as db from './db.js';
-import { compute, nextHoleFor, currentHoleOf, sameFoursome, matchFor, playOrder, posOf, holeAt, HOLES, sideOn } from './scoring.js';
+import { compute, nextHoleFor, currentHoleOf, sameFoursome, matchFor, playOrder, posOf, holeAt, HOLES, sideOn, teeTimeName, groupIndex } from './scoring.js';
 import { isDefaultTeamName } from './teams.js';
 import { replayHeadlines, latestMoment } from './headlines.js';
 import { esc, icon, initials, roundLink, copyText } from './ui.js';
@@ -879,7 +879,7 @@ function foursomeLabel(pid, hole) {
     if (m) return m.teams.map((t) => snap.teamById.get(t)?.name || t).join(' v ');
   }
   const g = (app.event.roster.groups || []).find((x) => x.id === p?.groupId);
-  return g?.name || 'Hole';
+  return g ? teeTimeName(snap.settings, groupIndex(g.id)) : 'Hole';
 }
 function noteIncoming(row) {
   const label = foursomeLabel(row.player_id, row.hole);

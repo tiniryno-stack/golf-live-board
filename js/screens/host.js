@@ -5,6 +5,7 @@
 
 import { esc, icon, seg, clock, copyText, roundLink } from '../ui.js';
 import * as db from '../db.js';
+import { teeTimeName } from '../scoring.js';
 
 const clone = (x) => JSON.parse(JSON.stringify(x));
 const TEAM_IDS = ['A', 'B', 'C', 'D'];
@@ -38,6 +39,18 @@ function pinForm() {
   </div>`;
 }
 
+/** Optional clock time for each tee time (settings.teeTimes); blank = "1st tee time" etc. */
+function teeTimesField(d) {
+  const groups = d.roster.groups?.length ? d.roster.groups : [{ id: 'g1' }];
+  const times = Array.isArray(d.settings.teeTimes) ? d.settings.teeTimes : [];
+  const who = (g) => (d.roster.players || []).filter((p) => (p.groupId || 'g1') === g.id).map((p) => p.name.split(' ')[0]).join(', ');
+  return `<div class="field"><span class="label">Tee times</span>
+    <p class="help" style="margin:0 0 8px">Optional. Shown on the Board and the rules; blank says “1st tee time”.</p>
+    ${groups.map((g, i) => `<label class="tee-row"><span class="tee-k">${esc(teeTimeName({ teeTimes: [] }, i))}<small class="ellipsis">${esc(who(g))}</small></span>
+      <input class="input tee-in" type="time" value="${esc(times[i] || '')}" data-input="host-tee" data-i="${i}" aria-label="${esc(teeTimeName({ teeTimes: [] }, i))}"></label>`).join('')}
+  </div>`;
+}
+
 function rules(app, d) {
   const st = d.settings;
   const pm = st.game === 'rotationPlusMinus';
@@ -56,11 +69,13 @@ function rules(app, d) {
     : `<div class="field"><span class="label">Game</span>${seg('host-set', [['none', 'None'], ['rotationMatch', 'Match Play'], ['rotationPlusMinus', 'Plus/Minus']], st.game, 'data-k="game"')}</div>`;
   if (noCarts) {
     return `${gameField}
+      ${teeTimesField(d)}
       <div class="field"><span class="label">Max hole score</span>${seg('host-set', [['doublePar', 'Double par'], ['netDoubleBogey', 'Net dbl bogey'], ['none', 'None']], st.maxHoleScore, 'data-k="maxHoleScore"')}</div>
       ${courseAndFinish(app, d)}`;
   }
   return `${gameField}
     <div class="field"><span class="label">First tee</span>${seg('host-set', [['1', 'Hole 1'], ['10', 'Hole 10']], String(st.startHole || 1), 'data-k="startHole"')}</div>
+    ${teeTimesField(d)}
     <div class="field"><span class="label">Team score</span>${seg('host-set', [['bestBallAggregate', 'Low Ball/Total'], ['bestBall', 'Best ball'], ['aggregate', 'Aggregate']], st.teamScore, 'data-k="teamScore"')}</div>
     <div class="field"><span class="label">Max hole score</span>${seg('host-set', [['doublePar', 'Double par'], ['netDoubleBogey', 'Net dbl bogey'], ['none', 'None']], st.maxHoleScore, 'data-k="maxHoleScore"')}</div>
     <div class="chips" style="margin:0 0 16px">
@@ -236,6 +251,14 @@ export default {
       st.handicapMode = st.handicapMode === 'offLow' ? 'full' : 'offLow';
       touch(app);
       app.render();
+    },
+    'host-tee': (el, ev, app) => {
+      const st = draft(app).settings;
+      const times = Array.isArray(st.teeTimes) ? [...st.teeTimes] : [];
+      times[Number(el.dataset.i)] = /^\d{1,2}:\d{2}$/.test(el.value) ? el.value : '';
+      while (times.length && !times[times.length - 1]) times.pop();
+      st.teeTimes = Array.from(times, (t) => t || '');
+      touch(app);
     },
     'host-allow': (el, ev, app) => {
       const v = el.value.replace(/\D/g, '').slice(0, 3);

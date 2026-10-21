@@ -247,6 +247,11 @@ a { color: inherit; }
 .input.code { font-family: var(--mono); letter-spacing: .2em; text-transform: uppercase; font-size: 20px; font-weight: 700; }
 .input.num { width: 72px; text-align: center; font-family: var(--mono); padding: 0 6px; }
 .help { font-size: 13px; color: var(--ink-soft); margin: -6px 0 14px; }
+/* Host → tee times: one row per tee time, the clock input in a fixed column */
+.field label.tee-row { display: flex; align-items: center; gap: var(--space-3); min-height: var(--tap-min); color: var(--text); font-size: 15px; font-weight: 500; }
+.tee-row .tee-k { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.tee-row .tee-k small { font-size: 13px; color: var(--text-muted); }
+.tee-row .tee-in { width: 132px; flex: none; font-family: var(--font-mono); font-size: 17px; }
 
 /* segmented control (designspec §3): s1 track, 48px segments, active = s3 + shadow */
 .seg {
