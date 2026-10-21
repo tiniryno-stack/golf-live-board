@@ -37,3 +37,14 @@ test('retired color names stay retired (green = you, red = double bogey / errors
     assert.ok(!/#F4C95D|#14161A/i.test(src), `${f} has a hard-coded amber / ink color`);
   }
 });
+
+test('every font size in the stylesheet is one of the 6 type styles (64 / 32 / 17 / 15 / 13 / 12)', () => {
+  const css = read('css/styles.css').replace(/\/\*[\s\S]*?\*\//g, '');
+  const sizes = [...css.matchAll(/font-size:\s*([\d.]+)px/g), ...css.matchAll(/font:\s*\d+\s+([\d.]+)px/g)].map((m) => Number(m[1]));
+  const off = [...new Set(sizes.filter((n) => ![12, 13, 15, 17, 32, 64].includes(n)))];
+  assert.deepEqual(off, [], `sizes outside the type scale: ${off.join(', ')}`);
+  for (const f of ['season', 'card', 'setup', 'enter', 'board', 'matches', 'sheets', 'toasts', 'home', 'host', 'brief'].map((x) => `js/screens/${x}.js`)) {
+    const inline = [...read(f).matchAll(/font-size:\s*([\d.]+)px/g)].map((m) => Number(m[1])).filter((n) => ![12, 13, 15, 17, 32, 64].includes(n));
+    assert.deepEqual(inline, [], `${f}: inline font sizes outside the scale`);
+  }
+});

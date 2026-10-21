@@ -683,7 +683,7 @@ function checkView(s) {
     ${nine(0)}${nine(9)}
     <p class="meta nr-hint">${ok ? 'Tap any number to change it. The organizer can also fix a hole mid-round from Host.' : 'Copy from the paper card. Hcp is the “Handicap” row: 1 is the hardest hole, 18 the easiest, each used once.'}</p>
     ${c.source === 'opengolfapi' || c.lastSource === 'opengolfapi' ? `<p class="meta attrib">Course data ${esc(cd.ATTRIBUTION)}</p>` : ''}
-    ${c.tees?.length ? `<div class="lbl nr-lbl">Tees</div><div class="chips">${c.tees.map((t) => `<button class="chip" data-act="setup-tee" data-v="${esc(t.name)}" aria-pressed="${s.tee?.name === t.name}">${esc(t.name)}${t.yards ? ` <span class="soft mono" style="font-size:12px">${t.yards}</span>` : ''}</button>`).join('')}</div>` : ''}
+    ${c.tees?.length ? `<div class="lbl nr-lbl">Tees</div><div class="chips">${c.tees.map((t) => `<button class="chip" data-act="setup-tee" data-v="${esc(t.name)}" aria-pressed="${s.tee?.name === t.name}">${esc(t.name)}${t.yards ? ` <span class="soft mono" style="font-size:13px">${t.yards}</span>` : ''}</button>`).join('')}</div>` : ''}
     <div class="lbl nr-lbl">First tee</div>${seg('setup-set', [['1', 'Hole 1'], ['10', 'Hole 10']], String(s.settings.startHole || 1), 'data-k="startHole"')}
     <div class="field" style="margin-top:14px"><label for="round-name">Round name (optional)</label>
       <input class="input" id="round-name" maxlength="60" value="${esc(s.name)}" placeholder="${esc(`${c.shortName || cd.shortCourseName(c.name || '') || 'Round'} · ${prettyDate(todayISO())}`)}" data-input="setup-name"></div>

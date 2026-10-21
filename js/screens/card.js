@@ -93,7 +93,7 @@ export default {
     const firstHole = groupHole(app, first);
     const mineBar = `<button class="mine-bar${foldIn(app.ui)}" style="--fold-h:80px" data-act="card-mine">
         <span style="flex:1;min-width:0"><span class="mb-k">${app.me ? 'YOUR GROUP' : 'GROUP 1'} · ${firstHole ? `ON ${firstHole}` : 'DONE'}</span>
-        <span class="mb-t ellipsis" style="font-size:14px;font-weight:600">${esc(first.players.map((p) => p.name).join(' · '))}</span></span>
+        <span class="mb-t ellipsis" style="font-size:15px;font-weight:600">${esc(first.players.map((p) => p.name).join(' · '))}</span></span>
         ${icon('fwd', 18).replace('<svg', '<svg style="transform:rotate(90deg)"')}</button>`;
     const others = rest.map((g) => {
       const open = g.key === openKey;
