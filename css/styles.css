@@ -474,39 +474,49 @@ a { color: inherit; }
 .score.blank { color: var(--ink-faint); font-weight: 500; font-size: clamp(15px, 2.4dvh, 18px); font-family: var(--font); }
 .tile .score.ghost { color: var(--ink-faint); opacity: .55; font-weight: 600; }
 
-/* ───────────────────────────────────────────── Matches */
-.match-hero { padding-top: 8px; }
-.mh-teams { display: grid; grid-template-columns: 1fr auto 1fr; align-items: end; gap: 8px; }
-.mh-side { min-width: 0; }
-.mh-side.right { text-align: right; }
-.mh-name { font-size: 17px; font-weight: 700; }
-.mh-players { font-size: 13px; color: var(--hero-soft); margin-top: 2px; }
-.mh-count { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 52px; font-weight: 700; letter-spacing: -0.03em; line-height: 1; margin-top: 8px; }
-.mh-mid { font-size: 13px; color: var(--hero-faint); padding-bottom: 8px; }
-.tug { position: relative; display: grid; gap: 3px; margin: 18px 0 10px; height: 18px; }
-.tug .seg-cell { position: relative; border-radius: 4px; background: var(--surface-2); overflow: hidden; }
-.tug .seg-cell .fill { position: absolute; top: 0; bottom: 0; transition: width .5s cubic-bezier(.2, .8, .2, 1); }
-.tug .seg-cell .fill.l { left: 0; background: var(--lc, var(--good)); }
-.tug .seg-cell .fill.r { right: 0; background: var(--rc, var(--hero-ink)); }
-.tug .mid { position: absolute; top: -6px; bottom: -6px; left: 50%; border-left: 1.5px dashed var(--hero-faint); }
-.mh-status { text-align: center; font-size: 14px; font-weight: 600; }
-.mh-status .clinch { color: var(--hero-faint); font-weight: 500; }
-.hole-strip { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin: 4px 0 16px; }
-.hs-hole { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px 0; border-radius: 12px; background: var(--surface-2); min-height: 64px; }
-.hs-hole .n { font-family: var(--mono); font-size: 13px; font-weight: 700; }
-.pips { display: flex; gap: 4px; }
-.pip { width: 12px; height: 12px; border-radius: 50%; background: var(--line-strong); position: relative; overflow: hidden; }
-.pip.l { background: var(--lc, var(--good)); }
-.pip.r { background: var(--rc, var(--ink)); }
-.pip.h { background: linear-gradient(90deg, var(--lc, var(--good)) 50%, var(--rc, var(--ink)) 50%); }
-.pip.p { background: transparent; border: 1.5px dashed var(--line-strong); }
-.mini-match { width: 100%; text-align: left; }
-.mini-bar { display: grid; gap: 2px; height: 6px; margin-top: 8px; }
-.mini-bar .seg-cell { position: relative; border-radius: 2px; background: var(--line-strong); overflow: hidden; }
-.mini-bar .fill { position: absolute; top: 0; bottom: 0; }
-.mini-bar .fill.l { left: 0; background: var(--lc, var(--ink)); }
-.mini-bar .fill.r { right: 0; background: var(--rc, var(--ink-soft)); }
-@media (prefers-reduced-motion: reduce) { .tug .seg-cell .fill { transition: none; } }
+/* ───────────────────────────────────────────── Matches (designspec §3) */
+.matches-nr { display: flex; flex-direction: column; gap: 10px; padding-top: 12px; }
+.m-hero { text-align: center; }
+.m-kicker { font-size: 11px; letter-spacing: .1em; color: var(--good-ink); font-weight: 600; }
+.m-title { font-size: 28px; font-weight: 800; letter-spacing: -0.03em; margin-top: 2px; }
+.m-sub { font-size: 14px; color: var(--ink-soft); margin-top: 2px; }
+.m-hero .seg2 { margin: 14px 0 0; }
+.m-score { display: flex; align-items: center; justify-content: center; gap: 18px; margin-top: 16px; }
+.ms-side { width: 96px; text-align: left; font-size: 14px; font-weight: 700; min-width: 0; }
+.ms-side.r { text-align: right; }
+.ms-side small { display: block; font-size: 12px; font-weight: 400; color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ms-num { font-size: 64px; font-weight: 700; letter-spacing: -0.05em; line-height: 1; white-space: nowrap; }
+.ms-num .dash { color: var(--ink-soft); font-size: 36px; padding: 0 8px; vertical-align: 6px; }
+.m-score.small { gap: 16px; margin-top: 14px; }
+.m-score.small .ms-side { width: 84px; }
+.m-score.small .ms-num { font-size: 44px; }
+.m-score.small .ms-num .dash { font-size: 26px; padding: 0 6px; vertical-align: 4px; }
+.pbar { position: relative; display: flex; gap: 3px; margin: 14px 4px 0; height: var(--h, 18px); }
+.pb-cell { flex: 1; position: relative; border-radius: 4px; background: var(--surface-2); overflow: hidden; display: block; }
+.pb-cell b { position: absolute; top: 0; bottom: 0; }
+.pb-cell b.l { left: 0; } .pb-cell b.r { right: 0; }
+.pb-mid { position: absolute; left: 50%; top: -4px; bottom: -4px; width: 2px; margin-left: -1px; background: var(--ink); }
+.m-line { display: flex; justify-content: space-between; gap: 8px; margin: 10px 4px 0; font-size: 14px; text-align: left; }
+.m-line b { font-weight: 600; }
+.m-line.small { font-size: 13px; margin-top: 8px; }
+.mtable { margin-top: 14px; border-radius: 18px; background: var(--surface); padding: 4px 14px; text-align: left; }
+.mt-row { width: 100%; display: grid; gap: 8px; align-items: center; height: 44px; border-top: 1px solid var(--line); text-align: left; }
+.mt-head { height: auto; padding: 10px 0 6px; border-top: 0; font-size: 11px; color: var(--ink-soft); letter-spacing: .06em; }
+.mt-row .r { text-align: right; }
+.mt-row b.mono { font-size: 16px; font-weight: 700; }
+.mt-row small { font-size: 11px; color: var(--ink-soft); }
+.mt-row .pts { font-size: 15px; font-weight: 700; }
+.tc { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; min-width: 0; white-space: nowrap; overflow: hidden; }
+.td { width: 10px; height: 10px; border-radius: 50%; flex: none; box-sizing: border-box; }
+.td.push { border: 2px solid var(--ink-soft); }
+.td.live { border: 2px dashed var(--ink-soft); }
+.td.none { border: 2px solid var(--line); }
+.watch-head b { font-weight: 700; flex: none; }
+.watch-head b.ellipsis { flex: 1; }
+.wb-body { padding: 0 14px 14px; }
+.wb-body .spread { font-size: 13px; gap: 8px; white-space: nowrap; }
+.wb-table { margin: 14px -14px -14px; border-top: 1px solid var(--line); }
+.wb-table .mtable { margin: 0; border-radius: 0; }
 
 /* ───────────────────────────────────────────── Board */
 .board-hero { padding-bottom: 30px; }

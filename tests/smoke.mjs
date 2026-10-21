@@ -556,6 +556,42 @@ ok(!!(await YF.page.$('.grow.open [data-act="pad-pick"][data-pid="p4"]')), 'and 
 ok(/Entered by you · Sean can still edit/.test(await yText()), 'Sean’s row: “Entered by you · Sean can still edit”');
 await YF.ctx.close();
 
+// 11c. Matches: one segment per match; the other match expands IN PLACE (yours collapses to a
+//      pinned green bar), and back.
+const mr = seedRound(be, { holesPlayed: 9 });
+const MDEV = '88888888-8888-4888-8888-888888888888';
+be.tables.claims.push({ event_id: mr.id, player_id: 'p1', device_id: MDEV });
+const MX = await (async () => {
+  const ctx = await browser.newContext({ viewport: { width: 393, height: 659 }, isMobile: true, hasTouch: true });
+  await attach(ctx, be, srv.origin);
+  await ctx.addInitScript(([code, dev]) => {
+    localStorage.setItem('glb.device', JSON.stringify(dev));
+    localStorage.setItem('glb.me.' + code, '"p1"');
+    localStorage.setItem('glb.who.' + code, 'true');
+    localStorage.setItem('glb.brief.' + code, 'true');
+    localStorage.setItem('glb.seen.' + code, JSON.stringify({ last: Date.now(), ids: [] }));
+    for (const k of ['tile5', 'prov2', 'oppcart3']) localStorage.setItem('glb.coach.' + k, 'true');
+  }, [mr.code, MDEV]);
+  const page = await ctx.newPage();
+  page.errors = [];
+  page.on('pageerror', (e) => page.errors.push(`Matches phone: ${e.message}`));
+  return { ctx, page };
+})();
+await MX.page.goto(`${srv.origin}/#/e/${mr.code}/matches`);
+await MX.page.waitForTimeout(900);
+await clearOverlays(MX.page);
+const segTxt = await MX.page.$$eval('[data-act="matches-rot"]', (els) => els.map((e) => e.innerText.replace(/\s+/g, ' ').trim()));
+ok(segTxt.length === 3 && /MATCH 2 OF 3/.test(await MX.page.textContent('.m-kicker')) && /7–12 · LIVE/.test(segTxt[1]), `a segment per match (${segTxt.join(' | ')})`);
+ok((await MX.page.$$('.mtable .mt-row:not(.mt-head)')).length === 6, 'Hole · Low Ball · Low Total · Pts: 6 rows');
+await MX.page.tap('[data-act="match-expand"]');
+await MX.page.waitForTimeout(400);
+ok(!!(await MX.page.$('.mine-bar')) && !(await MX.page.$('.m-hero')) && /WATCHING/.test(await MX.page.textContent('.watch-box')) && !!(await MX.page.$('.watch-box .mtable')), 'tap the other match: yours collapses to the green bar, theirs opens in place (WATCHING)');
+ok(/YOUR MATCH/.test(await MX.page.textContent('.mine-bar')) && (await MX.page.evaluate(() => window.__glb.route.tab)) === 'matches', 'still on Matches (no separate screen)');
+await MX.page.tap('.mine-bar');
+await MX.page.waitForTimeout(400);
+ok(!!(await MX.page.$('.m-hero')) && !(await MX.page.$('.mine-bar')) && /ALSO/.test(await MX.page.textContent('.watch-box')), 'tap the bar: back to your match');
+await MX.ctx.close();
+
 // 12. Every box needs a score: Next hole waits, points at who's missing, never saves par on its own
 const r3 = seedRound(be);
 const DEV3 = '33333333-3333-4333-8333-333333333333';

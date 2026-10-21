@@ -92,6 +92,9 @@ export function mark(strokes, par, size = 28, { ghost = null, cls = '' } = {}) {
   return `<span class="mk ${k}${cls ? ` ${cls}` : ''}" style="--mk:${size}px">${esc(v)}</span>`;
 }
 
+/** ' fold-in' only right after the tap that opened something (background redraws don't replay it). */
+export const foldIn = (ui) => (Date.now() - (ui.foldAt || 0) < 600 ? ' fold-in' : '');
+
 /** Segmented control with a second line per segment: [[value, label, sub, { dot, live }], …]. */
 export function seg2(act, options, value) {
   return `<div class="seg seg2" role="group">${options

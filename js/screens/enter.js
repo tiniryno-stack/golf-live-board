@@ -8,7 +8,7 @@
 // Holes two or more back open locked. Holes follow play order (start on 1 or 10).
 // Must fit an iPhone SE with no scrolling (rows and buttons shrink to the space).
 
-import { esc, icon, mark, scoreName } from '../ui.js';
+import { esc, icon, mark, scoreName, foldIn } from '../ui.js';
 import {
   maxHoleScore, maxLabel, rotationFor, rotationIndexFor, foursomeFor, matchFor, componentNames,
   fmtPts, fmtSigned, playOrder, posOf, holeAt, HOLES, sideOn,
@@ -224,7 +224,7 @@ function groupRow(app, p, hole, locked) {
       <span class="gname"><span class="ellipsis">${esc(p.name)}${strokeDots(p.dots[hole - 1])}</span><span class="gsub ellipsis${src.cls}">${esc(src.text)}</span></span>
       ${right}
     </button>
-    ${open ? `<div class="pad fold-in" style="--fold-h:160px">${padChips(app, p, hole)}</div>` : ''}
+    ${open ? `<div class="pad${foldIn(app.ui)}" style="--fold-h:160px">${padChips(app, p, hole)}</div>` : ''}
   </div>`;
 }
 
@@ -479,6 +479,7 @@ export default {
       const pid = el.dataset.pid;
       const h = app.ui.hole;
       app.ui.pad = app.ui.pad?.pid === pid && app.ui.pad?.hole === h ? null : { pid, hole: h };
+      app.ui.foldAt = Date.now();
       app.render();
     },
     'pad-pick': (el, ev, app) => {
