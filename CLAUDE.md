@@ -8,7 +8,7 @@ after the first playtest; section 13 is the V2 backlog.
 
 - Mobile web app for Andrew's friend group: each foursome enters hole-by-hole scores on their
   phones; everyone sees one live board across tee times, plus a rotating 2v2 cart game
-  (Rotation Match Play or Plus/Minus). Sundown design, dark by default, Flighty-inspired.
+  (Rotation Match Play or Plus/Minus). Night Round design (docs/design/system), dark by default.
 - Live: https://tiniryno-stack.github.io/golf-live-board/ (GitHub Pages, `main`, root). Repo:
   `tiniryno-stack/golf-live-board`.
 - **Played for real on Oct 16, 2026** ("Chucks Bday", code `V4T3M`, Twin Creeks, 8 phones). It
@@ -17,10 +17,11 @@ after the first playtest; section 13 is the V2 backlog.
   **mid-round**, replay the live round's data through the new code before pushing (see Testing),
   and never make destructive DB changes.
 
-## Night Round redesign (Oct 21, branch `design/night-round`)
+## Night Round redesign (Oct 21, live on `main`)
 
 - Design handoff in `docs/design/` (`designspec.md` = source of truth, `screens/` = mockups, `PLAN.md`
-  = the plan + open items). Built on the branch, **not merged to `main` yet**.
+  = the plan + open items). Built on `design/night-round`, merged to `main` Oct 21 (both real rounds
+  replayed through the new engine first: identical results).
 - Tokens in `css/styles.css` `:root` (dark + light): `--bg/--surface/--surface-2/--surface-3`,
   `--good` (me) + `--good-ink` (green text), `--warn` amber (warnings only), `--bad` + `--dbl-bg`
   (double bogey only), jerseys `--t-A…F`. Score marks everywhere: `ui.mark(score, par, size)`.
