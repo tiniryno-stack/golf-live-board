@@ -23,7 +23,7 @@ export function headlineColor(myTeamId, h) {
 /** Short team name for tight spots: "Hogan’s Heroes" → "Hogan’s", "The Bogey Brigade" → "Bogey". */
 export function shortTeam(name) {
   const full = String(name || '').trim();
-  if (full.length <= 10) return full;
+  if (full.length <= 10 || full.includes(' + ')) return full; // 2v2 pairings keep both names
   const w = full.split(/\s+/).filter((x) => !/^the$/i.test(x));
   if (!w.length) return full;
   return w[0].length <= 3 && w[1] ? `${w[0]} ${w[1]}` : w[0];

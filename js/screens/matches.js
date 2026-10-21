@@ -205,7 +205,7 @@ export function teamGameView(app) {
     </div>`;
 }
 
-/** Split point (2–4 players, each their own): totals up top, then a hole-by-hole table of who
+/** Split point (2–6 players, each their own): totals up top, then a hole-by-hole table of who
  *  took the point and how it split. Kept simple on purpose. */
 function splitView(app) {
   const snap = app.snapshot;
@@ -242,7 +242,7 @@ function splitView(app) {
   const foot = live.length ? `<tr class="sp-sum"><th scope="row">Pts</th>${ids.map((t) => `<td style="color:${color(t)}">${fmtPts(live.find((s) => s.teamId === t).points)}</td>`).join('')}</tr>` : '';
   return `<div class="hero split-hero">
       <div class="micro" style="text-align:center;margin:6px 0 12px">Split point · 1 point a hole</div>
-      <div class="sp-tots" style="grid-template-columns:repeat(${ids.length},1fr)">${totals}</div>
+      <div class="sp-tots" style="grid-template-columns:repeat(${ids.length > 4 ? 3 : ids.length},minmax(0,1fr))">${totals}</div>
     </div>
     <div class="sheet">
       <p class="meta" style="margin:0 0 12px">Low ${net ? 'net ' : ''}score takes the hole’s point. A tie for low splits it: 2 tied = ½ each, 3 = ⅓, 4 = ¼.</p>

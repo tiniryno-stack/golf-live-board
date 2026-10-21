@@ -33,9 +33,29 @@ function teamBar(isPM, s, scale) {
   return `<div class="tbar" role="img" aria-label="${label}"><span class="fill" style="width:${pct(s.officialPoints)}"></span>${s.provisionalPoints ? `<span class="fill prov hatch" style="width:${(provW * 100).toFixed(1)}%"></span><span class="cut" style="left:${pct(s.officialPoints)}"></span>` : ''}</div>`;
 }
 
+/** 2v2: players ranked on the points of every pairing they were in. */
+function peopleRows(app) {
+  const snap = app.snapshot;
+  const g = snap.game;
+  const scale = Math.max(1, ...g.people.map((r) => r.available));
+  return g.people.map((r) => {
+    const p = snap.playerById.get(r.playerId);
+    const isMe = r.playerId === app.me;
+    const chip = r.provisionalPoints ? `<span class="prov" data-prov>+${fmtPts(r.provisionalPoints)} prov</span>` : '';
+    const s = { points: r.points, officialPoints: r.officialPoints, provisionalPoints: r.provisionalPoints, available: r.available };
+    return `<button class="row team-row${isMe ? ' me' : ''}" data-act="board-player" data-v="${esc(r.playerId)}" style="--jersey:${isMe ? 'var(--good)' : 'var(--t-B)'}">
+      <span class="rank">${r.rank}</span>
+      <div class="body"><div class="row-title ellipsis">${esc(p.name)}${isMe ? ' <span class="you-tag">YOU</span>' : ''}</div>
+        <div class="detail ellipsis">thru ${p.thru} · ${fmtToPar(snap.hasStrokes ? p.netToPar : p.grossToPar)}${snap.hasStrokes ? ' net' : ''}</div>
+        ${teamBar(false, s, scale)}</div>
+      <div class="tval"><div class="n" style="color:${isMe ? 'var(--good-ink)' : 'var(--ink)'}">${fmtPts(r.points)}</div>${chip}</div></button>`;
+  }).join('');
+}
+
 function teamRowsGame(app) {
   const snap = app.snapshot;
   const g = snap.game;
+  if (snap.settings.pairs && g.people) return peopleRows(app);
   const isPM = g.type === 'rotationPlusMinus';
   const mine = app.myTeam();
   const scale = isPM
@@ -100,6 +120,17 @@ function playerRows(app, mode) {
 function hero(app, mode) {
   const snap = app.snapshot;
   const g = snap.game;
+  if (g && snap.settings.pairs && g.people) {
+    const top = g.people.filter((r) => r.rank === 1);
+    const started = g.people.some((r) => r.available > 0);
+    const lead = started ? top.map((r) => snap.playerById.get(r.playerId).name).join(' & ') : 'Nobody yet';
+    const me = g.people.find((r) => r.playerId === app.me);
+    const you = me && started ? (top.some((r) => r.playerId === app.me) ? 'that’s you' : `up ${fmtPts(top[0].points - me.points)} on you`) : '';
+    return `<div class="hero board-hero">
+      <div class="lbl">${snap.roundComplete ? 'Final' : snap.officialThrough ? `Leader · official thru ${snap.officialHole}` : 'Leader'} · 2v2</div>
+      <div class="spread" style="align-items:flex-end"><div style="flex:1;min-width:0"><div class="leader-name">${esc(lead)}</div>${you ? `<div class="you">${esc(you)}</div>` : ''}</div>
+      ${started ? `<div class="leader-pts">${fmtPts(top[0].points)}</div>` : ''}</div></div>`;
+  }
   if (g) {
     const isPM = g.type === 'rotationPlusMinus';
     // Live standings: every point won so far counts (the provisional part is marked on the rows).
@@ -192,7 +223,7 @@ export default {
       ? `<div class="headlines compact">${recent.map((h) => `<button class="headline" data-act="board-headlines" style="--jersey:${headlineColor(app.myTeam(), h)}"><span class="spark">${icon('spark', 18)}</span><span class="h-text">${esc(h.text)}</span><span class="meta mono">${clock(h.at)}</span></button>`).join('')}</div>`
       : '';
     const segs = `<div class="segs board-segs">
-      ${hasTeams ? seg('board-view', [['teams', 'Teams'], ['players', 'Players']], view) : ''}
+      ${hasTeams ? seg('board-view', snap.settings.pairs ? [['teams', 'Points'], ['players', 'Strokes']] : [['teams', 'Teams'], ['players', 'Players']], view) : ''}
       ${snap.hasStrokes ? seg('board-mode', [['gross', 'Gross'], ['net', 'Net']], mode) : ''}
       <button class="icon-btn" data-act="board-share" aria-label="Share the round" style="width:46px;height:46px;border-radius:14px">${icon('share')}</button></div>`;
     const rows = view === 'teams' ? (g ? teamRowsGame(app) : teamRowsStroke(app, mode)) : playerRows(app, mode);
