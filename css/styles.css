@@ -1,59 +1,31 @@
 /* Golf Live Board — Night Round (docs/design/designspec.md §1), dark by default */
 
 /* ───────────────────────────────────────────── tokens
-   Names and values come straight from the design system (docs/design/design-system/tokens.css + README.md).
-   Use the system names in new CSS. The older short names below are aliases so existing rules follow. */
+   css/tokens.css (loaded first) holds every design-system token and the 6 type styles (.ts-*), copied
+   from docs/design/design-system/tokens.css. Use those names. Below: what the system doesn't have yet,
+   and the older names as aliases while screens move over (BUILD-PLAN.md §2). */
 :root, [data-theme="dark"] {
-  --bg: #0a0b0d;
-  --surface-1: #15171b; --surface-2: #1f2227; --surface-3: #2a2e35;
-  --text: #f4f5f7; --text-muted: #a7acb4;
-  --line: #2b2f36;
-  --cart-you: #3ddc84; --cart-you-text: #3ddc84;
-  --cart-a: #ff9f43; --cart-b: #5b9bff; --cart-c: #ff6fb5; --cart-d: #b18cff;
-  --tint-you: rgba(61, 220, 132, .10);
-  --tint-a: rgba(255, 159, 67, .12); --tint-b: rgba(91, 155, 255, .12); --tint-c: rgba(255, 111, 181, .12); --tint-d: rgba(177, 140, 255, .12);
-  --double: #ff6b6b; --double-bg: rgba(255, 107, 107, .16);
-  --warn: #f5c64a; --warn-bg: rgba(245, 198, 74, .12);
-  --button: #f4f5f7; --on-button: #0a0b0d;
-  /* not in the system yet: carts E/F (5–6 player match play), the stronger hairline, sheets */
+  /* not in the system yet: carts E/F (5–6 player match play) — flagged for the design system */
   --cart-e: #36c5c5; --cart-f: #e3b341;
+  /* retired as screens move over: line-strong → line, text-faint → text-muted, tint-n → surface-2,
+     glass → surface-1, shadow-seg → shadow-card */
   --line-strong: #3b4048;
   --text-faint: rgba(167, 172, 180, .55);
   --tint-n: rgba(167, 172, 180, .10);
   --glass: rgba(21, 23, 27, .92);
-  --scrim: rgba(0, 0, 0, .55);
   --shadow-seg: 0 1px 3px rgba(0, 0, 0, .25);
   color-scheme: dark;
 }
 [data-theme="light"] {
-  --bg: #f2f3f5;
-  --surface-1: #ffffff; --surface-2: #e8eaee; --surface-3: #ffffff;
-  --text: #0b0d10; --text-muted: #4f555e;
-  --line: #d5d9df;
-  --cart-you: #12a35c; --cart-you-text: #0a7a43;
-  --cart-a: #b35c00; --cart-b: #1a5fd0; --cart-c: #c02a70; --cart-d: #6e3fd0;
-  --tint-you: rgba(18, 163, 92, .09);
-  --tint-a: rgba(179, 92, 0, .08); --tint-b: rgba(26, 95, 208, .08); --tint-c: rgba(192, 42, 112, .08); --tint-d: rgba(110, 63, 208, .08);
-  --double: #b42318; --double-bg: rgba(180, 35, 24, .10);
-  --warn: #8a6000; --warn-bg: rgba(138, 96, 0, .09);
-  --button: #0b0d10; --on-button: #ffffff;
   --cart-e: #0e8c8c; --cart-f: #8a6000;
   --line-strong: #c3c8cf;
   --text-faint: #8a9099;
   --tint-n: rgba(79, 85, 94, .08);
   --glass: rgba(255, 255, 255, .94);
-  --scrim: rgba(10, 12, 14, .40);
   --shadow-seg: 0 1px 3px rgba(0, 0, 0, .12);
   color-scheme: light;
 }
 :root {
-  /* type families + the system's text styles (size / line height / weight / tracking) */
-  --font-sans: Geist, system-ui, -apple-system, sans-serif;
-  --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, monospace;
-  /* spacing, radius, sizes */
-  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 20px; --space-6: 24px;
-  --radius-sm: 8px; --radius-md: 12px; --radius-lg: 16px; --radius-xl: 18px; --radius-2xl: 24px; --radius-pill: 999px;
-  --tap-min: 48px; --stepper: 88px; --button-primary: 60px; --screen-width: 393px;
   --sat: env(safe-area-inset-top, 0px);
   --sab: env(safe-area-inset-bottom, 0px);
 }
@@ -69,23 +41,8 @@
   --hero: var(--bg); --hero-ink: var(--text); --hero-soft: var(--text-muted); --hero-faint: var(--text-faint); --hero-line: var(--line);
   --font: var(--font-sans); --mono: var(--font-mono);
   --tap: var(--tap-min); --gutter: var(--space-4);
-  --radius-sheet: 28px; --radius-card: var(--radius-xl); --radius-chip: var(--radius-md);
+  --radius-card: var(--radius-xl); --radius-chip: var(--radius-md);
 }
-
-/* the system's text styles, for markup that wants one directly */
-.ts-screen-title { font: 800 32px/36px var(--font-sans); letter-spacing: -1px; }
-.ts-hole-title { font: 800 40px/40px var(--font-sans); letter-spacing: -1.5px; }
-.ts-match-title { font: 800 28px/32px var(--font-sans); letter-spacing: -0.8px; }
-.ts-row-title { font: 700 17px/22px var(--font-sans); }
-.ts-body { font: 600 16px/22px var(--font-sans); }
-.ts-body-sm { font: 500 14px/20px var(--font-sans); }
-.ts-caption { font: 500 12px/16px var(--font-sans); }
-.ts-button-lg { font: 700 18px/24px var(--font-sans); }
-.ts-score-hero { font: 700 72px/72px var(--font-mono); letter-spacing: -2px; }
-.ts-score-big { font: 700 64px/64px var(--font-mono); letter-spacing: -3px; }
-.ts-points { font: 700 34px/36px var(--font-mono); }
-.ts-score-cell { font: 600 15px/20px var(--font-mono); }
-.ts-label { font: 600 11px/14px var(--font-mono); letter-spacing: 1.1px; text-transform: uppercase; }
 
 /* ───────────────────────────────────────────── base */
 *, *::before, *::after { box-sizing: border-box; }
