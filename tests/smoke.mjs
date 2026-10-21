@@ -699,8 +699,8 @@ const listText = () => G.page.evaluate(() => document.getElementById('course-res
 await G.page.goto(`${srv.origin}/#/setup`);
 await G.page.waitForTimeout(1200);
 const nearText = await listText();
-ok(/Your courses/i.test(nearText) && /Twin Creeks Allen, TX · here · checked/.test(nearText), 'Course step: Your courses has Twin Creeks (checked), with its distance');
-ok(/Mesquite Hollow.*1\.4 mi.*Cedar Bend.*6\.9 mi/.test(nearText) && (nearText.match(/Twin Creeks/g) || []).length === 1, `location already allowed → courses near you, nearest first, Twin Creeks not listed twice (${nearText.slice(0, 120)}…)`);
+ok(/^Looks like you’re at The Golf Club at Twin Creeks Allen, TX · here · checked/i.test(nearText) && !!(await G.page.$('.here-list [data-act="setup-mine"][data-v="twin-creeks-allen-tx"]')), `standing at Twin Creeks → it's on top ("Looks like you're at"), ready to tap (${nearText.slice(0, 80)}…)`);
+ok(/Near you.*Mesquite Hollow.*1\.4 mi.*Cedar Bend.*6\.9 mi/i.test(nearText) && (nearText.match(/Twin Creeks/g) || []).length === 1, `courses near you load on their own (no button), nearest first, Twin Creeks not listed twice (${nearText.slice(0, 120)}…)`);
 ok(!!(await G.page.$('[data-act="setup-pick"][data-v="' + fx.pecanNine.id + '"][disabled]')) && /9 holes/.test(nearText), 'a 9-hole course shows but can’t be picked yet');
 ok(be.oga.calls[0]?.via === 'direct' && be.oga.calls.some((c) => c.via === 'proxy'), 'direct route blocked → it went through the Supabase backup route');
 ok(/OpenStreetMap contributors/.test(nearText), 'the OpenStreetMap / OpenGolfAPI credit is shown');
@@ -779,10 +779,8 @@ const NL = await (async () => {
 })();
 await NL.page.goto(`${srv.origin}/#/setup`);
 await NL.page.waitForTimeout(800);
-await NL.page.tap('[data-act="setup-near"]');
-await NL.page.waitForTimeout(800);
 const locMsg = (await NL.page.textContent('#course-results')).replace(/\s+/g, ' ');
-ok(/blocking location/.test(locMsg) && /Safari Websites/.test(locMsg) && /Website Settings/.test(locMsg) && !!(await NL.page.$('#course-results [data-act="setup-near"]')), 'location blocked: iPhone steps to turn it on + Try again');
+ok(/blocking location/.test(locMsg) && /Safari Websites/.test(locMsg) && /Website Settings/.test(locMsg) && !!(await NL.page.$('#course-results [data-act="setup-near"]')), 'location blocked: asked on open, then iPhone steps to turn it on + Try again');
 
 // 17. Test phones (sim.html): make a practice round, 8 phones each signed in as their own player,
 //     "Play a hole" enters a score on every phone and moves them on, "Other group only" puts one

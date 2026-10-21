@@ -104,8 +104,8 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
   PNGs: leaderboard, your scorecard, your cart, full report; Save or share via share sheet).
   Organizer gets **Finalize round** under it (also Host → Rules); then the card says `Final · locked`.
 - **Setup → Course:** search box, **Your courses** (built-ins + courses from your group's past rounds,
-  latest copy wins so fixes stick), **Near you** (location only on tap, or automatically if already
-  allowed). Picking loads the scorecard in the background (`s.courseStatus`). **Save** has a
+  latest copy wins so fixes stick), **Near you** (looked up as soon as Setup opens; the phone asks once).
+  A course ≤1 mi away goes on top as **Looks like you're at** (`hereCourses`, max 3, your copy wins). Picking loads the scorecard in the background (`s.courseStatus`). **Save** has a
   scorecard check (front/back 9 grid) and won't save gaps (`scorecardProblems`). "Enter the
   scorecard yourself" for missing courses. Search results/location are never saved to the draft.
 - **Finalized round:** every phone locks, **the organizer's too**. Enter shows a locked "Final" view

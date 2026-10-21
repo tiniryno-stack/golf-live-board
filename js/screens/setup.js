@@ -1,5 +1,6 @@
 // setup.js — organizer flow: Course → Players → Teams → Matchups → Game → Save.
-// Course: search by name or "Courses near me" (OpenGolfAPI, js/coursedata.js); your group's
+// Course: search by name, or courses near you (looked up as soon as Setup opens; the one you're
+// standing at goes on top as "Looks like you're at"). OpenGolfAPI, js/coursedata.js; your group's
 // courses come first (built-in ones, and the copy from your last round there, with any fixes).
 // Picking a course fetches its scorecard in the background while you set up the rest; Save
 // has a scorecard check (fix pars / hole handicaps) and won't save a card with gaps.
@@ -178,6 +179,9 @@ function courseList(s) {
           : '';
     return `<div class="stack">${mineRows(myHits, s.loc)}${api.map((r) => courseRow(r, 'setup-pick', r.ogaId)).join('')}</div>${body}${listFoot(s)}`;
   }
+  // At the course (or right next to it): it goes on top, ready to tap.
+  const here = hereCourses(s, mine);
+  const hereIds = new Set(here.map((c) => c.ogaId || c.id));
   let near;
   switch (s.nearStatus) {
     case 'locating': near = '<p class="meta">Finding where you are…</p>'; break;
@@ -191,15 +195,44 @@ function courseList(s) {
     case 'unavailable': near = '<p class="meta">This phone can\u2019t share its location here. Search by name instead.</p>'; break;
     case 'error': near = '<p class="meta">Couldn\u2019t reach course search. Check your signal.</p><button class="btn small" data-act="setup-near">Try again</button>'; break;
     case 'ok': {
-      const rows = (s.near || []).filter((r) => !mineIds.has(r.ogaId));
+      const rows = (s.near || []).filter((r) => !mineIds.has(r.ogaId) && !hereIds.has(r.ogaId));
       near = rows.length ? `<div class="stack">${rows.map((r) => courseRow(r, 'setup-pick', r.ogaId)).join('')}</div>` : '<p class="meta">No courses within 25 miles. Search by name instead.</p>';
       break;
     }
     default: near = '<button class="btn block" data-act="setup-near">Find courses near me</button>';
   }
-  return `<div class="micro" style="margin:0 0 8px">Your courses</div>
-    <div class="stack">${mineRows(mine, s.loc)}</div>
+  const mineLeft = mine.filter((c) => !hereIds.has(c.ogaId || c.id));
+  const top = here.length
+    ? `<div class="micro" style="margin:0 0 8px">${here.length > 1 ? 'Looks like you\u2019re at one of these' : 'Looks like you\u2019re at'}</div>
+      <div class="stack here-list">${here.map((c) => (c.mine
+        ? courseRow(c, 'setup-mine', c.id, c.source === 'builtin' ? 'checked' : 'played before')
+        : courseRow(c, 'setup-pick', c.ogaId))).join('')}</div>`
+    : '';
+  const yours = mineLeft.length
+    ? `<div class="micro" style="margin:${top ? 18 : 0}px 0 8px">Your courses</div><div class="stack">${mineRows(mineLeft, s.loc)}</div>`
+    : '';
+  return `${top}${yours}
     <div class="micro" style="margin:18px 0 8px">Near you</div>${near}${listFoot(s)}`;
+}
+
+const HERE_MI = 1; // course coordinates are usually the clubhouse; a mile covers being out on the course
+
+/** Courses you're standing at (≤ HERE_MI away), nearest first, at most 3; your copy wins. */
+export function hereCourses(s, mine) {
+  if (!s.loc) return [];
+  const out = new Map();
+  for (const c of mine) {
+    const d = c.lat != null ? cd.distanceMi(s.loc, c) : null;
+    if (d != null && d <= HERE_MI) out.set(c.ogaId || c.id, { ...c, distance: d, mine: true });
+  }
+  if (s.nearStatus === 'ok') {
+    for (const r of s.near || []) {
+      if (r.distance == null || r.distance > HERE_MI || out.has(r.ogaId)) continue;
+      const yours = mine.find((c) => c.ogaId && c.ogaId === r.ogaId); // your checked copy beats the API's
+      out.set(r.ogaId, yours ? { ...yours, distance: r.distance, mine: true } : r);
+    }
+  }
+  return [...out.values()].sort((a, b) => a.distance - b.distance).slice(0, 3);
 }
 
 function listFoot() {
@@ -575,12 +608,9 @@ export default {
     const s = app.setup;
     if (!s || s.saved || s.step !== 0 || course(s) || s.nearStatus !== 'idle' || s.autoNearTried) return;
     s.autoNearTried = true;
-    // Only when this site already has location permission: never pop the prompt unasked.
-    try {
-      navigator.permissions?.query({ name: 'geolocation' }).then((p) => {
-        if (p.state === 'granted' && app.setup === s && s.nearStatus === 'idle') findNear(app);
-      }).catch(() => {});
-    } catch { /* no Permissions API: the button still works */ }
+    // Look for nearby courses straight away (the course you're standing at goes on top). If the
+    // site doesn't have location yet the phone asks once; blocked → the turn-it-on steps show.
+    findNear(app);
   },
 
   render(app) {
