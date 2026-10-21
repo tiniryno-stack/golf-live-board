@@ -173,6 +173,113 @@ function slimCart(app, cart, hole, mine) {
   </section>`;
 }
 
+// ───────────────────────────────────────────── individual rounds ("you first", designspec §2)
+
+/** No carts and not 2v2: your score is the hero card, everyone else a compact row. */
+function individual(app) {
+  const snap = app.snapshot;
+  return !(app.event?.roster?.teams || []).length && !snap.settings.pairs;
+}
+
+/** Where a score came from: "✓ From Sam's phone", "Entered by you · Sam can still edit", "Waiting on Sam". */
+function sourceLine(app, p, hole) {
+  const g = p.gross[hole - 1];
+  const first = p.firstName || p.name;
+  if (g == null) return { text: `Waiting on ${first} · tap to enter`, cls: '' };
+  const by = p.meta[hole - 1]?.by || '';
+  if (by && by === p.name) return { text: `✓ From ${first}’s phone`, cls: ' good' };
+  if (by && by === app.myName()) return { text: `Entered by you · ${first} can still edit`, cls: '' };
+  if (by === 'Organizer') return { text: 'Entered by the organizer', cls: '' };
+  return { text: by ? `Entered by ${by}` : 'Entered', cls: '' };
+}
+
+/** One-tap score pad: birdie … triple (eagle on a par 5) + the max, par outlined. */
+function padChips(app, p, hole) {
+  const snap = app.snapshot;
+  const par = snap.holes[hole - 1].par;
+  const max = maxHoleScore(snap.course, snap.settings, hole, p.dots[hole - 1]);
+  const names = { '-2': 'Eagle', '-1': 'Birdie', 0: 'Par', 1: 'Bogey', 2: 'Double', 3: 'Triple' };
+  const from = par >= 5 ? par - 2 : par - 1;
+  const vals = [];
+  for (let v = from; v <= Math.min(from + 4, max); v++) vals.push([v, names[v - par]]);
+  if (max > from + 4) vals.push([max, 'Max']);
+  const g = p.gross[hole - 1];
+  return vals.map(([v, label]) => `<button class="pad-chip${v === par ? ' par' : ''}${v === g ? ' on' : ''}" data-act="pad-pick" data-pid="${esc(p.id)}" data-v="${v}" aria-label="${esc(p.name)}: ${v}, ${label}">
+      ${mark(v, par, 30, { cls: 'pad-mk' })}<span>${label}</span></button>`).join('');
+}
+
+function groupRow(app, p, hole, locked) {
+  const snap = app.snapshot;
+  const par = snap.holes[hole - 1].par;
+  const g = p.gross[hole - 1];
+  const editable = !locked && app.canEdit(p.id, hole);
+  const open = editable && app.ui.pad?.hole === hole && app.ui.pad?.pid === p.id;
+  const src = sourceLine(app, p, hole);
+  const color = snap.game && snap.settings.solo ? teamColor(app.myTeam(), p.teamId) : 'var(--ink-soft)';
+  const right = g == null ? (open ? '' : `<span class="enter-chip">${editable ? 'Enter' : '–'}</span>`) : mark(g, par, 40);
+  const nudge = g == null && app.ui.nudge?.hole === hole && Date.now() < app.ui.nudge.until ? ' nudge' : '';
+  return `<div class="grow${open ? ' open' : ''}${g == null ? ' empty' : ''}${nudge}">
+    <button class="grow-head" ${editable ? `data-act="pad-toggle" data-pid="${esc(p.id)}"` : 'disabled'} aria-expanded="${open}">
+      <i class="gdot" style="background:${color}"></i>
+      <span class="gname"><span class="ellipsis">${esc(p.name)}${strokeDots(p.dots[hole - 1])}</span><span class="gsub ellipsis${src.cls}">${esc(src.text)}</span></span>
+      ${right}
+    </button>
+    ${open ? `<div class="pad fold-in" style="--fold-h:160px">${padChips(app, p, hole)}</div>` : ''}
+  </div>`;
+}
+
+/** Your position, for the strip: "YOU 2ND · +3" (net to par) or split-point points. */
+function myPosition(app) {
+  const snap = app.snapshot;
+  const me = app.myPlayer();
+  if (!me) return '';
+  if (snap.game && snap.settings.solo) {
+    const s = snap.game.liveStandings.find((x) => x.teamId === me.teamId);
+    return s ? `YOU ${s.shared ? 'T' : ''}${ordinal(s.rank)} · ${fmtPts(s.points)} ${s.points === 1 ? 'PT' : 'PTS'}` : '';
+  }
+  if (!me.thru) return '';
+  const key = snap.hasStrokes ? 'netToPar' : 'grossToPar';
+  const better = snap.players.filter((p) => p.thru && p[key] < me[key]).length;
+  const tied = snap.players.filter((p) => p !== me && p.thru && p[key] === me[key]).length;
+  const v = me[key];
+  return `YOU ${tied ? 'T' : ''}${ordinal(better + 1)} · ${v === 0 ? 'E' : v > 0 ? `+${v}` : v}`;
+}
+
+const ordinal = (n) => `${n}${['TH', 'ST', 'ND', 'RD'][(n % 100 >= 11 && n % 100 <= 13) || n % 10 > 3 ? 0 : n % 10]}`;
+
+function individualView(app, h, parts) {
+  const snap = app.snapshot;
+  const st = snap.settings;
+  const me = app.myPlayer();
+  const locked = isLocked(app, h);
+  const ids = foursomeFor(snap.roster, st, app.me, h).filter((id) => id !== app.me);
+  const others = ids.map((id) => snap.playerById.get(id));
+  const blanks = others.filter((p) => p.gross[h - 1] == null && app.canEdit(p.id, h));
+  const youTile = tile(app, me, h, locked).replace('<div class="tile', '<div class="tile you').replace('<span class="who">', '<span class="who"><span class="you-badge mono">YOU</span>');
+  // Match play: the others' points, leader first ("Josh 3½ · Sean 2"); else the format.
+  const kind = snap.game && st.solo
+    ? snap.game.liveStandings.filter((x) => x.teamId !== me.teamId).map((x) => `${esc(snap.teamById.get(x.teamId).name)} <span class="status">${fmtPts(x.points)}</span>`).join(' <span class="faint">·</span> ') || 'Match play'
+    : snap.hasStrokes ? 'Stroke play · net' : 'Stroke play';
+  const pos = myPosition(app);
+  const tap = locked ? ` data-act="hole-unlock" data-enter="hole-unlock" role="button" tabindex="0" aria-label="Edit hole ${h}"` : '';
+  const strip = app.isFinal()
+    ? `<span class="teams">${icon('lock', 13)} Fixing a finalized round</span><button class="link-btn relock" data-act="final-relock">Done</button>`
+    : `<span class="teams">${kind}</span>${pos ? `<span class="status">${esc(pos)}</span>` : ''}`;
+  return `<div class="enter nr solo-enter">
+      <div class="hero">${parts.holeRow}<div class="matchup-line">${strip}</div></div>
+      <div class="sheet">
+        <section class="cart mine focus you-card${locked ? ' locked' : ''}" style="--jersey:var(--good)"${tap}>
+          ${locked ? `<div class="cart-head"><span class="name">Your score</span><span class="focus-chip lock-chip">${icon('lock', 12)} Tap to edit</span></div>` : ''}
+          <div class="tiles">${youTile}</div>
+        </section>
+        ${others.length ? `<div class="group-head"><span class="lbl">Your group</span><span class="meta">${blanks.length ? `${blanks.length} still to go · tap to enter for them` : 'All in'}</span></div>
+        <div class="group-list">${others.map((p) => groupRow(app, p, h, locked)).join('')}</div>` : ''}
+        <div class="enter-foot"><div class="holedots" aria-hidden="true">${parts.dots}</div><span class="sync" data-sync>Synced</span></div>
+        ${parts.footBtn}
+      </div>
+    </div>`;
+}
+
 function watchView(app) {
   const org = app.isOrganizer();
   return `<div class="enter">
@@ -263,6 +370,15 @@ export default {
         : `<button class="btn primary block next-btn" data-act="hole-current">Back to hole ${cur} →</button>`;
     const open = focus === 'opp' ? carts[1] : carts[0];
     const shut = carts.filter((c) => c !== open);
+    const holeRow = `<div class="hole-row">
+          <button class="arrow" data-act="hole-prev" aria-label="Previous hole" ${pos <= 1 ? 'disabled' : ''}>${icon('back')}</button>
+          <button class="hole-head" data-act="hole-grid" aria-label="Hole ${h}: all holes">
+            <span class="hole-title">Hole ${h}</span>
+            <span class="hole-meta">Par ${hole.par} · Hcp ${hole.si} · ${esc(maxLabel(snap.course, st, h))}</span>
+          </button>
+          <button class="arrow" data-act="hole-next" aria-label="Next hole" ${pos >= limitPos ? 'disabled' : ''}>${icon('fwd')}</button>
+        </div>`;
+    if (individual(app)) return individualView(app, h, { holeRow, dots, footBtn });
     return `<div class="enter nr">
       <div class="hero">
         <div class="hole-row">
@@ -359,6 +475,23 @@ export default {
       app.render();
     },
     'team-picker': (el, ev, app) => app.openTeamPicker(),
+    'pad-toggle': (el, ev, app) => {
+      const pid = el.dataset.pid;
+      const h = app.ui.hole;
+      app.ui.pad = app.ui.pad?.pid === pid && app.ui.pad?.hole === h ? null : { pid, hole: h };
+      app.render();
+    },
+    'pad-pick': (el, ev, app) => {
+      // Car-ride mode: pick a score and the pad jumps to the next player still waiting.
+      const pid = el.dataset.pid;
+      const h = app.ui.hole;
+      app.setScore(pid, h, Number(el.dataset.v));
+      const snap = app.snapshot;
+      const ids = foursomeFor(snap.roster, snap.settings, app.me, h).filter((id) => id !== app.me);
+      const next = ids.find((id) => id !== pid && snap.playerById.get(id).gross[h - 1] == null && app.canEdit(id, h));
+      app.ui.pad = next ? { pid: next, hole: h } : null;
+      app.render();
+    },
     'pin-open': (el, ev, app) => app.unlockFinal(),
     'final-relock': (el, ev, app) => {
       app.ui.finalUnlock = null;
@@ -392,6 +525,9 @@ function nudgeBlanks(app, h, blanks) {
     app.ui.enterFocus = open === carts[0] ? h : null;
   }
   app.ui.nudge = { hole: h, until: Date.now() + 1200 };
+  // "You first" rounds: open the score pad on the first player still waiting.
+  const firstOther = blanks.find((p) => p.id !== app.me && app.canEdit(p.id, h));
+  if (individual(app) && firstOther && !blanks.some((p) => p.id === app.me)) app.ui.pad = { pid: firstOther.id, hole: h };
   app.render();
   const names = blanks.map((p) => p.name);
   const list = names.length > 1 ? `${names.slice(0, -1).join(', ')} + ${names[names.length - 1]}` : names[0];

@@ -516,6 +516,46 @@ ok(madeL.crew_id === LC && madeL.roster.players.map((p) => `${p.personId}:${p.fi
 ok(JSON.stringify(be.rpc.crew_people({ p_crew_id: LC }).people.map((p) => [p.firstName, p.lastName, p.rounds])) === '[["Josh","Reyes",2],["Sean","Mills",2],["Andrew",null,1]]', 'crew list: 2 rounds each for Sean and Josh');
 await L.ctx.close();
 
+// 11b. "You first" Enter (≤4, no teams): your score is the hero card; the rest of your group are
+//      rows saying where each score came from; tap a row → one-tap score pad that jumps to the next
+//      player still waiting (car-ride mode).
+const YP = ['Andrew', 'Sean', 'Sam', 'Jake'].map((n, i) => ({ id: `p${i + 1}`, personId: `yf${i}`, name: n, teamId: null, groupId: 'g1', strokes: null }));
+const yr = be.rpc.create_event({ p_name: 'You first', p_course: { ...COURSES[0], tee: COURSES[0].tees[0] }, p_roster: { groups: [{ id: 'g1', name: 'Group 1' }], teams: [], players: YP }, p_settings: { game: 'none', solo: false, rotationMode: 'fixed' } });
+const yev = be.tables.events.find((e) => e.code === yr.code);
+const YDEV = '66666666-6666-4666-8666-666666666666';
+be.tables.claims.push({ event_id: yev.id, player_id: 'p1', device_id: YDEV });
+be.tables.scores.push({ event_id: yev.id, player_id: 'p3', hole: 1, strokes: 4, updated_by: 'Sam', updated_at: new Date().toISOString() });
+const YF = await (async () => {
+  const ctx = await browser.newContext({ viewport: { width: 393, height: 659 }, isMobile: true, hasTouch: true });
+  await attach(ctx, be, srv.origin);
+  await ctx.addInitScript(([code, dev]) => {
+    localStorage.setItem('glb.device', JSON.stringify(dev));
+    localStorage.setItem('glb.me.' + code, '"p1"');
+    localStorage.setItem('glb.who.' + code, 'true');
+    localStorage.setItem('glb.brief.' + code, 'true');
+    for (const k of ['tile5', 'prov2', 'oppcart3']) localStorage.setItem('glb.coach.' + k, 'true');
+  }, [yr.code, YDEV]);
+  const page = await ctx.newPage();
+  page.errors = [];
+  page.on('pageerror', (e) => page.errors.push(`You-first phone: ${e.message}`));
+  return { ctx, page };
+})();
+await YF.page.goto(`${srv.origin}/#/e/${yr.code}/enter`);
+await YF.page.waitForTimeout(900);
+const yText = async () => (await YF.page.textContent('.group-list')).replace(/\s+/g, ' ');
+ok(!!(await YF.page.$('.you-card .you-badge')) && (await YF.page.$$('.grow')).length === 3, 'you first: your score is the hero card, the other three are rows');
+ok(/From Sam’s phone/.test(await yText()) && /Waiting on Sean · tap to enter/.test(await yText()), `rows say where each score came from (${(await yText()).slice(0, 80)}…)`);
+await YF.page.tap('[data-act="pad-toggle"][data-pid="p2"]');
+await YF.page.waitForTimeout(300);
+ok((await YF.page.$$('.grow.open .pad-chip')).length >= 5 && !!(await YF.page.$('.grow.open .pad-chip.par')), 'tap Sean → the score pad opens, par outlined');
+const ypar = COURSES[0].par[0];
+await YF.page.tap(`[data-act="pad-pick"][data-pid="p2"][data-v="${ypar + 1}"]`);
+await YF.page.waitForTimeout(1000);
+ok(be.tables.scores.find((x) => x.event_id === yev.id && x.player_id === 'p2' && x.hole === 1)?.strokes === ypar + 1, 'picked bogey for Sean: saved');
+ok(!!(await YF.page.$('.grow.open [data-act="pad-pick"][data-pid="p4"]')), 'and the pad jumped to Jake (next one waiting)');
+ok(/Entered by you · Sean can still edit/.test(await yText()), 'Sean’s row: “Entered by you · Sean can still edit”');
+await YF.ctx.close();
+
 // 12. Every box needs a score: Next hole waits, points at who's missing, never saves par on its own
 const r3 = seedRound(be);
 const DEV3 = '33333333-3333-4333-8333-333333333333';
@@ -989,7 +1029,7 @@ await SP.page.goto(`${srv.origin}/#/e/${sp.code}/enter`);
 await SP.page.waitForTimeout(900);
 await clearOverlays(SP.page);
 const spLine = await SP.page.textContent('.matchup-line');
-ok(/Josh\s*3½/.test(spLine) && /You\s*1/.test(spLine), `Enter: everyone's points under the hole (${spLine.replace(/\s+/g, ' ').trim()})`);
+ok(/Josh\s*3½/.test(spLine) && /YOU 3RD · 1 PT\b/.test(spLine), `Enter: the others' points + your place under the hole (${spLine.replace(/\s+/g, ' ').trim()})`);
 const spBrief = await SP.page.evaluate(async () => (await import('/js/screens/brief.js')).briefPages(window.__glb).join(' '));
 ok(/Split point/.test(spBrief) && /⅓ point/.test(spBrief), 'Today’s game: one card for split point');
 
