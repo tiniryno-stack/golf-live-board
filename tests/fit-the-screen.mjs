@@ -26,7 +26,13 @@ if (process.env.FIT_SIZE) {
   SIZES.splice(0, SIZES.length, [`${w}x${h}`, w, h]);
 }
 const DEV = '11111111-1111-4111-8111-111111111111';
-const OUT = new URL('./screenshots/fit/', import.meta.url).pathname;
+// FIT_THEME=light runs every screen in light mode (glb.theme), with screenshots in screenshots/fit-light/.
+const LIGHT = process.env.FIT_THEME === 'light';
+const OUT = new URL(LIGHT ? './screenshots/fit-light/' : './screenshots/fit/', import.meta.url).pathname;
+const themed = async (ctx) => {
+  if (LIGHT) await ctx.addInitScript(() => localStorage.setItem('glb.theme', '"light"'));
+  return ctx;
+};
 mkdirSync(OUT, { recursive: true });
 
 const srv = await serve();
@@ -137,7 +143,7 @@ async function check(page, size, screen, extra) {
 
 for (const size of SIZES) {
   const [, w, h] = size;
-  const ctx = await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  const ctx = await themed(await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 2, isMobile: true, hasTouch: true }));
   await attach(ctx, be, srv.origin);
   await ctx.addInitScript(([code, dev, pin]) => {
     localStorage.setItem('glb.device', JSON.stringify(dev));
@@ -293,7 +299,7 @@ for (const size of SIZES) {
   await go(`#/season/${r.crew_id}`);
   await check(page, size, 'Season');
   // Someone who hasn't picked a name yet (fresh phone)
-  const ctx2 = await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  const ctx2 = await themed(await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 2, isMobile: true, hasTouch: true }));
   await attach(ctx2, be, srv.origin);
   await ctx2.addInitScript((codes) => codes.forEach((code) => localStorage.setItem('glb.who.' + code, 'true')), [r.code, rf.code]);
   const watcher = await ctx2.newPage();
