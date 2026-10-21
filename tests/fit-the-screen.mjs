@@ -162,19 +162,29 @@ for (const size of SIZES) {
   await check(page, size, 'Home');
   await go('#/setup');
   await check(page, size, 'Setup 1 (find a course)');
-  for (let i = 0; i < 6; i++) {
-    if (i === 0) await page.tap('[data-act="setup-mine"][data-v="twin-creeks-allen-tx"]');
-    if (i === 1) for (const n of ['Andrew Duong', 'Sean Baker', 'Mike Ortiz', 'Tyler Nguyen', 'Sam Patel', 'Jake Miller', 'Chris Young', 'Christopher Abernathy-Wells']) {
-      await page.fill('#new-player', n);
-      await page.press('#new-player', 'Enter');
-      await page.waitForTimeout(150);
-    }
-    if (i === 2) for (let p = 0; p < 8; p++) await page.tap(`[data-act="setup-team"][data-i="${p}"][data-v="${'AABBCCDD'[p]}"]`);
-    await check(page, size, `Setup ${i + 1}`);
-    if (i < 5) await page.tap('[data-act="setup-next"]');
+  await page.tap('[data-act="setup-mine"][data-v="twin-creeks-allen-tx"]');
+  for (const n of ['Andrew Duong', 'Sean Baker', 'Mike Ortiz', 'Tyler Nguyen', 'Sam Patel', 'Jake Miller', 'Chris Young', 'Christopher Abernathy-Wells']) {
+    await page.fill('#new-player', n);
+    await page.press('#new-player', 'Enter');
+    await page.waitForTimeout(150);
   }
-  await page.tap('[data-act="setup-card-edit"]');
-  await check(page, size, 'Setup 6 (scorecard check)');
+  await check(page, size, 'Setup 2 (players)');
+  await page.tap('[data-act="setup-go"][data-v="game"]');
+  await check(page, size, 'Setup 3 (pick a game)');
+  await page.tap('[data-act="setup-game"][data-v="carts"]');
+  await page.tap('[data-act="setup-go"][data-v="teams"]');
+  await check(page, size, 'Setup 4 (carts)');
+  await page.tap('[data-act="setup-go"][data-v="matchups"]');
+  await check(page, size, 'Setup 4b (matchups)');
+  await page.tap('[data-act="setup-custom"]');
+  await check(page, size, 'Setup 4b (custom matchups)');
+  await page.evaluate(() => { const s = window.__glb.setup; s.screen = 'check'; window.__glb.render(); });
+  await check(page, size, 'Setup scorecard check');
+  await page.evaluate(() => { const s = window.__glb.setup; s.players = s.players.slice(0, 4); s.game = '2v2'; s.screen = 'teams'; window.__glb.render(); });
+  await check(page, size, 'Setup 4 (2v2 partners)');
+  await page.evaluate(() => { const s = window.__glb.setup; s.saved = { code: 'TC482', admin_pin: '7319' }; window.__glb.render(); });
+  await check(page, size, 'Setup 5 (round is live)');
+  await page.evaluate(() => { window.__glb.setup = null; localStorage.removeItem('glb.setupDraft'); });
   await go(`#/e/${r.code}/enter`);
   await check(page, size, 'Enter', 'enter');
   await page.evaluate(() => { window.__glb.ui.hole = 6; window.__glb.ui.unlocked = 6; window.__glb.render(); }); // a past hole, unlocked for editing

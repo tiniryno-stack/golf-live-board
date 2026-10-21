@@ -64,3 +64,22 @@ test('search rows: nearest first, by API distance or our own', () => {
   assert.equal(fmtMiles(null), '');
   assert.equal(fmtMiles(0.04), 'here');
 });
+
+test('Multi-course club: the same hole numbers twice split into Course 1 / Course 2 in listing order', async () => {
+  const { fromOpenGolf, splitCourses } = await import('../js/coursedata.js');
+  const a = [4, 4, 3, 5, 4, 4, 3, 4, 5, 4, 3, 4, 5, 4, 4, 3, 5, 4];
+  const b = [5, 4, 4, 3, 4, 5, 4, 3, 4, 4, 4, 3, 5, 4, 3, 4, 5, 4];
+  const holes_data = [];
+  for (let i = 0; i < 18; i++) {
+    holes_data.push({ number: i + 1, par: a[i], handicap: i + 1 });
+    holes_data.push({ number: i + 1, par: b[i], handicap: 18 - i }); // alternating rows
+  }
+  const c = fromOpenGolf({ id: '11111111-2222-4333-8444-555555555555', course_name: 'Bear Creek Golf Club', holes_data });
+  assert.equal(c.variants.length, 2);
+  assert.deepEqual(c.variants.map((v) => [v.label, v.parTotal, v.par[0], v.par[17]]), [['Course 1', 72, 4, 4], ['Course 2', 72, 5, 4]]);
+  assert.deepEqual(c.variants[1].strokeIndex.slice(0, 3), [18, 17, 16]);
+  assert.deepEqual(c.par, a, 'the plain card still takes the first of each hole');
+  assert.deepEqual(splitCourses([{ n: 1, par: 4 }]), [], 'a normal course has no variants');
+  const named = fromOpenGolf({ id: '11111111-2222-4333-8444-555555555556', course_name: 'Club', holes_data: holes_data.map((h, i) => ({ ...h, course_name: i % 2 ? 'East' : 'West' })) });
+  assert.deepEqual(named.variants.map((v) => v.label), ['West', 'East'], 'uses the listing’s own course names when it has them');
+});

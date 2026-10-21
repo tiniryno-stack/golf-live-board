@@ -419,7 +419,7 @@ function ogaAnswer(route, u) {
     return send(200, { total: rows.length, courses: rows });
   }
   const m = u.pathname.match(/^\/api\/v1\/courses\/([0-9a-f-]{36})$/i);
-  const course = m && [fx.twinCreeks, fx.mesquiteHollow, fx.pecanNine].find((c) => c.id === m[1]);
+  const course = m && [fx.twinCreeks, fx.mesquiteHollow, fx.pecanNine, fx.oakTwins].find((c) => c.id === m[1]);
   return course ? send(200, course) : send(404, { error: 'not_found' });
 }
 

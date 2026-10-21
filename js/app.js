@@ -1108,9 +1108,10 @@ function renderTopbar(screen, inRound) {
   const theme = document.documentElement.dataset.theme === 'light' ? 'moon' : 'sun';
   const themeBtn = `<button class="icon-btn" data-act="theme" aria-label="Light or dark">${icon(theme)}</button>`;
   if (!inRound) {
+    const custom = screen.topBack?.(app); // e.g. Setup: back to the previous step
     const back = app.route.name === 'home'
       ? '<div class="spacer"></div>'
-      : `<button class="back" data-act="go" data-v="#/">${icon('back', 22)}<span>Home</span></button>`;
+      : custom || `<button class="back" data-act="go" data-v="#/">${icon('back', 22)}<span>Home</span></button>`;
     return `${back}${themeBtn}`;
   }
   const name = app.event?.name || app.code || '';

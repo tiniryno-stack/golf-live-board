@@ -1,28 +1,23 @@
-// setup.js — organizer flow: Course → Players → Teams → Matchups → Game → Save.
-// Course: search by name, or courses near you (looked up as soon as Setup opens; the one you're
-// standing at goes on top as "Looks like you're at"). OpenGolfAPI, js/coursedata.js; your group's
-// courses come first (built-in ones, and the copy from your last round there, with any fixes).
-// Picking a course fetches its scorecard in the background while you set up the rest; Save
-// has a scorecard check (fix pars / hole handicaps) and won't save a card with gaps.
-// Can't find it: enter the scorecard yourself. Nothing is preselected.
-// "Run it back" (#/setup/CODE) copies players, team names, carts and settings from a past
-// round (not the course).
+// setup.js — New round (designspec §6). ① Course → ② Players → ③ Pick a game →
+//   Scorecard only / Match play → Start;  2v2 → ④ partners → Start;  Cart game → ④ carts →
+//   (④b matchups & rules, optional) → Start;  then ⑤ Round is live (join code + organizer PIN).
+// ① → ①a "Which course?" for a club listed with 2–3 courses mixed together; ② card line →
+// Scorecard check (Par / Hcp for 18 holes, tees, first tee, round name).
+// Course search: nearby courses load on open ("Looks like you're at" on top), your group's courses
+// (the copy from your last round there), search by name, or enter the card yourself.
+// Players: first + last name (nickname only when that full name is taken), Hcp = strokes.
+// Games by player count (scoring.GAMES): the game is always picked on its own step; team screens
+// never re-ask it. Nothing is required that has a sensible default.
+// "Run it back" (#/setup/CODE) copies players, team names, carts and settings (not the course).
 
 import { esc, icon, seg, todayISO, prettyDate, copyText, roundLink } from '../ui.js';
 import { COURSES } from '../courses.js';
 import * as cd from '../coursedata.js';
-import { DEFAULT_SETTINGS, DEFAULT_ROTATION, holesLabel } from '../scoring.js';
-import { TEAM_NAME_PICKS } from '../teams.js';
+import { DEFAULT_SETTINGS, DEFAULT_ROTATION, GAMES, gameFix, autoGroups, cartRotation } from '../scoring.js';
 import * as db from '../db.js';
 import * as names from '../names.js';
 
-const STEPS = ['Course', 'Players', 'Teams', 'Matchups', 'Game', 'Save'];
 const TEAM_IDS = ['A', 'B', 'C', 'D'];
-const MATCHINGS = [
-  [['A', 'B'], ['C', 'D']],
-  [['A', 'C'], ['B', 'D']],
-  [['A', 'D'], ['B', 'C']],
-];
 const DRAFT_KEY = 'glb.setupDraft';
 
 const clone = (x) => JSON.parse(JSON.stringify(x));
@@ -56,14 +51,26 @@ const same = (a, b) => String(a || '').toLowerCase() === String(b || '').toLower
 function blank(from = null) {
   const { rotation, ...settings } = DEFAULT_SETTINGS;
   return {
-    step: 0, from, loadingFrom: !!from, courseId: null, tee: null, name: '',
+    screen: 'course', from, loadingFrom: !!from, courseId: null, tee: null, name: '',
     course: null, courseStatus: 'idle', mine: [], q: '', results: null, searching: false, searchError: '',
-    near: null, nearStatus: 'idle', loc: null, editCard: false,
+    near: null, nearStatus: 'idle', loc: null, which: null, whichName: '',
     players: [], teams: TEAM_IDS.map((id) => ({ id, name: '' })),
-    rotation: clone(DEFAULT_ROTATION), settings: { ...settings, rotationMode: 'swap' },
-    crewId: null, crewFromSource: false, past: [], newName: '', nickAsk: null,
+    game: 'scorecard', pairSwitch: 'never', schedule: 'six', opps: null, custom: false, swapSel: null, rulesOpen: false,
+    settings: { ...settings, rotationMode: 'fixed' }, // keep tee times by default (designspec §6 ④b)
+    crewId: null, crewFromSource: false, past: [], newName: '', nickAsk: null, pairedFromLast: false,
     saving: false, saved: null,
   };
+}
+
+/** The picked game, or Scorecard only if it no longer fits the player count. */
+function gameOf(s) {
+  return gameFix(s.game, s.players.length) ? 'scorecard' : s.game;
+}
+
+/** Cart game: every player in a cart, 2 per cart (fills in order when they aren't). */
+function ensureCarts(s) {
+  const ok = TEAM_IDS.every((id) => s.players.filter((p) => p.teamId === id).length === 2);
+  if (!ok) s.players.forEach((p, i) => { p.teamId = TEAM_IDS[Math.floor(i / 2)] || null; });
 }
 
 function persist(s) {
@@ -119,7 +126,12 @@ async function loadFrom(app, code) {
     s.teams = TEAM_IDS.map((id) => ({ id, name: (ev.roster.teams || []).find((t) => t.id === id)?.name || '' }));
     const { rotation, ...settings } = ev.settings || {};
     s.settings = { ...s.settings, ...settings };
-    if (Array.isArray(rotation) && rotation.length === 3) s.rotation = clone(rotation);
+    // The same game as last time (the course isn't copied).
+    s.game = settings.pairs ? '2v2' : settings.solo ? 'match' : (ev.roster.teams || []).length === 4 ? 'carts' : 'scorecard';
+    s.pairSwitch = settings.pairSwitch || 'never';
+    if (Array.isArray(rotation) && rotation.length === 2) s.schedule = 'turn';
+    if (Array.isArray(rotation) && rotation.length) s.opps = rotation.map((r) => r.matches?.[0]?.[1]).filter(Boolean);
+    s.pairedFromLast = s.game === 'carts';
     s.crewId = ev.crew_id || null;
     s.crewFromSource = true;
     persist(s);
@@ -275,43 +287,6 @@ function listFoot() {
     <p class="meta attrib">Course data ${esc(cd.ATTRIBUTION)}</p>`;
 }
 
-/** Status of the picked course's scorecard, one line. */
-function cardStatus(s, c) {
-  if (s.courseStatus === 'loading') return '<div class="sc-line"><span class="spinner tiny" aria-hidden="true"></span><span>Getting the scorecard…</span></div>';
-  if (s.courseStatus === 'error') return '<div class="sc-line warn"><span>Couldn\u2019t get the scorecard. <button class="link-btn inline" data-act="setup-course-retry">Try again</button>, or fill it in on the last step.</span></div>';
-  if (c.source === 'manual') return '<div class="sc-line"><span>You\u2019ll fill in the scorecard on the last step.</span></div>';
-  const issues = cd.scorecardProblems(c);
-  if (issues.length) return `<div class="sc-line warn"><span>${esc(issues[0])} You\u2019ll fix it on the last step.</span></div>`;
-  const par = c.par.reduce((a, b) => a + b, 0);
-  return `<div class="sc-line good">${icon('check', 16)}<span>Scorecard ready · par ${par} · ${esc(SOURCE_LABEL[c.source] || 'ready')}</span></div>`;
-}
-
-/** Save step: the scorecard to check (and fix) before the round is created. */
-function scorecardCard(s) {
-  const c = course(s);
-  if (!c) return '';
-  if (s.courseStatus === 'loading') return `<div class="card sc-card"><div class="micro">Scorecard</div>${cardStatus(s, c)}</div>`;
-  const issues = c.source === 'manual' && !c.par.some(Boolean) ? ['Fill in the par and hole handicap for each hole.'] : cd.scorecardProblems(c);
-  const open = s.editCard || issues.length;
-  const par = (c.par || []).reduce((a, b) => a + (Number(b) || 0), 0);
-  const half = (from) => `<div class="par-grid sc-grid"><span class="micro">Hole</span><span class="micro">Par</span><span class="micro">Hcp</span>
-    ${Array.from({ length: 9 }, (_, k) => {
-      const i = from + k;
-      return `<span class="h">${i + 1}</span>
-      <input class="input" inputmode="numeric" pattern="[0-9]*" maxlength="1" value="${esc(c.par?.[i] ?? '')}" aria-label="Par hole ${i + 1}" data-input="setup-scpar" data-i="${i}">
-      <input class="input" inputmode="numeric" pattern="[0-9]*" maxlength="2" value="${esc(c.strokeIndex?.[i] ?? '')}" aria-label="Handicap hole ${i + 1}" data-input="setup-scsi" data-i="${i}">`;
-    }).join('')}</div>`;
-  const grid = `<div class="sc-halves">${half(0)}${half(9)}</div>
-  <p class="help" style="margin:10px 0 0">Copy these from the card. Hcp is the hole handicap: 1 is the hardest hole, 18 the easiest, each number once.</p>`;
-  return `<div class="card sc-card${issues.length ? ' needs' : ''}">
-    <div class="spread"><span class="micro">Scorecard</span><span class="meta">${esc(SOURCE_LABEL[c.source] || '')}</span></div>
-    ${issues.length
-      ? `<div class="sc-line warn" style="margin:4px 0 10px"><span>${esc(issues[0])}</span></div>`
-      : `<div class="sc-line good" style="margin:4px 0 ${open ? '10px' : '0'}">${icon('check', 16)}<span>Par ${par} · hole handicaps 1\u201318</span></div>`}
-    ${open ? grid : '<button class="btn small" style="margin-top:10px" data-act="setup-card-edit">Check it against the card</button>'}
-    ${c.source === 'opengolfapi' ? `<p class="meta attrib" style="margin:10px 0 0">${esc(cd.ATTRIBUTION)}</p>` : ''}
-  </div>`;
-}
 function teamName(s, id) {
   const t = s.teams.find((x) => x.id === id);
   return (t?.name || '').trim() || `Cart ${id}`;
@@ -329,7 +304,8 @@ function problems(s) {
   if (!c) out.push('Pick a course.');
   else if (s.courseStatus === 'loading') out.push('Still getting the scorecard\u2026');
   else {
-    if (c.source === 'manual' && !(c.name || '').trim()) out.push('Name the course (on the Course step).');
+    if (c.variants?.length > 1 && !c.variant) out.push(`This club has ${c.variants.length} courses: pick which one.`);
+    if (c.source === 'manual' && !(c.name || '').trim()) out.push('Name the course (Scorecard check).');
     out.push(...cd.scorecardProblems(c));
   }
   if (!s.players.length) out.push('Add the players.');
@@ -340,215 +316,382 @@ function problems(s) {
   for (const p of s.players.filter((x) => x.needsNick && !x.nickname)) {
     out.push(`Someone else is already called ${names.fullName(p)}. Add a nickname for them (on Players).`);
   }
-  // Not 4 full carts of 2 (any other number of players): it saves as a plain scorecard +
-  // leaderboard round (see buildRound), so nothing to block here.
+  if (s.game !== 'scorecard' && gameFix(s.game, s.players.length)) out.push(`${GAMES.find((g) => g.id === s.game).name}: ${gameFix(s.game, s.players.length)}`);
+  if (gameOf(s) === 'carts' && !hasFullTeams(s)) out.push('Put 2 players in each cart.');
   return out;
 }
 
-/** Fewer or more than 8 players, or carts not filled: scorecard + leaderboard, no cart game.
- *  Up to 4 players all play in one group. */
-function casualRound(s) {
-  return !hasFullTeams(s);
-}
-/** Solo match play: 2–4 players, no carts, and the organizer picked Match play. */
-function soloOn(s) {
-  return casualRound(s) && s.players.length >= 2 && s.players.length <= 4 && !!s.settings.solo;
+/** Problems that live on the scorecard (send them to the Scorecard check). */
+function cardProblem(s) {
+  const c = course(s);
+  return !!c && (c.variants?.length > 1 && !c.variant ? 'which' : cd.scorecardProblems(c).length || (c.source === 'manual' && !(c.name || '').trim()) ? 'check' : null);
 }
 
 function buildRound(s) {
   const c = course(s);
-  const full = hasFullTeams(s);
-  const casual = casualRound(s);
-  const groupOfTeam = {};
-  s.rotation[0].matches.forEach((m, i) => m.forEach((t) => (groupOfTeam[t] = `g${i + 1}`)));
+  const game = gameOf(s);
   const shown = names.displayNames(s.players);
+  const rotation = game === 'carts' ? cartRotation(s.schedule, s.opps) : clone(DEFAULT_ROTATION);
+  const groupOfTeam = {};
+  rotation[0].matches.forEach((m, i) => m.forEach((t) => (groupOfTeam[t] = `g${i + 1}`)));
+  const auto = autoGroups(s.players.length);
   const players = s.players.map((p, i) => ({
     id: `p${i + 1}`, personId: p.personId || db.uuid(), name: shown[i],
     firstName: p.firstName, lastName: p.lastName || '', ...(p.nickname ? { nickname: p.nickname } : {}),
-    teamId: casual ? null : p.teamId || null,
-    groupId: casual && s.players.length <= 4 ? 'g1' : full && p.teamId ? groupOfTeam[p.teamId] : p.groupId || 'g1',
+    teamId: game === 'carts' ? p.teamId : null,
+    groupId: game === 'carts' ? groupOfTeam[p.teamId] : game === '2v2' ? 'g1' : `g${auto[i] + 1}`,
     strokes: p.strokes === '' || p.strokes == null || Number.isNaN(Number(p.strokes)) ? null : Math.max(0, Math.round(Number(p.strokes))),
   }));
-  const teams = casual ? [] : teamsUsed(s).map((id) => ({ id, name: teamName(s, id).slice(0, 20) }));
+  const nGroups = Math.max(...players.map((p) => Number(p.groupId.slice(1))));
+  const teams = game === 'carts' ? TEAM_IDS.map((id) => ({ id, name: teamName(s, id).slice(0, 20) })) : [];
+  const base = { ...s.settings };
+  const settings = game === 'carts'
+    ? { ...base, solo: false, pairs: false, rotation }
+    : game === '2v2'
+      ? { ...base, game: 'rotationMatch', solo: false, pairs: true, pairSwitch: s.pairSwitch, rotationMode: 'fixed', rotation }
+      : game === 'match'
+        ? { ...base, game: 'rotationMatch', solo: true, pairs: false, rotationMode: 'fixed', rotation }
+        : { ...base, game: 'none', solo: false, pairs: false, rotationMode: 'fixed', rotation };
+  const { variants, variant, ...cleanCourse } = c;
   return {
     name: s.name.trim() || `${c.shortName || cd.shortCourseName(c.name)} · ${prettyDate(todayISO())}`,
     course: {
-      id: c.id, ...(c.ogaId ? { ogaId: c.ogaId } : {}), source: c.source === 'yours' ? c.lastSource || 'yours' : c.source || 'builtin',
+      id: cleanCourse.id, ...(c.ogaId ? { ogaId: c.ogaId } : {}), source: c.source === 'yours' ? c.lastSource || 'yours' : c.source || 'builtin',
       name: c.name.trim(), shortName: c.shortName || cd.shortCourseName(c.name), location: c.location || '',
       ...(c.lat != null && c.lng != null ? { lat: c.lat, lng: c.lng } : {}),
       tee: s.tee, tees: (c.tees || []).map((t) => ({ name: t.name, yards: t.yards ?? null, rating: t.rating ?? null, slope: t.slope ?? null })),
       par: c.par.map(Number), strokeIndex: c.strokeIndex.map(Number),
     },
-    roster: { groups: [{ id: 'g1', name: 'Group 1' }, { id: 'g2', name: 'Group 2' }], teams, players },
-    settings: casual
-      ? { ...s.settings, ...(soloOn(s) ? { game: 'rotationMatch', solo: true } : { game: 'none', solo: false }), rotationMode: 'fixed', rotation: clone(s.rotation) }
-      : { ...s.settings, solo: false, rotation: clone(s.rotation) },
+    roster: { groups: Array.from({ length: nGroups }, (_, i) => ({ id: `g${i + 1}`, name: `Group ${i + 1}` })), teams, players },
+    settings,
     playedOn: todayISO(),
     crewId: s.crewId,
   };
 }
 
-// ───────────────────────────────────────────── step views
+// ───────────────────────────────────────────── screens (designspec §6)
 
-const VIEWS = {
-  Course(s) {
-    const c = course(s);
-    if (!c) {
-      return `<input class="input course-q" id="course-q" type="search" placeholder="Search courses by name" value="${esc(s.q)}" autocomplete="off" autocapitalize="words" enterkeyhint="search" aria-label="Search courses by name" data-input="setup-q">
-        <div id="course-results" style="margin-top:14px">${courseList(s)}</div>`;
-    }
-    const title = c.source === 'manual'
-      ? `<input class="input" id="course-name" maxlength="60" placeholder="Course name" value="${esc(c.name)}" aria-label="Course name" data-input="setup-cname">`
-      : `<div class="row-title">${esc(c.name)}</div><div class="detail">${esc(c.location || '')}</div>`;
-    return `<div class="card course-picked">
-      <div class="spread" style="align-items:flex-start;gap:10px"><div style="flex:1;min-width:0">${title}</div>
-        <button class="btn small" data-act="setup-unpick">Change</button></div>
-      <div style="margin-top:8px">${cardStatus(s, c)}</div>
-    </div>
-    ${c.tees?.length ? `<div class="micro" style="margin:18px 0 8px">Tees</div>
-      <div class="chips">${c.tees.map((t) => `<button class="chip" data-act="setup-tee" data-v="${esc(t.name)}" aria-pressed="${s.tee?.name === t.name}">${esc(t.name)}${t.yards ? ` <span class="soft mono" style="font-size:12px">${t.yards}</span>` : ''}</button>`).join('')}</div>` : ''}
-    <div class="field" style="margin-top:18px"><span class="label">First tee</span>${seg('setup-set', [['1', 'Hole 1'], ['10', 'Hole 10']], String(s.settings.startHole || 1), 'data-k="startHole"')}</div>
-    <p class="help">Starting on 10? Everything follows the order you play: 10 → 18, then 1 → 9.</p>
-    <div class="field"><label for="round-name">Round name</label>
-      <input class="input" id="round-name" maxlength="60" value="${esc(s.name)}" placeholder="${esc(c ? `${c.shortName} · ${prettyDate(todayISO())}` : 'e.g. Twin Creeks · Fri')}" data-input="setup-name"></div>
-    <p class="meta">You\u2019ll check the scorecard on the last step. The organizer can still fix any hole mid-round from Host.</p>`;
-  },
+/** Back target for each screen. */
+const BACK = { which: 'course', players: 'course', check: 'players', game: 'players', teams: 'game', matchups: 'teams' };
+const BACK_LABEL = { course: 'Course', players: 'Players', game: 'Game', teams: s => (s.game === 'carts' ? 'Carts' : 'Partners') };
 
-  Players(s) {
-    const used = new Set(s.players.map((p) => p.personId));
-    const past = s.past.filter((p) => !used.has(p.personId));
-    return `${past.length ? `<div class="micro" style="margin:0 0 8px">From past rounds</div>
-      <div class="chips" style="margin:0 0 16px">${past.map((p) => `<button class="chip" data-act="setup-past" data-v="${esc(p.personId)}">${icon('plus', 14)} ${esc(p.name)}</button>`).join('')}</div>` : ''}
-      <div class="join-row" style="margin:0 0 8px">
-        <input class="input" id="new-player" maxlength="48" placeholder="First and last name" value="${esc(s.newName)}" autocapitalize="words" autocomplete="off" data-input="setup-newname" data-enter="setup-add">
+/** Progress bars: how far along the flow this screen is (2–4 bars depending on the game). */
+function progress(s) {
+  const flow = ['course', 'players', 'game', ...(s.game === '2v2' ? ['teams'] : s.game === 'carts' ? ['teams', 'matchups'] : [])];
+  const at = Math.max(0, flow.indexOf(s.screen === 'which' ? 'course' : s.screen === 'check' ? 'players' : s.screen));
+  return `<div class="nr-bars">${flow.map((_, i) => `<i class="${i <= at ? 'on' : ''}"></i>`).join('')}</div>`;
+}
+
+function topBar() {
+  return ''; // the step's back button lives in the app's top bar (topBack below)
+}
+
+let curState = null; // the setup being drawn (for the progress bars in each headline)
+function headline(kicker, title, sub = '') {
+  const bars = curState && curState.screen !== 'check' && curState.screen !== 'which' ? progress(curState) : '';
+  return `<div class="nr-head"><div class="nr-k"><span class="lbl">${kicker}</span>${bars}</div><h1 class="nr-title">${title}</h1>${sub ? `<div class="nr-sub">${sub}</div>` : ''}</div>`;
+}
+
+function bottom(label, act, { disabled = false, v = '', arrow = false } = {}) {
+  return `<div class="nr-foot"><button class="btn primary nr-cta" data-act="${act}"${v ? ` data-v="${esc(v)}"` : ''} ${disabled ? 'disabled' : ''}>${esc(label)}${arrow ? icon('fwd', 18) : ''}</button></div>`;
+}
+
+/** One line for the picked course's card: "✓ Card ready · par 72 · tap to check". */
+function cardLine(s, c) {
+  if (s.courseStatus === 'loading') return { cls: '', text: 'Getting the scorecard…' };
+  if (s.courseStatus === 'error') return { cls: 'warn', text: 'Couldn’t get the scorecard · tap to fill it in' };
+  if (c.variants?.length > 1 && !c.variant) return { cls: 'warn', text: `This club has ${c.variants.length} courses · tap to pick one` };
+  if (c.source === 'manual' && !(c.par || []).some(Boolean)) return { cls: 'warn', text: 'Enter the scorecard · tap to start' };
+  const issues = cd.scorecardProblems(c);
+  if (issues.length) return { cls: 'warn', text: `${issues.length} thing${issues.length === 1 ? '' : 's'} to fix on the card · tap to check` };
+  return { cls: 'good', text: `✓ Card ready · par ${c.par.reduce((a, b) => a + b, 0)} · tap to check` };
+}
+
+function courseView(s) {
+  return `${topBar(s)}${headline('Step 1 · Course', s.from ? 'Run it back: where to?' : 'Where are you playing?')}
+    <label class="nr-search">${icon('search', 20)}<input class="course-q" id="course-q" type="search" placeholder="Search courses by name" value="${esc(s.q)}" autocomplete="off" autocapitalize="words" enterkeyhint="search" aria-label="Search courses by name" data-input="setup-q"></label>
+    <div id="course-results">${courseList(s)}</div>`;
+}
+
+/** ①a This club has 2 courses. Which one are you playing? */
+function whichView(s) {
+  const c = course(s);
+  const vs = c?.variants || [];
+  return `${topBar(s)}
+    <div class="nr-head"><div class="lbl">${esc(c?.name || '')}${c?.location ? ` · ${esc(c.location)}` : ''}</div>
+      <h1 class="nr-title which">This club has ${vs.length} courses. Which one are you playing?</h1>
+      <div class="nr-sub">Not sure? Match holes 1 and 18 to the paper card.</div></div>
+    ${vs.map((v) => {
+      const on = s.which === v.n;
+      return `<div class="which-opt${on ? ' on' : ''}">
+        <button class="which-pick" data-act="setup-which" data-v="${v.n}" aria-pressed="${on}">
+          <span class="radio"></span>
+          <span style="flex:1;min-width:0"><span class="spread"><b>${esc(v.label)}</b><span class="mono soft">par ${v.parTotal}</span></span>
+          <span class="mono soft wsub">Hole 1 par ${v.par[0]} · Hole 18 par ${v.par[17]}</span>${v.named ? '<span class="meta">Named on the course listing</span>' : ''}</span>
+        </button>
+        ${on && !v.named ? `<div class="which-name"><label for="which-name">This one has no name yet. What’s it called?</label>
+          <input class="input" id="which-name" maxlength="20" placeholder="e.g. East" value="${esc(s.whichName || '')}" autocapitalize="words" data-input="setup-whichname">
+          <div class="meta">Optional. Next time your group sees it by this name.</div></div>` : ''}
+      </div>`;
+    }).join('')}
+    <div class="nr-note">${icon('redo', 16)}<span>We’ll remember this. Next time the club shows as separate picks: ${vs.map((v) => `<b>${esc(c.shortName || c.name)} · ${esc(v.label)}</b>`).join(' and ')}.</span></div>
+    ${bottom(s.which ? 'Next: players' : 'Pick one to continue', 'setup-which-done', { disabled: !s.which, arrow: true })}`;
+}
+
+/** ② Who's playing? */
+function playersView(s) {
+  const c = course(s);
+  const line = c ? cardLine(s, c) : null;
+  const used = new Set(s.players.map((p) => p.personId));
+  const recent = s.past.filter((p) => !used.has(p.personId)).slice(0, 8);
+  const tee = s.tee ? ` · ${s.tee.name} tees` : '';
+  return `${topBar(s)}${headline('Step 2 · Players', 'Who’s playing?')}
+    ${c ? `<div class="nr-course">
+      <button class="nc-main" data-act="setup-go" data-v="${c.variants?.length > 1 && !c.variant ? 'which' : 'check'}">
+        <b class="ellipsis">${esc(c.shortName || c.name || 'Your course')}${esc(tee)}</b>
+        <span class="nc-line ${line.cls}">${line.cls === '' && s.courseStatus === 'loading' ? '<span class="spinner tiny" aria-hidden="true"></span>' : ''}${esc(line.text)}</span>
+      </button>
+      <button class="btn small" data-act="setup-unpick">Change</button></div>` : ''}
+    <div class="pl-head"><span class="lbl">Players · ${s.players.length}</span><span class="lbl pl-hcp">Hcp</span><span class="pl-x"></span></div>
+    <div class="pl-list">
+      ${s.players.map((p, i) => `<div class="player-row">
+        <span class="pname">${p.lastName && !p.needsNick
+          ? `<span class="ellipsis" style="display:block">${esc(p.name)}</span>`
+          : `<span class="ellipsis" style="display:block">${esc(p.name)}</span>${p.lastName
+            ? `<input class="input name-fill" maxlength="24" placeholder="Nickname, e.g. Tini Ryno" value="${esc(p.nickname)}" aria-label="Nickname for ${esc(p.name)}" data-input="setup-nick" data-i="${i}">`
+            : `<input class="input name-fill" maxlength="30" placeholder="Last name" autocapitalize="words" autocomplete="off" aria-label="Last name for ${esc(p.firstName)}" data-input="setup-last" data-i="${i}">`}`}
+        </span>
+        <input class="hcp-pill mono${p.strokes === '' || p.strokes == null ? ' empty' : ''}" inputmode="numeric" pattern="[0-9]*" maxlength="2" placeholder="Add" aria-label="${esc(p.name)} handicap (strokes)" value="${esc(p.strokes ?? '')}" data-input="setup-strokes" data-i="${i}">
+        <button class="x" data-act="setup-remove" data-i="${i}" aria-label="Remove ${esc(p.name)}">${icon('close', 18)}</button>
+      </div>`).join('')}
+      <div class="pl-add join-row">
+        <input class="input" id="new-player" maxlength="48" placeholder="Add a name (first and last)" value="${esc(s.newName)}" autocapitalize="words" autocomplete="off" data-input="setup-newname" data-enter="setup-add">
         <button class="btn primary" data-act="setup-add"${s.nickAsk ? ' disabled' : ''}>Add</button>
       </div>
-      ${s.nickAsk ? `<div class="card nick-ask">
-        <p class="meta" style="margin:0 0 8px">Someone named ${esc(s.nickAsk.first)} ${esc(s.nickAsk.last)} already plays in another crew. Someone new? Add a nickname so they\u2019re their own player.</p>
-        <div class="join-row"><input class="input" id="new-nick" maxlength="24" placeholder="Nickname, e.g. Tini Ryno" autocapitalize="words" autocomplete="off" data-enter="setup-add">
-          <button class="btn primary" data-act="setup-add">Add</button></div>
-        <button class="link-btn" style="margin-top:8px" data-act="setup-nick-cancel">Cancel</button>
-      </div>` : ''}
-      <p class="help" style="margin:4px 0 0">Only first names show during the round. Last names keep two Andrews apart in the season standings.</p>
-      <p class="help" style="margin:4px 0 10px">Strokes are optional. Blank = plays even. Giving a newer player 15 strokes = 1 stroke on the 15 hardest holes.</p>
-      <div>${s.players.map((p, i) => `<div class="player-row">
-          ${p.lastName && !p.needsNick
-            ? `<span class="pname ellipsis">${esc(p.name)}</span>`
-            : `<span class="pname"><span class="ellipsis" style="display:block">${esc(p.name)}</span>${p.lastName
-              ? `<input class="input name-fill" maxlength="24" placeholder="Nickname, e.g. Tini Ryno" value="${esc(p.nickname)}" aria-label="Nickname for ${esc(p.name)}" data-input="setup-nick" data-i="${i}">`
-              : `<input class="input name-fill" maxlength="30" placeholder="Last name" autocapitalize="words" autocomplete="off" aria-label="Last name for ${esc(p.firstName)}" data-input="setup-last" data-i="${i}">`}</span>`}
-          <input class="input num" inputmode="numeric" pattern="[0-9]*" maxlength="2" placeholder="even" aria-label="Strokes for ${esc(p.name)}" value="${esc(p.strokes ?? '')}" data-input="setup-strokes" data-i="${i}">
-          <button class="x" data-act="setup-remove" data-i="${i}" aria-label="Remove ${esc(p.name)}">${icon('close', 18)}</button>
-        </div>`).join('') || '<p class="meta">No players yet.</p>'}</div>
-      <p class="meta" style="margin-top:10px">${s.players.length} player${s.players.length === 1 ? '' : 's'}${s.players.length && s.players.length !== 8 ? ' · the rotating game is built for 8 (4 carts of 2)' : ''}</p>`;
-  },
+    </div>
+    ${s.nickAsk ? `<div class="card nick-ask">
+      <p class="meta" style="margin:0 0 8px">Someone named ${esc(s.nickAsk.first)} ${esc(s.nickAsk.last)} already plays in another crew. Someone new? Add a nickname so they’re their own player.</p>
+      <div class="join-row"><input class="input" id="new-nick" maxlength="24" placeholder="Nickname, e.g. Tini Ryno" autocapitalize="words" autocomplete="off" data-enter="setup-add">
+        <button class="btn primary" data-act="setup-add">Add</button></div>
+      <button class="link-btn" style="margin-top:8px" data-act="setup-nick-cancel">Cancel</button>
+    </div>` : ''}
+    ${recent.length ? `<div class="pl-recent"><span class="lbl">Recent</span>${recent.map((p) => `<button class="chip-o" data-act="setup-past" data-v="${esc(p.personId)}">+ ${esc(p.firstName || p.name)}</button>`).join('')}</div>` : ''}
+    <p class="meta pl-help">Only first names show during the round. Hcp = strokes they get (blank = plays even).</p>
+    ${bottom('Next: pick a game', 'setup-go', { v: 'game', disabled: !s.players.length || !!s.nickAsk, arrow: true })}`;
+}
 
-  Teams(s) {
-    const counts = Object.fromEntries(TEAM_IDS.map((id) => [id, s.players.filter((p) => p.teamId === id).length]));
-    return `<div class="micro" style="margin:0 0 8px">Team names</div>
-      <div class="name-grid">${TEAM_IDS.map((id) => `<label class="team-name-cell" style="--jersey:var(--t-${id})">
-          <span class="spread"><span class="cart-tag"><i class="jdot"></i>Cart ${id}</span><span class="mono ${counts[id] === 2 ? 'good' : 'soft'}" style="font-size:12px">${counts[id]}/2</span></span>
-          <input class="input" maxlength="20" placeholder="Cart ${id}" value="${esc(s.teams.find((t) => t.id === id).name)}" aria-label="Team name for cart ${id}" data-input="setup-teamname" data-v="${id}">
-          <span class="meta ellipsis">${esc(s.players.filter((p) => p.teamId === id).map((p) => p.name).join(' + ') || 'empty')}</span>
-        </label>`).join('')}</div>
-      <p class="help" style="margin:8px 0 18px">Optional. Leave a name blank and that cart picks its own when they join (${esc(TEAM_NAME_PICKS.slice(0, 3).join(', '))}…).</p>
-      <div class="micro" style="margin:0 0 4px">Who\u2019s in each cart</div>
-      <div style="margin:0 0 8px">${s.players.map((p, i) => `<div class="player-row">
-          <span class="pname ellipsis">${esc(p.name)}</span>
-          <div class="team-picks">${TEAM_IDS.map((id) => `<button data-act="setup-team" data-i="${i}" data-v="${id}" aria-pressed="${p.teamId === id}" aria-label="${esc(p.name)} to cart ${id}">${id}</button>`).join('')}</div>
-        </div>`).join('') || '<p class="meta">Add players first.</p>'}</div>`;
-  },
+/** ③ Pick a game (availability by player count). */
+function gameView(s) {
+  const n = s.players.length;
+  const pick = gameOf(s);
+  const maxLbl = { doublePar: 'Double par', netDoubleBogey: 'Net double bogey', none: 'None' }[s.settings.maxHoleScore] || 'Double par';
+  const next = pick === '2v2' || pick === 'carts';
+  return `${topBar(s)}${headline(`Step 3 · Game · ${n} player${n === 1 ? '' : 's'}`, 'Pick a game', 'Games that don’t fit your player count are greyed out.')}
+    <div class="game-list">${GAMES.map((g) => {
+      const fix = gameFix(g.id, n);
+      const on = g.id === pick;
+      return `<button class="game-opt${on ? ' on' : ''}" data-act="setup-game" data-v="${g.id}" ${fix ? 'aria-disabled="true"' : ''} aria-pressed="${on}">
+        <span class="radio"></span>
+        <span style="flex:1;min-width:0"><span class="spread"><b>${esc(g.name)}</b><span class="mono g-count">${g.count}</span></span>
+        <span class="g-desc">${esc(g.desc)}</span>${fix ? `<span class="g-fix">${esc(fix)}</span>` : ''}</span>
+      </button>`;
+    }).join('')}</div>
+    <button class="nr-row" data-act="setup-max"><span style="flex:1">Max score per hole</span><b>${maxLbl}</b>${icon('fwd', 16)}</button>
+    ${pick === 'match' ? '<p class="meta nr-hint">Match play: everyone plays their own ball. Each hole is worth 1 point; low net score takes it, a tie for low splits it.</p>' : ''}
+    <div class="nr-foot">
+      ${next ? '' : '<p class="meta" style="text-align:center;margin:0 0 8px">2v2 and the cart game go to one more screen to set teams.</p>'}
+      <button class="btn primary nr-cta" data-act="${next ? 'setup-go' : 'setup-save'}" ${next ? 'data-v="teams"' : ''} ${s.saving ? 'disabled' : ''}>${s.saving ? 'Starting…' : next ? `Next: ${pick === '2v2' ? 'pick partners' : 'carts'}` : `Start round · ${n} player${n === 1 ? '' : 's'}`}${next ? icon('fwd', 18) : ''}</button>
+    </div>`;
+}
 
-  Matchups(s) {
-    if (casualRound(s) && s.players.length <= 4) {
-      return `<p class="soft" style="margin:0 0 8px">${s.players.length || 'No'} player${s.players.length === 1 ? '' : 's'}: everyone plays in one group and enters scores together. Pick Match play or a straight scorecard on the next step.</p>
-        <p class="meta">The rotating cart game needs 8 players in 4 carts of 2.</p>`;
-    }
-    const swap = s.settings.rotationMode === 'swap';
-    const full = hasFullTeams(s);
-    const rot = s.rotation
-      .map((r, i) => `<div class="rot-card">
-        <div class="micro" style="margin:0 0 4px">Rotation ${i + 1} · ${esc(holesLabel(s.settings, r.holes[0], r.holes[1]).toLowerCase())}</div>
-        ${r.matches.map((m) => `<div class="row-title" style="font-size:16px">${esc(teamName(s, m[0]))} <span class="vs">vs</span> ${esc(teamName(s, m[1]))}</div>`).join('')}
-      </div>`)
-      .join('');
-    const groups = full
-      ? `<p class="meta">${swap ? `${holesLabel(s.settings, 1, 6)} foursomes` : 'Fixed foursomes'}: Group 1 = ${esc(s.rotation[0].matches[0].map((t) => teamName(s, t)).join(' + '))} · Group 2 = ${esc(s.rotation[0].matches[1].map((t) => teamName(s, t)).join(' + '))}</p>`
-      : `<div class="micro" style="margin:12px 0 8px">Foursomes</div>${s.players.map((p, i) => `<div class="player-row"><span class="pname">${esc(p.name)}</span>
-          <div class="team-picks" style="grid-template-columns:repeat(2,52px)">${['g1', 'g2'].map((g, gi) => `<button data-act="setup-group" data-i="${i}" data-v="${g}" aria-pressed="${(p.groupId || 'g1') === g}">G${gi + 1}</button>`).join('')}</div></div>`).join('')}`;
-    return `<div class="stack" style="gap:10px;margin:0 0 14px">
-        <button class="pill" data-act="setup-swap" aria-pressed="${swap}"><span class="dot"></span>Carts swap foursomes every 6 holes</button>
-        <p class="meta" style="margin:0">${swap ? 'At holes 7 and 13 one cart waits and one moves up, so every matchup is played face to face.' : 'Group 1 and Group 2 stay together all day; rotations 2–3 compare scores across groups.'}</p>
-      </div>
-      ${full ? `${rot}<button class="btn ghost block" data-act="setup-shuffle">${icon('shuffle', 18)} Shuffle matchups</button>` : '<p class="meta">Fill 4 carts of 2 on Teams to see the matchups.</p>'}
-      <div style="margin-top:14px">${groups}</div>`;
-  },
-
-  Game(s) {
-    const st = s.settings;
-    const pm = st.game === 'rotationPlusMinus';
-    if (casualRound(s)) {
-      const canSolo = s.players.length >= 2 && s.players.length <= 4;
-      const solo = canSolo && !!st.solo;
-      return `${canSolo ? `<div class="field"><span class="label">Game</span>${seg('setup-solo', [['off', 'Scorecard only'], ['on', 'Match play']], solo ? 'on' : 'off')}</div>
-        <p class="help">${solo
-          ? 'Everyone plays their own ball. Each hole is worth 1 point: low score takes it, a tie for low splits it (½, ⅓ or ¼ each). Most points after 18 wins.'
-          : 'Straight scorecard and leaderboard (gross and net).'}</p>`
-        : `<p class="soft" style="margin:0 0 8px">With ${s.players.length} player${s.players.length === 1 ? '' : 's'} it\u2019s a straight scorecard and leaderboard (gross and net). The cart game needs 8 players in 4 carts of 2.</p>`}
-        <div class="field"><span class="label">Max hole score (pick-up)</span>${seg('setup-set', [['doublePar', 'Double par'], ['netDoubleBogey', 'Net dbl bogey'], ['none', 'None']], st.maxHoleScore, 'data-k="maxHoleScore"')}</div>`;
-    }
-    return `<div class="field"><span class="label">Game</span>${seg('setup-set', [['none', 'None'], ['rotationMatch', 'Match Play'], ['rotationPlusMinus', 'Plus/Minus']], st.game, 'data-k="game"')}</div>
-      <p class="help">${st.game === 'rotationMatch' ? 'Points bank every hole; most points after 18 wins the day.' : pm ? 'Zero-sum: each rotation starts even, margins carry all day.' : 'Just the live scorecard and leaderboard.'}</p>
-      ${st.game !== 'none' ? `<div class="field"><span class="label">Team score</span>${seg('setup-set', [['bestBallAggregate', 'Low Ball/Total'], ['bestBall', 'Best ball'], ['aggregate', 'Aggregate']], st.teamScore, 'data-k="teamScore"')}</div>` : ''}
-      <div class="field"><span class="label">Max hole score (pick-up)</span>${seg('setup-set', [['doublePar', 'Double par'], ['netDoubleBogey', 'Net dbl bogey'], ['none', 'None']], st.maxHoleScore, 'data-k="maxHoleScore"')}</div>
-      <div class="chips" style="margin:0 0 16px"><button class="pill" data-act="setup-toggle" data-k="par3NoMax" aria-pressed="${!!st.par3NoMax}"><span class="dot"></span>No max on par 3s</button></div>
-      ${st.game === 'rotationMatch' ? `<div class="field"><span class="label">Halved points</span>${seg('setup-set', [['0.5', '½ each'], ['0', 'Nothing']], String(st.halvedHolePoints), 'data-k="halvedHolePoints"')}</div>` : ''}
-      ${st.game === 'rotationMatch' ? `<div class="field"><span class="label">Matchup win bonus</span>${seg('setup-set', [['1', '+1 point'], ['0', 'None']], String(st.matchBonus ?? 1), 'data-k="matchBonus"')}</div>` : ''}
-      ${pm ? `<div class="field"><span class="label">Max swing per rotation</span>${seg('setup-set', [['', 'Uncapped'], ['3', '3'], ['5', '5']], st.plusMinusCap == null ? '' : String(st.plusMinusCap), 'data-k="plusMinusCap"')}</div>` : ''}
-      <details class="fold"${st.handicapMode !== 'full' || Number(st.allowancePct) !== 100 ? ' open' : ''}><summary>Advanced</summary>
-        <div class="chips" style="margin:4px 0 12px"><button class="pill" data-act="setup-lowman" aria-pressed="${st.handicapMode === 'offLow'}"><span class="dot"></span>Play off the low man</button></div>
-        <div class="field"><label for="allow">Allowance %</label><input class="input num" id="allow" inputmode="numeric" maxlength="3" value="${esc(st.allowancePct)}" data-input="setup-allow" style="width:96px"></div>
-        <p class="help">Only if everyone enters a real handicap instead of tee-box strokes.</p>
-      </details>`;
-  },
-
-  Save(s, app) {
-    if (s.saved) return savedView(s);
-    const issues = problems(s);
-    const c = course(s);
-    const r = !issues.length ? buildRound(s) : null;
-    return `${issues.length ? `<div class="card" style="margin:0 0 14px;border:1px solid var(--warn)">${issues.map((x) => `<div style="margin:2px 0">${esc(x)}</div>`).join('')}</div>` : ''}
-      ${scorecardCard(s)}
-      <div class="card" style="margin:0 0 14px">
-        <div class="micro">Course</div><div class="row-title" style="margin:2px 0 10px">${c ? esc(c.name) : '—'}${s.tee ? ` · ${esc(s.tee.name)}` : ''}</div>
-        <div class="micro">Round</div><div style="margin:2px 0 10px">${esc(r?.name || s.name || '—')}</div>
-        <div class="micro">Players</div><div style="margin:2px 0 10px">${s.players.length ? s.players.map((p) => `${esc(p.name)}${p.strokes !== '' && p.strokes != null ? ` <span class="soft">(${esc(p.strokes)})</span>` : ''}`).join(', ') : '—'}</div>
-        <div class="micro">First tee</div><div style="margin:2px 0 10px">Hole ${s.settings.startHole === 10 ? '10 (back nine first)' : '1'}</div>
-        <div class="micro">Game</div><div style="margin:2px 0 0">${casualRound(s)
-          ? soloOn(s)
-            ? 'Match play · split point (1 point a hole, ties split) · one group'
-            : `Scorecard + leaderboard${s.players.length <= 4 ? ' · one group' : ''}<div class="meta" style="margin-top:2px">The cart game needs 8 players in 4 carts of 2.</div>`
-          : `${{ none: 'Scorecard only', rotationMatch: 'Rotation Match Play', rotationPlusMinus: 'Rotation Plus/Minus' }[s.settings.game]}${s.settings.rotationMode === 'swap' ? ' · carts swap' : ' · fixed foursomes'}`}</div>
-      </div>
-      <button class="btn primary big block" data-act="setup-save" ${issues.length || s.saving ? 'disabled' : ''}>${s.saving ? 'Saving…' : 'Save round'}</button>
-      <p class="meta" style="margin-top:10px">Saving makes this phone the organizer.</p>`;
-  },
+const SWITCH_TIP = {
+  never: 'Same partner all 18. Pick <b>every 6</b> and everyone partners with everyone once.',
+  six: 'New partner every 6 holes: everyone partners with everyone once. Nobody changes groups.',
+  turn: 'New partner at the turn. Nobody changes groups.',
 };
 
+function rulesSummary(s) {
+  const st = s.settings;
+  const parts = [];
+  if (s.game === 'carts') parts.push(st.game === 'rotationPlusMinus' ? 'Plus/Minus' : st.game === 'none' ? 'No game' : 'Match play');
+  parts.push({ bestBallAggregate: 'Low ball + total', bestBall: 'Best ball', aggregate: 'Aggregate' }[st.teamScore] || 'Low ball + total');
+  parts.push({ doublePar: 'double par max', netDoubleBogey: 'net double bogey max', none: 'no max' }[st.maxHoleScore] || 'double par max');
+  if (st.game !== 'rotationPlusMinus') parts.push(Number(st.halvedHolePoints) ? '½ ties' : 'no points for ties');
+  if (st.game !== 'rotationPlusMinus' && Number(st.matchBonus ?? 1)) parts.push(`+${st.matchBonus ?? 1} win`);
+  return parts.join(' · ');
+}
+
+function rulesBlock(s) {
+  const st = s.settings;
+  const pm = st.game === 'rotationPlusMinus';
+  return `<div class="nr-rules${s.rulesOpen ? ' open' : ''}">
+    <button class="nr-row" data-act="setup-rules" aria-expanded="${!!s.rulesOpen}"><span style="flex:1;min-width:0"><b class="rt">Rules</b><span class="rs ellipsis">${esc(rulesSummary(s))}</span></span>${icon('fwd', 18)}</button>
+    ${s.rulesOpen ? `<div class="rules-body">
+      ${s.game === 'carts' ? `<div class="field"><span class="label">Game</span>${seg('setup-set', [['rotationMatch', 'Match play'], ['rotationPlusMinus', 'Plus/Minus'], ['none', 'None']], st.game, 'data-k="game"')}</div>` : ''}
+      ${st.game !== 'none' ? `<div class="field"><span class="label">Team score</span>${seg('setup-set', [['bestBallAggregate', 'Low ball + total'], ['bestBall', 'Best ball'], ['aggregate', 'Aggregate']], st.teamScore, 'data-k="teamScore"')}</div>` : ''}
+      <div class="field"><span class="label">Max hole score</span>${seg('setup-set', [['doublePar', 'Double par'], ['netDoubleBogey', 'Net dbl bogey'], ['none', 'None']], st.maxHoleScore, 'data-k="maxHoleScore"')}</div>
+      ${!pm && st.game !== 'none' ? `<div class="field"><span class="label">Ties</span>${seg('setup-set', [['0.5', '½ each'], ['0', 'Nothing']], String(st.halvedHolePoints), 'data-k="halvedHolePoints"')}</div>
+      <div class="field"><span class="label">Matchup win bonus</span>${seg('setup-set', [['1', '+1 point'], ['0', 'None']], String(st.matchBonus ?? 1), 'data-k="matchBonus"')}</div>` : ''}
+      ${pm ? `<div class="field"><span class="label">Max swing per rotation</span>${seg('setup-set', [['', 'Uncapped'], ['3', '3'], ['5', '5']], st.plusMinusCap == null ? '' : String(st.plusMinusCap), 'data-k="plusMinusCap"')}</div>` : ''}
+      <div class="chips"><button class="pill" data-act="setup-toggle" data-k="par3NoMax" aria-pressed="${!!st.par3NoMax}"><span class="dot"></span>No max on par 3s</button>
+      <button class="pill" data-act="setup-lowman" aria-pressed="${st.handicapMode === 'offLow'}"><span class="dot"></span>Play off the low man</button></div>
+    </div>` : ''}
+  </div>`;
+}
+
+/** Name button for swapping: tap one, then another, to trade places. */
+function swapBtn(s, i, extra = '') {
+  const p = s.players[i];
+  return `<button class="swap-name${s.swapSel === i ? ' sel' : ''}" data-act="setup-swapsel" data-i="${i}" aria-pressed="${s.swapSel === i}"><span class="ellipsis">${esc(p.name)}</span>${extra}</button>`;
+}
+
+/** ④ 2v2: pick partners + when they switch. */
+function pairsView(s) {
+  const c = course(s);
+  return `${topBar(s)}${headline('Step 4 · 2v2 setup', 'Pick partners', `2v2 · 4 players${c ? ` · ${esc(c.shortName || c.name)}` : ''}`)}
+    <div class="pair-grid">
+      <div class="pair-card me"><div class="pc-k mono">${s.pairSwitch === 'never' ? 'TEAM 1' : 'START · TEAM 1'}</div>${swapBtn(s, 0)}${swapBtn(s, 1)}</div>
+      <div class="pair-card them"><div class="pc-k mono">${s.pairSwitch === 'never' ? 'TEAM 2' : 'START · TEAM 2'}</div>${swapBtn(s, 2)}${swapBtn(s, 3)}</div>
+    </div>
+    <div class="nr-line"><span class="meta">${s.swapSel != null ? 'Now tap who to swap with.' : 'Tap two names to swap partners.'}</span><button class="btn small" data-act="setup-shuffle">Shuffle</button></div>
+    <div class="lbl nr-lbl">Switch partners</div>
+    ${seg('setup-pairswitch', [['never', 'Never'], ['six', 'Every 6'], ['turn', 'At the turn']], s.pairSwitch)}
+    <div class="nr-tip">${icon('spark', 16)}<span>${SWITCH_TIP[s.pairSwitch]}</span></div>
+    ${rulesBlock(s)}
+    ${bottom(s.saving ? 'Starting…' : 'Start round · 2v2', 'setup-save', { disabled: s.saving })}`;
+}
+
+const CART_TINT = { A: 'var(--good)', B: 'var(--t-B)', C: 'var(--t-C)', D: 'var(--t-D)' };
+
+/** ④ Cart game: 8 players, 4 carts. */
+function cartsView(s) {
+  const c = course(s);
+  const idx = (id) => s.players.map((p, i) => [p, i]).filter(([p]) => p.teamId === id).map(([, i]) => i);
+  const sched = s.schedule === 'turn' ? '2 rotations' : '3 rotations';
+  return `${topBar(s)}${headline('Step 4 · Cart game setup', '8 players, 4 carts')}
+    <div class="nr-course small"><div class="ellipsis" style="flex:1"><b>Cart game</b> <span class="soft">· 8 players${c ? ` · ${esc(c.shortName || c.name)}` : ''}</span></div><button class="btn small" data-act="setup-go" data-v="game">Change</button></div>
+    <p class="meta nr-hint">${s.pairedFromLast ? 'Paired like your last round · ' : ''}Tap two names to swap.</p>
+    <div class="cart-grid">${TEAM_IDS.map((id) => {
+      const t = s.teams.find((x) => x.id === id);
+      return `<div class="cart-card" style="--jersey:${CART_TINT[id]}">
+        <div class="cc-k mono">CART ${id}</div>
+        <input class="cc-name" maxlength="20" placeholder="Names itself on join" value="${esc(t.name)}" aria-label="Team name for cart ${id}" data-input="setup-teamname" data-v="${id}">
+        ${idx(id).map((i) => swapBtn(s, i, s.players[i].strokes !== '' && s.players[i].strokes != null ? `<span class="mono soft">${esc(s.players[i].strokes)}</span>` : '')).join('')}
+      </div>`;
+    }).join('')}</div>
+    <div class="nr-two"><button class="btn ghost" data-act="setup-shuffle">Shuffle carts</button><button class="btn ghost" data-act="setup-go" data-v="players">Edit players</button></div>
+    <button class="nr-row" data-act="setup-go" data-v="matchups"><span style="flex:1;min-width:0"><b class="rt">Game &amp; matchups</b><span class="rs ellipsis">${esc(`${rulesSummary(s).split(' · ').slice(0, 2).join(' · ')} · ${sched}`)}</span></span><span class="meta">Optional</span>${icon('fwd', 18)}</button>
+    ${bottom(s.saving ? 'Starting…' : 'Start round · 8 players', 'setup-save', { disabled: s.saving })}`;
+}
+
+/** ④b Game & matchups (optional; defaults set). */
+function matchupsView(s) {
+  const rot = cartRotation(s.schedule, s.opps);
+  const opps = rot.map((r) => r.matches[0][1]);
+  const uniq = new Set(opps).size;
+  const tip = uniq === 3 ? `You face all 3 other carts: ${opps.join(', then ')}.` : `You face ${uniq} of the 3 other carts${uniq < opps.length ? ' (a repeat is fine)' : ''}.`;
+  const when = s.schedule === 'turn' ? 'at the turn' : 'at holes 7 and 13';
+  const fixed = s.settings.rotationMode !== 'swap';
+  const name = (id) => (id === 'A' ? 'A · You' : id);
+  const chip = (id) => `<span class="mu-chip" style="--jersey:${CART_TINT[id]}">${name(id)}</span>`;
+  const rows = rot.map((r, i) => {
+    const h = `${r.holes[0]}–${r.holes[1]}`;
+    if (s.custom) {
+      return `<div class="mu-row"><span class="mono soft mu-h">${h}</span><b class="good-ink">You vs</b>
+        <span class="mu-picks">${['B', 'C', 'D'].map((k) => `<button class="mu-pick${k === opps[i] ? ' on' : ''}" style="--jersey:${CART_TINT[k]}" data-act="setup-opp" data-i="${i}" data-v="${k}" aria-pressed="${k === opps[i]}" aria-label="Holes ${h}: play cart ${k}">${k}</button>`).join('')}</span>
+        <span class="mono soft mu-rest">${r.matches[1].join(' vs ')}</span></div>`;
+    }
+    return `<div class="mu-row"><span class="mono soft mu-h">${h}</span><span class="mu-m">${chip(r.matches[0][0])}<small>vs</small>${chip(r.matches[0][1])}</span><span class="mu-m">${chip(r.matches[1][0])}<small>vs</small>${chip(r.matches[1][1])}</span></div>`;
+  }).join('');
+  const g1 = rot[0].matches[0].join(' + '), g2 = rot[0].matches[1].join(' + ');
+  const groupLine = fixed ? `1st tee time: ${g1} · 2nd: ${g2}, all 18. Nobody moves.` : `Each matchup plays as a foursome. Groups re-form ${when}.`;
+  return `${topBar(s)}${headline('Step 5 · Optional', 'Game &amp; matchups', 'Defaults are set. Change anything, or just start.')}
+    <div class="lbl nr-lbl">Switch opponents</div>
+    ${seg('setup-schedule', [['six', 'Every 6 holes'], ['turn', 'At the turn']], s.schedule)}
+    <div class="nr-hint meta">${esc(tip)}</div>
+    <div class="lbl nr-lbl">On the course</div>
+    ${seg('setup-move', [['fixed', 'Keep tee times'], ['swap', 'Play together']], fixed ? 'fixed' : 'swap')}
+    <div class="nr-tip">${icon('spark', 16)}<span>${fixed ? 'Groups never change. The app keeps score against your opponent in the other group. Best for pace of play.' : `Carts swap foursomes ${when} so you play next to your opponent. Both groups need to meet up.`}</span></div>
+    <div class="nr-line"><span class="lbl" style="flex:1">Matchups</span><button class="btn small" data-act="setup-shuffle-mu">Shuffle</button><button class="btn small${s.custom ? ' primary' : ''}" data-act="setup-custom">${s.custom ? 'Done' : 'Custom'}</button></div>
+    <div class="mu-card">${rows}<div class="mu-groups meta">${esc(groupLine)}</div></div>
+    ${rulesBlock(s)}
+    ${bottom(s.saving ? 'Starting…' : 'Start round · 8 players', 'setup-save', { disabled: s.saving })}`;
+}
+
+/** Scorecard check: good / fix / entered by hand. Also tees, first tee and the round name. */
+function checkView(s) {
+  const c = course(s);
+  if (!c) return courseView(s);
+  if (s.courseStatus === 'loading') return `${topBar(s)}${headline(esc(c.name), 'Scorecard check')}<p class="meta"><span class="spinner tiny"></span> Getting the scorecard…</p>`;
+  const manual = c.source === 'manual';
+  const filled = (c.par || []).filter((p, i) => p != null && c.strokeIndex?.[i] != null).length;
+  const issues = manual && filled < 18 ? [] : cd.scorecardProblems(c);
+  const tone = manual && filled < 18 ? 'hand' : issues.length ? 'warn' : 'good';
+  const par = (c.par || []).reduce((a, b) => a + (Number(b) || 0), 0);
+  const head = tone === 'good' ? `✓ All good · par ${par} · hole handicaps 1–18` : tone === 'warn' ? `${issues.length} thing${issues.length === 1 ? '' : 's'} to fix before you start` : `${filled} of 18 holes filled in`;
+  const src = { builtin: 'Checked against the card', yours: 'From your group’s last round', opengolfapi: 'From course data', manual: 'Entered by you' }[c.source] || '';
+  const used = s.mine.find((m) => m.id === c.id)?.rounds;
+  const tags = [src, used ? `Used in ${used} round${used === 1 ? '' : 's'}` : '', c.source === 'opengolfapi' ? 'Not checked yet' : ''].filter(Boolean);
+  const bad = new Set();
+  if (issues.length) {
+    (c.par || []).forEach((p, i) => { if (!(Number.isInteger(p) && p >= 3 && p <= 6)) bad.add(`p${i}`); });
+    const si = c.strokeIndex || [];
+    const seen = new Map();
+    si.forEach((v, i) => { if (!(Number.isInteger(v) && v >= 1 && v <= 18)) bad.add(`h${i}`); else seen.set(v, [...(seen.get(v) || []), i]); });
+    for (const [, list] of seen) if (list.length > 1) list.forEach((i) => bad.add(`h${i}`));
+  }
+  const cell = (key, i, v, lo, hi, label) => `<input class="sck mono${bad.has(`${key === 'par' ? 'p' : 'h'}${i}`) ? ' bad' : v == null || v === '' ? ' empty' : ''}" inputmode="numeric" pattern="[0-9]*" maxlength="${String(hi).length}" value="${esc(v ?? '')}" placeholder="–" aria-label="Hole ${i + 1} ${label}" data-input="setup-sc${key === 'par' ? 'par' : 'si'}" data-i="${i}">`;
+  const nine = (from) => {
+    const idx = Array.from({ length: 9 }, (_, k) => from + k);
+    const sum = idx.every((i) => c.par?.[i] != null) ? idx.reduce((a, i) => a + Number(c.par[i]), 0) : '–';
+    return `<div class="sc-nine">
+      <div class="sc-r"><span class="sc-l">Hole</span>${idx.map((i) => `<span class="sc-h mono">${i + 1}</span>`).join('')}<span class="sc-t">${from ? 'IN' : 'OUT'}</span></div>
+      <div class="sc-r"><span class="sc-l b">Par</span>${idx.map((i) => cell('par', i, c.par?.[i], 3, 6, 'par')).join('')}<span class="sc-t mono b">${sum}</span></div>
+      <div class="sc-r"><span class="sc-l b">Hcp</span>${idx.map((i) => cell('si', i, c.strokeIndex?.[i], 1, 18, 'handicap')).join('')}<span class="sc-t"></span></div>
+    </div>`;
+  };
+  const ok = tone === 'good';
+  return `${topBar(s)}${headline(`${esc(c.shortName || c.name)}${s.tee ? ` · ${esc(s.tee.name)} tees` : ''}${manual ? ' · entered by hand' : ''}`, 'Scorecard check')}
+    ${manual ? `<input class="input" id="course-name" maxlength="60" placeholder="Course name" value="${esc(c.name)}" aria-label="Course name" data-input="setup-cname" style="margin:0 0 10px">` : ''}
+    <div class="sc-status ${tone}">
+      <div class="sc-head">${esc(head)}</div>
+      ${issues.map((x) => `<div class="sc-issue"><b>•</b><span>${esc(x)}</span></div>`).join('')}
+      <div class="sc-tags">${tags.map((t) => `<span class="mono">${esc(t)}</span>`).join('')}</div>
+    </div>
+    ${nine(0)}${nine(9)}
+    <p class="meta nr-hint">${ok ? 'Tap any number to change it. The organizer can also fix a hole mid-round from Host.' : 'Copy from the paper card. Hcp is the “Handicap” row: 1 is the hardest hole, 18 the easiest, each used once.'}</p>
+    ${c.source === 'opengolfapi' || c.lastSource === 'opengolfapi' ? `<p class="meta attrib">Course data ${esc(cd.ATTRIBUTION)}</p>` : ''}
+    ${c.tees?.length ? `<div class="lbl nr-lbl">Tees</div><div class="chips">${c.tees.map((t) => `<button class="chip" data-act="setup-tee" data-v="${esc(t.name)}" aria-pressed="${s.tee?.name === t.name}">${esc(t.name)}${t.yards ? ` <span class="soft mono" style="font-size:12px">${t.yards}</span>` : ''}</button>`).join('')}</div>` : ''}
+    <div class="lbl nr-lbl">First tee</div>${seg('setup-set', [['1', 'Hole 1'], ['10', 'Hole 10']], String(s.settings.startHole || 1), 'data-k="startHole"')}
+    <div class="field" style="margin-top:14px"><label for="round-name">Round name (optional)</label>
+      <input class="input" id="round-name" maxlength="60" value="${esc(s.name)}" placeholder="${esc(`${c.shortName || cd.shortCourseName(c.name || '') || 'Round'} · ${prettyDate(todayISO())}`)}" data-input="setup-name"></div>
+    ${bottom(ok ? 'Looks right' : tone === 'hand' ? `Save card · ${18 - filled} hole${18 - filled === 1 ? '' : 's'} left` : `Fix ${issues.length} thing${issues.length === 1 ? '' : 's'} to continue`, 'setup-go', { v: 'players', disabled: !ok })}`;
+}
+
+/** ⑤ Round is live. */
 function savedView(s) {
   const v = s.saved;
-  return `<div class="saved-box">
-      <div class="micro">Join code</div><div class="big-code">${esc(v.code)}</div>
-      <div class="micro" style="margin-top:12px">Share link · safe for the group chat</div>
-      <div class="copy-line"><code>${esc(roundLink(v.code))}</code><button class="btn small" data-act="setup-copy" data-v="share">${icon('copy', 16)} Copy</button></div>
+  const c = course(s);
+  const n = s.players.length;
+  return `<div class="live-top"><div class="live-check">${icon('check', 28)}</div>
+      <h1 class="nr-title">Round is live</h1>
+      <div class="nr-sub">${esc([c?.shortName || c?.name, prettyDate(todayISO()), s.tee ? `${s.tee.name} tees` : '', `${n} player${n === 1 ? '' : 's'}`].filter(Boolean).join(' · '))}</div></div>
+    <div class="saved-box">
+      <div class="lbl">Join code</div><div class="big-code mono">${esc(v.code)}</div>
+      <div class="mono meta live-link">${esc(roundLink(v.code).replace(/^https?:\/\//, ''))}</div>
+      <div class="nr-two"><button class="btn primary" data-act="setup-copy" data-v="share">${icon('share', 18)} Text the group</button><button class="btn" data-act="setup-copy" data-v="link">Copy link</button></div>
     </div>
     <div class="saved-box secret">
-      <div class="micro" style="color:var(--warn)">Organizer only · screenshot this, keep it private</div>
-      <div class="spread" style="margin-top:6px"><span>Admin PIN</span><span class="big-code" style="font-size:32px">${esc(v.admin_pin)}</span></div>
-      <div class="copy-line"><code>${esc(roundLink(v.code, '/host'))}</code><button class="btn small" data-act="setup-copy" data-v="host">${icon('copy', 16)} Copy</button></div>
+      <div class="sec-k">${icon('lock', 16)} Organizer only · screenshot this, keep it private</div>
+      <div class="sec-grid"><span class="soft">Admin PIN</span><span class="mono sec-pin">${esc(v.admin_pin)}</span>
+        <span class="soft">Host link</span><span class="sec-link"><span class="mono ellipsis">${esc(roundLink(v.code, '/host').replace(/^https?:\/\//, ''))}</span><button class="btn small" data-act="setup-copy" data-v="host">Copy</button></span></div>
+      <div class="meta">Lets you fix scores and the scorecard from any phone if this one dies.</div>
     </div>
-    <button class="btn primary big block" data-act="setup-open">Open the round</button>`;
+    ${bottom('Open the round', 'setup-open')}`;
 }
+
+const VIEWS = { course: courseView, which: whichView, players: playersView, check: checkView, game: gameView, teams: (s) => (s.game === 'carts' ? cartsView(s) : pairsView(s)), matchups: matchupsView };
+
 
 // ───────────────────────────────────────────── course search actions
 
@@ -611,8 +754,10 @@ function pickCourse(app, c, status) {
   s.course = c;
   s.courseId = c.id;
   s.courseStatus = status;
-  s.tee = null;
-  s.editCard = false;
+  s.tee = c.tee && (c.tees || []).some((t) => t.name === c.tee.name) ? c.tee : null; // the tee your group played last time
+  s.which = null;
+  s.whichName = '';
+  s.screen = c.variants?.length > 1 ? 'which' : c.source === 'manual' ? 'check' : 'players';
   persist(s);
   app.render();
   document.getElementById('content').scrollTop = 0;
@@ -628,7 +773,6 @@ function scoreCell(app, el, key, lo, hi) {
   const n = v === '' ? null : Number(v);
   if (!s.course) s.course = clone(c);
   s.course[key][Number(el.dataset.i)] = n != null && n >= lo && n <= hi ? n : null;
-  s.editCard = true;
   persist(s);
   app.render(); // shows after the box loses focus (typing isn't interrupted)
 }
@@ -641,12 +785,13 @@ export default {
     if (app.setup && app.setup.from === from && !app.setup.saved) return;
     const draft = db.local.get(DRAFT_KEY);
     if (!from && draft && !draft.saved && (draft.players?.length || draft.courseId)) {
-      app.setup = { ...blank(null), ...draft, step: Math.min(draft.step || 0, 4), saving: false };
+      const screen = VIEWS[draft.screen] ? draft.screen : draft.step ? 'players' : 'course';
+      app.setup = { ...blank(null), ...draft, screen, saving: false, swapSel: null };
       const s = app.setup;
       s.players = (s.players || []).map(withName);
       s.nickAsk = null;
       if (!s.course && s.courseId) s.course = clone(COURSES.find((c) => c.id === s.courseId) || null);
-      if (!s.course) s.courseId = null;
+      if (!s.course) { s.courseId = null; s.screen = 'course'; }
       if (s.courseStatus === 'loading' && s.course?.ogaId) loadCourse(app, s.course.ogaId);
     } else {
       app.setup = blank(from);
@@ -661,34 +806,28 @@ export default {
 
   mount(root, app) {
     const s = app.setup;
-    if (!s || s.saved || s.step !== 0 || course(s) || s.nearStatus !== 'idle' || s.autoNearTried) return;
+    if (!s || s.saved || s.screen !== 'course' || s.nearStatus !== 'idle' || s.autoNearTried) return;
     s.autoNearTried = true;
     // Look for nearby courses straight away (the course you're standing at goes on top). If the
     // site doesn't have location yet the phone asks once; blocked → the turn-it-on steps show.
     findNear(app);
   },
 
+  topBack(app) {
+    const s = app.setup;
+    const back = s && !s.saved ? BACK[s.screen] : null;
+    if (!back) return null;
+    const label = typeof BACK_LABEL[back] === 'function' ? BACK_LABEL[back](s) : BACK_LABEL[back];
+    return `<button class="back" data-act="setup-go" data-v="${back}">${icon('back', 22)}<span>${esc(label)}</span></button>`;
+  },
+
   render(app) {
     const s = app.setup;
     if (!s) return '';
     relabel(s);
-    const name = STEPS[s.step];
-    const dots = STEPS.map((_, i) => `<i class="${i <= s.step ? 'on' : ''}"></i>`).join('');
-    const c0 = course(s);
-    const canNext = s.step === 0 ? !!c0 && (c0.source !== 'manual' || !!(c0.name || '').trim()) : true;
-    const foot = s.saved
-      ? ''
-      : `<div class="setup-foot">
-          ${s.step > 0 ? '<button class="btn" data-act="setup-back">Back</button>' : ''}
-          ${s.step < STEPS.length - 1 ? `<button class="btn primary" data-act="setup-next" ${canNext ? '' : 'disabled'}>Next: ${STEPS[s.step + 1]}</button>` : ''}
-        </div>`;
-    return `<div class="plain" style="padding-bottom:0">
-      <div class="steps">${dots}</div>
-      <div class="micro">${s.saved ? 'Round saved' : `Step ${s.step + 1} of ${STEPS.length} · ${name}`}</div>
-      <h1 class="title" style="margin:2px 0 16px">${s.saved ? 'You’re set' : s.from ? 'Run it back' : 'New round'}</h1>
-      ${s.loadingFrom ? '<p class="meta">Copying the last round…</p>' : VIEWS[name](s, app)}
-      ${foot}
-    </div>`;
+    curState = s;
+    const body = s.saved ? savedView(s) : s.loadingFrom ? '<p class="meta" style="margin-top:20px">Copying the last round…</p>' : (VIEWS[s.screen] || courseView)(s, app);
+    return `<div class="plain nr-setup">${body}</div>`;
   },
 
   actions: {
@@ -736,18 +875,7 @@ export default {
         id: `manual:${db.uuid()}`, name: (s.q || '').trim().slice(0, 60), shortName: '', location: '', tees: [],
         par: Array(18).fill(null), strokeIndex: Array(18).fill(null), holes: 18, source: 'manual',
       }, 'ready');
-      s.editCard = true;
       setTimeout(() => document.getElementById('course-name')?.focus(), 50);
-    },
-    'setup-unpick': (el, ev, app) => {
-      const s = app.setup;
-      s.course = null;
-      s.courseId = null;
-      s.courseStatus = 'idle';
-      s.tee = null;
-      s.editCard = false;
-      persist(s);
-      app.render();
     },
     'setup-course-retry': (el, ev, app) => {
       const s = app.setup;
@@ -762,12 +890,7 @@ export default {
       s.course.name = el.value.slice(0, 60);
       s.course.shortName = cd.shortCourseName(s.course.name);
       persist(s);
-      const next = document.querySelector('[data-act="setup-next"]');
-      if (next) next.disabled = !s.course.name.trim();
-    },
-    'setup-card-edit': (el, ev, app) => {
-      app.setup.editCard = true;
-      app.render();
+
     },
     'setup-scpar': (el, ev, app) => scoreCell(app, el, 'par', 3, 6),
     'setup-scsi': (el, ev, app) => scoreCell(app, el, 'strokeIndex', 1, 18),
@@ -876,55 +999,15 @@ export default {
       persist(s);
       app.render();
     },
-    'setup-remove': (el, ev, app) => {
-      app.setup.players.splice(Number(el.dataset.i), 1);
-      persist(app.setup);
-      app.render();
-    },
     'setup-strokes': (el, ev, app) => {
       const v = el.value.replace(/[^0-9]/g, '').slice(0, 2);
       if (v !== el.value) el.value = v;
       app.setup.players[Number(el.dataset.i)].strokes = v;
       persist(app.setup);
     },
-    'setup-team': (el, ev, app) => {
-      const s = app.setup;
-      const p = s.players[Number(el.dataset.i)];
-      const id = el.dataset.v;
-      if (p.teamId === id) p.teamId = null;
-      else {
-        if (s.players.filter((x) => x.teamId === id).length >= 2) {
-          app.toast({ title: `Cart ${id} is full`, sub: 'Two players per cart.', error: true });
-          return;
-        }
-        p.teamId = id;
-      }
-      persist(s);
-      app.render();
-    },
     'setup-teamname': (el, ev, app) => {
       app.setup.teams.find((t) => t.id === el.dataset.v).name = el.value.slice(0, 20);
       persist(app.setup);
-    },
-    'setup-swap': (el, ev, app) => {
-      const st = app.setup.settings;
-      st.rotationMode = st.rotationMode === 'swap' ? 'fixed' : 'swap';
-      persist(app.setup);
-      app.render();
-    },
-    'setup-shuffle': (el, ev, app) => {
-      const order = [0, 1, 2].sort(() => Math.random() - 0.5);
-      app.setup.rotation = app.setup.rotation.map((r, i) => ({
-        holes: r.holes,
-        matches: clone(MATCHINGS[order[i]]).sort(() => Math.random() - 0.5),
-      }));
-      persist(app.setup);
-      app.render();
-    },
-    'setup-group': (el, ev, app) => {
-      app.setup.players[Number(el.dataset.i)].groupId = el.dataset.v;
-      persist(app.setup);
-      app.render();
     },
     'setup-set': (el, ev, app) => {
       const st = app.setup.settings;
@@ -934,11 +1017,6 @@ export default {
       if (k === 'plusMinusCap') v = v === '' ? null : Number(v);
       if (k === 'startHole') v = Number(v);
       st[k] = v;
-      persist(app.setup);
-      app.render();
-    },
-    'setup-solo': (el, ev, app) => {
-      app.setup.settings.solo = el.dataset.v === 'on';
       persist(app.setup);
       app.render();
     },
@@ -954,31 +1032,18 @@ export default {
       persist(app.setup);
       app.render();
     },
-    'setup-allow': (el, ev, app) => {
-      const v = el.value.replace(/[^0-9]/g, '').slice(0, 3);
-      if (v !== el.value) el.value = v;
-      app.setup.settings.allowancePct = v === '' ? 100 : Math.min(100, Number(v));
-      persist(app.setup);
-    },
-    'setup-next': (el, ev, app) => {
-      const s = app.setup;
-      const c = course(s);
-      if (s.step === 0 && (!c || (c.source === 'manual' && !(c.name || '').trim()))) return;
-      s.step = Math.min(STEPS.length - 1, s.step + 1);
-      persist(s);
-      app.render();
-      document.getElementById('content').scrollTop = 0;
-    },
-    'setup-back': (el, ev, app) => {
-      const s = app.setup;
-      s.step = Math.max(0, s.step - 1);
-      persist(s);
-      app.render();
-      document.getElementById('content').scrollTop = 0;
-    },
     'setup-save': async (el, ev, app) => {
       const s = app.setup;
-      if (problems(s).length || s.saving) return;
+      if (s.saving) return;
+      const issues = problems(s);
+      if (issues.length) {
+        const where = cardProblem(s);
+        if (where) s.screen = where;
+        else if (issues.some((x) => /name|player/i.test(x))) s.screen = 'players';
+        app.render();
+        app.toast({ title: 'Not ready yet', sub: issues[0], error: true });
+        return;
+      }
       s.saving = true;
       app.render();
       // Full names are one per person app-wide: a clash with a crew-mate is that person;
@@ -996,6 +1061,7 @@ export default {
         });
         if (blocked) {
           s.saving = false;
+          s.screen = 'players';
           persist(s);
           app.render();
           app.toast({ title: 'That name\u2019s taken', sub: 'Add a nickname on Players so they\u2019re their own player.', error: true });
@@ -1040,6 +1106,149 @@ export default {
       const code = app.setup.saved.code;
       app.setup = null;
       app.go(`#/e/${code}/enter`);
+    },
+    'setup-go': (el, ev, app) => {
+      const s = app.setup;
+      const to = el.dataset.v;
+      if (to === 'game' && !s.players.length) return;
+      if (to === 'teams') {
+        const g = gameOf(s);
+        if (g !== s.game || (g !== '2v2' && g !== 'carts')) return;
+        if (g === 'carts') ensureCarts(s);
+      }
+      if (to === 'matchups') ensureCarts(s);
+      s.screen = to;
+      s.swapSel = null;
+      persist(s);
+      app.render();
+      document.getElementById('content').scrollTop = 0;
+    },
+    'setup-unpick': (el, ev, app) => {
+      const s = app.setup;
+      s.course = null;
+      s.courseId = null;
+      s.courseStatus = 'idle';
+      s.tee = null;
+      s.screen = 'course';
+      persist(s);
+      app.render();
+    },
+    'setup-which': (el, ev, app) => {
+      app.setup.which = Number(el.dataset.v);
+      app.render();
+    },
+    'setup-whichname': (el, ev, app) => {
+      app.setup.whichName = el.value.trim().slice(0, 20);
+    },
+    'setup-which-done': (el, ev, app) => {
+      // The picked course of a multi-course club becomes its own course ("Bear Creek · East"),
+      // saved with the round, so your group sees it as its own pick next time.
+      const s = app.setup;
+      const c = course(s);
+      const v = c?.variants?.find((x) => x.n === s.which);
+      if (!v) return;
+      const label = (s.whichName || '').trim() || v.label;
+      const club = c.shortName || cd.shortCourseName(c.name);
+      s.course = {
+        ...c, id: `${c.id.split('#')[0]}#${v.n}`, name: `${c.name} · ${label}`, shortName: `${club} · ${label}`,
+        par: [...v.par], strokeIndex: [...v.strokeIndex], variant: v.n,
+      };
+      delete s.course.variants;
+      s.courseId = s.course.id;
+      s.screen = 'players';
+      persist(s);
+      app.render();
+      document.getElementById('content').scrollTop = 0;
+    },
+    'setup-remove': (el, ev, app) => {
+      app.setup.players.splice(Number(el.dataset.i), 1);
+      persist(app.setup);
+      app.render();
+    },
+    'setup-game': (el, ev, app) => {
+      const s = app.setup;
+      const fix = gameFix(el.dataset.v, s.players.length);
+      if (fix) {
+        app.toast({ title: GAMES.find((g) => g.id === el.dataset.v).name, sub: fix });
+        return;
+      }
+      s.game = el.dataset.v;
+      persist(s);
+      app.render();
+    },
+    'setup-max': (el, ev, app) => {
+      const st = app.setup.settings;
+      const order = ['doublePar', 'netDoubleBogey', 'none'];
+      st.maxHoleScore = order[(order.indexOf(st.maxHoleScore) + 1) % order.length];
+      persist(app.setup);
+      app.render();
+    },
+    'setup-rules': (el, ev, app) => {
+      app.setup.rulesOpen = !app.setup.rulesOpen;
+      app.render();
+    },
+    'setup-pairswitch': (el, ev, app) => {
+      app.setup.pairSwitch = el.dataset.v;
+      persist(app.setup);
+      app.render();
+    },
+    'setup-schedule': (el, ev, app) => {
+      app.setup.schedule = el.dataset.v === 'turn' ? 'turn' : 'six';
+      persist(app.setup);
+      app.render();
+    },
+    'setup-move': (el, ev, app) => {
+      app.setup.settings.rotationMode = el.dataset.v === 'swap' ? 'swap' : 'fixed';
+      persist(app.setup);
+      app.render();
+    },
+    'setup-custom': (el, ev, app) => {
+      const s = app.setup;
+      s.custom = !s.custom;
+      if (!s.opps) s.opps = cartRotation(s.schedule).map((r) => r.matches[0][1]);
+      app.render();
+    },
+    'setup-opp': (el, ev, app) => {
+      const s = app.setup;
+      s.opps = s.opps ? [...s.opps] : cartRotation(s.schedule).map((r) => r.matches[0][1]);
+      while (s.opps.length < 3) s.opps.push(['B', 'C', 'D'][s.opps.length]);
+      s.opps[Number(el.dataset.i)] = el.dataset.v;
+      persist(s);
+      app.render();
+    },
+    'setup-shuffle-mu': (el, ev, app) => {
+      const s = app.setup;
+      const a = ['B', 'C', 'D'];
+      for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+      s.opps = a;
+      persist(s);
+      app.render();
+    },
+    'setup-swapsel': (el, ev, app) => {
+      // Tap a name, then another: they trade places (2v2: partners; cart game: carts).
+      const s = app.setup;
+      const i = Number(el.dataset.i);
+      if (s.swapSel == null) s.swapSel = i;
+      else if (s.swapSel === i) s.swapSel = null;
+      else {
+        const j = s.swapSel;
+        if (gameOf(s) === 'carts') [s.players[i].teamId, s.players[j].teamId] = [s.players[j].teamId, s.players[i].teamId];
+        else [s.players[i], s.players[j]] = [s.players[j], s.players[i]];
+        s.swapSel = null;
+        persist(s);
+      }
+      app.render();
+    },
+    'setup-shuffle': (el, ev, app) => {
+      const s = app.setup;
+      const order = s.players.map((_, i) => i);
+      for (let i = order.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
+      if (gameOf(s) === 'carts') order.forEach((pi, k) => { s.players[pi].teamId = TEAM_IDS[Math.floor(k / 2)]; });
+      else s.players = order.map((k) => s.players[k]);
+      s.swapSel = null;
+      s.pairedFromLast = false;
+      persist(s);
+      app.render();
     },
   },
 };

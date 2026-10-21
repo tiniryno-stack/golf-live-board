@@ -112,6 +112,34 @@ export function shortCourseName(name) {
   return (s || full).slice(0, 28);
 }
 
+/**
+ * A club listed as one course with two or three courses' holes mixed in (the same hole number
+ * more than once): split it in listing order — the first hole 1, 2 … 18 is Course 1, the second
+ * of each is Course 2, … Each variant: label (the listing's own course name if a hole row has
+ * one, else "Course N"), pars, hole handicaps, total par, and holes 1 + 18 for matching the card.
+ * Fewer than 2 complete 18-hole sets → [] (a normal course).
+ */
+export function splitCourses(rows) {
+  const by = new Map();
+  for (const r of rows || []) {
+    if (!(r.n >= 1 && r.n <= 18)) continue;
+    if (!by.has(r.n)) by.set(r.n, []);
+    by.get(r.n).push(r);
+  }
+  const k = Math.max(0, ...[...by.values()].map((l) => l.length));
+  if (k < 2) return [];
+  const out = [];
+  for (let j = 0; j < k; j++) {
+    const at = (n) => by.get(n)?.[j];
+    if (!Array.from({ length: 18 }, (_, i) => at(i + 1)).every(Boolean)) continue;
+    const par = Array.from({ length: 18 }, (_, i) => at(i + 1).par ?? null);
+    const strokeIndex = Array.from({ length: 18 }, (_, i) => at(i + 1).si ?? null);
+    const named = at(1).course || null;
+    out.push({ n: j + 1, label: named || `Course ${j + 1}`, named: !!named, par, strokeIndex, parTotal: par.reduce((a, b) => a + (b || 0), 0) });
+  }
+  return out.length > 1 ? out : [];
+}
+
 /** OpenGolfAPI course detail → our course shape (the same shape js/courses.js uses). */
 export function fromOpenGolf(d) {
   if (!d || !d.id) throw new Error('no course');
@@ -121,6 +149,7 @@ export function fromOpenGolf(d) {
     par: num(h.par),
     si: num(h.handicap_index ?? h.handicap ?? h.stroke_index),
     yards: h.yardages || null,
+    course: (h.course_name || h.course || h.layout || '').toString().trim() || null,
   }));
   const holes = num(d.holes) || rows.filter((h) => h.n).length || 18;
   const at = (n) => rows.find((h) => h.n === n);
@@ -136,7 +165,9 @@ export function fromOpenGolf(d) {
       return { name: label, yards: num(t.yardage ?? t.yards), rating: num(t.course_rating ?? t.rating), slope: num(t.slope) };
     })
     .sort((a, b) => (b.yards || 0) - (a.yards || 0));
+  const variants = splitCourses(rows);
   return {
+    ...(variants.length > 1 ? { variants } : {}),
     id: `oga:${d.id}`,
     ogaId: String(d.id),
     name,
