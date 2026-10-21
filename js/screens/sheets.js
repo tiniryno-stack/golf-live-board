@@ -41,6 +41,47 @@ export function render(root, app) {
   }
 }
 
+/** The Rules sheet's rows: [label, value, one line of detail], from the round's settings. */
+export function rulesRows(app) {
+  const snap = app.snapshot;
+  const st = snap.settings;
+  const g = snap.game;
+  const mine = app.myTeam();
+  const name = (t) => snap.teamById.get(t)?.name || t;
+  const rows = [];
+  const half = Number(st.halvedHolePoints) ? `A tie splits it, ${fmtPts(Number(st.halvedHolePoints))} each.` : 'A tie is worth nothing.';
+  const two = st.teamScore === 'bestBallAggregate';
+  if (!g) {
+    rows.push(['Format', snap.hasStrokes ? 'Stroke play · net' : 'Stroke play', 'Everyone plays their own ball. Lowest total wins.']);
+  } else if (g.type === 'splitPoint') {
+    rows.push(['Format', 'Match play · everyone vs everyone', 'Everyone plays their own ball.']);
+    rows.push(['Points', '1 a hole', 'Low net score takes it. A tie for low splits it (½, ⅓, ¼…).']);
+  } else {
+    const three = !st.pairs && snap.teams.length === 3;
+    rows.push(['Format', `${st.pairs ? '2v2' : 'Partner “Rider” Cup'} · ${g.type === 'rotationPlusMinus' ? 'Plus/Minus' : 'Match play'}${snap.hasStrokes ? ' · net' : ''}`,
+      st.pairs ? 'Two teams of two in one foursome.' : three ? 'Your cart plays both other carts on every hole.' : 'Your cart vs one other cart at a time.']);
+    if (g.type === 'rotationPlusMinus') rows.push(['Points', 'Every stroke counts', `${two ? 'Low ball and low total' : st.teamScore === 'aggregate' ? 'Both partners added' : 'Best ball'}: beat theirs and the difference is yours.${g.cap != null ? ` A matchup swings ±${g.cap} at most.` : ''}`]);
+    else rows.push(['Points', `${g.ncomp * (three ? 2 : 1)} a hole`, `${two ? '1 for low ball, 1 for low total' : st.teamScore === 'aggregate' ? '1 for the lower total of both partners' : '1 for the best ball'}${three ? ', against each cart' : ''}. ${half}${g.bonus ? ` +${fmtPts(g.bonus)} for winning a matchup.` : ''}`]);
+    const myMatches = mine ? g.matches.filter((m) => m.teams.includes(mine)) : [];
+    const lens = [...new Set(g.rotations.map((r) => r.to - r.from + 1))];
+    const switchLabel = g.rotations.length === 1 ? 'Same opponents all 18' : lens[0] === 9 ? 'Switch at the turn' : `Switch every ${lens[0]} holes`;
+    const vs = myMatches.length
+      ? myMatches.map((m) => `${m.firstHole}–${m.lastHole} vs ${shortTeam(name(m.teams.find((t) => t !== mine)))}`).join(', ')
+      : g.rotations.map((r) => `${r.matches[0] ? `${r.matches[0].firstHole}–${r.matches[0].lastHole}` : ''}`).join(', ');
+    const stay = (st.rotationMode || 'swap') === 'swap' ? 'Carts swap foursomes at the switch.' : 'You keep your tee time.';
+    rows.push([st.pairs ? 'Partners' : 'Opponents', st.pairs ? ({ never: 'Same partner all 18', six: 'Switch every 6 holes', turn: 'Switch at the turn' })[st.pairSwitch] || 'Same partner all 18' : switchLabel, st.pairs ? 'Nobody changes groups.' : `${vs}. ${stay}`]);
+  }
+  const allow = Number(st.allowancePct ?? 100);
+  rows.push(['Handicaps', `${allow === 100 ? 'Full' : `${allow}%`}, ${st.handicapMode === 'offLow' ? 'off the low player' : 'off zero'}`, snap.hasStrokes ? 'Strokes fall on the hardest holes first (stroke index).' : 'Nobody gets strokes in this round.']);
+  rows.push(['Max score', ({ doublePar: 'Double par', netDoubleBogey: 'Net double bogey', none: 'None' })[st.maxHoleScore] || 'Double par',
+    st.maxHoleScore === 'none' ? 'Play every hole out.' : `Pick up once you hit it; it counts as that score.${st.par3NoMax ? ' No max on par 3s.' : ''}`]);
+  if (g && g.type !== 'splitPoint') rows.push(['Winner', g.type === 'rotationPlusMinus' ? 'Best +/− after 18' : 'Most points after 18', 'Tie at the top: better matchup record, then who won between the two, then the stroke margin. Still tied = shared.']);
+  else if (g) rows.push(['Winner', 'Most points after 18', 'A tie at the top is shared.']);
+  else rows.push(['Winner', `Lowest ${snap.hasStrokes ? 'net ' : ''}total`, 'A tie is shared.']);
+  if (st.teeTimes?.some(Boolean)) rows.push(['Tee times', st.teeTimes.map((t, i) => teeTimeName(st, i)).join(' · '), '']);
+  return rows;
+}
+
 /** Swipe down on a sheet (from its top, when it isn't scrolled) to close it. Wired once per root. */
 function armSwipe(root, app) {
   if (root.dataset.swipe) return;
@@ -167,6 +208,19 @@ const BODIES = {
       </div>
       <div class="fh-warn">${icon('alert', 18)}<span>Changes the card for all ${n} players.</span></div>
       <button class="btn primary big block" data-act="fixhole-save">Save hole ${hole}</button>`;
+  },
+
+  /** Matches → Rules: the round's real settings in plain words (designspec §6b). */
+  rules(app) {
+    const snap = app.snapshot;
+    if (!snap) return head('Rules');
+    const rows = rulesRows(app).map(([k, v, d]) => `<div class="rl-row"><div class="ts-label rl-k">${esc(k)}</div><div class="rl-v">${esc(v)}</div>${d ? `<div class="rl-d">${esc(d)}</div>` : ''}</div>`).join('');
+    const ev = app.event;
+    const who = ev?.roster?.players?.[0]?.name;
+    return `${head('Rules', [ev?.course?.shortName || ev?.course?.name, ev?.played_on ? new Date(`${ev.played_on}T12:00:00`).toLocaleDateString([], { weekday: 'short' }) : ''].filter(Boolean).join(' · '))}
+      <div class="rl-list">${rows}</div>
+      <div class="rl-btns">${app.isOrganizer() ? '<button class="btn" data-act="rules-edit">Edit · organizer</button>' : ''}
+        <button class="btn" data-act="rules-share">${icon('share', 18)} Share rules</button></div>`;
   },
 
   /** Setup → Players: one player's handicap. */
@@ -466,6 +520,18 @@ function editValue(app, d) {
 export const actions = {
   'sheet-close': (el, ev, app) => app.closeSheet(),
   // Fix a hole (organizer): draft lives in the sheet's props until Save.
+  'rules-open': (el, ev, app) => app.openSheet('rules', {}),
+  'rules-edit': (el, ev, app) => {
+    app.closeSheet();
+    app.go(app.tabHash('host'));
+  },
+  'rules-share': async (el, ev, app) => {
+    const text = `${app.event?.name || 'Our round'} · rules\n${rulesRows(app).map(([k, v, d]) => `${k}: ${v}${d ? `. ${d}` : ''}`).join('\n')}`;
+    try {
+      if (navigator.share) await navigator.share({ title: 'Rules', text });
+      else { await navigator.clipboard.writeText(text); app.toast({ title: 'Rules copied' }); }
+    } catch { /* share sheet dismissed */ }
+  },
   'fixhole-open': (el, ev, app) => {
     const h = Number(el.dataset.v);
     const c = app.event?.course;

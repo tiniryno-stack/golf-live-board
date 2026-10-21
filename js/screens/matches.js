@@ -154,6 +154,7 @@ function waitingView(app) {
       return `<div class="mu-item"><span class="mi-h">${m.firstHole}–${m.lastHole}</span><span class="mi-v">${who}</span></div>`;
     }).join('');
   return `<div class="plain wait">
+      <div class="m-rules"><button class="btn small ghost" data-act="rules-open">Rules</button></div>
       <div class="ts-label wait-k">Before the first tee</div>
       <h1 class="ts-title wait-t">Waiting for the first scores</h1>
       <p class="wait-p">Matchups fill in as soon as anyone enters hole 1.</p>
@@ -237,6 +238,7 @@ export function teamGameView(app) {
   }).join('');
 
   return `<div class="plain matches-nr">
+      <div class="m-rules"><button class="btn small ghost" data-act="rules-open">Rules</button></div>
       ${watching ? mineBar : heroFull}
       ${otherBoxes}
     </div>`;

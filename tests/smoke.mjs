@@ -547,6 +547,12 @@ await R6.page.waitForTimeout(700);
 ok((await R6.page.$$('.seg2 button')).length === 2 && (await R6.page.$$('.watch-box')).length === 1 && /MATCH 1 OF 2/.test(await R6.page.textContent('.m-kicker')),
   'Matches: a segment for each of your 2 matchups, the third (B v C) under ALSO');
 await R6.page.screenshot({ path: 'tests/screenshots/matches-3-carts.png' });
+await R6.page.tap('[data-act="rules-open"]');
+await R6.page.waitForTimeout(300);
+const rules6 = (await R6.page.textContent('#sheet')).replace(/\s+/g, ' ');
+ok(/Partner “Rider” Cup · Match play/.test(rules6) && /4 a hole/.test(rules6) && /Same opponents all 18/.test(rules6) && /Full, off zero/.test(rules6) && /Double par/.test(rules6) && /better matchup record/.test(rules6),
+  `Rules sheet: the round's real settings (${rules6.slice(0, 120)}…)`);
+await R6.page.evaluate(() => window.__glb.closeSheet());
 await R6.page.evaluate(() => window.__glb.openSheet('menu', {}));
 await R6.page.waitForTimeout(300);
 ok(!!(await R6.page.$('#sheet [data-act="go"][data-v^="#/setup/"]')), 'the round’s ⋯ menu has Run it back as a new round');

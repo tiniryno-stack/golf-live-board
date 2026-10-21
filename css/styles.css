@@ -1316,3 +1316,14 @@ details.fold summary::-webkit-details-marker { display: none; }
   border-radius: var(--radius-lg); background: var(--warn-bg); border: 1.5px solid var(--warn); color: var(--warn); font-size: 15px; line-height: 20px; font-weight: 600; }
 .fh-par button { font-family: var(--font-mono); font-size: 17px; }
 .fh-warn svg { color: var(--warn); flex: none; }
+
+/* Rules sheet */
+.rl-list { display: flex; flex-direction: column; }
+.rl-row { display: grid; grid-template-columns: 96px minmax(0, 1fr); column-gap: var(--space-3); padding: var(--space-3) 0; border-bottom: 1px solid var(--line); }
+.rl-row .rl-k { grid-row: span 2; padding-top: 3px; }
+.rl-row:last-child { border-bottom: 0; }
+.rl-k { color: var(--text-muted); }
+.rl-v { font-size: 17px; line-height: 22px; font-weight: 600; }
+.rl-d { font-size: 15px; line-height: 20px; color: var(--text-muted); margin-top: 2px; }
+.rl-btns { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: var(--space-3); margin-top: var(--space-4); }
+.m-rules { display: flex; justify-content: flex-end; margin: 0 0 calc(-1 * var(--space-2)); }

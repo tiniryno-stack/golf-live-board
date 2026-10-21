@@ -356,6 +356,13 @@ for (const size of SIZES) {
   await page.waitForTimeout(300);
   await page.evaluate(() => { document.getElementById('toasts').innerHTML = ''; });
   await check(page, size, 'Enter (fixing a finalized round)', 'enter');
+  // Matches → Rules sheet (the round's real settings).
+  await go(`#/e/${r.code}/matches`);
+  await page.tap('[data-act="rules-open"]');
+  await page.waitForTimeout(400);
+  await check(page, size, 'Rules sheet');
+  await page.tap('#sheet .panel [data-act="sheet-close"]');
+  await page.waitForTimeout(350);
   // Before the first scores: the real structure with "–" and "Waiting for the first scores", not zeros.
   await page.evaluate((c) => {
     localStorage.setItem('glb.me.' + c, '"p1"'); localStorage.setItem('glb.who.' + c, 'true'); localStorage.setItem('glb.brief.' + c, 'true');
