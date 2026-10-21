@@ -1069,8 +1069,8 @@ details.fold summary::-webkit-details-marker { display: none; }
 .pl-list .player-row { min-height: 58px; padding: 0 2px 0 14px; border-bottom: 0; gap: 2px; }
 .pl-list .player-row + .player-row { border-top: 1px solid var(--line); }
 .pl-list .player-row .x { width: 48px; height: 48px; }
-.hcp-pill { width: 64px; height: 44px; flex: none; border-radius: 12px; border: 0; background: var(--surface-2); text-align: center; font-size: 17px; font-weight: 600; color: var(--ink); outline: none; }
-.hcp-pill.empty { border: 1.5px dashed var(--line); background: transparent; font-size: 13px; }
+.hcp-pill { width: 64px; height: var(--tap-min); flex: none; border-radius: var(--radius-md); border: 0; background: var(--surface-2); text-align: center; font-size: 17px; font-weight: 600; color: var(--ink); outline: none; }
+.hcp-pill.empty { border: 1.5px dashed var(--line); background: transparent; font-size: 15px; font-family: var(--font-sans); font-weight: 500; color: var(--text-muted); }
 .hcp-pill::placeholder { color: var(--ink-soft); }
 .pl-add { height: 60px; align-items: center; padding: 0 8px 0 14px; border-top: 1px solid var(--line); }
 .pl-list .pl-add .input { height: 48px; min-height: 48px; background: transparent; border: 0; border-radius: 0; padding: 0; }
@@ -1291,3 +1291,15 @@ details.fold summary::-webkit-details-marker { display: none; }
 .dym-row .dr-name { font-size: 17px; line-height: 22px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dym-row .dr-sub { font-size: 15px; line-height: 20px; color: var(--text-muted); }
 .dym-foot { margin-top: var(--space-6); }
+
+/* Handicap sheet: a ScoreStepper-style − number + */
+.hcp-stepper { display: flex; align-items: center; gap: var(--space-3); margin: var(--space-2) 0 var(--space-4); }
+.hcp-stepper .hs-btn { width: var(--stepper); height: var(--stepper); flex: none; border-radius: var(--radius-xl); border: 1px solid var(--line); background: var(--bg); color: var(--text); display: grid; place-items: center; }
+.hcp-stepper .hs-btn:not(:disabled):active { background: var(--surface-2); transform: scale(.97); }
+.hcp-stepper .hs-btn:disabled { color: var(--text-muted); opacity: .5; }
+.hcp-stepper .hs-mid { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; }
+.hcp-stepper .hs-num { width: 100%; border: 0; background: transparent; text-align: center; color: var(--text); outline: none;
+  font-family: var(--font-mono); font-size: 64px; line-height: 64px; font-weight: 700; letter-spacing: -2px; padding: 0; }
+.hcp-stepper .hs-num::placeholder { color: var(--text-muted); opacity: .5; }
+.hcp-stepper .hs-was { font-size: 15px; line-height: 20px; color: var(--text-muted); margin-top: var(--space-1); }
+.hs-done { margin-top: var(--space-4); }

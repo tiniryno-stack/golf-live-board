@@ -43,9 +43,11 @@ function relabel(s) {
     p.name = names.fullName(p, { withNick: twin });
   });
 }
-function newPlayer({ personId, firstName, lastName = '', nickname = '' }) {
-  return withName({ key: db.uuid(), personId: personId || db.uuid(), firstName, lastName, nickname, strokes: '', teamId: null, groupId: 'g1' });
+function newPlayer({ personId, firstName, lastName = '', nickname = '', strokes = '' }) {
+  return withName({ key: db.uuid(), personId: personId || db.uuid(), firstName, lastName, nickname, strokes, teamId: null, groupId: 'g1' });
 }
+/** Last round's handicap for a person (from the crew's rounds), or '' — it prefills. */
+const lastHcpOf = (s, personId) => (personId && s.lastHcp && s.lastHcp[personId] != null ? String(s.lastHcp[personId]) : '');
 const same = (a, b) => String(a || '').toLowerCase() === String(b || '').toLowerCase();
 
 function blank(from = null) {
@@ -94,8 +96,12 @@ async function loadPast(app, crewId) {
     const people = new Map();
     const courses = new Map(); // course id → the copy from the group's latest round there (with any fixes)
     const plays = new Map(); // course id → rounds your group played there
+    const lastHcp = {}; // person → strokes in the latest round they played (rounds come oldest first)
     for (const { event } of rounds) {
-      for (const p of event.roster?.players || []) if (p.personId) people.set(p.personId, p.name);
+      for (const p of event.roster?.players || []) {
+        if (p.personId) people.set(p.personId, p.name);
+        if (p.personId && p.strokes != null && p.strokes !== '') lastHcp[p.personId] = Number(p.strokes);
+      }
       if (event.course?.id) {
         courses.set(event.course.id, event.course);
         plays.set(event.course.id, (plays.get(event.course.id) || 0) + 1);
@@ -111,6 +117,7 @@ async function loadPast(app, crewId) {
         ? crew.map((p) => withName({ personId: p.id, firstName: p.firstName, lastName: p.lastName || '', nickname: p.nickname || '', crewId }))
         : [...people].map(([personId, name]) => withName({ personId, name, crewId }));
       app.setup.mine = yourCourses([...courses.values()].reverse().map((c) => ({ ...c, plays: plays.get(c.id) || 0 })));
+      app.setup.lastHcp = lastHcp;
       paintCourses(app);
     }
   } catch { /* offline: typing names still works */ }
@@ -396,6 +403,29 @@ function buildRound(s) {
   };
 }
 
+// ───────────────────────────────────────────── handicap sheet (designspec §6b)
+
+/** Bottom sheet for one player's handicap: big stepper, last round's number, full / no strokes. */
+export function handicapSheet(app, { i }) {
+  const s = app.setup;
+  const p = s?.players[i];
+  if (!p) return '';
+  const none = p.strokes === '' || p.strokes == null;
+  const v = none ? 0 : Number(p.strokes);
+  const last = lastHcpOf(s, p.personId);
+  return `<div class="panel-head"><div class="ph-text"><h2 class="title">${esc(p.firstName || p.name)}’s handicap</h2>
+      <div class="ph-sub">Strokes they get over 18 holes. Tap the number to type it.</div></div>
+      <button class="icon-btn" data-act="sheet-close" aria-label="Close">${icon('close')}</button></div>
+    <div class="hcp-stepper">
+      <button class="hs-btn" data-act="hcp-step" data-i="${i}" data-d="-1" aria-label="One less" ${none || v === 0 ? 'disabled' : ''}>${icon('minus', 28)}</button>
+      <span class="hs-mid"><input class="hs-num" inputmode="numeric" pattern="[0-9]*" maxlength="2" value="${none ? '' : esc(v)}" placeholder="0" aria-label="${esc(p.name)} handicap" data-input="hcp-type" data-i="${i}">
+        <span class="hs-was">${last !== '' ? `was ${esc(last)} last round` : none ? 'plays even' : '&nbsp;'}</span></span>
+      <button class="hs-btn" data-act="hcp-step" data-i="${i}" data-d="1" aria-label="One more">${icon('plus', 28)}</button>
+    </div>
+    ${seg('hcp-mode', [['full', 'Use full'], ['none', 'No strokes']], none ? 'none' : 'full', `data-i="${i}"`)}
+    <button class="btn primary big block hs-done" data-act="hcp-done">Done</button>`;
+}
+
 // ───────────────────────────────────────────── screens (designspec §6)
 
 /** Back target for each screen. */
@@ -488,7 +518,7 @@ function playersView(s) {
             ? `<input class="input name-fill" maxlength="24" placeholder="Nickname, e.g. Tini Ryno" value="${esc(p.nickname)}" aria-label="Nickname for ${esc(p.name)}" data-input="setup-nick" data-i="${i}">`
             : `<input class="input name-fill" maxlength="30" placeholder="Last name" autocapitalize="words" autocomplete="off" aria-label="Last name for ${esc(p.firstName)}" data-input="setup-last" data-i="${i}">`}`}
         </span>
-        <input class="hcp-pill mono${p.strokes === '' || p.strokes == null ? ' empty' : ''}" inputmode="numeric" pattern="[0-9]*" maxlength="2" placeholder="Add" aria-label="${esc(p.name)} handicap (strokes)" value="${esc(p.strokes ?? '')}" data-input="setup-strokes" data-i="${i}">
+        <button class="hcp-pill mono${p.strokes === '' || p.strokes == null ? ' empty' : ''}" data-act="setup-hcp" data-i="${i}" aria-label="${esc(p.name)} handicap: ${p.strokes === '' || p.strokes == null ? 'none' : esc(p.strokes)}">${p.strokes === '' || p.strokes == null ? 'Add' : esc(p.strokes)}</button>
         <button class="x" data-act="setup-remove" data-i="${i}" aria-label="Remove ${esc(p.name)}">${icon('close', 18)}</button>
       </div>`).join('')}
       <div class="pl-add join-row">
@@ -1013,7 +1043,7 @@ export default {
         s.adding = false;
       }
       if (pick?.crewId) s.crewId = s.crewId || pick.crewId;
-      s.players.push(newPlayer({ personId: pick?.personId, firstName: first, lastName: last, nickname: nick }));
+      s.players.push(newPlayer({ personId: pick?.personId, firstName: first, lastName: last, nickname: nick, strokes: lastHcpOf(s, pick?.personId) }));
       s.newName = '';
       s.nickAsk = null;
       persist(s);
@@ -1044,15 +1074,47 @@ export default {
       const p = s.past.find((x) => x.personId === el.dataset.v);
       if (!p || s.players.some((x) => x.personId === p.personId)) return;
       s.crewId = s.crewId || p.crewId;
-      s.players.push(newPlayer({ personId: p.personId, firstName: p.firstName, lastName: p.lastName, nickname: p.nickname }));
+      s.players.push(newPlayer({ personId: p.personId, firstName: p.firstName, lastName: p.lastName, nickname: p.nickname, strokes: lastHcpOf(s, p.personId) }));
       persist(s);
       app.render();
     },
-    'setup-strokes': (el, ev, app) => {
+    // Handicap sheet (designspec §6b): tap an HCP pill → stepper, "was 17 last round", full / no strokes.
+    'setup-hcp': (el, ev, app) => app.openSheet('hcp', { i: Number(el.dataset.i) }),
+    'hcp-step': (el, ev, app) => {
+      const p = app.setup?.players[Number(el.dataset.i)];
+      if (!p) return;
+      const d = Number(el.dataset.d);
+      if (p.strokes === '' || p.strokes == null) {
+        if (d < 0) return;
+        p.strokes = lastHcpOf(app.setup, p.personId) || '1'; // from "no strokes": start at last round's number
+      } else {
+        p.strokes = String(Math.max(0, Math.min(54, Number(p.strokes) + d)));
+      }
+      persist(app.setup);
+      app.openSheet('hcp', { i: Number(el.dataset.i) });
+      app.render();
+    },
+    'hcp-type': (el, ev, app) => {
+      const p = app.setup?.players[Number(el.dataset.i)];
+      if (!p) return;
       const v = el.value.replace(/[^0-9]/g, '').slice(0, 2);
       if (v !== el.value) el.value = v;
-      app.setup.players[Number(el.dataset.i)].strokes = v;
+      p.strokes = v === '' ? '' : String(Math.min(54, Number(v)));
       persist(app.setup);
+    },
+    'hcp-mode': (el, ev, app) => {
+      const s = app.setup;
+      const p = s?.players[Number(el.dataset.i)];
+      if (!p) return;
+      if (el.dataset.v === 'none') { if (p.strokes !== '') p.prevStrokes = p.strokes; p.strokes = ''; }
+      else p.strokes = p.prevStrokes || lastHcpOf(s, p.personId) || p.strokes || '0';
+      persist(s);
+      app.openSheet('hcp', { i: Number(el.dataset.i) });
+      app.render();
+    },
+    'hcp-done': (el, ev, app) => {
+      app.closeSheet();
+      app.render();
     },
     'setup-teamname': (el, ev, app) => {
       app.setup.teams.find((t) => t.id === el.dataset.v).name = el.value.slice(0, 20);

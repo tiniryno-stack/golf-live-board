@@ -6,6 +6,7 @@ import { esc, icon, scoreClass, clock, mark } from '../ui.js';
 import { fmtToPar, fmtPts, fmtSigned, maxHoleScore, componentNames, posOf, holeAt, holesLabel, matchesFor, playOrder, teeTimeName, groupIndex } from '../scoring.js';
 import { teamColor, headlineColor, shortTeam } from '../teams.js';
 import { codeField } from './home.js';
+import { handicapSheet } from './setup.js';
 
 let lastHtml = '';
 let closeTimer = null;
@@ -146,6 +147,9 @@ const BODIES = {
       <p class="soft" style="margin:0 0 16px">Waiting for your foursome to let you in as <b>${esc(name)}</b>. Anyone playing with you sees a “Let them in” banner. The organizer can approve too.</p>
       <button class="btn ghost block" data-act="sheet-close">Watch while I wait</button>`;
   },
+
+  /** Setup → Players: one player's handicap. */
+  hcp: (app, props) => handicapSheet(app, props),
 
   /** Home → Join with code. */
   join() {

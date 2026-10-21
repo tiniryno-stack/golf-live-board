@@ -471,6 +471,22 @@ await R6.page.tap('[data-act="setup-go"][data-v="players"]');
 await R6.page.waitForTimeout(200);
 await R6.page.locator('.player-row', { hasText: 'Zed' }).locator('[data-act="setup-remove"]').tap().catch(() => {});
 await R6.page.waitForTimeout(200);
+// Handicap sheet: tap the pill → stepper; + from "Add" starts at 1, + again 2; No strokes clears it.
+await R6.page.tap('[data-act="setup-hcp"][data-i="0"]');
+await R6.page.waitForTimeout(300);
+ok(/Tara’s handicap/.test(await R6.page.textContent('#sheet')), 'tap Tara’s HCP pill → her handicap sheet');
+await R6.page.tap('#sheet [data-act="hcp-step"][data-d="1"]');
+await R6.page.tap('#sheet [data-act="hcp-step"][data-d="1"]');
+await R6.page.waitForTimeout(200);
+const st6 = await R6.page.evaluate(() => window.__glb.setup.players[0].strokes);
+ok(st6 === '2' && /^2$/.test((await R6.page.textContent('[data-act="setup-hcp"][data-i="0"]')).trim()), 'stepper: + + → 2, and the pill shows it');
+await R6.page.tap('#sheet [data-act="hcp-mode"][data-v="none"]');
+await R6.page.waitForTimeout(200);
+ok(await R6.page.evaluate(() => window.__glb.setup.players[0].strokes) === '', 'No strokes clears it (plays even)');
+await R6.page.tap('#sheet [data-act="hcp-mode"][data-v="full"]');
+await R6.page.tap('[data-act="hcp-done"]');
+await R6.page.waitForTimeout(300);
+ok(await R6.page.evaluate(() => window.__glb.setup.players[0].strokes) === '2' && !(await R6.page.$('#sheet .panel')), 'Use full brings the 2 back; Done closes the sheet');
 await R6.page.tap('[data-act="setup-go"][data-v="game"]');
 await R6.page.waitForTimeout(200);
 ok(!(await R6.page.$('[data-act="setup-game"][data-v="carts"][aria-disabled]')) && /3 carts of 2/.test(await R6.page.textContent('[data-act="setup-game"][data-v="carts"]')),

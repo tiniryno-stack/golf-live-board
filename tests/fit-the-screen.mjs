@@ -196,6 +196,11 @@ for (const size of SIZES) {
     await page.waitForTimeout(150);
   }
   await check(page, size, 'Setup 2 (players)');
+  await page.tap('[data-act="setup-hcp"][data-i="1"]');
+  await page.waitForTimeout(400);
+  await check(page, size, 'Setup 2 (handicap sheet)');
+  await page.tap('[data-act="hcp-done"]');
+  await page.waitForTimeout(300);
   await page.tap('[data-act="setup-go"][data-v="game"]');
   await check(page, size, 'Setup 3 (pick a game)');
   await page.tap('[data-act="setup-game"][data-v="carts"]');
