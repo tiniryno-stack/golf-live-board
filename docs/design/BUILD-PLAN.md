@@ -5,8 +5,8 @@ Branch `design/design-system`, from `main` at `bfa48a2` (Oct 21). Source of trut
 `designspec.md`. Mockups in `screens/` are reference only.
 
 Status: **plan only, nothing built yet.** Takes over the open items from the first `PLAN.md`
-(section 9). Questions for Andrew are marked **Ask**; until he answers, the default in bold is what gets
-built (or nothing, for spec "Open items").
+(section 9). Andrew answered the spec's open items, tee times and the Rules sheet on Oct 21 (section 9).
+Questions still open are marked **Ask**; until he answers, the default in bold is what gets built.
 
 ---
 
@@ -209,7 +209,7 @@ Today: 26 different `font-size` values in `styles.css` plus 13 `.ts-*` styles. *
 | **Handicap sheet** | Tap an HCP pill on Players → big − / + stepper, "was 17 last round", Use full / No strokes, Done; tap the number to type | "Last round": the person's strokes in the newest crew round that has them (Setup already loads those rosters). **No DB change** |
 | **Fix-a-hole sheet** | Organizer-only ⋯ button next to the hole number on Enter (hidden for everyone else) → Par 3–6 buttons, stroke-index stepper, amber note "Changes the card for all 8 players", Save hole 14 → toast | Uses the same `update_event` path Host uses for par / hole handicaps. Yardage: see Ask below |
 | **Rules sheet** | Rules button on Matches → read-only rows: format, points, opponents, handicaps, max score, winner + tiebreak; "Edit · organizer" opens Host → Rules; Share rules (share sheet, plain text) | Reads the round's settings. Values are placeholders until confirmed (section 9) |
-| **Board before first scores** | EmptyState over the real structure: "Waiting for the first scores", "7 of 8 joined · Waiting on Tyler" + Send code, teams with "–" | Joined count from claims (already loaded). Tee times: see Ask below |
+| **Board before first scores** | EmptyState over the real structure: "Waiting for the first scores", "7 of 8 joined · Waiting on Tyler" + Send code, teams with "–" and their tee time | Joined count from claims (already loaded). Tee times: "tees off 8:40" when the organizer set one, else "1st tee time" / "2nd tee time" (section 8) |
 
 Matches before the first scores has no mockup ("still to draw"): **default: same pattern as the Board**
 (matchups listed, "Waiting for the first scores").
@@ -241,53 +241,76 @@ all storage through `db.local`.
 
 ## 8. Data model
 
-Nothing in this plan needs a database change by default.
+Only one item needs the database: the "player's own entry wins" rule (decided Oct 21). Everything
+else lives in the round's settings JSON or on the phone.
 
 - **Rules per round:** already in `settings` (`maxHoleScore` doublePar | netDoubleBogey | none +
   `par3NoMax`, `handicapMode` full | offLow + `allowancePct`, `halvedHolePoints`, `matchBonus`,
-  `teamScore`). The Rules sheet just reads them.
-- **Tiebreak:** not a setting today; `scoring.js` uses a fixed order (points → match record →
-  head-to-head → secondary margin → shared). Only if Andrew wants a choice: new `settings.tiebreak`,
-  default `'standard'` = today's order, so old rounds (normalized from `DEFAULT_SETTINGS`) don't change.
-- **Entered by:** already stored (`scores.updated_by`, `meta.by`); Enter already shows it.
+  `teamScore`). The Rules sheet reads them and writes them out in plain English. No new setting.
+- **Tiebreak:** stays the engine's fixed order (`rankStandings`); the Rules sheet just says it: "Tie on
+  points: better matchup record (wins minus losses, then most wins), then who won between the two,
+  then the stroke margin. Still tied = shared." No `settings.tiebreak`.
+- **Tee times (decided Oct 21):** new `settings.teeTimes`, a list of clock times, one per tee time in
+  group order (`["8:40", "8:50"]`). Default `[]` → every screen says "1st tee time", "2nd tee time"…
+  Old rounds normalize to `[]`, so nothing changes for them. Set in Host → round settings (and in
+  Setup where the first tee and round name are). Shown on the waiting Board, matchup lines and the
+  Rules sheet. Input: the TextField with the phone's time picker (no new pattern).
+- **Entered by:** already stored (`scores.updated_by` = the writer's name or "Organizer", `meta.by`).
+- **Player's own entry wins (decided Oct 21, needs the database):** in `upsert_score`, when someone
+  writes a score for another player and the saved score was entered **by that player themselves**
+  (`updated_by` = the player's own name) with a different value, the write is refused with
+  `{ ok: false, error: 'own_entry', strokes, updated_by }`. The player can always change their own
+  score; entering for someone who hasn't entered yet works as today; the organizer's
+  `admin_upsert_score` still overrides (fixes and finalized rounds). The refused phone takes the
+  player's score and shows a toast: "Sam entered 5 himself. His score stays." Additive
+  `create or replace function` only, mirrored in `supabase/schema.sql` and `tests/mock-supabase.mjs`,
+  with smoke tests for each case. Older phones on the live site drop a refused write (the queue settles
+  it and calls `onReject`) rather than retrying, so applying it early is safe; still, it goes live with
+  the merge to `main`, after the mid-round check.
+- **Partner Rider Cup for 6 (decided Oct 21: build it):** 3 carts of 2 (A, B, C). Format: see
+  section 9, item 4. Stored like the 8-player game (`settings` + 3 teams), no migration.
 - **Home result line, last handicap, times played:** derived on the phone (section 6).
-- **Optional, only if asked:** `settings.teeTimes` for "tees off 8:40", and per-hole yards in the
-  round's `course` JSON. Both are inside the round's JSON, no migration.
-- **Needs the database (not building until decided):** the "player's own entry wins" conflict rule.
-  It would be an additive `create or replace` of the score-writing function plus a notice, mirrored in
-  `supabase/schema.sql` and `tests/mock-supabase.mjs`.
+- **Per-hole yards** for the Fix-a-hole sheet: not stored; only if asked later (course JSON, no migration).
 
 ---
 
 ## 9. Open items and questions
 
-From the spec's "Open items" (carried over from the first PLAN.md; nothing here gets built without a yes):
-1. **Name for the 8-player cart game:** still shipping as "Cart game".
-2. **Two phones enter different scores for the same player:** still last entry wins. Note: the
-   ScorePad README now states "a player's own entry wins", but the spec still lists it as open.
-3. **Stepper for the scorecard-check cells:** still the number keypad. The Handicap sheet's stepper
-   could be reused (tap a cell → sheet), once you say so.
-4. **3-cart game for 6 players:** not built; 6 players pick Match play or Scorecard only.
-5. **Rules sheet values:** handicap mode, max score and tiebreak are placeholders. The mockup's lines
-   ("Full, off the low player", "Net double bogey", "most low-ball points wins") don't match today's
-   defaults (full off zero, double par, the fixed order above).
+From the spec's "Open items" (carried over from the first PLAN.md). **Andrew decided these Oct 21:**
+1. **Name for the cart game: "Partner Rider Cup".** Renames "Cart game" everywhere it shows (game
+   picker, Today's game, Rules sheet, Home, recap). Internal ids (`carts`) stay.
+2. **Two phones enter different scores: the player's own entry wins** (section 8 has the exact rule).
+3. **Scorecard-check cells: keep typing with the number keypad** (Claude's call; faster than a stepper
+   for 18 holes entered by hand). The cells get the TextField states (focus ring, amber problem
+   border) and at least 48px tap height. Mid-round fixes use the Fix-a-hole sheet's stepper.
+   **Closed.**
+4. **Partner Rider Cup for 6 players: build it** (3 carts of 2). **Ask, format:** default is
+   **every cart plays both other carts on every hole, all 18 holes** (A v B, A v C, B v C at once; Low
+   Ball + Low Total each, ties ½, +1 for winning each matchup), so there's no switching and nobody sits
+   out. Groups: carts A + B in the first tee time, C in the second. The other way (switching every 6)
+   leaves one cart idle each stretch. The game picker's count becomes "6 OR 8 PLAYERS".
+5. **Rules sheet: shows the round's real settings.** The mockup's lines were sample text. Defaults
+   today: handicaps full, off zero; max score double par; tiebreak as in section 8. If the organizer
+   changed a setting, the sheet shows that instead. **Closed.**
 
 Carried over from the first plan's known limits: naming an unnamed course in "Which course?" is
 remembered per group (shared courses table = V2); "start now, finish the card during the round" isn't
 built; mid-round Host still edits the cart game / split point the old way.
 
 New questions from this handoff (default in bold):
-6. **Home's header** ("AD · Andrew" + a "Settings" button) has no mockup behind it, and the phone has
-   no single "me": names are per round (`glb.me.CODE`). **Default: name and initials from the newest
-   round you joined (hidden on a phone that never joined one); leave Settings out**, so theme stays on
-   Home's top bar and in the round ⋯ menu. Also: the mockup has two primary-style buttons (Back to
-   hole 11 in the card, New round at the bottom). **Default: Back to hole 11 as secondary**, so New round
-   is the one primary.
+6. **Home's header** ("AD · Andrew" + a "Settings" button) appears only in the two Home mockups
+   (`screens/home.html`, `screens/home-empty.html`); the spec never says what Settings opens.
+   Andrew (Oct 21): Home needs a bigger revamp anyway; build the header from the design system for
+   now. **Default: name and initials from the newest round you joined (hidden on a phone that never
+   joined one); no Settings button until there's something to put in it**, so theme stays on Home's
+   top bar and in the round ⋯ menu. Also: the mockup has two primary-style buttons (Back to hole 11 in
+   the card, New round at the bottom). **Default: Back to hole 11 as secondary**, so New round is the
+   one primary. A new Home mockup from the designer replaces all of this when it comes.
 7. **Where Run it back, Season standings and Add to Home Screen go on the new Home.** **Default: Season
    and Add to Home Screen stay as rows under Recent rounds; Run it back moves into a finished round's
    ⋯ menu.**
-8. **Tee times on the waiting Board** aren't stored. **Default: "1st tee time" / "2nd tee time"** instead
-   of clock times.
+8. **Tee times: decided Oct 21.** Optional clock time per tee time in the round settings; without one
+   it says "1st tee time", "2nd tee time"… (section 8). **Closed.**
 9. **Yardage on the Fix-a-hole sheet** ("Par 5 · 512 yd"): rounds don't keep per-hole yards. **Default:
    "Par 5 · SI 7" only.**
 10. **Destructive buttons** need a pattern (the system has primary / secondary / ghost only).

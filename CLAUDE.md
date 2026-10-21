@@ -220,9 +220,11 @@ npm run test:smoke     # 225 checks: multi-phone flows against the mock (join, s
   groups as one-tap chips + ~8 frequent players + search within the crew, 5) team names reserved per
   pair **within a crew** + the first 151 Pokémon (`TEAM_NAME_PICKS`). Keep UI changes small until the
   Claude Design setup redesign lands.
-- **Night Round open items** (docs/design/BUILD-PLAN.md): cart-game name (shipping as "Cart game"), conflict
-  rule when two phones enter different scores (still last entry wins), stepper for scorecard-check
-  cells, 3-cart game for 6. Naming a course in "Which course?" is remembered per group (shared
+- **Design open items, decided Oct 21** (docs/design/BUILD-PLAN.md §8–9, not built yet): the cart game
+  is renamed **Partner Rider Cup**; **a player's own entry wins** over one entered for them (DB rule);
+  scorecard-check cells keep the keypad; Partner Rider Cup gets a **3-cart version for 6** (format to
+  confirm); optional **tee times** per round (`settings.teeTimes`, else "1st tee time"); the Rules sheet
+  shows the round's real settings. Naming a course in "Which course?" is remembered per group (shared
   courses table = V2). "Start now, finish the card during the round" not built.
 - **Split point played for real Oct 20** (Bridlewood, 3 players, switched on mid-round). Worked;
   Andrew may want some optimization later but asked for no changes for now.
