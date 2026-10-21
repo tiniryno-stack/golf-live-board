@@ -368,7 +368,7 @@ export async function flush() {
       }
       queue.settle(code, item);
       if (res.ok) sync.handlers.onSaved?.(item, res);
-      else sync.handlers.onReject?.(item, res.error);
+      else sync.handlers.onReject?.(item, res.error, res);
     }
   } finally {
     sync.flushing = false;

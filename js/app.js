@@ -221,10 +221,21 @@ const REJECT_TEXT = {
   bad_pin: 'the organizer PIN didn’t work',
   finalized: 'the round is final (organizer PIN to edit)',
   unknown_player: 'that player isn’t in the round anymore',
+  own_entry: 'they entered it on their own phone, so theirs stays',
 };
 
-function onQueueReject(item, error) {
+function onQueueReject(item, error, res = {}) {
   const name = app.snapshot?.playerById.get(item.playerId)?.name || 'score';
+  if (error === 'own_entry') {
+    // A player's own entry wins: take their number and say so (not an error, nothing to retry).
+    const key = `${item.playerId}:${item.hole}`;
+    app.scores.set(key, { player_id: item.playerId, hole: item.hole, strokes: res.strokes, updated_by: res.updated_by || name, updated_at: new Date().toISOString() });
+    recompute();
+    render();
+    app.toast({ title: `${name} entered ${res.strokes} on hole ${item.hole} on their phone`, sub: 'A player’s own score wins. Theirs stays.' });
+    refetchAll();
+    return;
+  }
   app.toast({ title: `Couldn’t save ${name} on ${item.hole}`, sub: REJECT_TEXT[error] || error, error: true });
   if (error === 'not_claimed') setMe(null);
   if (error === 'bad_pin') setAdmin(null);

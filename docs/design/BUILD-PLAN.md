@@ -273,7 +273,7 @@ else lives in the round's settings JSON or on the phone.
 **Database changes waiting for the merge to `main`** (additive `create or replace` only; already in
 `supabase/schema.sql`; apply with `apply_migration` right before merging, after the mid-round check):
 1. `_setting_label`: plain names for `matchBonus`, `startHole`, `teeTimes` in the audit log.
-2. The own-entry rule in `upsert_score` (below, when built).
+2. The own-entry rule in `upsert_score` (built and tested against the mock; below).
 - **Home result line, last handicap, times played:** derived on the phone (section 6).
 - **Per-hole yards** for the Fix-a-hole sheet: not stored; only if asked later (course JSON, no migration).
 

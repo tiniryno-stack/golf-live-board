@@ -446,7 +446,7 @@ end $$;
 
 create or replace function public.upsert_score(p_code text, p_device_id uuid, p_player_id text, p_hole int, p_strokes int)
 returns jsonb language plpgsql security definer set search_path = public as $$
-declare e public.events; v_actor text;
+declare e public.events; v_actor text; v_old smallint; v_by text;
 begin
   e := public._event(p_code);
   if e.id is null then return jsonb_build_object('ok', false, 'error', 'not_found'); end if;
@@ -456,6 +456,16 @@ begin
     return jsonb_build_object('ok', false, 'error', 'not_your_foursome');
   end if;
   if e.finalized_at is not null then return jsonb_build_object('ok', false, 'error', 'finalized'); end if;
+  -- A player's own entry wins (Oct 21): nobody else can change or clear a score the player entered
+  -- on their own phone. They can always change it themselves; the organizer (admin_upsert_score) can too.
+  if v_actor <> p_player_id then
+    select strokes, updated_by into v_old, v_by from public.scores
+     where event_id = e.id and player_id = p_player_id and hole = p_hole;
+    if v_old is not null and v_by = public._player_name(e.roster, p_player_id)
+       and v_old is distinct from p_strokes::smallint then
+      return jsonb_build_object('ok', false, 'error', 'own_entry', 'strokes', v_old, 'updated_by', v_by);
+    end if;
+  end if;
   return public._write_score(e, p_player_id, p_hole, p_strokes, public._player_name(e.roster, v_actor));
 end $$;
 

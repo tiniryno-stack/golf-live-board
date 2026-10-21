@@ -626,6 +626,22 @@ await YF.page.waitForTimeout(1000);
 ok(be.tables.scores.find((x) => x.event_id === yev.id && x.player_id === 'p2' && x.hole === 1)?.strokes === ypar + 1, 'picked bogey for Sean: saved');
 ok(!!(await YF.page.$('.grow.open [data-act="pad-pick"][data-pid="p4"]')), 'and the pad jumped to Jake (next one waiting)');
 ok(/Entered by you · Sean can still edit/.test(await yText()), 'Sean’s row: “Entered by you · Sean can still edit”');
+// A player's own entry wins: Sam entered 4 on his phone, so Andrew can't change it; the organizer can.
+await YF.page.tap('[data-act="pad-toggle"][data-pid="p3"]');
+await YF.page.waitForTimeout(300);
+await YF.page.tap(`[data-act="pad-pick"][data-pid="p3"][data-v="${ypar + 2}"]`);
+await YF.page.waitForTimeout(1200);
+const samRow = be.tables.scores.find((x) => x.event_id === yev.id && x.player_id === 'p3' && x.hole === 1);
+ok(samRow.strokes === 4 && samRow.updated_by === 'Sam', `own entry wins: Sam’s 4 stays (${samRow.strokes} by ${samRow.updated_by})`);
+const oeToast = await toastText(YF.page);
+ok(/Sam entered 4 on hole 1 on their phone/.test(oeToast) && /own score wins/.test(oeToast) && /From Sam’s phone/.test(await yText()),
+  `Andrew’s phone takes Sam’s 4 back and says why (${oeToast})`);
+const SDEV = '6a6a6a6a-6666-4666-8666-666666666666';
+be.tables.claims.push({ event_id: yev.id, player_id: 'p3', device_id: SDEV });
+ok(be.rpc.upsert_score({ p_code: yr.code, p_device_id: SDEV, p_player_id: 'p3', p_hole: 1, p_strokes: 5 }).ok === true, 'Sam can still change his own score');
+ok(be.rpc.upsert_score({ p_code: yr.code, p_device_id: YDEV, p_player_id: 'p3', p_hole: 1, p_strokes: 5 }).ok === true, 'the same number from Andrew is fine (nothing changes)');
+ok(be.rpc.admin_upsert_score({ p_code: yr.code, p_admin_pin: yr.admin_pin, p_player_id: 'p3', p_hole: 1, p_strokes: 6 }).ok === true, 'the organizer can still fix it');
+ok(be.rpc.upsert_score({ p_code: yr.code, p_device_id: YDEV, p_player_id: 'p3', p_hole: 1, p_strokes: 4 }).ok === true, 'once someone else entered it, Andrew can change it again');
 await YF.ctx.close();
 
 // 11c. Matches: one segment per match; the other match expands IN PLACE (yours collapses to a
