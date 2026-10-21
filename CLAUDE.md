@@ -84,7 +84,8 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
   name is taken; unique app-wide). Roster players carry `firstName`/`lastName`/`nickname`; `name` is
   the display name (`names.displayNames`: first name, "Andrew D." when two share it). Season shows
   full names; a nickname shows only when two people share the exact full name (placeholder "e.g.
-  Tini Ryno", Andrew's gamer tag — keep it). **Live since Oct 21** (1 crew, 9 people). Old rounds
+  Tini Ryno", Andrew's gamer tag — keep it). **Live since Oct 21** (1 crew, 9 people, last names
+  backfilled into `people` and both rounds' rosters). Old rounds
   only have `name` — everything must still work with that.
 - Settings are normalized from `DEFAULT_SETTINGS`, so new settings must default sensibly for old
   rounds.
