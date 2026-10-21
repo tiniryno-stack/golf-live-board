@@ -61,14 +61,44 @@ export function todayISO() {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
-/** Score decoration class: u = under par (circle), b = bogey (square), d = double+ (double square). */
+/** Score decoration class: e = eagle or better (double circle), u = birdie (circle),
+ *  b = bogey (square), d = double bogey or worse (double square, red tint). */
 export function scoreClass(strokes, par) {
   if (strokes == null) return 'blank';
   const d = strokes - par;
+  if (d <= -2) return 'u e';
   if (d < 0) return 'u';
   if (d === 1) return 'b';
   if (d >= 2) return 'd';
   return '';
+}
+
+/** "BIRDIE" / "PAR" / "+4" for a score on a hole. */
+export function scoreName(strokes, par) {
+  if (strokes == null) return '';
+  const d = strokes - par;
+  if (strokes === 1) return 'ACE';
+  return { '-3': 'ALBATROSS', '-2': 'EAGLE', '-1': 'BIRDIE', 0: 'PAR', 1: 'BOGEY', 2: 'DOUBLE', 3: 'TRIPLE' }[d] || (d > 0 ? `+${d}` : `${d}`);
+}
+
+/**
+ * Score mark (designspec §1): eagle− double circle, birdie circle, par plain, bogey square,
+ * double+ double square with a light red fill. size = the mark's box in px. A missing score
+ * shows `ghost` (e.g. par) in a dashed circle, or nothing.
+ */
+export function mark(strokes, par, size = 28, { ghost = null, cls = '' } = {}) {
+  const k = strokes == null ? (ghost != null ? 'mk-ghost' : 'mk-none') : `mk-${{ u: 'u', 'u e': 'e', b: 'b', d: 'd', '': 'p' }[scoreClass(strokes, par)]}`;
+  const v = strokes ?? ghost ?? '';
+  return `<span class="mk ${k}${cls ? ` ${cls}` : ''}" style="--mk:${size}px">${esc(v)}</span>`;
+}
+
+/** Segmented control with a second line per segment: [[value, label, sub, { dot, live }], …]. */
+export function seg2(act, options, value) {
+  return `<div class="seg seg2" role="group">${options
+    .map(([v, label, sub, o = {}]) => `<button data-act="${act}" data-v="${esc(v)}" aria-pressed="${String(v) === String(value)}">
+      <span class="s-top">${o.dot ? `<i class="s-dot" style="background:${o.dot}"></i>` : ''}<span class="ellipsis">${esc(label)}</span></span>
+      ${sub ? `<span class="s-sub mono${o.live ? ' live' : ''}">${esc(sub)}</span>` : ''}</button>`)
+    .join('')}</div>`;
 }
 
 export function copyText(text) {

@@ -207,22 +207,68 @@ a { color: inherit; }
 .input.num { width: 72px; text-align: center; font-family: var(--mono); padding: 0 6px; }
 .help { font-size: 13px; color: var(--ink-soft); margin: -6px 0 14px; }
 
-/* segmented control */
+/* segmented control (designspec §3): s1 track, 48px segments, active = s3 + shadow */
 .seg {
-  display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 2px;
-  padding: 3px; border-radius: 14px; background: var(--surface-2);
+  display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 4px;
+  padding: 4px; border-radius: 14px; background: var(--surface);
 }
+[data-theme="light"] .seg { background: var(--surface-2); }
 .seg button {
-  min-height: 40px; border-radius: 11px; font-size: 14px; font-weight: 600; color: var(--ink-soft);
-  position: relative; padding: 0 6px;
+  min-height: 48px; border-radius: 10px; font-size: 14px; font-weight: 500; color: var(--ink-soft);
+  position: relative; padding: 0 6px; min-width: 0;
 }
-.seg button::after { content: ""; position: absolute; inset: -4px 0; }
-.seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(0, 0, 0, .25); }
-.hero .seg { background: var(--surface); }
-.hero .seg button { color: var(--hero-soft); }
-.hero .seg button[aria-pressed="true"] { background: var(--surface-3); color: var(--ink); box-shadow: var(--shadow-seg); }
+.seg button[aria-pressed="true"] { background: var(--surface-3); color: var(--ink); font-weight: 700; box-shadow: var(--shadow-seg); }
+.seg2 { border-radius: 16px; }
+.seg2 button { min-height: 54px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; }
+.seg2 .s-top { display: flex; align-items: center; gap: 6px; max-width: 100%; font-size: 14px; }
+.seg2 .s-dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+.seg2 .s-sub { font-size: 11px; color: var(--ink-soft); font-weight: 500; }
+.seg2 .s-sub.live { color: var(--good-ink); font-weight: 600; }
 .segs { display: flex; gap: 8px; margin: 0 0 14px; }
 .segs .seg { flex: 1; }
+
+/* score marks (designspec §1): every score on Enter, Card and the player card */
+.mk {
+  --mk: 28px;
+  display: inline-flex; align-items: center; justify-content: center; flex: none;
+  width: var(--mk); height: var(--mk); box-sizing: border-box;
+  font-family: var(--mono); font-variant-numeric: tabular-nums; font-weight: 700; line-height: 1;
+  font-size: calc(var(--mk) * .6); letter-spacing: calc(var(--mk) * -.018);
+  --thin: clamp(1.5px, calc(var(--mk) * .031), 3.5px); --dbl: clamp(4px, calc(var(--mk) * .08), 9px);
+}
+.mk-u { border-radius: 50%; border: var(--thin) solid var(--ink); }
+.mk-e { border-radius: 50%; border: var(--dbl) double var(--ink); }
+.mk-b { border-radius: calc(var(--mk) * .16); border: var(--thin) solid var(--ink-soft); }
+.mk-d { border-radius: calc(var(--mk) * .16); border: var(--dbl) double var(--bad); background: var(--dbl-bg); color: var(--bad); }
+.mk-ghost { border-radius: 50%; border: 2px dashed var(--line); color: var(--ink-soft); opacity: .6; }
+.mk-none { color: transparent; }
+.mk-legend { display: flex; justify-content: center; flex-wrap: wrap; gap: 12px; font-size: 11px; color: var(--ink-soft); }
+.mk-legend span { display: inline-flex; align-items: center; gap: 4px; }
+.mk-legend .mk { --mk: 12px; font-size: 0; }
+.mk-legend .mk-u { border-width: 1.5px; } .mk-legend .mk-e { border-width: 3px; }
+.mk-legend .mk-b { border-width: 1.5px; border-radius: 2px; } .mk-legend .mk-d { border-width: 3px; border-radius: 2px; }
+
+/* expand in place (designspec §3, §5): your match/group collapses to a pinned green bar, the
+   other one opens below in an outlined "WATCHING" box. Never a separate screen. */
+.fold-in { animation: fold-in .46s cubic-bezier(.2, .8, .2, 1) both; overflow: hidden; }
+@keyframes fold-in { from { max-height: 0; opacity: 0; } to { max-height: var(--fold-h, 900px); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .fold-in { animation: none; } }
+.mine-bar {
+  width: 100%; min-height: 56px; border-radius: 16px; border: 1.5px solid var(--good);
+  background: var(--tint); display: flex; align-items: center; gap: 10px; padding: 0 14px; text-align: left;
+}
+.mine-bar .mb-k { display: block; font-family: var(--mono); font-size: 10px; letter-spacing: .1em; color: var(--good-ink); font-weight: 600; }
+.mine-bar .mb-t { display: block; font-size: 15px; font-weight: 700; margin-top: 2px; }
+.mine-bar svg { color: var(--good-ink); flex: none; }
+.watch-box { border-radius: 20px; border: 1px solid var(--line); overflow: hidden; }
+.watch-head {
+  width: 100%; min-height: 52px; display: flex; align-items: center; gap: 8px; padding: 0 12px 0 14px;
+  font-size: 14px; text-align: left;
+}
+.watch-head .wk { font-family: var(--mono); font-size: 11px; color: var(--ink-soft); letter-spacing: .08em; flex: none; }
+.watch-head .chev { color: var(--ink-soft); flex: none; transition: transform .32s ease; }
+.watch-box.open .watch-head .chev { transform: rotate(180deg); }
+.lbl { font-family: var(--mono); font-size: 11px; letter-spacing: .1em; color: var(--ink-soft); font-weight: 600; text-transform: uppercase; }
 
 /* filled chips + outline pills */
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -391,11 +437,11 @@ a { color: inherit; }
 /* score decorations: under par circle, bogey square, double+ double square */
 .score { font-family: var(--mono); font-variant-numeric: tabular-nums; font-weight: 700; line-height: 1; position: relative; display: inline-grid; place-items: center; }
 .tile .score { font-size: clamp(28px, 5.4dvh, 46px); min-width: 1.6em; min-height: 1.3em; }
-.score.u { color: var(--good); }
-.score.u::before { content: ""; position: absolute; inset: -0.08em -0.02em; border: 2px solid currentColor; border-radius: 50%; }
+.score.u::before { content: ""; position: absolute; inset: -0.08em -0.02em; border: 1.5px solid var(--ink); border-radius: 50%; }
+.score.e::before { border: 4px double var(--ink); inset: -0.16em -0.1em; }
 .score.b::before { content: ""; position: absolute; inset: -0.06em 0.02em; border: 1.5px solid var(--ink-soft); border-radius: 3px; }
 .score.d { color: var(--bad); }
-.score.d::before { content: ""; position: absolute; inset: -0.06em 0.02em; border: 1.5px solid currentColor; border-radius: 3px; box-shadow: 0 0 0 2px var(--surface), 0 0 0 3.5px currentColor; }
+.score.d::before { content: ""; position: absolute; inset: -0.1em -0.02em; border: 4px double currentColor; border-radius: 3px; background: var(--dbl-bg); z-index: -1; }
 .score.blank { color: var(--ink-faint); font-weight: 500; font-size: clamp(15px, 2.4dvh, 18px); font-family: var(--font); }
 .tile .score.ghost { color: var(--ink-faint); opacity: .55; font-weight: 600; }
 
