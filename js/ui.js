@@ -30,6 +30,8 @@ const P = {
   lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
   redo: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>',
   search: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>',
+  flag: '<path d="M5 21V4"/><path d="M5 4h11l-2 4 2 4H5"/>',
+  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   grid: '<rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/>',
 };
 
@@ -94,6 +96,18 @@ export function mark(strokes, par, size = 28, { ghost = null, cls = '' } = {}) {
   const k = strokes == null ? (ghost != null ? 'mk-ghost' : 'mk-none') : `mk-${{ u: 'u', 'u e': 'e', b: 'b', d: 'd', '': 'p' }[scoreClass(strokes, par)]}`;
   const v = strokes ?? ghost ?? '';
   return `<span class="mk ${k}${cls ? ` ${cls}` : ''}" style="--mk:${size}px">${esc(v)}</span>`;
+}
+
+/**
+ * EmptyState (design-system/components/EmptyState): what a list or screen shows when there's nothing
+ * in it yet, or a search found nothing. One-line headline, one line of help, the one action that fixes
+ * it (`action` = button HTML). `open` drops the dashed box (the whole screen is the empty state).
+ */
+export function empty({ icon: ic = 'flag', headline, help = '', action = '', open = false } = {}) {
+  return `<div class="empty-box${open ? ' open' : ''}">
+    <span class="eb-ico">${icon(ic, 24)}</span>
+    <div class="eb-h">${esc(headline)}</div>${help ? `<div class="eb-p">${esc(help)}</div>` : ''}
+    ${action ? `<div class="eb-a">${action}</div>` : ''}</div>`;
 }
 
 /** ' fold-in' only right after the tap that opened something (background redraws don't replay it). */

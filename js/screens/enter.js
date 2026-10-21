@@ -553,7 +553,7 @@ function goHole(app, to, from) {
   app.ui.hole = to;
   app.render();
   app.toast({
-    title: `Hole ${from} saved`, action: 'Undo', ms: 3000,
+    title: `Hole ${from} saved`, action: 'Undo',
     onAction: () => {
       app.ui.hole = from;
       app.render();

@@ -11,6 +11,8 @@ let closeTimer = null;
 
 export function render(root, app) {
   const s = app.sheet;
+  document.documentElement.classList.toggle('sheet-open', !!s); // the tab bar hides while a sheet is open
+  armSwipe(root, app);
   if (!s) {
     if (!root.classList.contains('open')) return;
     root.classList.remove('open');
@@ -37,8 +39,38 @@ export function render(root, app) {
   }
 }
 
-const head = (title) =>
-  `<div class="panel-head"><h2 class="title">${esc(title)}</h2>
+/** Swipe down on a sheet (from its top, when it isn't scrolled) to close it. Wired once per root. */
+function armSwipe(root, app) {
+  if (root.dataset.swipe) return;
+  root.dataset.swipe = '1';
+  let start = null;
+  root.addEventListener('touchstart', (ev) => {
+    const panel = ev.target.closest?.('.panel');
+    if (!panel || ev.touches.length !== 1 || panel.scrollTop > 0) { start = null; return; }
+    start = { y: ev.touches[0].clientY, panel, dy: 0 };
+  }, { passive: true });
+  root.addEventListener('touchmove', (ev) => {
+    if (!start) return;
+    start.dy = ev.touches[0].clientY - start.y;
+    if (start.dy <= 0) { start.panel.style.transform = ''; return; }
+    start.panel.classList.add('dragging');
+    start.panel.style.transform = `translateY(${start.dy}px)`;
+  }, { passive: true });
+  const end = () => {
+    if (!start) return;
+    const { panel, dy } = start;
+    start = null;
+    panel.classList.remove('dragging');
+    panel.style.transform = '';
+    if (dy > 90) app.closeSheet();
+  };
+  root.addEventListener('touchend', end, { passive: true });
+  root.addEventListener('touchcancel', end, { passive: true });
+}
+
+/** BottomSheet header: title, an optional one-line subtitle, and the 48px close button. */
+const head = (title, sub = '') =>
+  `<div class="panel-head"><div class="ph-text"><h2 class="title">${esc(title)}</h2>${sub ? `<div class="ph-sub">${esc(sub)}</div>` : ''}</div>
    <button class="icon-btn" data-act="sheet-close" aria-label="Close">${icon('close')}</button></div>`;
 
 function playersByCart(app) {

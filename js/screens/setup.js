@@ -397,8 +397,9 @@ function headline(kicker, title, sub = '') {
   return `<div class="nr-head"><div class="nr-k"><span class="lbl">${kicker}</span></div><h1 class="nr-title">${title}</h1>${sub ? `<div class="nr-sub">${sub}</div>` : ''}</div>`;
 }
 
-function bottom(label, act, { disabled = false, v = '', arrow = false } = {}) {
-  return `<div class="nr-foot"><button class="btn primary nr-cta" data-act="${act}"${v ? ` data-v="${esc(v)}"` : ''} ${disabled ? 'disabled' : ''}>${esc(label)}${arrow ? icon('fwd', 18) : ''}</button></div>`;
+/** The screen's one primary button. busy = loading state (spinner before the label, still the same width). */
+function bottom(label, act, { disabled = false, busy = false, v = '', arrow = false } = {}) {
+  return `<div class="nr-foot"><button class="btn primary nr-cta" data-act="${act}"${v ? ` data-v="${esc(v)}"` : ''} ${disabled ? 'disabled' : ''}${busy ? ' aria-busy="true"' : ''}>${esc(label)}${arrow ? icon('fwd', 18) : ''}</button></div>`;
 }
 
 /** One line for the picked course's card: "✓ Card ready · par 72 · tap to check". */
@@ -505,7 +506,7 @@ function gameView(s) {
     ${pick === 'match' ? '<p class="meta nr-hint">Match play: everyone plays their own ball. Each hole is worth 1 point; low net score takes it, a tie for low splits it.</p>' : ''}
     <div class="nr-foot">
       ${next ? '' : '<p class="meta" style="text-align:center;margin:0 0 8px">2v2 and Partner “Rider” Cup go to one more screen to set teams.</p>'}
-      <button class="btn primary nr-cta" data-act="${next ? 'setup-go' : 'setup-save'}" ${next ? 'data-v="teams"' : ''} ${s.saving ? 'disabled' : ''}>${s.saving ? 'Starting…' : next ? `Next: ${pick === '2v2' ? 'pick partners' : 'carts'}` : `Start round · ${n} player${n === 1 ? '' : 's'}`}${next ? icon('fwd', 18) : ''}</button>
+      <button class="btn primary nr-cta" data-act="${next ? 'setup-go' : 'setup-save'}" ${next ? 'data-v="teams"' : ''} ${s.saving ? 'aria-busy="true"' : ''}>${s.saving ? 'Starting…' : next ? `Next: ${pick === '2v2' ? 'pick partners' : 'carts'}` : `Start round · ${n} player${n === 1 ? '' : 's'}`}${next ? icon('fwd', 18) : ''}</button>
     </div>`;
 }
 
@@ -563,7 +564,7 @@ function pairsView(s) {
     ${seg('setup-pairswitch', [['never', 'Never'], ['six', 'Every 6'], ['turn', 'At the turn']], s.pairSwitch)}
     <div class="nr-tip">${icon('bulb', 16)}<span>${SWITCH_TIP[s.pairSwitch]}</span></div>
     ${rulesBlock(s)}
-    ${bottom(s.saving ? 'Starting…' : 'Start round · 2v2', 'setup-save', { disabled: s.saving })}`;
+    ${bottom(s.saving ? 'Starting…' : 'Start round · 2v2', 'setup-save', { busy: s.saving })}`;
 }
 
 const CART_TINT = { A: 'var(--cart-you)', B: 'var(--t-B)', C: 'var(--t-C)', D: 'var(--t-D)' };
@@ -588,7 +589,7 @@ function cartsView(s) {
     }).join('')}</div>
     <div class="nr-two"><button class="btn ghost" data-act="setup-shuffle">Shuffle carts</button><button class="btn ghost" data-act="setup-go" data-v="players">Edit players</button></div>
     <button class="nr-row" data-act="setup-go" data-v="matchups"><span style="flex:1;min-width:0"><b class="rt">Game &amp; matchups</b><span class="rs ellipsis">${esc(`${rulesSummary(s).split(' · ').slice(0, 2).join(' · ')} · ${sched}`)}</span></span><span class="meta">Optional</span>${icon('fwd', 18)}</button>
-    ${bottom(s.saving ? 'Starting…' : `Start round · ${n} players`, 'setup-save', { disabled: s.saving })}`;
+    ${bottom(s.saving ? 'Starting…' : `Start round · ${n} players`, 'setup-save', { busy: s.saving })}`;
 }
 
 /** ④b with 3 carts: nothing to switch; every matchup runs all 18. Rules only. */
@@ -602,7 +603,7 @@ function threeCartView(s) {
     <div class="lbl nr-lbl">Matchups</div>
     <div class="mu-card">${rows}<div class="mu-groups meta">1st tee time: A + B · 2nd: C, all 18. Nobody moves.</div></div>
     ${rulesBlock(s)}
-    ${bottom(s.saving ? 'Starting…' : `Start round · ${s.players.length} players`, 'setup-save', { disabled: s.saving })}`;
+    ${bottom(s.saving ? 'Starting…' : `Start round · ${s.players.length} players`, 'setup-save', { busy: s.saving })}`;
 }
 
 /** ④b Game & matchups (optional; defaults set). */
@@ -637,7 +638,7 @@ function matchupsView(s) {
     <div class="nr-line"><span class="lbl" style="flex:1">Matchups</span><button class="btn small" data-act="setup-shuffle-mu">Shuffle</button><button class="btn small${s.custom ? ' primary' : ''}" data-act="setup-custom">${s.custom ? 'Done' : 'Custom'}</button></div>
     <div class="mu-card">${rows}<div class="mu-groups meta">${esc(groupLine)}</div></div>
     ${rulesBlock(s)}
-    ${bottom(s.saving ? 'Starting…' : 'Start round · 8 players', 'setup-save', { disabled: s.saving })}`;
+    ${bottom(s.saving ? 'Starting…' : 'Start round · 8 players', 'setup-save', { busy: s.saving })}`;
 }
 
 /** Scorecard check: good / fix / entered by hand. Also tees, first tee and the round name. */

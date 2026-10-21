@@ -19,12 +19,15 @@ export function toast(opts, app) {
   const root = $('toasts');
   clearTimeout(toastTimer);
   current = { ...opts, app };
+  // Toast (design-system/components/Toast): neutral pill with a check (never green); 2 s, or 5 s with
+  // Undo. Errors keep a red outline, no check, and stay a little longer so the fix can be read.
   const act = opts.action ? `<button class="t-act" data-act="toast-act">${esc(opts.action)}</button>` : '';
+  const check = opts.error ? '' : `<span class="t-ico">${icon('check', 18)}</span>`;
   root.innerHTML = `<div class="toast${opts.error ? ' error' : ''}" data-act="toast-tap" role="status">
-    <div class="t-body"><div class="t-title ellipsis">${esc(opts.title)}</div>${opts.sub ? `<div class="t-sub">${esc(opts.sub)}</div>` : ''}</div>${act}</div>`;
+    ${check}<div class="t-body"><div class="t-title">${esc(opts.title)}</div>${opts.sub ? `<div class="t-sub">${esc(opts.sub)}</div>` : ''}</div>${act}</div>`;
   const el = root.firstElementChild;
   requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('show')));
-  toastTimer = setTimeout(hideToast, opts.ms ?? 3000);
+  toastTimer = setTimeout(hideToast, opts.ms ?? (opts.action ? 5000 : opts.error || opts.sub ? 3500 : 2000));
 }
 
 export function hideToast() {
