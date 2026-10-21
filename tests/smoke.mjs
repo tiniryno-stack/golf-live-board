@@ -695,6 +695,25 @@ ok(be.rpc.upsert_score({ p_code: yr.code, p_device_id: SDEV, p_player_id: 'p3', 
 ok(be.rpc.upsert_score({ p_code: yr.code, p_device_id: YDEV, p_player_id: 'p3', p_hole: 1, p_strokes: 5 }).ok === true, 'the same number from Andrew is fine (nothing changes)');
 ok(be.rpc.admin_upsert_score({ p_code: yr.code, p_admin_pin: yr.admin_pin, p_player_id: 'p3', p_hole: 1, p_strokes: 6 }).ok === true, 'the organizer can still fix it');
 ok(be.rpc.upsert_score({ p_code: yr.code, p_device_id: YDEV, p_player_id: 'p3', p_hole: 1, p_strokes: 4 }).ok === true, 'once someone else entered it, Andrew can change it again');
+// Fix a hole (organizer only): the hole menu ⋯ → par + stroke index → Save; SI stays 1–18 once each.
+ok(!(await YF.page.$('[data-act="fixhole-open"]')), 'no hole menu for a player who isn’t the organizer');
+await YF.page.evaluate(([c, pin]) => { localStorage.setItem('glb.admin.' + c, JSON.stringify(pin)); }, [yr.code, yr.admin_pin]);
+await YF.page.reload();
+await YF.page.waitForTimeout(1000);
+await YF.page.tap('[data-act="fixhole-open"]');
+await YF.page.waitForTimeout(300);
+const fh = await YF.page.textContent('#sheet');
+const siWas = yev.course.strokeIndex[0];
+ok(/Fix hole 1/.test(fh) && /Changes the card for all 4 players/.test(fh), 'organizer: ⋯ → Fix hole 1, with the amber note');
+await YF.page.tap('#sheet [data-act="fixhole-par"][data-v="6"]');
+await YF.page.tap('#sheet [data-act="fixhole-si"][data-d="1"]');
+await YF.page.waitForTimeout(150);
+await YF.page.tap('#sheet [data-act="fixhole-save"]');
+await YF.page.waitForTimeout(900);
+const swapped = yev.course.strokeIndex.indexOf(siWas);
+ok(yev.course.par[0] === 6 && yev.course.strokeIndex[0] === siWas + 1 && swapped >= 0 && new Set(yev.course.strokeIndex).size === 18,
+  `saved: par 6, stroke index ${siWas} → ${siWas + 1}, the hole that had ${siWas + 1} took ${siWas} (${swapped + 1})`);
+ok(/Hole 1 saved/.test(await toastText(YF.page)), 'and a toast says so');
 await YF.ctx.close();
 
 // 11c. Matches: one segment per match; the other match expands IN PLACE (yours collapses to a

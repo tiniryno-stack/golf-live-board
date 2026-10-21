@@ -2,7 +2,7 @@
 // leave round, player detail, edit a past score, hole detail, headline feed, confirm,
 // organizer PIN (unlock a finalized round).
 
-import { esc, icon, scoreClass, clock, mark } from '../ui.js';
+import { esc, icon, scoreClass, clock, mark, seg } from '../ui.js';
 import { fmtToPar, fmtPts, fmtSigned, maxHoleScore, componentNames, posOf, holeAt, holesLabel, matchesFor, playOrder, teeTimeName, groupIndex } from '../scoring.js';
 import { teamColor, headlineColor, shortTeam } from '../teams.js';
 import { codeField } from './home.js';
@@ -146,6 +146,27 @@ const BODIES = {
     return `${head('Waiting…')}
       <p class="soft" style="margin:0 0 16px">Waiting for your foursome to let you in as <b>${esc(name)}</b>. Anyone playing with you sees a “Let them in” banner. The organizer can approve too.</p>
       <button class="btn ghost block" data-act="sheet-close">Watch while I wait</button>`;
+  },
+
+  /** Enter → hole menu (⋯), organizer only: fix this hole's par and stroke index for everyone. */
+  fixhole(app, { hole, par, si }) {
+    const c = app.event?.course;
+    if (!c) return head('Fix a hole');
+    const was = c.par[hole - 1];
+    const other = c.strokeIndex.findIndex((v, i) => v === si && i !== hole - 1);
+    const n = app.snapshot?.players.length || 0;
+    return `${head(`Fix hole ${hole}`, 'From the hole menu. Organizer only.')}
+      <div class="ts-label fh-k">Par</div>
+      ${seg('fixhole-par', [3, 4, 5, 6].map((p) => [String(p), String(p)]), String(par)).replace('class="seg"', 'class="seg fh-par" aria-label="Par"')}
+      <p class="fh-note">${par !== was ? `The card said par ${was}. ` : ''}Scores already in stay; points are re-counted.</p>
+      <div class="ts-label fh-k">Stroke index</div>
+      <div class="hcp-stepper fh-stepper">
+        <button class="hs-btn" data-act="fixhole-si" data-d="-1" aria-label="Lower" ${si <= 1 ? 'disabled' : ''}>${icon('minus', 28)}</button>
+        <span class="hs-mid"><span class="hs-num">${si}</span><span class="hs-was">${other >= 0 ? `hole ${other + 1} gets ${c.strokeIndex[hole - 1]}` : '1 = hardest, 18 = easiest'}</span></span>
+        <button class="hs-btn" data-act="fixhole-si" data-d="1" aria-label="Higher" ${si >= 18 ? 'disabled' : ''}>${icon('plus', 28)}</button>
+      </div>
+      <div class="fh-warn">${icon('alert', 18)}<span>Changes the card for all ${n} players.</span></div>
+      <button class="btn primary big block" data-act="fixhole-save">Save hole ${hole}</button>`;
   },
 
   /** Setup → Players: one player's handicap. */
@@ -444,6 +465,33 @@ function editValue(app, d) {
 
 export const actions = {
   'sheet-close': (el, ev, app) => app.closeSheet(),
+  // Fix a hole (organizer): draft lives in the sheet's props until Save.
+  'fixhole-open': (el, ev, app) => {
+    const h = Number(el.dataset.v);
+    const c = app.event?.course;
+    if (!c || !app.isOrganizer()) return;
+    app.openSheet('fixhole', { hole: h, par: c.par[h - 1], si: c.strokeIndex[h - 1] });
+  },
+  'fixhole-par': (el, ev, app) => app.openSheet('fixhole', { ...app.sheet.props, par: Number(el.dataset.v) }),
+  'fixhole-si': (el, ev, app) => {
+    const p = app.sheet.props;
+    app.openSheet('fixhole', { ...p, si: Math.max(1, Math.min(18, p.si + Number(el.dataset.d))) });
+  },
+  'fixhole-save': async (el, ev, app) => {
+    const { hole, par, si } = app.sheet.props;
+    const c = JSON.parse(JSON.stringify(app.event.course));
+    const old = c.strokeIndex[hole - 1];
+    const other = c.strokeIndex.findIndex((v, i) => v === si && i !== hole - 1);
+    if (other >= 0) c.strokeIndex[other] = old; // keep 1–18 each used once: the two holes swap
+    c.par[hole - 1] = par;
+    c.strokeIndex[hole - 1] = si;
+    el.setAttribute('aria-busy', 'true');
+    const ok = await app.saveEvent({ course: c });
+    if (ok) {
+      app.closeSheet();
+      app.toast({ title: `Hole ${hole} saved`, sub: `Par ${par} · stroke index ${si}${other >= 0 ? ` · hole ${other + 1} is ${old} now` : ''}` });
+    } else el.removeAttribute('aria-busy');
+  },
   'who-pick': (el, ev, app) => {
     const pid = el.dataset.v;
     if (app.claimed.has(pid) && pid !== app.me) app.openSheet('taken', { pid });

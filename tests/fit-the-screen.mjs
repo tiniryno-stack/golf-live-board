@@ -219,6 +219,12 @@ for (const size of SIZES) {
   await page.evaluate(() => { window.__glb.setup = null; localStorage.removeItem('glb.setupDraft'); });
   await go(`#/e/${r.code}/enter`);
   await check(page, size, 'Enter', 'enter');
+  // Organizer's hole menu → Fix-a-hole sheet.
+  await page.tap('[data-act="fixhole-open"]');
+  await page.waitForTimeout(400);
+  await check(page, size, 'Fix-a-hole sheet');
+  await page.tap('#sheet .panel [data-act="sheet-close"]');
+  await page.waitForTimeout(350);
   await page.evaluate(() => { window.__glb.ui.hole = 6; window.__glb.ui.unlocked = 6; window.__glb.render(); }); // a past hole, unlocked for editing
   await check(page, size, 'Enter (hole 6)', 'enter');
   await page.tap('.cart.opp.dim');

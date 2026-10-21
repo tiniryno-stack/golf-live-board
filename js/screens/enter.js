@@ -385,18 +385,12 @@ export default {
             <span class="hole-meta">Par ${hole.par} · Hcp ${hole.si} · ${esc(maxLabel(snap.course, st, h))}</span>
           </button>
           <button class="arrow" data-act="hole-next" aria-label="Next hole" ${pos >= limitPos ? 'disabled' : ''}>${icon('fwd')}</button>
+          ${app.isOrganizer() ? `<button class="hole-more" data-act="fixhole-open" data-v="${h}" aria-label="Hole menu: fix hole ${h}">${icon('more', 20)}</button>` : ''}
         </div>`;
     if (individual(app)) return individualView(app, h, { holeRow, dots, footBtn });
     return `<div class="enter nr">
       <div class="hero">
-        <div class="hole-row">
-          <button class="arrow" data-act="hole-prev" aria-label="Previous hole" ${pos <= 1 ? 'disabled' : ''}>${icon('back')}</button>
-          <button class="hole-head" data-act="hole-grid" aria-label="Hole ${h}: all holes">
-            <span class="hole-title">Hole ${h}</span>
-            <span class="hole-meta">Par ${hole.par} · Hcp ${hole.si} · ${esc(maxLabel(snap.course, st, h))}</span>
-          </button>
-          <button class="arrow" data-act="hole-next" aria-label="Next hole" ${pos >= limitPos ? 'disabled' : ''}>${icon('fwd')}</button>
-        </div>
+        ${holeRow}
         ${matchLine ? `<div class="matchup-line">${matchLine}</div>` : ''}
       </div>
       <div class="sheet${focus === 'opp' ? ' even' : ''}">
