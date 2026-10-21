@@ -599,6 +599,45 @@ await MX.page.waitForTimeout(400);
 ok(!!(await MX.page.$('.m-hero')) && !(await MX.page.$('.mine-bar')) && /ALSO/.test(await MX.page.textContent('.watch-box')), 'tap the bar: back to your match');
 await MX.ctx.close();
 
+// 11d. 2v2 (exactly 4): pick partners + switch every 6 → one foursome, pairings rotate, the
+//      Board ranks the four players on their summed points.
+const V = await (async () => {
+  const ctx = await browser.newContext({ viewport: { width: 393, height: 852 }, isMobile: true, hasTouch: true });
+  await attach(ctx, be, srv.origin);
+  await ctx.addInitScript(() => { for (const k of ['tile5', 'prov2', 'oppcart3']) localStorage.setItem('glb.coach.' + k, 'true'); });
+  const page = await ctx.newPage();
+  page.errors = [];
+  page.on('pageerror', (e) => page.errors.push(`2v2 phone: ${e.message}`));
+  return { ctx, page };
+})();
+await V.page.goto(`${srv.origin}/#/setup`);
+await V.page.waitForTimeout(800);
+await V.page.tap('[data-act="setup-mine"][data-v="twin-creeks-allen-tx"]');
+for (const n of ['Vic Abel', 'Wes Bond', 'Xan Cole', 'Yul Dorn']) {
+  await V.page.fill('#new-player', n);
+  await V.page.press('#new-player', 'Enter');
+  await V.page.waitForTimeout(150);
+}
+await V.page.tap('[data-act="setup-go"][data-v="game"]');
+await V.page.tap('[data-act="setup-game"][data-v="2v2"]');
+await V.page.tap('[data-act="setup-go"][data-v="teams"]');
+await V.page.tap('[data-act="setup-pairswitch"][data-v="six"]');
+await V.page.tap('[data-act="setup-save"]');
+await V.page.waitForTimeout(900);
+const ve = be.tables.events[be.tables.events.length - 1];
+ok(ve.settings.pairs === true && ve.settings.pairSwitch === 'six' && ve.roster.players.every((p) => p.groupId === 'g1' && !p.teamId), '2v2 saved: one foursome, partners switch every 6');
+for (let h = 1; h <= 7; h++) for (const p of ve.roster.players) be.tables.scores.push({ event_id: ve.id, player_id: p.id, hole: h, strokes: p.id === 'p1' ? 3 : 5, updated_by: p.name, updated_at: new Date(Date.now() + h).toISOString() });
+await V.page.goto(`${srv.origin}/#/e/${ve.code}/board`);
+await V.page.waitForTimeout(1200);
+await clearOverlays(V.page);
+const vrows = await V.page.$$eval('.team-row .row-title', (els) => els.map((e) => e.textContent.trim()));
+ok(vrows.length === 4 && vrows[0].startsWith('Vic') && /Points/.test(await V.page.textContent('.board-segs')), `2v2 Board: the four players ranked on points (${vrows.join(', ')})`);
+await V.page.goto(`${srv.origin}/#/e/${ve.code}/matches`);
+await V.page.waitForTimeout(800);
+const vsegs = await V.page.$$eval('[data-act="matches-rot"]', (els) => els.map((e) => e.innerText.replace(/\s+/g, ' ').trim()));
+ok(vsegs.length === 3, `Matches: a segment per pairing (${vsegs.join(' | ')})`);
+await V.ctx.close();
+
 // 12. Every box needs a score: Next hole waits, points at who's missing, never saves par on its own
 const r3 = seedRound(be);
 const DEV3 = '33333333-3333-4333-8333-333333333333';
