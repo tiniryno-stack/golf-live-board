@@ -54,7 +54,7 @@ test('short names drop the "golf club" words', () => {
 
 test('search rows: nearest first, by API distance or our own', () => {
   const rows = fx.near.courses.map(fromSearchRow).reverse();
-  assert.deepEqual(sortByDistance(rows, null).map((r) => r.distance), [0, 1.39, 2.27, 6.9]);
+  assert.deepEqual(sortByDistance(rows, null).map((r) => r.distance), [0, 1.39, 2.27, 6.9, 14.2]);
   const noDist = rows.map((r) => ({ ...r, distance: null }));
   const here = { lat: 33.2, lng: -96.65 };
   assert.equal(sortByDistance(noDist, here)[0].name, 'Cedar Bend Country Club');
