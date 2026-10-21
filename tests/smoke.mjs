@@ -1208,12 +1208,27 @@ await HD.page.goto(`${srv.origin}/${moveHash}`);
 await HD.page.waitForTimeout(600);
 ok((await HD.page.evaluate(() => JSON.parse(localStorage.getItem('glb.device')))) === '88888888-8888-4888-8888-888888888888', 'a home screen app already in use keeps its own ID');
 
+// iPhone's home screen app reports a page one status bar shorter than the screen: fill the screen anyway.
+const HF = await (async () => {
+  const ctx = await browser.newContext({ viewport: { width: 393, height: 793 }, screen: { width: 393, height: 852 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  await attach(ctx, be, srv.origin);
+  await ctx.addInitScript(() => { window.__GLB_IOS = true; window.__GLB_STANDALONE = true; });
+  const page = await ctx.newPage();
+  page.errors = [];
+  page.on('pageerror', (e) => page.errors.push(`HS-full: ${e.message}`));
+  return { ctx, page };
+})();
+await HF.page.goto(`${srv.origin}/#/`);
+await HF.page.waitForTimeout(500);
+const hf = await HF.page.evaluate(() => ({ app: document.getElementById('app').getBoundingClientRect().height, sheet: getComputedStyle(document.querySelector('.sheet-root')).height }));
+ok(Math.round(hf.app) === 852 && hf.sheet === '852px', `home screen app fills the whole screen, sheets too (${Math.round(hf.app)}px, ${hf.sheet})`);
+
 const HE = await hsPhone('HS-android', { ios: false });
 await HE.page.goto(`${srv.origin}/#/`);
 await HE.page.waitForTimeout(500);
 ok(!(await HE.page.$('[data-act="home-add"]')), 'not an iPhone: no button');
 
-const errors = [A, C, A2, P, Q, O, F, R, X, Y, Z, G, T, TP, NL, SP, HA, HB, HC, HD, HE].flatMap((p) => p.page.errors);
+const errors = [A, C, A2, P, Q, O, F, R, X, Y, Z, G, T, TP, NL, SP, HA, HB, HC, HD, HE, HF].flatMap((p) => p.page.errors);
 ok(errors.length === 0, `no page errors${errors.length ? `: ${errors.join('; ')}` : ''}`);
 
 await browser.close();

@@ -176,8 +176,9 @@ export default {
     const d = draft(app);
     const tab = app.ui.hostTab;
     const body = tab === 'players' ? players(app, d) : tab === 'activity' ? activity(app) : rules(app, d);
-    const save = tab === 'activity' ? '' : `<div class="setup-foot"><button class="btn primary" data-act="host-save" ${d.dirty ? '' : 'disabled'}>Save changes</button>
-      ${d.dirty ? '<button class="btn" data-act="host-discard">Discard</button>' : ''}</div>`;
+    // Only when something changed: a greyed Save bar sat on top of Finalize round for nothing.
+    const save = tab === 'activity' || !d.dirty ? '' : `<div class="setup-foot host-foot"><button class="btn primary" data-act="host-save">Save changes</button>
+      <button class="btn" data-act="host-discard">Discard</button></div>`;
     return `<div class="plain" style="padding-bottom:0">
       <h1 class="title">Host</h1>
       <div class="segs">${seg('host-tab', [['rules', 'Rules'], ['players', 'Players'], ['activity', 'Activity']], tab)}</div>

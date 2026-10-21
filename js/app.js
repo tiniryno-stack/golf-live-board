@@ -1320,6 +1320,15 @@ window.__glb = app; // handy for debugging from the console
 // Realtime handlers, reachable from the console / headless checks to simulate a push.
 app._remote = { score: onRemoteScore, event: onRemoteEvent, joinRequest: onRemoteJoinRequest, note: onRemoteNote };
 document.documentElement.classList.toggle('standalone', db.STANDALONE); // home screen app: no Safari bars
+if (db.STANDALONE) {
+  // The real screen height (iPhone's screen size doesn't turn with the phone; this app is portrait).
+  const fit = () => {
+    const tall = Math.max(screen.width, screen.height), short = Math.min(screen.width, screen.height);
+    document.documentElement.style.setProperty('--app-h', `${innerHeight > innerWidth ? tall : short}px`);
+  };
+  fit();
+  addEventListener('resize', fit);
+}
 route();
 if (db.moved) app.toast({ title: 'You’re all set', sub: 'Same phone as in Safari: your rounds and crew came with you.' });
 setTimeout(hideSplash, 4000); // never strand anyone on the launch screen

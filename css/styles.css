@@ -607,7 +607,7 @@ a { color: inherit; }
 .tbar.pm .mid { position: absolute; left: 50%; top: 0; bottom: 0; border-left: 1.5px dashed var(--line-strong); z-index: 1; }
 @media (prefers-reduced-motion: reduce) { .tbar .fill { transition: none; } }
 .row.team-row { position: relative; gap: 14px; padding: 14px 4px; }
-.row.team-row.me { background: var(--tint); border-radius: 14px; padding: 14px 10px; margin: 0 -6px; }
+.row.team-row.me { background: var(--tint); border-radius: 14px; padding: 14px 10px; margin: 0 -6px; width: calc(100% + 12px); }
 .row.team-row .row-title { font-size: 18px; font-weight: 700; }
 .you-tag { font-size: 11px; font-weight: 700; color: var(--good-ink); letter-spacing: .05em; vertical-align: 2px; margin-left: 4px; }
 .row.team-row .rank { width: 14px; font-size: 14px; color: var(--ink-soft); text-align: left; }
@@ -865,6 +865,7 @@ a { color: inherit; }
 .steps i.on { background: var(--ink); }
 .setup-foot { position: sticky; bottom: 0; display: flex; gap: 8px; padding: 12px 0 calc(8px + var(--sab)); background: linear-gradient(to bottom, transparent, var(--bg) 30%); }
 .setup-foot .btn { flex: 1; }
+.host-foot { background: var(--bg); border-top: 1px solid var(--line); margin: 16px calc(-1 * var(--gutter)) 0; padding-left: var(--gutter); padding-right: var(--gutter); }
 .course-opt { width: 100%; text-align: left; padding: 14px; border-radius: var(--radius-card); background: var(--surface); border: 1.5px solid transparent; }
 .course-opt[aria-pressed="true"] { border-color: var(--accent); }
 .course-opt:disabled { opacity: .5; }
@@ -1209,7 +1210,13 @@ details.fold summary::-webkit-details-marker { display: none; }
 /* ───────────────────────────────────────────── home screen app (standalone: no Safari bars)
    The home line's safe area is ~34px; the floating tab bar can sit inside its top part instead of
    leaving the whole strip empty. */
-.standalone .tabbar { padding-bottom: max(10px, calc(var(--sab) - 14px)); }
+/* iPhone bug: a home screen app with a see-through status bar gets a page ~one status bar short of
+   the screen, leaving a blank strip at the bottom (and under sheets). --app-h = the real screen
+   height (set in app.js), so the app and every overlay reach the bottom edge. */
+.standalone, .standalone body { min-height: var(--app-h, 100dvh); }
+.standalone .app { height: max(100dvh, var(--app-h, 100dvh)); }
+.standalone .sheet-root, .standalone .overlay-root, .standalone .coach-scrim { bottom: auto; height: max(100dvh, var(--app-h, 100dvh)); }
+.standalone .tabbar { padding-bottom: max(10px, calc(var(--sab) - 20px)); }
 .standalone .nr-foot { padding-bottom: max(16px, calc(var(--sab) - 10px)); }
 .standalone .nr-manual-wrap { padding-bottom: max(18px, calc(var(--sab) - 10px)); }
 .standalone .panel { padding-bottom: max(20px, calc(var(--sab) - 6px)); }
