@@ -135,8 +135,8 @@ const serverSays = be.rpc.upsert_score({ p_code: r.code, p_device_id: dev, p_pla
 ok(serverSays.error === 'not_your_foursome', `server rejects it too (${serverSays.error})`);
 await C.page.goto(`${link}/card`);
 await C.page.waitForTimeout(500);
-ok(!(await C.page.$('[data-pid="p1"][data-h="3"]')), 'Andrew\u2019s cart starts collapsed on Sam\u2019s Card (not his foursome)');
-await C.page.tap('[data-act="card-toggle"][data-v="A"]');
+ok(!(await C.page.$('[data-pid="p1"][data-h="3"]')), 'Andrew\u2019s group starts collapsed on Sam\u2019s Card (not his foursome)');
+await C.page.tap('[data-act="card-other"]');
 await C.page.waitForTimeout(200);
 const andrewCellEditable = await C.page.$eval('[data-pid="p1"][data-h="3"]', (el) => el.dataset.act === 'cell-edit');
 ok(!andrewCellEditable, 'Andrew’s hole 3 cell is view-only on Sam’s Card');
@@ -178,7 +178,7 @@ const official = await app(C.page, () => window.__glb.snapshot.officialThrough);
 ok(official === 6, `official line through 6 (${official})`);
 await C.page.goto(`${link}/card`);
 await C.page.waitForTimeout(500);
-const cardOrder = await C.page.$$eval('.cart-block .cb-head .name', (els) => els.map((e) => e.textContent));
+const cardOrder = await C.page.$$eval('.card-nr > .cgrid .cg-team .name', (els) => els.map((e) => e.textContent));
 ok(cardOrder[0] === 'Fore Play' && cardOrder[1] === 'Hogan\u2019s Heroes', `Sam\u2019s Card: his cart (C) first, then who he\u2019s playing (${cardOrder.slice(0, 2).join(', ')})`);
 // Matchup win bonus: rotation 1 is in → the winner's +1 shows; tap a team for the breakdown
 await C.page.goto(`${link}/board`);

@@ -581,7 +581,37 @@ a { color: inherit; }
 .bd-row.bd-total .bd-n { font-size: 28px; }
 .final-banner { background: var(--sun); color: #14161A; border-radius: 16px; padding: 12px 14px; margin: 0 0 14px; font-weight: 700; }
 
-/* ───────────────────────────────────────────── Card (scorecard grid) */
+/* ───────────────────────────────────────────── Card (designspec §5: classic scorecard) */
+.card-nr { display: flex; flex-direction: column; gap: 12px; padding-top: 14px; }
+.card-nr .segs { margin: 0; }
+.card-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; padding: 0 4px; }
+.card-head .title { font-size: 30px; margin: 2px 0 0; letter-spacing: -0.03em; }
+.card-head .seg { flex: none; padding: 3px; border-radius: 12px; }
+.card-head .seg button { min-height: 42px; padding: 0 12px; font-size: 13px; border-radius: 9px; }
+.cgrid { border-radius: 18px; background: var(--surface); padding: 8px 8px 6px; }
+.cg-row { display: grid; grid-template-columns: 74px repeat(9, minmax(0, 1fr)) 34px; align-items: center; }
+.cg-l { font-size: 12px; color: var(--ink-soft); padding-left: 6px; text-align: left; min-width: 0; }
+.cg-c { display: flex; justify-content: center; align-items: center; min-width: 0; }
+.cg-c.cur { background: var(--ctint); }
+.cg-t { text-align: center; font-size: 12px; color: var(--ink-soft); }
+.cg-hole { height: 30px; } .cg-hole .cg-c { height: 30px; font-size: 13px; border-radius: 8px 8px 0 0; } .cg-hole .cg-c b { font-weight: 700; }
+.cg-hole .cg-t { font-size: 10px; }
+.cg-par { height: 22px; } .cg-par .cg-c { height: 22px; font-size: 12px; color: var(--ink-soft); }
+.cg-hcp { height: 18px; } .cg-hcp .cg-c { height: 18px; font-size: 10px; color: var(--ink-soft); opacity: .8; } .cg-hcp .cg-l { font-size: 11px; opacity: .8; }
+.cg-team { display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 6px; margin-top: 6px; border-top: 1px solid var(--line); }
+.cg-team .name { font-size: 12px; font-weight: 700; } .cg-team .cg-right { flex: 1; text-align: right; font-size: 12px; color: var(--ink-soft); }
+.cg-team.cg-rule { height: 6px; }
+.cg-p { height: 38px; }
+.cg-p .cg-c { height: 38px; }
+.cg-name { font-size: 13px; font-weight: 600; color: var(--ink); height: 38px; }
+.cg-p .cg-t { font-size: 14px; font-weight: 700; color: var(--ink); }
+.cg-p .mk { font-size: 15px; font-weight: 600; }
+.cg-pend { border-radius: 50%; border: 1.5px dashed; }
+.cg-c.cell.editable:active { background: var(--surface-2); }
+.wb-grid { border-top: 1px solid var(--line); }
+.wb-grid .cgrid { border-radius: 0; padding-top: 4px; }
+
+/* old table grid (still used in sheets) */
 .sc { width: 100%; border-collapse: collapse; table-layout: fixed; font-variant-numeric: tabular-nums; }
 .sc th, .sc td { padding: 0; text-align: center; height: 36px; font-size: 14px; }
 .sc th { font-size: 11px; font-weight: 600; color: var(--ink-soft); height: 22px; }
@@ -599,6 +629,7 @@ a { color: inherit; }
 .cart-block .cb-head { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 40px; padding: 0 4px; text-align: left; }
 .cart-block .cb-head .name { flex: 1; font-weight: 700; }
 .cart-block.collapsed { padding-bottom: 8px; }
+
 
 /* ───────────────────────────────────────────── sheets (slide-up overlays) */
 .sheet-root { position: fixed; inset: 0; z-index: 40; pointer-events: none; }
@@ -932,3 +963,27 @@ details.fold summary::-webkit-details-marker { display: none; }
   .board-hero .you { font-size: 14px; margin-top: 4px; }
   .prow { min-height: 40px; }
 }
+
+/* player card (designspec §5) */
+.pc-top { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin: -4px 0 4px; }
+.pc-team { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+.pc-total { text-align: right; flex: none; }
+.pc-total > div { font-size: 64px; font-weight: 700; letter-spacing: -0.05em; line-height: .9; }
+.pc-total small { display: block; font-size: 15px; font-weight: 700; color: var(--ink-soft); margin-top: 4px; }
+.pc-nine { margin-top: 14px; border-radius: 18px; background: var(--surface); padding: 12px 10px 10px; }
+.panel .pc-nine, .panel .pc-stat { background: var(--surface-2); }
+.pc-nine .spread { padding: 0 4px 8px; font-size: 14px; }
+.pc-holes { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); row-gap: 4px; }
+.pc-h { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 4px 0; border-radius: 10px; }
+.pc-h.cur { background: var(--tint); }
+.pc-h > .mono { font-size: 11px; color: var(--ink-soft); }
+.pc-h small { font-size: 10px; color: var(--ink-soft); white-space: nowrap; }
+.pc-h .mk { font-size: 16px; }
+.pc-h .mk-ghost { border-width: 1.5px; color: transparent; }
+.pc-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-top: 14px; }
+.pc-stat { border-radius: 14px; background: var(--surface); padding: 10px 10px 12px; display: flex; flex-direction: column; }
+.pc-stat b { font-size: 26px; font-weight: 700; line-height: 1; }
+.pc-stat span { font-size: 12px; color: var(--ink-soft); margin-top: 4px; }
+.pc-stat i { display: block; height: 4px; border-radius: 2px; margin-top: 8px; max-width: 100%; }
+.pc-hl { margin-top: 14px; border-radius: 16px; background: var(--tint); border: 1px solid var(--good); padding: 12px 14px; display: flex; gap: 10px; align-items: flex-start; font-size: 15px; line-height: 1.35; font-weight: 500; }
+.pc-hl > span:first-child { color: var(--good-ink); flex: none; display: inline-flex; margin-top: 1px; }

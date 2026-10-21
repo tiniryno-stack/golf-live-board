@@ -2,7 +2,7 @@
 // leave round, player detail, edit a past score, hole detail, headline feed, confirm,
 // organizer PIN (unlock a finalized round).
 
-import { esc, icon, scoreClass, clock } from '../ui.js';
+import { esc, icon, scoreClass, clock, mark } from '../ui.js';
 import { fmtToPar, fmtPts, fmtSigned, maxHoleScore, componentNames, posOf, holeAt, holesLabel, matchFor, playOrder } from '../scoring.js';
 import { teamColor, headlineColor } from '../teams.js';
 
@@ -143,31 +143,57 @@ const BODIES = {
   },
 
   player(app, { pid }) {
+    // Player card (designspec §5): total + to-par, net, both nines with score marks and "par 4"
+    // under each hole, stat tiles, one highlight line.
     const snap = app.snapshot;
     const p = snap?.playerById.get(pid);
     if (!p) return head('Player');
-    const half = (from) => {
-      const hs = snap.holes.slice(from, from + 9);
-      return `<div class="line18" style="margin:0 0 10px">
-        ${hs.map((h) => `<span class="h">${h.n}</span>`).join('')}
-        ${hs.map((h) => `<span class="faint">${h.par}</span>`).join('')}
-        ${hs.map((h) => {
-          const g = p.gross[h.n - 1];
-          return `<span><span class="score ${scoreClass(g, h.par)}" style="font-size:14px">${g ?? '·'}</span></span>`;
-        }).join('')}
-        ${snap.hasStrokes ? hs.map((h) => `<span class="soft">${p.net[h.n - 1] ?? '·'}</span>`).join('') : ''}
+    const cur = app.me === pid ? app.nextHole() : null;
+    const nine = (from) => {
+      const hs = snap.holes.slice(from - 1, from + 8);
+      const got = hs.filter((h) => p.gross[h.n - 1] != null);
+      const sum = got.reduce((a, h) => a + p.gross[h.n - 1], 0);
+      const toPar = got.reduce((a, h) => a + p.gross[h.n - 1] - h.par, 0);
+      const tp = toPar === 0 ? 'E' : toPar > 0 ? `+${toPar}` : `−${-toPar}`;
+      const label = !got.length ? '–' : got.length === 9 ? `${sum} · ${tp}` : `${sum} thru ${got.length} · ${tp}`;
+      return `<div class="pc-nine">
+        <div class="spread"><b>${from === 1 ? 'Front 9' : 'Back 9'}</b><span class="mono meta">${label}</span></div>
+        <div class="pc-holes">${hs.map((h) => `<div class="pc-h${h.n === cur ? ' cur' : ''}"><span class="mono">${h.n}</span>${mark(p.gross[h.n - 1], h.par, 28, { ghost: '–' })}<small>par ${h.par}</small></div>`).join('')}</div>
       </div>`;
     };
+    const d = (h) => p.gross[h.n - 1] - h.par;
+    const played = snap.holes.filter((h) => p.gross[h.n - 1] != null);
+    const count = (f) => played.filter((h) => f(d(h))).length;
+    const stats = [[count((x) => x < 0), 'Birdies', 'var(--sun)'], [count((x) => x === 0), 'Pars', 'var(--ink-soft)'], [count((x) => x === 1), 'Bogeys', 'color-mix(in srgb, var(--ink-soft) 50%, transparent)'], [count((x) => x >= 2), 'Double+', 'var(--bad)']];
+    // One highlight: a birdie run, else the swing between nines, else the birdies.
+    const order = playOrder(snap.settings);
+    let line = '';
+    let run = [];
+    for (const n of order) {
+      const g = p.gross[n - 1];
+      if (g != null && g < snap.holes[n - 1].par) run.push(n);
+      else { if (run.length >= 2) break; run = []; }
+    }
+    const nineTo = (from) => snap.holes.slice(from - 1, from + 8).filter((h) => p.gross[h.n - 1] != null).reduce((a, h) => a + d(h), 0);
+    const fmt = (v) => (v === 0 ? 'even' : v > 0 ? `+${v}` : `−${-v}`);
+    if (run.length >= 2) line = run.length === 2 ? `Back-to-back birdies on ${run[0]} and ${run[1]}.` : `${run.length} birdies in a row (holes ${run[0]}–${run[run.length - 1]}).`;
+    if (p.thruFront && p.thruBack) line += `${line ? ' ' : ''}That’s ${fmt(nineTo(10))} on the back after ${fmt(nineTo(1))} on the front.`;
+    if (!line && stats[0][0]) line = `${stats[0][0]} birdie${stats[0][0] === 1 ? '' : 's'} so far.`;
+    const team = p.teamId && (app.event?.roster?.teams || []).length ? snap.teamById.get(p.teamId) : null;
+    const tc = team ? teamColor(app.myTeam(), team.id) : '';
+    const gtp = p.grossToPar === 0 ? 'E' : p.grossToPar > 0 ? `+${p.grossToPar}` : `−${-p.grossToPar}`;
+    const ntp = p.netToPar === 0 ? 'E' : p.netToPar > 0 ? `+${p.netToPar}` : `−${-p.netToPar}`;
     return `${head(p.name)}
-      <p class="meta" style="margin:-4px 0 14px">${esc(p.teamName || '')}${p.strokes ? ` · ${p.strokes} strokes` : ''} · thru ${p.thru}</p>
-      <div class="spread" style="margin:0 0 16px">
-        <div class="numcol"><div class="n">${fmtToPar(p.grossToPar)}</div><span class="micro">Gross</span></div>
-        ${snap.hasStrokes ? `<div class="numcol"><div class="n">${fmtToPar(p.netToPar)}</div><span class="micro">Net</span></div>` : ''}
-        <div class="numcol"><div class="n">${p.grossTotal || '–'}</div><span class="micro">Strokes</span></div>
+      <div class="pc-top">
+        <div style="min-width:0">
+          ${team ? `<div class="pc-team" style="color:${team.id === app.myTeam() ? 'var(--good-ink)' : tc}"><i class="jdot" style="--jersey:${tc}"></i>${esc(team.name)}</div>` : ''}
+          <div class="meta">${p.strokes ? `Hcp ${p.strokes} · ` : ''}thru ${p.thru}${snap.hasStrokes && p.thru ? ` · net ${p.netTotal} (${ntp})` : ''}</div>
+        </div>
+        <div class="pc-total"><div class="mono">${p.grossTotal || '–'}</div><small class="mono">${p.thru ? `${gtp} gross` : ''}</small></div>
       </div>
-      <div class="micro" style="margin:0 0 6px">Front</div>${half(0)}
-      <div class="micro" style="margin:0 0 6px">Back</div>${half(9)}
-      ${snap.hasStrokes ? '<p class="meta">Bottom row is net.</p>' : ''}`;
+      ${nine(1)}${nine(10)}
+      <div class="pc-stats">${stats.map(([n, l, c]) => `<div class="pc-stat"><b class="mono">${n}</b><span>${l}</span><i style="background:${c};width:${Math.max(18, n * 25)}%"></i></div>`).join('')}</div>
+      ${line ? `<div class="pc-hl"><span>${icon('spark', 18)}</span><span>${esc(line)}</span></div>` : ''}`;
   },
 
   holes(app) {
