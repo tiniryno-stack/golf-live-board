@@ -480,6 +480,18 @@ await R6.page.tap('[data-act="setup-go"][data-v="teams"]');
 await R6.page.waitForTimeout(200);
 ok((await R6.page.$$('.cart-card')).length === 3 && (await R6.page.$$('.cart-card .swap-name')).length === 6 && /6 players, 3 carts/.test(await R6.page.textContent('#content')),
   'Partner “Rider” Cup setup with 6: 3 carts of 2');
+// Swipe right = back in Setup (design system → gestures).
+const swipeRight = (page) => page.evaluate(() => {
+  const el = document.getElementById('content');
+  const t = (x) => new Touch({ identifier: 1, target: el, clientX: x, clientY: 400 });
+  el.dispatchEvent(new TouchEvent('touchstart', { touches: [t(60)], changedTouches: [t(60)], bubbles: true }));
+  el.dispatchEvent(new TouchEvent('touchend', { touches: [], changedTouches: [t(260)], bubbles: true }));
+});
+await swipeRight(R6.page);
+await R6.page.waitForTimeout(300);
+ok(await R6.page.evaluate(() => window.__glb.setup.screen) === 'game', 'swipe right in Setup goes back a step (carts → game)');
+await R6.page.tap('[data-act="setup-go"][data-v="teams"]');
+await R6.page.waitForTimeout(200);
 await R6.page.tap('[data-act="setup-go"][data-v="matchups"]');
 await R6.page.waitForTimeout(200);
 const mu6 = await R6.page.$$eval('.mu-row', (els) => els.map((e) => e.textContent.replace(/\s+/g, ' ').trim()));

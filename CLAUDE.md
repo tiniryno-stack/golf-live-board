@@ -155,7 +155,8 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
   empty boxes, names who's missing, and opens the other cart if only theirs are blank. Nothing is
   ever auto-saved as par. Name pinned at the top of
   a tile, score dead center level with − / +.
-- **Holes:** tap the hole number → grid of 18 (one row per matchup). The current hole and the one
+- **Holes:** tap the hole number → grid of 18 (one row per matchup). **No swiping between holes**
+  (design system, Oct 21): ◀ ▶ and the grid only. Swipe right = back in Setup; swipe down closes a sheet. The current hole and the one
   just finished are editable; **2+ holes back open locked** ("Tap to edit"). Switch it up shows
   once per swap.
 - **Jerseys:** your cart is always green on your phone; others fixed away colors A orange, B blue,
@@ -197,9 +198,9 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
 
 ```bash
 npm install
-npm test               # 72 unit tests: scoring + headlines + course data + names/crews + games (2v2, at the turn, 6-player match play, Partner “Rider” Cup for 6, tee times) + score marks
+npm test               # 76 unit tests: scoring + headlines + course data + names/crews + games (2v2, at the turn, 6-player match play, Partner “Rider” Cup for 6, tee times) + score marks + design tokens (drift, retired colors, type scale)
 npm run test:fit       # 132 checks: every screen at SE / 13 mini / 15-16 / Pro Max, no scroll on Enter
-npm run test:smoke     # 241 checks: multi-phone flows against the mock (join, swap, offline, rejoin,
+npm run test:smoke     # 242 checks: multi-phone flows against the mock (join, swap, offline, rejoin,
                        # reset/delete, back nine, Next waits for every score, grid/locks, recap,
                        # finalize + PIN unlock, add a course, which course?, names/nicknames/crew-mates, you-first pad,
                        # matches expand in place, 2v2, 3 carts for 6, own entry wins, Add to Home Screen move, test phones, blank-screen guards)

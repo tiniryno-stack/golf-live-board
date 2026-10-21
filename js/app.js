@@ -1308,21 +1308,20 @@ document.addEventListener('keydown', (ev) => {
   }
 });
 
-// Swipe left/right on Enter changes holes.
+// Gestures (design-system README → Motion and gestures): swipe right = back in Setup. Never swipe to
+// change holes on Enter (too easy to do by accident): arrows and the hole grid only.
 let swipe = null;
 $('content').addEventListener('touchstart', (ev) => {
-  if (app.route.tab !== 'enter' || ev.touches.length !== 1) return;
+  if (app.route.name !== 'setup' || ev.touches.length !== 1 || ev.target.closest?.('input, textarea, .chips, .seg')) { swipe = null; return; }
   swipe = { x: ev.touches[0].clientX, y: ev.touches[0].clientY, t: Date.now() };
 }, { passive: true });
 $('content').addEventListener('touchend', (ev) => {
-  if (!swipe || app.route.tab !== 'enter') return;
+  if (!swipe || app.route.name !== 'setup') return;
   const t = ev.changedTouches[0];
   const dx = t.clientX - swipe.x, dy = t.clientY - swipe.y;
   const quick = Date.now() - swipe.t < 600;
   swipe = null;
-  if (quick && Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
-    actions[dx < 0 ? 'hole-next' : 'hole-prev']?.(null, ev, app);
-  }
+  if (quick && dx > 70 && Math.abs(dx) > Math.abs(dy) * 1.5) document.querySelector('#topbar .back[data-act="setup-go"]')?.click();
 }, { passive: true });
 
 // ───────────────────────────────────────────── boot
