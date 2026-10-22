@@ -8,6 +8,9 @@ import { yardages, greenFor, greenSvg, yards } from '../geo.js';
 import { gps } from '../gps.js';
 
 const FAR_YD = 600;
+const near = new Set(); // courses this phone has had a fix near, this session
+const nearCourse = (g) => near.has(g);
+const setNear = (g, on) => { if (on) near.add(g); else near.delete(g); };
 
 /** Is the card on for this round + hole? (flag, round setting, green data) */
 export function cardOn(app, hole) {
@@ -22,9 +25,12 @@ export function cardState(app, hole) {
   const g = greenFor(app.snapshot.course, hole);
   const s = gps.state();
   if (s.status === 'denied') return { kind: 'denied', g };
-  if (!s.pos) return { kind: 'finding', g };
+  // No fix yet: show "finding you" only once this phone has been near this course (else the card would
+  // flash at home and vanish when the first fix lands 20 miles away).
+  if (!s.pos) return nearCourse(g) ? { kind: 'finding', g } : null;
   const y = yardages(s.pos, g.green);
-  if (y.middle > FAR_YD) return null;
+  if (y.middle > FAR_YD) { setNear(g, false); return null; }
+  setNear(g, true);
   return { kind: s.status === 'weak' ? 'weak' : 'ok', g, y: { ...y, front: Math.max(0, y.front) }, acc: Math.round(yards(s.acc)) };
 }
 

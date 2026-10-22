@@ -301,7 +301,7 @@ npm run test:smoke     # 272 checks (incl. crews): multi-phone flows against the
   outline, `greenSvg` with the three bands), `js/geodata.js` (Twin Creeks' 18 greens from OpenStreetMap, keyed by
   course id + `oga:` id; OSM numbers the nines the other way round, renumbered), `js/gps.js` (one `watchPosition`,
   only while Enter is open + visible; states off/finding/ok/weak(>±15 yd)/denied; `app._gps._fake()` for tests),
-  `js/screens/greencard.js` (card + badge; hidden when no green data, `settings.gps` off, or > 600 yd away),
+  `js/screens/greencard.js` (card + badge; hidden when no green data, `settings.gps` off, or > 600 yd away; "finding you" only shows once a fix has been near the course, so nothing flashes at home),
   Enter: card under the hole header, name row hidden (`screen.hideTop`), course name in the subtitle (team) /
   GPS badge (individual, and team when finding/weak), **Regular/Compact picked by measuring** the pads in
   `enter.mount` (compact when they'd shrink under 88px; never under 80px), Host → Rules "GPS yardages" pill,
