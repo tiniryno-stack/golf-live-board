@@ -18,8 +18,9 @@ import matches from './screens/matches.js';
 import board from './screens/board.js';
 import card from './screens/card.js';
 import host from './screens/host.js';
+import crew from './screens/crew.js';
 
-const SCREENS = { home, setup, season, enter, matches, board, card, host };
+const SCREENS = { home, setup, season, enter, matches, board, card, host, crew };
 const TABS = [
   ['enter', 'Enter', 'enter'],
   ['matches', 'Matches', 'matches'],
@@ -265,10 +266,21 @@ function onQueueSaved(item, res) {
 
 // ───────────────────────────────────────────── identity
 
+/** The crew learns which person this phone is from the name it plays as (feature 006, "you" across rounds). */
+function rememberCrewMe() {
+  const ev = app.event;
+  if (!ev?.crew_id || !app.me || String(ev.settings?.practice) === 'true') return;
+  const pid = (ev.roster?.players || []).find((p) => p.id === app.me)?.personId;
+  if (!pid) return;
+  const c = db.crews.get(ev.crew_id);
+  if (!c?.me) db.crews.put({ id: ev.crew_id, me: pid });
+}
+
 function setMe(pid) {
   if ((pid || null) !== app.me) app.ui.hole = null;
   app.me = pid || null;
   db.me.set(app.code, app.me);
+  rememberCrewMe();
   try { db.recent.note(app.code, roundSummary(app)); } catch { /* Home's summary is a nice-to-have */ }
   render();
 }
@@ -721,6 +733,7 @@ async function loadRound(code) {
   app.scores = new Map(res.scores.map((r) => [`${r.player_id}:${r.hole}`, r]));
   app.joinRequests = new Map(res.joinRequests.map((r) => [r.id, r]));
   db.recent.remember(app.event);
+  rememberCrewMe();
   recompute({ headlines: 'now' });
   // Coming back to a round that's over (finalized, or every score in): show the result, not Enter.
   if (app.route.tab === 'enter' && app.roundOver()) {
@@ -1021,7 +1034,13 @@ function parseHash() {
   const parts = location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
   if (!parts.length) return { name: 'home' };
   if (parts[0] === 'setup') return { name: 'setup', from: parts[1] ? db.normCode(parts[1]) : null };
-  if (parts[0] === 'season') return { name: 'season', crew: parts[1] || null };
+  if (parts[0] === 'season') return { name: 'season', crew: parts[1] || null, view: parts[2] || null };
+  // Crews (feature 006): #/crew/start · #/crew/rename/<id> · #/crew/which/<id> · #/crew/<INVITE>
+  if (parts[0] === 'crew') {
+    if (parts[1] === 'start') return { name: 'crew', mode: 'start' };
+    if ((parts[1] === 'rename' || parts[1] === 'which') && parts[2]) return { name: 'crew', mode: parts[1], id: parts[2] };
+    if (parts[1]) return { name: 'crew', mode: 'join', code: parts[1].toUpperCase().replace(/[^A-Z0-9]/g, '') };
+  }
   if (parts[0] === 'e' && parts[1]) {
     const tab = ['enter', 'matches', 'board', 'card', 'host'].includes(parts[2]) ? parts[2] : 'enter';
     return { name: tab, code: db.normCode(parts[1]), tab, round: true };

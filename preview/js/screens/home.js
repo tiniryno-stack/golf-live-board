@@ -6,6 +6,7 @@
 
 import { esc, icon, prettyDate, initials, empty } from '../ui.js';
 import { recent, normCode, STANDALONE, moveLink } from '../db.js';
+import { homeCrew } from './crew.js';
 import { fmtPts, fmtToPar, playerLeaderboard } from '../scoring.js';
 
 /** iPhone or iPad in Safari (iPadOS says it's a Mac, but has touch). Tests set `__GLB_IOS`. */
@@ -126,14 +127,10 @@ export default {
 
   render(app) {
     const rounds = recent.all();
-    const crew = rounds.find((r) => r.crew_id)?.crew_id || null;
     const now = Date.now();
     const live = rounds.find((r) => r.live && !r.done && now - (r.seen || r.at || 0) < LIVE_FOR) || null;
     const rest = rounds.filter((r) => r !== live);
-    const season = crew ? `<div class="home-list"><button class="home-row" data-act="go" data-v="#/season/${esc(crew)}">
-          <span class="hr-ico">${icon('trophy', 22)}</span>
-          <span class="hr-main"><span class="hr-name">Season standings</span><span class="hr-sub">Player and pair records across your crew’s rounds</span></span>
-          <span class="hr-chev">${icon('fwd', 20)}</span></button></div>` : '';
+    const season = homeCrew(app); // crew card / switcher / Start a crew (feature 006)
     const extras = `${!STANDALONE && isIOS() ? `<button class="home-row" data-act="home-add">
           <span class="hr-ico">${icon('phone', 22)}</span>
           <span class="hr-main"><span class="hr-name">Add to Home Screen</span><span class="hr-sub">Opens like an app, no Safari bars. Your rounds come with it.</span></span>
@@ -150,8 +147,8 @@ export default {
     }
     return `<div class="plain home">
       <h1 class="ts-title home-title">Golf Live Board</h1>
-      ${season}
       ${live ? liveCard(live) : ''}
+      ${season}
       ${extras.trim() ? `<div class="home-list">${extras}</div>` : ''}
       ${rest.length ? `<div class="ts-label home-k">Recent rounds</div><div class="home-list">${rest.map(roundRow).join('')}</div>` : ''}
       <div class="nr-foot home-foot"><div class="home-two">
