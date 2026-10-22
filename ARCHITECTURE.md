@@ -724,6 +724,13 @@ Still open: nothing blocking. Design direction (section 9) is final.
   name moves into the hole subtitle; states finding / weak / denied / hidden (no data, GPS off for the round,
   > 600 yd). Math in `js/geo.js`, Twin Creeks' greens from OpenStreetMap in `js/geodata.js`, the watcher in
   `js/gps.js`. See `docs/design/yardages/NOTES.md` for the plan beyond Twin Creeks.
+- **Oct 22 evening · GPS yardages stage 3 (any course).** New table `course_geo` (one row of green outlines per course
+  key; anon reads, service-role writes) and Edge Function `course-geo` that builds it: OpenStreetMap greens / hole lines via
+  Overpass matched to our scorecard's pars (with the +9 shift when a mapper swapped the nines), then Mapbox satellite imagery
+  traced by Claude for the holes OSM lacks (numbered from our pars; a beam search fills what the model leaves), refined hole by
+  hole while the 60 s budget lasts, saved `ready` / `partial` / `failed`. The app (`js/geoload.js`) asks for a course's greens
+  when Setup picks it and when a round loads, caches them on the phone (`glb.geo.<course_key>`), and the card simply stays off
+  until they arrive. Twin Creeks keeps its built-in copy. Rules sheet credits OpenStreetMap + Mapbox when a card is on.
 
 - **Start on hole 1 or 10** (`settings.startHole`, Setup → Course and Host → Rules). Rotations are play-order positions, so starting on 10 the matchups are holes 10–15, 16–18 + 1–3, 4–9; the official line, swap cards, alerts, foursome editing rights (`_same_foursome`) and let-them-in all follow play order. Screens always show real hole numbers.
 - **Team names by the carts:** after joining, an unnamed cart gets a full-screen "Name your cart" card with six quick names (Bulbasaur, Charmander, Squirtle, Chikorita, Cyndaquil, Totodile). Either partner can pick; a name another cart has is greyed out and refused by `pick_team_name` (locks the round row). Tap your cart's name on Enter to change it. The organizer can still type names in Setup (team names now sit at the top of the Teams step) or Host.

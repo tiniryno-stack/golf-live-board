@@ -1084,3 +1084,26 @@ grant execute on function public.claim_crew_person(uuid, uuid, uuid) to anon, au
 grant execute on function public.crew_new_person(uuid, uuid, text, text, text) to anon, authenticated;
 grant execute on function public.remove_crew_person(uuid, uuid, uuid) to anon, authenticated;
 grant execute on function public.start_season(uuid, uuid, text, date) to anon, authenticated;
+
+-- ─────────────────────────────────────────────────────────────── course geo (Oct 22, 2026)
+-- GPS yardages stage 3 (docs/design/yardages/NOTES.md §7): one row of green outlines per course, built
+-- once by the course-geo Edge Function (OpenStreetMap first, Mapbox satellite + Claude tracing for the
+-- holes OSM lacks; service role) and read by every phone with the round (cached as glb.geo.<course_key>).
+-- Twin Creeks also ships built in (js/geodata.js). Migration: supabase/migrations/2026-10-22-course-geo.sql.
+create table if not exists public.course_geo (
+  course_key  text primary key,          -- 'twin-creeks-allen-tx' | 'oga:<id>' | 'oga:<id>#N' (the key Setup saves as course.id)
+  name        text not null,
+  lat         double precision,          -- course point (OpenGolfAPI / built-in)
+  lng         double precision,
+  holes       jsonb not null default '[]',  -- [{ hole, par, tee:[lat,lng], green:[[lat,lng],…], source:'osm'|'ai'|'fixed', confidence:0..1 }]
+  source      text not null default 'none', -- 'osm' | 'ai' | 'mixed' | 'none'
+  status      text not null default 'building', -- 'building' | 'ready' | 'partial' (some holes missing) | 'failed'
+  built_at    timestamptz,
+  updated_at  timestamptz not null default now(),
+  error       text
+);
+alter table public.course_geo enable row level security;
+create policy course_geo_read on public.course_geo for select to anon, authenticated using (true);  -- read-only for phones
+-- No insert/update/delete policies: the Edge Function writes with the service role.
+-- Stage 4 adds fix_green(course_key, hole, lat, lng) (SECURITY DEFINER, anon): slides one hole's outline so
+-- its center = the given point and sets source = 'fixed'.

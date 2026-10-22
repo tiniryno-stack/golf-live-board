@@ -92,12 +92,14 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
 | `sim.html` + `js/sim.js` | **Test with 8 phones** (laptop: 8 side by side; phone ≤700px: one full-size phone + 1–8 switcher, extras under More): makes a practice round (own crew → never in Season standings), 8 iframes `index.html?sim=N`, each its own device signed in as player N (phone 1 = organizer), **Play a hole** (random realistic score per phone, then taps Next hole), one-group-only buttons, reset/delete. `?sim=N` prefixes every storage key with `simN.` (`db.local`, `local.keys()`) |
 | `supabase/schema.sql` | **source of truth for the DB**; keep it in sync with what's live |
 | `supabase/functions/course-search/index.ts` | Edge Function (deployed, `verify_jwt` off): GET-only backup route to OpenGolfAPI search + one course, our origins only. Redeploy with `deploy_edge_function` after edits |
+| `supabase/functions/course-geo/index.ts` | Edge Function (deployed, `verify_jwt` off): builds a course's green outlines into `course_geo` (OSM → Mapbox + Claude), our origins only; secrets `MAPBOX_TOKEN`, `ANTHROPIC_API_KEY` |
+| `js/geo.js`, `js/geobuild.js`, `js/geoload.js`, `js/geodata.js`, `js/gps.js`, `js/screens/greencard.js` | GPS yardages: math + loaded-geo map, pure build helpers (shared with the function), loading/caching, built-in Twin Creeks, the watcher, the card |
 | `tests/` | unit tests (`*.test.mjs`), `fit-the-screen.mjs`, `smoke.mjs`, `mock-supabase.mjs` (in-memory stand-in mirroring every RPC, plus OpenGolfAPI + the backup route from `fixtures/opengolf.json`: Twin Creeks' real record and fictional test courses; `be.oga.blocked` / `be.oga.down`), `helpers.mjs` |
 
 ## Database (Supabase project `yxreupqzwgjzhfosnjbj`, via the Supabase connector)
 
 - Tables: `events`, `event_secrets`, `claims`, `join_requests`, `join_request_devices`, `audit_log`,
-  `scores`, and (Oct 21) `crews`, `people`, `crew_members` — no anon access at all; kept in sync with
+  `scores`, (Oct 21) `crews`, `people`, `crew_members`, and (Oct 22) `course_geo` (anon select; service-role writes from the `course-geo` function) — no anon access at all; kept in sync with
   every roster by trigger `events_sync_crew` → `_sync_crew()` (skips `settings.practice`; a clashing
   full name never blocks a round). RLS: anon may only `select` events / scores / join_requests. **All writes go through
   SECURITY DEFINER RPCs** returning `{ ok, error }`.
@@ -227,9 +229,9 @@ sync, joining, the engine or the database, and once before anything merges to `m
 
 ```bash
 npm install
-npm test               # 95 unit tests (incl. race.test.mjs, seasons.test.mjs): scoring + headlines + course data + names/crews + games (2v2, at the turn, 6-player match play, Partner “Rider” Cup for 6, tee times) + score marks + design tokens (drift, retired colors, type scale)
+npm test               # 108 unit tests (incl. race.test.mjs, seasons.test.mjs): scoring + headlines + course data + names/crews + games (2v2, at the turn, 6-player match play, Partner “Rider” Cup for 6, tee times) + score marks + design tokens (drift, retired colors, type scale)
 npm run test:fit       # 160 checks: every screen at SE / 13 mini / 15-16 / Pro Max, no scroll on Enter
-npm run test:smoke     # 272 checks (incl. crews): multi-phone flows against the mock (join, swap, offline, rejoin,
+npm run test:smoke     # 283 checks (incl. crews): multi-phone flows against the mock (join, swap, offline, rejoin,
                        # reset/delete, back nine, Next waits for every score, grid/locks, recap,
                        # finalize + PIN unlock, add a course, which course?, names/nicknames/crew-mates, you-first pad,
                        # matches expand in place, 2v2, 3 carts for 6, own entry wins, Add to Home Screen move, test phones, blank-screen guards)
@@ -305,11 +307,20 @@ npm run test:smoke     # 272 checks (incl. crews): multi-phone flows against the
   Enter: card under the hole header, name row hidden (`screen.hideTop`), course name in the subtitle (team) /
   GPS badge (individual, and team when finding/weak), **Regular/Compact picked by measuring** the pads in
   `enter.mount` (compact when they'd shrink under 88px; never under 80px), Host → Rules "GPS yardages" pill,
-  `_setting_label('gps')` in schema.sql (**not yet applied to the live DB**: additive `create or replace`). Fit
+  `_setting_label('gps')` in schema.sql (applied to the live DB Oct 22 with the course_geo migration). Fit
   test has "Enter (GPS card)" scenes with Playwright geolocation at the tee. To turn on: `FLAGS.gps = true`, stamp,
-  push. **Flag ON since Oct 22.** **NEXT: stage 3 = `course_geo` table + `course-geo` Edge Function (OSM → AI tracing),
-  fully spec'd in `docs/design/yardages/NOTES.md` §7 — start there.** Dev check page: `docs/design/yardages/geo-check.html` (also published as an
-  artifact).
+  push. **Flag ON since Oct 22.** **Stage 3 built Oct 22 evening** (NOTES.md §7 has the as-built notes): `course_geo` table
+  (anon select only; the function writes with the service role), Edge Function `supabase/functions/course-geo/index.ts`
+  (POST `{ course_key, name, lat, lng, holes:[{hole,par}] }` → the row; OSM via Overpass → match to our pars (+9 shift) →
+  Mapbox satellite + `claude-sonnet-4-5` trace + number the rest → per-hole zoomed refine while the 48 s budget lasts →
+  `ready` / `partial` (+ `pending…` = continue on the next request) / `failed`; `?diag=1` shows secret presence + Overpass health),
+  `js/geobuild.js` (pure, tested), `js/geoload.js` (`loadGeo(course, onReady)`: built-in → `glb.geo.<key>` → table → function;
+  called from Setup `pickCourse`/`loadCourse` and `loadRound`), `geo.js` `setGeo`/`geoKey`/`pixelToLatLng`, Rules sheet credit
+  (`GEO_ATTRIBUTION`). Mock: `be.tables.course_geo`, route for the function (`be.geo.{down,osmDown,aiDown,calls}`),
+  `tests/fixtures/geo.json` (fake Mesquite Hollow 18 greens, partial Cedar Bend). **Open:** the function saw no
+  `MAPBOX_TOKEN`/`ANTHROPIC_API_KEY` secrets and Overpass was down — real Bridlewood / Indian Creek builds not yet verified.
+  To redeploy the function: `deploy_edge_function` with index.ts + geobuild.js + geo.js (the app's files) + the stub geodata.js.
+  Dev check page: `docs/design/yardages/geo-check.html` (also published as an artifact).
   **013 also removed the rotation strip from team Enter (live).**
 - Other open items (Oct 22): standings rework (ELO-style across games, needs design), `FLAGS.crewHandicaps`
   off until Andrew asks, practice rounds HXPY4 / B5PGH to delete in-app, neutral recap images,

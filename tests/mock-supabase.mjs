@@ -18,6 +18,9 @@ const SUPABASE = 'https://yxreupqzwgjzhfosnjbj.supabase.co';
 const OGA = 'https://api.opengolfapi.org';
 // OpenGolfAPI stand-in: Twin Creeks (real record), plus fictional test courses.
 export const OGA_FIXTURES = JSON.parse(readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures/opengolf.json'), 'utf8'));
+// course_geo stand-in (GPS yardages stage 3): a fictional Mesquite Hollow row (18 greens, ready) and a partial
+// Cedar Bend (front nine only). The `course-geo` function route "builds" a row by answering from these.
+export const GEO_FIXTURES = JSON.parse(readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures/geo.json'), 'utf8'));
 const ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 
 export function createBackend() {
@@ -25,6 +28,7 @@ export function createBackend() {
     events: [], secrets: new Map(), claims: [], joins: [], jdev: new Map(), audit: [], scores: [],
     crews: new Map(), people: new Map(), members: new Map(), // crews + people (mirrors _sync_crew)
     crewClaims: [], seasons: [], // features 006 / 008
+    course_geo: [], // GPS yardages stage 3: the course-geo function route fills it (tests may push fixture rows)
   };
   let auditId = 1;
   const now = () => new Date().toISOString();
@@ -442,7 +446,7 @@ export function createBackend() {
 
   // PostgREST-style reads: ?col=eq.x, in.(a,b), gte.x, order=col
   function select(table, params) {
-    const rows = { events: t.events, scores: t.scores, join_requests: t.joins }[table];
+    const rows = { events: t.events, scores: t.scores, join_requests: t.joins, course_geo: t.course_geo }[table];
     if (!rows) return { status: 404, body: { message: 'no table' } };
     let out = rows.slice();
     for (const [k, v] of params) {
@@ -487,7 +491,11 @@ export function createBackend() {
     return route.fulfill({ status: res.status, headers: cors, body: JSON.stringify(res.body) });
   }
 
-  const backend = { tables: t, rpc, handle, calls: [], offline: false, stall: false, oga: { blocked: false, down: false, calls: [] } };
+  const backend = {
+    tables: t, rpc, handle, calls: [], offline: false, stall: false, oga: { blocked: false, down: false, calls: [] },
+    // course-geo: be.geo.down = the function can't be reached; be.geo.osmDown / aiDown = it finds nothing (row 'failed').
+    geo: { down: false, osmDown: false, aiDown: false, calls: [] },
+  };
   return backend;
 }
 
@@ -512,6 +520,26 @@ export async function attach(context, backend, origin) {
     const u = new URL(route.request().url());
     const id = u.searchParams.get('id');
     return ogaAnswer(route, id ? new URL(`${OGA}/api/v1/courses/${id}`) : new URL(`${OGA}/api/v1/courses/search${u.search}`));
+  });
+  // The course-geo Edge Function: builds (returns) the fixture row for a known course, else a 'failed' row.
+  await context.route(`${SUPABASE}/functions/v1/course-geo**`, (route) => {
+    const req = route.request();
+    const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'POST,OPTIONS', 'content-type': 'application/json' };
+    if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors });
+    if (backend.geo.down) return route.abort();
+    const body = req.postData() ? JSON.parse(req.postData()) : {};
+    backend.geo.calls.push(body);
+    const key = body.course_key;
+    const have = backend.tables.course_geo.find((r) => r.course_key === key);
+    if (have && (have.status === 'ready' || (have.status === 'partial' && !/^pending/.test(have.error || '')))) return route.fulfill({ status: 200, headers: cors, body: JSON.stringify(have) });
+    const fx = Object.values(GEO_FIXTURES).find((r) => r.course_key === key);
+    const now = new Date().toISOString();
+    const row = fx && !(backend.geo.osmDown && backend.geo.aiDown)
+      ? { ...fx, updated_at: now, built_at: now, holes: backend.geo.osmDown ? fx.holes.map((h) => ({ ...h, source: 'ai', confidence: 0.7 })) : fx.holes, source: backend.geo.osmDown ? 'ai' : fx.source }
+      : { course_key: key, name: body.name, lat: body.lat, lng: body.lng, holes: [], source: 'none', status: 'failed', built_at: now, updated_at: now, error: 'missing 1–18 [osm unreachable · no AI keys]' };
+    const i = backend.tables.course_geo.findIndex((r) => r.course_key === key);
+    if (i >= 0) backend.tables.course_geo[i] = row; else backend.tables.course_geo.push(row);
+    return route.fulfill({ status: 200, headers: cors, body: JSON.stringify(row) });
   });
   await context.routeWebSocket(/supabase\.co\/realtime/, (ws) => ws.close());
   await context.route('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@*/dist/umd/supabase.js', (route) =>

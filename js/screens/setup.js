@@ -17,6 +17,7 @@ import { DEFAULT_SETTINGS, DEFAULT_ROTATION, GAMES, gameFix, autoGroups, cartRot
 import * as db from '../db.js';
 import * as names from '../names.js';
 import { FLAGS } from '../flags.js';
+import { loadGeo } from '../geoload.js';
 import { TEAM_NAME_PICKS, isDefaultTeamName } from '../teams.js';
 import { initials } from '../ui.js';
 
@@ -230,6 +231,7 @@ async function loadCourse(app, ogaId) {
     if (app.setup !== s || s.course?.ogaId !== ogaId) return;
     s.course = { ...full, name: s.course.name || full.name, shortName: s.course.shortName || full.shortName };
     s.courseStatus = 'ready';
+    if (FLAGS.gps) loadGeo(s.course); // greens for the GPS card, in the background (usually ready by Save)
   } catch {
     if (app.setup !== s || s.course?.ogaId !== ogaId) return;
     s.courseStatus = 'error';
@@ -1024,6 +1026,7 @@ function pickCourse(app, c, status) {
   s.whichName = '';
   s.screen = c.variants?.length > 1 ? 'which' : c.source === 'manual' ? 'check' : 'players';
   persist(s);
+  if (FLAGS.gps && status === 'ready') loadGeo(c); // a course we already have the card for: get its greens now
   app.render();
   document.getElementById('content').scrollTop = 0;
 }

@@ -20,6 +20,8 @@ import card from './screens/card.js';
 import host from './screens/host.js';
 import crew from './screens/crew.js';
 import { gps } from './gps.js';
+import { loadGeo } from './geoload.js';
+import { FLAGS } from './flags.js';
 
 const SCREENS = { home, setup, season, enter, matches, board, card, host, crew };
 const TABS = [
@@ -736,6 +738,7 @@ async function loadRound(code) {
   db.recent.remember(app.event);
   rememberCrewMe();
   recompute({ headlines: 'now' });
+  if (FLAGS.gps && app.event.course) loadGeo(app.event.course, () => { if (seq === loadSeq) render(); }); // greens for the GPS card
   // Coming back to a round that's over (finalized, or every score in): show the result, not Enter.
   if (app.route.tab === 'enter' && app.roundOver()) {
     history.replaceState(null, '', app.tabHash('board'));

@@ -1,6 +1,6 @@
 # GPS yardages — architecture notes
 
-Status: **decided Oct 22, 2026; spike done the same day (Twin Creeks greens from OSM, `geo-check.html`); features 011 + 013 built behind `FLAGS.gps` (off).** Next: §4's `course_geo` table + the Overpass / AI Edge Function so courses other than Twin Creeks get greens, then the fixes (§2.3), then flip the flag.
+Status: **decided Oct 22, 2026; spike done the same day (Twin Creeks greens from OSM, `geo-check.html`); features 011 + 013 built, `FLAGS.gps` on; stage 3 (§7) built and deployed Oct 22 evening** (table live, function `course-geo` v3, app `loadGeo`). Next: confirm the Supabase secrets exist and build Bridlewood + Indian Creek for real, then stage 4 (§8).
 
 Goal: on Enter, a green card above your score with front / middle / back yards from your phone to the green,
 the green outline with a flag, and `GPS · ±N YD` in the hole header (designer mockup
@@ -97,7 +97,24 @@ course_geo
   Twin Creeks), `js/gps.js` (watcher), `js/screens/greencard.js` (card), Enter wiring, Host → Rules pill.
   Andrew saw the card work on his phone (position + math + states). Real-green accuracy still unchecked.
 
-## 7. Stage 3 — any course: `course_geo` + the `course-geo` Edge Function (NEXT, spec'd Oct 22)
+## 7. Stage 3 — any course: `course_geo` + the `course-geo` Edge Function (BUILT Oct 22 evening)
+
+**What landed** (commit on `main`, see CLAUDE.md): `course_geo` table (migration `supabase/migrations/2026-10-22-course-geo.sql`,
+applied), `supabase/functions/course-geo/index.ts` (deployed, `verify_jwt` off; `geo.js` / `geobuild.js` are symlinks to the app's
+files, `geodata.js` an empty stub), pure build helpers in `js/geobuild.js` (Overpass parsing, par matching + the +9 shift, a
+**beam-search** numbering for AI-traced greens, pixel → lat/lng), `js/geoload.js` (`loadGeo`: built-in → `glb.geo.<key>` cache →
+table → function, 20 s), `geo.js` `setGeo` / `geoKey`, Setup + round-load wiring, the Rules-sheet credit, mock + fixture
+(`tests/fixtures/geo.json`), 11 unit + 12 smoke checks. Differences from the spec below: the model is asked to **number the holes
+itself** from our pars + routing hints (the beam search only fills what it leaves), the overview image is 1024 px at zoom 16 (one
+Mapbox request, ~2 km across) and the per-hole refine is 768 px at zoom 18; a `failed` row is retried after an hour, not on every
+load. `POST …/course-geo?diag=1` (from our origin) reports which secrets the function can see and whether Overpass answers — no values.
+**Found while testing:** overpass-api.de answers the Edge runtime with 406 and every public mirror timed out that evening (OSM is
+best-effort, as planned); the function saw **no `MAPBOX_TOKEN` / `ANTHROPIC_API_KEY`** in the project — Andrew to re-check Supabase →
+Edge Functions → Secrets, then the first real builds (Bridlewood `oga:e8640131-8678-4550-9c5c-4f240ca6bd60`, Indian Creek
+`oga:aa01d8c5-7791-4a69-8cd1-821a63b1b851`) run on the next round load or Setup pick. Bridlewood currently has a `failed` row from
+the test call (retried after an hour).
+
+Original spec:
 
 Goal: a round at any course gets green outlines without anyone mapping anything. OSM where traced, AI-traced
 satellite imagery where not, stored once per course in Supabase, loaded with the round, cached on the phone.

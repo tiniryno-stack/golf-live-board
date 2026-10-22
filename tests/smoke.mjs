@@ -29,7 +29,7 @@
 // Run: npm run test:smoke
 
 import { chromium } from 'playwright';
-import { createBackend, attach, serve, seedRound, OGA_FIXTURES } from './mock-supabase.mjs';
+import { createBackend, attach, serve, seedRound, OGA_FIXTURES, GEO_FIXTURES } from './mock-supabase.mjs';
 import { COURSES } from '../js/courses.js';
 const COURSES_TC = COURSES[0];
 
@@ -1486,7 +1486,92 @@ await K.page.tap('.group-chip.primary');
 await K.page.waitForTimeout(300);
 ok((await kSetup()).length === 8 && /Next: pick a game · 8/.test(await K.page.textContent('.nr-cta')), 'last-group chip: all 8 from Friday in one tap');
 
-const errors = [K, FJ, DJ, A, C, A2, P, Q, O, R6, F, R, X, Y, Z, G, T, TP, NL, SP, HA, HB, HC, HD, HE, HF].flatMap((p) => p.page.errors);
+// 23. GPS yardages stage 3: greens come from the shared course_geo table. A course with no row asks the
+//     course-geo function once and keeps the result (table + phone cache); a ready row shows the card;
+//     a partial row shows it only on the holes it has; a course the function can't build gets no card.
+const geoFx = GEO_FIXTURES;
+ok(be.geo.calls.some((c) => c.course_key === `oga:${fx.mesquiteHollow.id}`) && be.tables.course_geo.some((r) => r.course_key === `oga:${fx.mesquiteHollow.id}` && r.status === 'ready'), 'picking a course in Setup already asked for its greens in the background (the row is built by Save)');
+be.tables.course_geo.length = 0; // start the round-load cases from an empty table
+const geoCourse = (fxc, geo) => ({ id: geo.course_key, ogaId: fxc.id, name: geo.name, shortName: geo.name.split(' ').slice(0, 2).join(' '), lat: geo.lat, lng: geo.lng, par: COURSES[0].par, strokeIndex: COURSES[0].strokeIndex, tees: [], source: 'opengolfapi', tee: null });
+let geoDevN = 0;
+async function geoPhone(label, code, tee) {
+  const dev = `6e0${geoDevN++}0000-0000-4000-8000-000000000000`; // this phone holds p1 (Andrew) in the round
+  const ev = be.tables.events.find((e) => e.code === code);
+  be.tables.claims.push({ event_id: ev.id, player_id: 'p1', device_id: dev });
+  const ctx = await browser.newContext({ viewport: { width: 393, height: 852 }, isMobile: true, hasTouch: true, permissions: ['geolocation'], geolocation: { latitude: tee[0], longitude: tee[1], accuracy: 4 } });
+  await attach(ctx, be, srv.origin);
+  await ctx.addInitScript(([c, d]) => {
+    window.__GLB_FLAGS = { gps: true };
+    localStorage.setItem('glb.device', JSON.stringify(d));
+    localStorage.setItem('glb.me.' + c, '"p1"');
+    localStorage.setItem('glb.who.' + c, 'true');
+    localStorage.setItem('glb.brief.' + c, 'true');
+    localStorage.setItem('glb.seen.' + c, JSON.stringify({ last: Date.now(), ids: [] }));
+    for (const k of ['tile5', 'prov2', 'oppcart3']) localStorage.setItem('glb.coach.' + k, 'true');
+  }, [code, dev]);
+  const page = await ctx.newPage();
+  page.errors = [];
+  page.on('pageerror', (e) => page.errors.push(`${label}: ${e.message}`));
+  return { ctx, page };
+}
+const cardInfo = (page) => page.evaluate(() => ({ card: !!document.querySelector('.green-card'), nums: [...document.querySelectorAll('.green-nums .gn b')].map((b) => b.textContent), hole: window.__glb.ui.hole }));
+// a) no row yet → the function builds it once; the card shows with real numbers from the tee
+const rM = seedRound(be, {});
+be.tables.events.find((e) => e.code === rM.code).course = geoCourse(fx.mesquiteHollow, geoFx.mesquiteHollow);
+be.geo.calls.length = 0;
+const GM = await geoPhone('Geo Mesquite', rM.code, geoFx.mesquiteHollow.holes[0].tee);
+await GM.page.goto(`${srv.origin}/#/e/${rM.code}/enter`);
+await GM.page.waitForTimeout(1500);
+let gi = await cardInfo(GM.page);
+ok(gi.card && gi.nums.every((n) => /^\d+$/.test(n)) && +gi.nums[1] > 480 && +gi.nums[1] < 560, `a course with no greens yet: the function built them and the card shows (${gi.nums.join('/')} from the 1st tee)`);
+ok(be.geo.calls.length === 1 && be.geo.calls[0].course_key === geoFx.mesquiteHollow.course_key && be.geo.calls[0].holes.length === 18 && be.geo.calls[0].lat === geoFx.mesquiteHollow.lat, 'the function was asked once, with the course key, point and 18 pars');
+ok(be.tables.course_geo.some((r) => r.course_key === geoFx.mesquiteHollow.course_key && r.status === 'ready'), 'the row is in the table now');
+ok(await GM.page.evaluate((k) => !!JSON.parse(localStorage.getItem('glb.geo.' + k) || 'null')?.holes?.length, geoFx.mesquiteHollow.course_key), 'and cached on the phone (glb.geo.<course_key>)');
+// a second phone finds the row in the table: no build call
+const GM2 = await geoPhone('Geo Mesquite 2', rM.code, geoFx.mesquiteHollow.holes[0].tee);
+await GM2.page.goto(`${srv.origin}/#/e/${rM.code}/enter`);
+await GM2.page.waitForTimeout(1500);
+gi = await cardInfo(GM2.page);
+ok(gi.card && be.geo.calls.length === 1, 'the next phone reads the row from the table (no second build)');
+await GM2.page.goto(`${srv.origin}/#/e/${rM.code}/board`); // Enter hides the top bar when the card is on; ⋯ lives on the other tabs
+await GM2.page.waitForTimeout(600);
+await GM2.page.tap('[data-act="round-menu"]');
+await GM2.page.waitForTimeout(400);
+await GM2.page.tap('[data-act="menu-rules"]');
+await GM2.page.waitForTimeout(400);
+ok(/OpenStreetMap contributors.*Mapbox/.test(await GM2.page.textContent('#sheet').catch(() => '')), 'Rules shows the greens / imagery credit');
+// b) a partial row: card on its holes only
+const rC = seedRound(be, {});
+be.tables.events.find((e) => e.code === rC.code).course = geoCourse({ id: '22222222-3333-4444-8555-666666666666' }, geoFx.cedarBend);
+be.tables.course_geo.push({ ...geoFx.cedarBend });
+be.geo.calls.length = 0;
+const GC = await geoPhone('Geo Cedar', rC.code, geoFx.cedarBend.holes[0].tee);
+await GC.page.goto(`${srv.origin}/#/e/${rC.code}/enter`);
+await GC.page.waitForTimeout(1500);
+gi = await cardInfo(GC.page);
+ok(gi.card && be.geo.calls.length === 0, 'a partial row (front nine only): card on hole 1, no rebuild asked for');
+await GC.page.evaluate(() => { window.__glb.ui.hole = 10; window.__glb.render(); });
+await GC.page.waitForTimeout(300);
+gi = await cardInfo(GC.page);
+ok(!gi.card && gi.hole === 10, 'hole 10 has no green in the row: no card, no gap');
+// c) a course the function can't map: no card, no crash, one failed row, no retry on the next load
+const rO = seedRound(be, {});
+be.tables.events.find((e) => e.code === rO.code).course = geoCourse(fx.oakTwins, { course_key: `oga:${fx.oakTwins.id}`, name: 'Oak Twins Golf Club', lat: 33.0, lng: -96.9 });
+be.geo.osmDown = true; be.geo.aiDown = true;
+be.geo.calls.length = 0;
+const GO = await geoPhone('Geo Oak Twins', rO.code, [33.0, -96.9]);
+await GO.page.goto(`${srv.origin}/#/e/${rO.code}/enter`);
+await GO.page.waitForTimeout(1500);
+gi = await cardInfo(GO.page);
+ok(!gi.card && be.geo.calls.length === 1 && be.tables.course_geo.find((r) => r.course_key === `oga:${fx.oakTwins.id}`)?.status === 'failed', 'nothing found for a course: no card, the row says failed');
+await GO.page.goto(`${srv.origin}/#/`);
+await GO.page.waitForTimeout(300);
+await GO.page.goto(`${srv.origin}/#/e/${rO.code}/enter`);
+await GO.page.waitForTimeout(1200);
+ok(be.geo.calls.length === 1, 'a fresh failed row is not retried on the next load');
+be.geo.osmDown = false; be.geo.aiDown = false;
+
+const errors = [GM, GM2, GC, GO, K, FJ, DJ, A, C, A2, P, Q, O, R6, F, R, X, Y, Z, G, T, TP, NL, SP, HA, HB, HC, HD, HE, HF].flatMap((p) => p.page.errors);
 ok(errors.length === 0, `no page errors${errors.length ? `: ${errors.join('; ')}` : ''}`);
 
 await browser.close();

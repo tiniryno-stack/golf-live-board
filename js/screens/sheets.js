@@ -9,6 +9,8 @@ import { codeField } from './home.js';
 import { handicapSheet, teamNameSheet } from './setup.js';
 import { crewSheets } from './crew.js';
 import { seasonSheets } from './season.js';
+import { geoFor } from '../geo.js';
+import { GEO_ATTRIBUTION } from '../geoload.js';
 
 let lastHtml = '';
 let closeTimer = null;
@@ -227,6 +229,7 @@ const BODIES = {
     const who = ev?.roster?.players?.[0]?.name;
     return `${head('Rules', [ev?.course?.shortName || ev?.course?.name, ev?.played_on ? new Date(`${ev.played_on}T12:00:00`).toLocaleDateString([], { weekday: 'short' }) : ''].filter(Boolean).join(' · '))}
       <div class="rl-list">${rows}</div>
+      ${snap.settings.gps !== false && geoFor(ev?.course) ? `<p class="meta attrib">${esc(GEO_ATTRIBUTION)}</p>` : ''}
       <div class="rl-btns">${app.isOrganizer() ? '<button class="btn" data-act="rules-edit">Edit · organizer</button>' : ''}
         <button class="btn" data-act="rules-share">${icon('share', 18)} Share rules</button></div>`;
   },

@@ -40,12 +40,26 @@ export function yardages(from, green) {
   return { front: Math.round(lo), middle: Math.round(yards(metersBetween(from, c))), back: Math.round(hi), bearing: Math.atan2(ux, uy) };
 }
 
-/** Course geo for a round's course, or null. `course` is the snapshot's course ({ id, ogaId }). */
+/** Keys a course can be found under: its id, 'oga:<ogaId>', and both without a '#N' course suffix. */
+export function geoKeys(course) {
+  if (!course) return [];
+  const keys = [course.id, course.ogaId && `oga:${course.ogaId}`, course.source, course.key].filter(Boolean).map(String);
+  return [...new Set(keys.flatMap((k) => [k, k.replace(/#\d+$/, '')]))];
+}
+
+/** The key the shared course_geo table uses for this course (the id Setup saved), or null. */
+export const geoKey = (course) => (course?.id ? String(course.id) : course?.ogaId ? `oga:${course.ogaId}` : null);
+
+// Courses loaded this visit from the shared course_geo table (js/geoload.js): key → { name, source, holes }.
+const LOADED = new Map();
+export function setGeo(key, geo) {
+  if (key && geo?.holes?.length) LOADED.set(key, geo);
+}
+
+/** Course geo for a round's course, or null: built-ins (js/geodata.js) first, then what's been loaded. */
 export function geoFor(course) {
-  if (!course) return null;
-  const keys = [course.id, course.ogaId && `oga:${course.ogaId}`, course.source, course.key].filter(Boolean);
-  for (const k of keys) {
-    const g = GEO[k] || GEO[String(k).replace(/#\d+$/, '')];
+  for (const k of geoKeys(course)) {
+    const g = GEO[k] || LOADED.get(k);
     if (g) return g;
   }
   return null;
@@ -55,6 +69,28 @@ export function geoFor(course) {
 export function greenFor(course, hole) {
   const g = geoFor(course);
   return g?.holes.find((h) => h.hole === hole) || null;
+}
+
+/**
+ * Web Mercator: a pixel in a map image centered on (cLat, cLng) at `zoom` (Mapbox Static Images,
+ * `scale` 1 or 2 for @2x) → [lat, lng]. Origin top-left; the image's center is the map center.
+ */
+export function pixelToLatLng(px, py, w, h, cLat, cLng, zoom, scale = 1) {
+  const world = 256 * 2 ** zoom * scale;
+  const latr = rad(cLat);
+  const cx = ((cLng + 180) / 360) * world;
+  const cy = ((1 - Math.log(Math.tan(latr) + 1 / Math.cos(latr)) / Math.PI) / 2) * world;
+  const x = cx + (px - w / 2), y = cy + (py - h / 2);
+  const lng = (x / world) * 360 - 180;
+  const lat = (Math.atan(Math.sinh(Math.PI * (1 - (2 * y) / world))) * 180) / Math.PI;
+  return [lat, lng];
+}
+
+/** The inverse of pixelToLatLng (tests, and centering a zoomed-in image on a rough green). */
+export function latLngToPixel(lat, lng, w, h, cLat, cLng, zoom, scale = 1) {
+  const world = 256 * 2 ** zoom * scale;
+  const merc = (la) => { const r = rad(la); return ((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2) * world; };
+  return [w / 2 + (((lng - cLng) / 360) * world), h / 2 + (merc(lat) - merc(cLat))];
 }
 
 /** Round off the outline for drawing (display only): each point eases toward its neighbours, n passes. */
