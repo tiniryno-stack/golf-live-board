@@ -444,6 +444,10 @@ a { color: inherit; }
 .group-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 2px 4px 0; flex: none; }
 .group-head .meta { font-size: 13px; }
 .group-list { flex: 0 1 auto; min-height: 0; overflow-y: auto; border-radius: 18px; background: var(--surface); }
+/* pad open: the group box grows to its full height and the Enter page scrolls instead (no nested scroll) */
+.enter.pad-open .sheet { overflow-y: auto; overscroll-behavior: contain; }
+.enter.pad-open .group-list { flex: none; overflow: visible; }
+.enter.pad-open .you-card, .enter.pad-open .enter-foot, .enter.pad-open .sheet > .btn { flex-shrink: 0; }
 .grow + .grow { border-top: 1px solid var(--line); }
 .grow.open { background: var(--surface-2); }
 .grow-head { width: 100%; height: var(--sl); display: flex; align-items: center; gap: 10px; padding: 0 14px; text-align: left; }
@@ -457,7 +461,7 @@ a { color: inherit; }
 .enter-chip { font-size: 13px; font-weight: 600; color: var(--ink-soft); padding: 6px 10px; border-radius: 8px; border: 1px dashed var(--line); flex: none; }
 .grow .mk { --mk: 40px; font-size: 17px; }
 .grow.nudge .enter-chip { border-style: solid; border-color: var(--accent); color: var(--ink); animation: nudge .45s ease-in-out 2; }
-.pad { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; padding: 0 12px 12px; }
+.pad { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; padding: 0 12px 12px; }
 .pad-chip { height: 52px; border-radius: 12px; background: var(--surface); border: 2px solid transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
 [data-theme="light"] .pad-chip { background: var(--surface-2); }
 .grow.open .pad-chip { background: var(--surface-3); }
