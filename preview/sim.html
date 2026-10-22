@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Test phones · Golf Live Board</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@500;700&display=swap">
+  <style>
+    :root { --bg: #000; --surface: #14161A; --surface-2: #1E2127; --line: #2A2E36; --ink: #ECEEF1; --soft: #9AA0AA; --accent: #ECEEF1; --accent-ink: #0B0C0E; --good: #34C281; --warn: #D6A23E; --bad: #F0564B; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.4 Geist, system-ui, sans-serif; }
+    header { position: sticky; top: 0; z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); padding: 14px 20px 12px; }
+    h1 { font-size: 20px; font-weight: 800; letter-spacing: -0.01em; margin: 0 0 10px; }
+    .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 8px; }
+    button { font: inherit; font-weight: 650; color: var(--ink); background: var(--surface-2); border: 0; border-radius: 12px; padding: 9px 14px; cursor: pointer; }
+    button.primary { background: var(--accent); color: var(--accent-ink); }
+    button.danger { background: transparent; color: var(--bad); border: 1px solid color-mix(in srgb, var(--bad) 50%, transparent); }
+    button:disabled { opacity: .4; cursor: default; }
+    input[type=text] { font: inherit; font-family: 'Geist Mono', monospace; text-transform: uppercase; letter-spacing: .12em; width: 120px; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 8px 10px; }
+    label { color: var(--soft); font-size: 14px; display: inline-flex; gap: 6px; align-items: center; }
+    .status { color: var(--soft); font-size: 14px; }
+    .status b { color: var(--ink); font-family: 'Geist Mono', monospace; }
+    .status.err { color: var(--bad); }
+    .grid { display: flex; flex-wrap: wrap; gap: 18px; padding: 18px 20px 40px; }
+    .phone { display: flex; flex-direction: column; gap: 6px; }
+    .phone-label { font-size: 13px; color: var(--soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .phone-label b { color: var(--ink); }
+    .frame { border-radius: 22px; overflow: hidden; border: 2px solid var(--line); background: #000; position: relative; }
+    .frame iframe { border: 0; transform-origin: 0 0; position: absolute; left: 0; top: 0; }
+    .hint { color: var(--soft); font-size: 13px; margin: 2px 0 0; max-width: 900px; }
+    .more { display: none; }
+    body.has-round .more { display: flex; }
+    .short { display: none; }
+    body.narrow .short { display: inline; }
+    body.narrow .long { display: none; }
+    body.narrow #controls { flex-wrap: nowrap; }
+    #more-btn, #switcher { display: none; }
+    [hidden] { display: none !important; }
+    /* Phone layout: one test phone at full size, buttons 1–8 to switch; the other 7 keep running. */
+    body.narrow header { padding: 10px 12px 8px; }
+    body.narrow h1 { font-size: 17px; margin: 0 0 6px; }
+    body.narrow button { padding: 8px 11px; font-size: 14px; border-radius: 10px; }
+    body.narrow .row { gap: 6px; margin: 0 0 6px; }
+    body.narrow .status { font-size: 12px; }
+    body.narrow #more-btn { display: inline-block; }
+    body.narrow .more { display: none; }
+    body.narrow.has-round.more-open .more { display: flex; }
+    body.narrow.has-round #start { display: none; }
+    body.narrow.has-round.more-open #start { display: flex; }
+    body.narrow.has-round .hint, body.narrow .zoom { display: none; }
+    body.narrow.has-round #switcher { display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 6px; scrollbar-width: none; }
+    #switcher button { flex: none; padding: 6px 10px; font-size: 13px; background: var(--surface); border: 1px solid var(--line); }
+    #switcher button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+    #switcher button small { opacity: .7; font-weight: 500; margin-left: 4px; }
+    body.narrow .grid { padding: 0; gap: 0; }
+    body.narrow .phone { display: none; width: 100% !important; gap: 0; }
+    body.narrow .phone.on { display: flex; }
+    body.narrow .phone-label { display: none; }
+    body.narrow .frame { width: 100% !important; height: max(540px, calc(100dvh - var(--head, 200px))) !important; border: 0; border-radius: 0; }
+    body.narrow .frame iframe { transform: none !important; width: 100%; height: 100%; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
+  <script type="module" src="js/sim.js"></script>
+</head>
+<body>
+  <header>
+    <h1>Test with 8 phones</h1>
+    <div class="row" id="start">
+      <button class="primary" id="make">Make a practice round</button>
+      <span class="status">or open a round:</span>
+      <input type="text" id="code" maxlength="8" placeholder="CODE" aria-label="Round code">
+      <button id="open">Open</button>
+      <button id="reopen" hidden></button>
+    </div>
+    <div class="row"><span class="status" id="status"></span></div>
+    <div class="row" id="switcher" role="group" aria-label="Show phone"></div>
+    <div class="row" id="controls" hidden>
+      <button class="primary" id="play-all">Play a hole</button>
+      <button id="play-mine"><span class="long">Phone 1’s group only</span><span class="short">P1’s group</span></button>
+      <button id="play-other"><span class="long">Other group only</span><span class="short">Other group</span></button>
+      <button id="more-btn" aria-expanded="false">More</button>
+    </div>
+    <div class="row more">
+      <label><input type="checkbox" id="advance" checked> Tap Next hole after</label>
+      <label class="zoom">Size <input type="range" id="zoom" min="35" max="100" value="55"></label>
+      <button id="reset">Reset scores</button>
+      <button class="danger" id="delete">Delete round</button>
+    </div>
+    <p class="hint" id="hint">Each phone below is its own device, signed in as a different player. Phone 1 is the organizer. Tap scores on any phone, or let “Play a hole” enter a score on every phone. “Other group only” puts one foursome ahead so you can see provisional points.</p>
+  </header>
+  <main class="grid" id="grid"></main>
+</body>
+</html>
