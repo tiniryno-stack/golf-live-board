@@ -18,8 +18,9 @@ import matches from './screens/matches.js';
 import board from './screens/board.js';
 import card from './screens/card.js';
 import host from './screens/host.js';
+import crew from './screens/crew.js';
 
-const SCREENS = { home, setup, season, enter, matches, board, card, host };
+const SCREENS = { home, setup, season, enter, matches, board, card, host, crew };
 const TABS = [
   ['enter', 'Enter', 'enter'],
   ['matches', 'Matches', 'matches'],
@@ -1034,6 +1035,12 @@ function parseHash() {
   if (!parts.length) return { name: 'home' };
   if (parts[0] === 'setup') return { name: 'setup', from: parts[1] ? db.normCode(parts[1]) : null };
   if (parts[0] === 'season') return { name: 'season', crew: parts[1] || null };
+  // Crews (feature 006): #/crew/start · #/crew/rename/<id> · #/crew/which/<id> · #/crew/<INVITE>
+  if (parts[0] === 'crew') {
+    if (parts[1] === 'start') return { name: 'crew', mode: 'start' };
+    if ((parts[1] === 'rename' || parts[1] === 'which') && parts[2]) return { name: 'crew', mode: parts[1], id: parts[2] };
+    if (parts[1]) return { name: 'crew', mode: 'join', code: parts[1].toUpperCase().replace(/[^A-Z0-9]/g, '') };
+  }
   if (parts[0] === 'e' && parts[1]) {
     const tab = ['enter', 'matches', 'board', 'card', 'host'].includes(parts[2]) ? parts[2] : 'enter';
     return { name: tab, code: db.normCode(parts[1]), tab, round: true };
