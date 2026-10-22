@@ -1,3 +1,5 @@
+Status: built in 65529e0
+
 # 009 · Team names per crew
 
 A crew remembers what each pair called their cart. It needs 006 (crews) first. Screens are 393 × 852 in dark and light, following Night Round.

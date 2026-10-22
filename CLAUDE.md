@@ -222,9 +222,9 @@ sync, joining, the engine or the database, and once before anything merges to `m
 
 ```bash
 npm install
-npm test               # 84 unit tests (incl. race.test.mjs): scoring + headlines + course data + names/crews + games (2v2, at the turn, 6-player match play, Partner “Rider” Cup for 6, tee times) + score marks + design tokens (drift, retired colors, type scale)
+npm test               # 95 unit tests (incl. race.test.mjs, seasons.test.mjs): scoring + headlines + course data + names/crews + games (2v2, at the turn, 6-player match play, Partner “Rider” Cup for 6, tee times) + score marks + design tokens (drift, retired colors, type scale)
 npm run test:fit       # 160 checks: every screen at SE / 13 mini / 15-16 / Pro Max, no scroll on Enter
-npm run test:smoke     # 256 checks: multi-phone flows against the mock (join, swap, offline, rejoin,
+npm run test:smoke     # 272 checks (incl. crews): multi-phone flows against the mock (join, swap, offline, rejoin,
                        # reset/delete, back nine, Next waits for every score, grid/locks, recap,
                        # finalize + PIN unlock, add a course, which course?, names/nicknames/crew-mates, you-first pad,
                        # matches expand in place, 2v2, 3 carts for 6, own entry wins, Add to Home Screen move, test phones, blank-screen guards)
@@ -252,6 +252,13 @@ npm run test:smoke     # 256 checks: multi-phone flows against the mock (join, s
 
 ## Open items / ideas
 
+- **Crews (features 006–009, Oct 22, branch `design/crews`):** crew card on Home (`screens/crew.js`: start / rename /
+  join `#/crew/<INVITE>` / Which one are you? / settings sheet), owner = the phone that started it (rename, reset
+  link, new season, remove player); `db.crews` keeps this phone's crews (`glb.crews`, `glb.crew`); Quick players in
+  Setup (chips, regulars, search, guests); Standings by season (`js/seasons.js`, pure + tested; first season is
+  implicit from the first round; points = Partner Rider Cup until the standings rework); usual cart names per pair
+  + 151 Pokémon. Handicap numbers on crew screens behind `FLAGS.crewHandicaps` (off). New DB pieces in `schema.sql`
+  (crews columns, `crew_claims`, `seasons`, RPCs `crew_info … start_season`) need the live migration before merge.
 - **Crews roadmap (agreed Oct 21, step 1 built):** 2) crew name + invite link + "Start a crew",
   3) seasons = date ranges per crew (standings default to the current one), 4) Players step: recent
   groups as one-tap chips + ~8 frequent players + search within the crew, 5) team names reserved per

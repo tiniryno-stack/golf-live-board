@@ -1,3 +1,5 @@
+Status: built in 65529e0
+
 # 006 · Crew home + invite
 
 Nine screens, each in dark and light, at 393 × 852. They follow the Night Round rules: dark by default, Geist and Geist Mono, green only means "you", red only for errors, and taps of 48px or more. All the logic, database work, the iPhone share sheet, toasts and confirms are yours; this spec covers what each screen shows.

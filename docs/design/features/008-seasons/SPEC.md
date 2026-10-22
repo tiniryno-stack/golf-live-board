@@ -1,3 +1,5 @@
+Status: built in 65529e0
+
 # 008 · Seasons
 
 Crew standings split into seasons. It needs 006 (crews) first; Standings opens from the crew card's **Standings** button. Screens are 393 × 852 in dark and light, following Night Round.

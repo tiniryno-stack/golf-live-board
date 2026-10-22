@@ -1,3 +1,5 @@
+Status: built in 65529e0
+
 # 007 · Quick players
 
 This is the new **② Players** step for a round with a crew, and it replaces the old Players screen. It needs 006 (crews) first. All screens are 393 × 852 in dark and light, following Night Round: green means only "you", taps are 48px or more, and side tasks use sheets.
