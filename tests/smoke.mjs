@@ -632,20 +632,25 @@ await L.page.goto(`${srv.origin}/#/setup`);
 await L.page.waitForTimeout(900);
 await L.page.tap('[data-act="setup-mine"][data-v="twin-creeks-allen-tx"]');
 await L.page.waitForTimeout(300);
-await L.page.tap(`[data-act="setup-past"][data-v="${LIDS[1]}"]`);
+// Quick players (feature 007): crew-mates are one-tap rows; typing a name searches, then adds.
+ok((await L.page.$$('.pick-row')).length === 3 && !!(await L.page.$('.group-chip.primary')), 'quick players: the crew as one-tap rows, last group as a chip');
+await L.page.tap(`[data-act="qp-toggle"][data-v="${LIDS[1]}"]`);
 await L.page.waitForTimeout(200);
-ok(!!(await L.page.$('[data-input="setup-last"]')), 'a crew-mate from before last names gets a “Last name” box');
+await L.page.tap('[data-act="qp-search"]');
 await L.page.fill('#new-player', 'josh reyes');
 await L.page.press('#new-player', 'Enter');
 await L.page.waitForTimeout(500);
+await L.page.tap('[data-act="qp-search-done"]');
+await L.page.waitForTimeout(200);
+ok(!!(await L.page.$('[data-input="setup-last"]')), 'a crew-mate from before last names gets a “Last name” box once picked');
 await L.page.fill('[data-input="setup-last"]', 'mills');
 await L.page.tap('.nr-title');
 await L.page.tap('[data-act="setup-go"][data-v="game"]');
 await L.page.tap('[data-act="setup-save"]');
 await L.page.waitForTimeout(900);
 const madeL = be.tables.events[be.tables.events.length - 1];
-ok(madeL.crew_id === LC && madeL.roster.players.map((p) => `${p.personId}:${p.firstName} ${p.lastName}`).join(',') === `${LIDS[1]}:Sean Mills,${LIDS[2]}:Josh Reyes`,
-  'Sean (tapped) and Josh (typed) are the same people as before, now with last names, same crew');
+ok(madeL.crew_id === LC && madeL.roster.players.map((p) => `${p.personId}:${p.firstName} ${p.lastName || ''}`.trim()).join(',') === `${LIDS[1]}:Sean Mills,${LIDS[2]}:Josh Reyes`,
+  `Sean (tapped) and Josh (typed) are the same people as before, now with last names, same crew (${madeL.roster.players.map((p) => `${p.firstName} ${p.lastName || ''}`).join(', ')})`);
 ok(JSON.stringify(be.rpc.crew_people({ p_crew_id: LC }).people.map((p) => [p.firstName, p.lastName, p.rounds])) === '[["Josh","Reyes",2],["Sean","Mills",2],["Andrew",null,1]]', 'crew list: 2 rounds each for Sean and Josh');
 await L.ctx.close();
 
@@ -1394,7 +1399,94 @@ await HE.page.goto(`${srv.origin}/#/`);
 await HE.page.waitForTimeout(500);
 ok(!(await HE.page.$('[data-act="home-add"]')), 'not an iPhone: no button');
 
-const errors = [A, C, A2, P, Q, O, R6, F, R, X, Y, Z, G, T, TP, NL, SP, HA, HB, HC, HD, HE, HF].flatMap((p) => p.page.errors);
+
+// 13. Crews (features 006–009): start a crew, a round in it, crew card + season line, Standings +
+//     new season (owner only), invite → join → Which one are you?, reset link → dead link, Quick players.
+const KDEV = '7a7a7a7a-7777-4777-8777-777777777777';
+async function crewPhone(name, dev, init = {}) {
+  const ctx = await browser.newContext({ viewport: { width: 393, height: 852 }, isMobile: true, hasTouch: true });
+  await attach(ctx, be, srv.origin);
+  await ctx.addInitScript(([d, extra]) => {
+    if (d) localStorage.setItem('glb.device', JSON.stringify(d));
+    for (const [k, v] of Object.entries(extra)) localStorage.setItem(k, JSON.stringify(v));
+  }, [dev, init]);
+  const page = await ctx.newPage();
+  page.errors = [];
+  page.on('pageerror', (e) => page.errors.push(`${name}: ${e.message}`));
+  return { ctx, page };
+}
+const K = await crewPhone('Crew owner', KDEV);
+await K.page.goto(`${srv.origin}/#/`);
+await K.page.waitForTimeout(500);
+ok(!!(await K.page.$('.crew-card.crew-none [data-v="#/crew/start"]')), 'no crew yet: Home offers “Start a crew”');
+await K.page.goto(`${srv.origin}/#/crew/start`);
+await K.page.waitForTimeout(300);
+await K.page.fill('#crew-name', 'Saturday Crew');
+await K.page.tap('[data-act="crew-save"]');
+await K.page.waitForTimeout(800);
+const kc = [...be.tables.crews.values()].find((c) => c.name === 'Saturday Crew');
+ok(!!kc && kc.owner_device === KDEV && /^[A-Z2-9]{6}$/.test(kc.invite_code || ''), `Create and invite: the crew exists, this phone owns it, invite code ${kc?.invite_code}`);
+ok(/Saturday Crew/.test(await K.page.textContent('.crew-card')) && /Invite copied|Invite link/.test(await toastText(K.page)), 'Home shows the crew card; the invite link was copied (no share sheet here)');
+// A finished cart-game round in the crew, people with real ids.
+const kr = seedRound(be, { holesPlayed: 18 });
+const KP = ['Andrew', 'Sean', 'Mike', 'Tyler', 'Sam', 'Jake', 'Chris', 'Matt'].map((n, i) => `8${i}8${i}8${i}8${i}-0000-4000-8000-00000000000${i}`);
+const kroster = JSON.parse(JSON.stringify(kr.event.roster));
+kroster.players.forEach((p, i) => { p.personId = KP[i]; p.firstName = p.name; p.lastName = 'Test'; });
+const kev = be.rpc.create_event({ p_name: 'Twin Creeks · Crew', p_course: kr.event.course, p_roster: kroster, p_settings: kr.event.settings, p_played_on: '2026-10-16', p_crew_id: kc.id });
+const kevRow = be.tables.events.find((e) => e.code === kev.code);
+for (const sc of be.tables.scores.filter((x) => x.event_id === kr.event.id)) be.tables.scores.push({ ...sc, event_id: kevRow.id });
+be.rpc.claim_crew_person({ p_crew_id: kc.id, p_device_id: KDEV, p_person_id: KP[0] });
+await K.page.goto(`${srv.origin}/#/season/${kc.id}`);
+await K.page.waitForTimeout(900);
+ok((await K.page.$$('.st-row')).length === 8 && !!(await K.page.$('.st-row.me')) && /Fall 2026/.test(await K.page.textContent('.season-card')),
+  'Standings: Fall 2026 (first season starts with the crew’s first round), all 8 ranked, your row highlighted');
+ok(!!(await K.page.$('[data-act="season-new"]')), 'owner sees “Start a new season”');
+await K.page.tap('[data-act="season-new"]');
+await K.page.waitForTimeout(300);
+ok(/End Fall 2026 and start Winter 2027/.test(await K.page.textContent('#sheet')), 'new season sheet: name prefilled, says what happens');
+await K.page.tap('[data-act="season-starts"][data-v="next"]');
+await K.page.tap('[data-act="season-start"]');
+await K.page.waitForTimeout(600);
+ok(be.tables.seasons.length === 1 && be.tables.seasons[0].starts_on === null && be.tables.seasons[0].name === 'Winter 2027', 'started Winter 2027 “with the next round”');
+await K.page.goto(`${srv.origin}/#/`);
+await K.page.waitForTimeout(900);
+ok(/Fall 2026 · you’re (T?\d+(st|nd|rd|th)?)/i.test(await K.page.textContent('.crew-card')), `crew card: “${(await K.page.textContent('.cc-line').catch(() => '')) || 'no line'}”`);
+// Invite → join on a friend's phone → Which one are you? (Andrew is on another phone).
+const FDEV = '7b7b7b7b-7777-4777-8777-777777777777';
+const FJ = await crewPhone('Crew friend', FDEV);
+await FJ.page.goto(`${srv.origin}/#/crew/${kc.invite_code}`);
+await FJ.page.waitForTimeout(700);
+ok(/Join Saturday Crew\?/.test(await FJ.page.textContent('#content')) && (await FJ.page.$$('.av-stack .av')).length === 6, 'invite link: “Join Saturday Crew?” with the avatar stack');
+await FJ.page.tap('[data-act="crew-join"]');
+await FJ.page.waitForTimeout(900);
+ok(!!(await FJ.page.$(`.claim-row.taken[data-v="${KP[0]}"]`)) && /On another phone/i.test(await FJ.page.textContent('.claim-row.taken')), 'Which one are you? Andrew is dimmed: on another phone');
+await FJ.page.tap(`[data-act="crew-which-pick"][data-v="${KP[1]}"]`);
+await FJ.page.waitForTimeout(200);
+await FJ.page.tap('[data-act="crew-which-ok"]');
+await FJ.page.waitForTimeout(800);
+ok(be.tables.crewClaims.some((x) => x.device_id === FDEV && x.person_id === KP[1]) && /Saturday Crew/.test(await FJ.page.textContent('.crew-card')), 'friend is Sean in the crew; Home shows the crew card');
+await FJ.page.tap('[data-act="crew-settings"]');
+await FJ.page.waitForTimeout(500);
+ok(!!(await FJ.page.$('#sheet [data-act="crew-rename"][disabled]')) && !!(await FJ.page.$('#sheet [data-act="crew-copy"]:not([disabled])')), 'not the owner: Rename / Reset are off, Copy works');
+// Reset → the old link is dead.
+const oldCode = kc.invite_code;
+be.rpc.reset_invite({ p_crew_id: kc.id, p_device_id: KDEV });
+const DJ = await crewPhone('Crew dead link', null);
+await DJ.page.goto(`${srv.origin}/#/crew/${oldCode}`);
+await DJ.page.waitForTimeout(700);
+ok(!!(await DJ.page.$('.crew-dead')) && /doesn’t work anymore/.test(await DJ.page.textContent('#content')), 'after a reset, the old invite shows the dead-link screen');
+// Quick players: last group chip adds everyone, you start ticked.
+await K.page.goto(`${srv.origin}/#/setup`);
+await K.page.waitForTimeout(900);
+await K.page.tap('[data-act="setup-mine"][data-v="twin-creeks-allen-tx"]');
+await K.page.waitForTimeout(400);
+const kSetup = () => K.page.evaluate(() => window.__glb.setup.players.map((p) => p.firstName));
+ok((await kSetup()).join() === 'Andrew' && !!(await K.page.$('.pick-row.on .av.me')), 'quick players: you start ticked, green avatar');
+await K.page.tap('.group-chip.primary');
+await K.page.waitForTimeout(300);
+ok((await kSetup()).length === 8 && /Next: pick a game · 8/.test(await K.page.textContent('.nr-cta')), 'last-group chip: all 8 from Friday in one tap');
+
+const errors = [K, FJ, DJ, A, C, A2, P, Q, O, R6, F, R, X, Y, Z, G, T, TP, NL, SP, HA, HB, HC, HD, HE, HF].flatMap((p) => p.page.errors);
 ok(errors.length === 0, `no page errors${errors.length ? `: ${errors.join('; ')}` : ''}`);
 
 await browser.close();

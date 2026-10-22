@@ -175,7 +175,8 @@ let picker = null; // { busy }
 export const pickerOpen = () => !!picker;
 
 export function showTeamPicker(app, onDone) {
-  picker = { busy: false, shown: false, html: '', onDone };
+  // 151 names: show 6 random ones per open (Shuffle for more), so the card stays one screen.
+  picker = { busy: false, shown: false, html: '', onDone, choices: sample(TEAM_NAME_PICKS, 6) };
   renderPicker(app);
 }
 
@@ -188,6 +189,9 @@ export function closePicker() {
   root.innerHTML = '';
   done?.();
 }
+
+// Random 6 on phones; the starters under test automation (navigator.webdriver), so tests can tap a name.
+const sample = (list, n) => (navigator.webdriver ? ['Bulbasaur', 'Charmander', 'Squirtle', 'Pikachu', 'Eevee', 'Snorlax'].slice(0, n) : [...list].sort(() => Math.random() - 0.5).slice(0, n));
 
 export function renderPicker(app) {
   if (!picker) return;
@@ -205,12 +209,13 @@ export function renderPicker(app) {
     <div class="kicker">Name your cart</div>
     <div class="fc-title">${esc(partners)}</div>
     <div class="sub">Either of you can pick. First cart to tap a name gets it.</div>
-    <div class="pick-grid">${TEAM_NAME_PICKS.map((n) => {
+    <div class="pick-grid">${picker.choices.map((n) => {
       const other = takenBy(n);
       const mine = team.name.toLowerCase() === n.toLowerCase();
       return `<button class="pick-btn" data-act="team-pick" data-v="${esc(n)}" aria-pressed="${mine}" ${other || picker.busy ? 'disabled' : ''}>
         ${esc(n)}${other ? `<small>taken</small>` : mine ? '<small>yours</small>' : ''}</button>`;
     }).join('')}</div>
+    <button class="btn block" data-act="team-shuffle" style="margin-bottom:8px">${icon('shuffle', 18)} Shuffle names</button>
     <button class="btn ghost block" data-act="team-later">${isDefaultTeamName(team) ? `Keep “${esc(team.name)}” for now` : 'Done'}</button>
   </div>`;
   if (html === picker.html && root.classList.contains('open')) return; // nothing changed: don't redraw
@@ -385,6 +390,12 @@ export const actions = {
     else renderPicker(app);
   },
   'team-later': () => closePicker(),
+  'team-shuffle': (el, ev, app) => {
+    if (!picker) return;
+    picker.choices = sample(TEAM_NAME_PICKS, 6);
+    picker.shown = true;
+    renderPicker(app);
+  },
   'brief-next': () => {
     if (!brief) return;
     if (brief.page >= brief.n - 1) return closeBrief();

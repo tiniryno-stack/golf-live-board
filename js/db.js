@@ -77,7 +77,7 @@ export const STANDALONE = (() => {
   }
 })();
 
-const MOVE_KEYS = /^glb\.(device|recent|theme|me\.|admin\.|brief\.|who\.|coach\.|seen\.)/;
+const MOVE_KEYS = /^glb\.(device|recent|theme|crews|crew$|me\.|admin\.|brief\.|who\.|coach\.|seen\.)/;
 const toB64 = (s) => btoa(String.fromCharCode(...new TextEncoder().encode(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const fromB64 = (s) => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0)));
 
@@ -134,6 +134,48 @@ export const admin = {
   set: (code, pin) => (pin ? local.set(`glb.admin.${code}`, pin) : local.del(`glb.admin.${code}`)),
 };
 
+/**
+ * Crews this phone belongs to (feature 006): [{ id, name, me }] in glb.crews, the selected one in glb.crew.
+ * A phone is in a crew by knowing its id: from an invite, from starting it, or from a round it played in.
+ * `me` = this phone's person in that crew (from "Which one are you?" or the round it played).
+ */
+export const crews = {
+  all() {
+    const list = local.get('glb.crews', []);
+    const known = new Set(list.map((c) => c.id));
+    for (const r of local.get('glb.recent', [])) {
+      if (r.crew_id && !known.has(r.crew_id) && !r.practice) { list.push({ id: r.crew_id, name: null, me: r.personId || null }); known.add(r.crew_id); }
+    }
+    return list;
+  },
+  save(list) { local.set('glb.crews', list); },
+  get(id) { return crews.all().find((c) => c.id === id) || null; },
+  /** Add or update one crew (name / me), keeping the others. */
+  put(c) {
+    const list = crews.all();
+    const i = list.findIndex((x) => x.id === c.id);
+    if (i >= 0) list[i] = { ...list[i], ...Object.fromEntries(Object.entries(c).filter(([, v]) => v !== undefined)) };
+    else list.unshift({ id: c.id, name: c.name ?? null, me: c.me ?? null });
+    crews.save(list);
+  },
+  leave(id) {
+    crews.save(crews.all().filter((c) => c.id !== id));
+    local.set('glb.crewsLeft', [...new Set([...(local.get('glb.crewsLeft', [])), id])]);
+    if (local.get('glb.crew') === id) local.del('glb.crew');
+  },
+  /** The crew Home shows: the last one picked, else the newest. Crews you left stay gone. */
+  current() {
+    const left = new Set(local.get('glb.crewsLeft', []));
+    const list = crews.all().filter((c) => !left.has(c.id));
+    return list.find((c) => c.id === local.get('glb.crew')) || list[0] || null;
+  },
+  visible() {
+    const left = new Set(local.get('glb.crewsLeft', []));
+    return crews.all().filter((c) => !left.has(c.id));
+  },
+  select(id) { local.set('glb.crew', id); local.set('glb.crewsLeft', (local.get('glb.crewsLeft', [])).filter((x) => x !== id)); },
+};
+
 /** Recent rounds opened on this phone (Home + "Run it back"). */
 export const recent = {
   all: () => local.get('glb.recent', []),
@@ -145,6 +187,7 @@ export const recent = {
     const list = recent.all().filter((r) => r.code !== ev.code);
     list.unshift({
       code: ev.code, name: ev.name, played_on: ev.played_on || null, crew_id: ev.crew_id || null,
+      practice: String(ev.settings?.practice) === 'true' || undefined,
       course: ev.course?.shortName || ev.course?.name || '', at: Date.now(),
     });
     local.set('glb.recent', list.slice(0, 12));
@@ -288,6 +331,17 @@ export const api = {
   crewPeople: (crewId) => rpc('crew_people', { p_crew_id: crewId }),
   personNameCheck: ({ first, last, nickname = null, crewId = null, personId = null }) =>
     rpc('person_name_check', { p_first: first, p_last: last, p_nickname: nickname, p_crew_id: crewId, p_person_id: personId }),
+  // Crews step 2+ (features 006–009)
+  crewInfo: (crewId) => rpc('crew_info', { p_crew_id: crewId, p_device_id: deviceId }),
+  crewByInvite: (code) => rpc('crew_by_invite', { p_code: code }),
+  createCrew: (name, personId = null) => rpc('create_crew', { p_device_id: deviceId, p_name: name, p_person_id: personId }),
+  renameCrew: (crewId, name) => rpc('rename_crew', { p_crew_id: crewId, p_device_id: deviceId, p_name: name }),
+  resetInvite: (crewId) => rpc('reset_invite', { p_crew_id: crewId, p_device_id: deviceId }),
+  claimCrewPerson: (crewId, personId) => rpc('claim_crew_person', { p_crew_id: crewId, p_device_id: deviceId, p_person_id: personId }),
+  crewNewPerson: (crewId, { first, last, nickname = null }) =>
+    rpc('crew_new_person', { p_crew_id: crewId, p_device_id: deviceId, p_first: first, p_last: last, p_nickname: nickname }),
+  removeCrewPerson: (crewId, personId) => rpc('remove_crew_person', { p_crew_id: crewId, p_device_id: deviceId, p_person_id: personId }),
+  startSeason: (crewId, name, startsOn = null) => rpc('start_season', { p_crew_id: crewId, p_device_id: deviceId, p_name: name, p_starts_on: startsOn }),
   upsertScore: (code, playerId, hole, strokes) =>
     rpc('upsert_score', { p_code: code, p_device_id: deviceId, p_player_id: playerId, p_hole: hole, p_strokes: strokes }),
   fillScore: (code, playerId, hole, strokes) =>

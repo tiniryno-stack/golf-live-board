@@ -16,6 +16,9 @@ import * as cd from '../coursedata.js';
 import { DEFAULT_SETTINGS, DEFAULT_ROTATION, GAMES, gameFix, autoGroups, cartRotation, threeCartRotation, cartIdsFor } from '../scoring.js';
 import * as db from '../db.js';
 import * as names from '../names.js';
+import { FLAGS } from '../flags.js';
+import { TEAM_NAME_PICKS, isDefaultTeamName } from '../teams.js';
+import { initials } from '../ui.js';
 
 const TEAM_IDS = ['A', 'B', 'C', 'D'];
 const DRAFT_KEY = 'glb.setupDraft';
@@ -97,6 +100,30 @@ async function loadPast(app, crewId) {
     const courses = new Map(); // course id → the copy from the group's latest round there (with any fixes)
     const plays = new Map(); // course id → rounds your group played there
     const lastHcp = {}; // person → strokes in the latest round they played (rounds come oldest first)
+    const freq = {}; // person → rounds in the crew's last 12 (Quick players order, feature 007)
+    const live = rounds.filter(({ event }) => String(event.settings?.practice) !== 'true');
+    for (const { event } of live.slice(-12)) for (const p of event.roster?.players || []) if (p.personId) freq[p.personId] = (freq[p.personId] || 0) + 1;
+    // Last groups: the crew's 4 most recent rounds, newest first ("All 8 from Friday", "Sat 2v2 · 4").
+    const groups = live.slice(-4).reverse().map(({ event }) => ({
+      day: event.played_on ? new Date(`${event.played_on}T12:00:00`).toLocaleDateString([], { weekday: 'long' }) : '',
+      course: event.course?.shortName || event.course?.name || '',
+      game: event.settings?.pairs ? '2v2' : (event.roster?.teams || []).length >= 3 ? 'Cart game' : event.settings?.solo ? 'Match' : '',
+      people: (event.roster?.players || []).filter((p) => p.personId).map((p) => ({ personId: p.personId, firstName: p.firstName || String(p.name || '').split(' ')[0], lastName: p.lastName || '', nickname: p.nickname || '' })),
+    })).filter((g) => g.people.length);
+    // Usual cart names (feature 009): per pair (either order), the name they used most recently in the crew.
+    const usual = {};
+    for (const { event } of live) {
+      for (const t of event.roster?.teams || []) {
+        const ids = (event.roster.players || []).filter((p) => p.teamId === t.id && p.personId).map((p) => p.personId);
+        if (ids.length !== 2 || !t.name || isDefaultTeamName(t)) continue;
+        const k = ids.sort().join('|');
+        const u = (usual[k] ||= { counts: {} });
+        u.counts[t.name] = (u.counts[t.name] || 0) + 1;
+        u.name = t.name;
+        u.last = event.played_on || u.last;
+      }
+    }
+    for (const u of Object.values(usual)) u.uses = u.counts[u.name];
     for (const { event } of rounds) {
       for (const p of event.roster?.players || []) {
         if (p.personId) people.set(p.personId, p.name);
@@ -118,7 +145,14 @@ async function loadPast(app, crewId) {
         : [...people].map(([personId, name]) => withName({ personId, name, crewId }));
       app.setup.mine = yourCourses([...courses.values()].reverse().map((c) => ({ ...c, plays: plays.get(c.id) || 0 })));
       app.setup.lastHcp = lastHcp;
+      app.setup.freq = freq;
+      app.setup.usual = usual;
+      app.setup.groups = groups;
+      app.setup.pastPeople = [...people].map(([personId, name]) => ({ personId, name })); // incl. people off the crew list
+      app.setup.pastLoaded = true;
+      quickAddMe(app.setup);
       paintCourses(app);
+      if (app.setup.screen === 'players') app.render();
     }
   } catch { /* offline: typing names still works */ }
 }
@@ -495,8 +529,102 @@ function whichView(s) {
     ${bottom(s.which ? 'Next: players' : 'Pick one to continue', 'setup-which-done', { disabled: !s.which, arrow: true })}`;
 }
 
+// ───────────────────────────────────────────── ② Quick players (feature 007-quick-players)
+
+const meOf = (s) => (s.crewId ? db.crews.get(s.crewId)?.me || null : null);
+const fullOf = (p) => [p.firstName, p.lastName].filter(Boolean).join(' ') || p.name || '';
+const shortOf = (p) => (p.lastName ? `${p.firstName} ${p.lastName[0]}.` : p.firstName || p.name || '');
+
+/** You start ticked in a crew round (once per setup, never after you untick yourself). */
+function quickAddMe(s) {
+  const me = meOf(s);
+  if (!me || s.meAdded || s.from) return;
+  s.meAdded = true;
+  if (s.players.some((x) => x.personId === me)) return;
+  const p = s.past.find((x) => x.personId === me);
+  if (p) s.players.unshift(newPlayer({ personId: p.personId, firstName: p.firstName, lastName: p.lastName, nickname: p.nickname, strokes: lastHcpOf(s, p.personId) }));
+}
+
+/** Rows: you, then everyone picked who isn't a regular (guests), then regulars by how often they play. */
+function quickRows(s) {
+  const me = meOf(s);
+  const picked = new Set(s.players.map((p) => p.personId));
+  const freq = s.freq || {};
+  const crew = [...s.past].sort((a, b) => (b.personId === me) - (a.personId === me) || (freq[b.personId] || 0) - (freq[a.personId] || 0) || shortOf(a).localeCompare(shortOf(b)));
+  const inCrew = new Set(crew.map((p) => p.personId));
+  const guests = s.players.filter((p) => !inCrew.has(p.personId)).map((p) => ({ ...p, guest: true }));
+  return [...crew.filter((p) => p.personId === me), ...guests, ...crew.filter((p) => p.personId !== me)].map((p) => ({ ...p, on: picked.has(p.personId), me: p.personId === me }));
+}
+
+function pickRow(s, p) {
+  const hcp = FLAGS.crewHandicaps ? lastHcpOf(s, p.personId) : '';
+  const i = s.players.findIndex((x) => x.personId === p.personId);
+  return `<button class="pick-row${p.on ? ' on' : ''}" data-act="qp-toggle" data-v="${esc(p.personId)}" aria-pressed="${p.on}">
+      <span class="av${p.me ? ' me' : ''}">${esc(initials(fullOf(p)))}</span>
+      <span class="pr-main"><span class="pr-name ellipsis">${esc(shortOf(p))}</span>${p.me ? '<span class="pr-sub you">You</span>' : p.guest ? '<span class="pr-sub">Guest · joins the crew after the round</span>' : ''}</span>
+      ${FLAGS.crewHandicaps && hcp !== '' && i >= 0 ? `<span class="pr-hcp mono" data-act="setup-hcp" data-i="${i}">${esc(hcp)}</span>` : FLAGS.crewHandicaps && hcp !== '' ? `<span class="pr-hcp mono">${esc(hcp)}</span>` : ''}
+      <span class="pr-box">${p.on ? icon('check', 18) : ''}</span>
+    </button>${i >= 0 && !s.players[i].lastName ? `<div class="pr-last"><input class="input name-fill" maxlength="30" placeholder="${esc(s.players[i].firstName || 'Their')}’s last name" autocapitalize="words" autocomplete="off" aria-label="Last name for ${esc(s.players[i].firstName)}" data-input="setup-last" data-i="${i}"></div>` : ''}`;
+}
+
+/** Search results (repainted in place while typing, so the field keeps focus). */
+function quickResults(s) {
+  const q = String(s.newName || '').trim().toLowerCase();
+  const rows = quickRows(s);
+  const hits = q ? rows.filter((p) => fullOf(p).toLowerCase().includes(q) || String(p.nickname || '').toLowerCase().includes(q)) : rows;
+  const inCrew = new Set(rows.map((p) => p.personId));
+  const before = q ? (s.pastPeople || []).filter((p) => !inCrew.has(p.personId) && String(p.name).toLowerCase().includes(q)) : [];
+  const picked = s.players.map(shortOf);
+  return `${hits.length ? `<div class="pick-list">${hits.map((p) => pickRow(s, p)).join('')}</div>` : ''}
+    ${before.length ? `<div class="ts-label qp-k">Played with the crew before</div><div class="pick-list">${before.map((p) => `<button class="pick-row" data-act="qp-before" data-v="${esc(p.personId)}"><span class="av">${esc(initials(p.name))}</span><span class="pr-main"><span class="pr-name ellipsis">${esc(p.name)}</span><span class="pr-sub">Not on the crew list</span></span><span class="pr-box"></span></button>`).join('')}</div>` : ''}
+    ${q ? `<div class="ts-label qp-k">Not in the crew</div>
+      <button class="qp-guest" data-act="setup-add"${s.nickAsk ? ' disabled' : ''}>${icon('plus', 18)}<span>Add “${esc(s.newName.trim())}” as a guest</span></button>` : ''}
+    <p class="meta qp-picked">${picked.length} picked${picked.length ? ` · ${esc(picked.join(', '))}` : ''}</p>`;
+}
+
+function quickPlayersView(s, c, line, tee) {
+  const crewName = (db.crews.get(s.crewId)?.name || 'Your crew').toUpperCase();
+  const rows = quickRows(s);
+  const searching = s.qpSearch;
+  const onlyYou = s.pastLoaded && rows.filter((p) => !p.me && !p.guest).length === 0;
+  const g = s.groups || [];
+  const chips = g.length ? `<div class="ts-label qp-k">Last group · ${esc(g[0].day.slice(0, 3))} at ${esc(g[0].course)}</div>
+    <div class="qp-chips">${g.map((x, i) => `<button class="group-chip${i === 0 ? ' primary' : ''}" data-act="qp-group" data-i="${i}">${i === 0 ? `${icon('plus', 18)} All ${x.people.length} from ${esc(x.day)}` : `${esc(x.day.slice(0, 3))}${x.game ? ` ${esc(x.game)}` : ''} · ${x.people.length}`}</button>`).join('')}</div>` : '';
+  const list = searching
+    ? `<div class="qp-searchbar"><label class="nr-search qp-search">${icon('search', 20)}<input id="new-player" type="search" maxlength="48" placeholder="Search the crew or type a name" value="${esc(s.newName || '')}" autocapitalize="words" autocomplete="off" data-input="qp-query" data-enter="setup-add"></label>
+        <button class="btn small" data-act="qp-search-done">Done</button></div>
+      <div id="qp-results">${quickResults(s)}</div>`
+    : `<div class="qp-head"><span class="ts-label">${esc(crewName)} · ${onlyYou ? 'just you so far' : `${s.players.length} picked`}</span>
+        <button class="link-btn qp-find" data-act="qp-search">${icon('search', 18)} Search</button></div>
+      <div class="pick-list">${rows.map((p) => pickRow(s, p)).join('')}</div>
+      ${onlyYou ? `<div class="crew-card crew-none qp-empty"><div class="cc-name">Your regulars show up here</div>
+          <p class="cc-meta">Invite the crew, or add people by name. People you add join the crew list after the round.</p>
+          <div class="cc-actions"><button class="btn cc-btn" data-act="crew-invite" data-v="${esc(s.crewId)}">${icon('share', 20)} Invite crew</button><button class="btn cc-btn" data-act="qp-search">Add by name</button></div></div>`
+        : `<div class="qp-foot">${rows.length > 8 ? `<span class="meta">+${rows.length - 8} more in the crew · scroll</span>` : '<span></span>'}<button class="link-btn" data-act="qp-search">${icon('plus', 16)} Guest</button></div>`}`;
+  return `${topBar(s)}${headline('Step 2 · Players', 'Who’s playing?')}
+    ${c ? `<div class="nr-course">
+      <button class="nc-main" data-act="setup-go" data-v="${c.variants?.length > 1 && !c.variant ? 'which' : 'check'}">
+        <b class="ellipsis">${esc(c.shortName || c.name || 'Your course')}${esc(tee)}</b>
+        <span class="nc-line ${line.cls}">${line.cls === '' && s.courseStatus === 'loading' ? '<span class="spinner tiny" aria-hidden="true"></span>' : ''}${esc(line.text)}</span>
+      </button>
+      <button class="btn small" data-act="setup-unpick">Change</button></div>` : ''}
+    ${searching ? '' : chips}
+    ${list}
+    ${s.nickAsk ? `<div class="card nick-ask">
+      <p class="meta" style="margin:0 0 8px">Someone named ${esc(s.nickAsk.first)} ${esc(s.nickAsk.last)} already plays in another crew. Someone new? Add a nickname so they’re their own player.</p>
+      <div class="join-row"><input class="input" id="new-nick" maxlength="24" placeholder="Nickname, e.g. Tini Ryno" autocapitalize="words" autocomplete="off" data-enter="setup-add">
+        <button class="btn primary" data-act="setup-add">Add</button></div>
+      <button class="link-btn" style="margin-top:8px" data-act="setup-nick-cancel">Cancel</button>
+    </div>` : ''}
+    ${bottom(`Next: pick a game · ${s.players.length}`, 'setup-go', { v: 'game', disabled: !s.players.length || !!s.nickAsk, arrow: false })}`;
+}
+
 /** ② Who's playing? */
 function playersView(s) {
+  if (s.crewId && db.crews.get(s.crewId)) {
+    const c0 = course(s);
+    return quickPlayersView(s, c0, c0 ? cardLine(s, c0) : null, s.tee ? ` · ${s.tee.name} tees` : '');
+  }
   const c = course(s);
   const line = c ? cardLine(s, c) : null;
   const used = new Set(s.players.map((p) => p.personId));
@@ -619,7 +747,71 @@ function pairsView(s) {
 const CART_TINT = { A: 'var(--cart-you)', B: 'var(--t-B)', C: 'var(--t-C)', D: 'var(--t-D)' };
 
 /** ④ Partner “Rider” Cup: 8 players in 4 carts, or 6 in 3. */
+// ───────────────────────────────────────────── team names per crew (feature 009-team-names-per-crew)
+
+const pairKey = (s, id) => {
+  const ids = s.players.filter((p) => p.teamId === id).map((p) => p.personId);
+  return ids.length === 2 ? [...ids].sort().join('|') : null;
+};
+const usualOf = (s, id) => (pairKey(s, id) && s.usual?.[pairKey(s, id)]) || null;
+
+/** Pairs that played together before get their usual name back (unless someone named the cart by hand). */
+function applyUsual(s) {
+  for (const t of s.teams) {
+    if (!cartIds(s).includes(t.id)) continue;
+    const key = pairKey(s, t.id);
+    if (t.auto && t.autoKey !== key) { t.name = ''; t.auto = false; }
+    if (t.name || !key) continue;
+    const u = s.usual?.[key];
+    if (u && !s.teams.some((x) => x.id !== t.id && same(x.name, u.name))) Object.assign(t, { name: u.name, auto: true, autoKey: key });
+  }
+}
+
+function cartTag(s, id) {
+  const u = usualOf(s, id);
+  const t = s.teams.find((x) => x.id === id);
+  const mine = s.players.some((p) => p.teamId === id && p.personId === meOf(s));
+  if (!u) return 'New pair';
+  if (t?.name && same(t.name, u.name)) return mine ? 'Your usual' : 'Their usual';
+  return '';
+}
+
+export function teamNameSheet(app, { id, q = '' }, head) {
+  const s = app.setup;
+  const t = s?.teams.find((x) => x.id === id);
+  if (!t) return head('Name cart');
+  const pair = s.players.filter((p) => p.teamId === id).map((p) => p.firstName || p.name).join(' + ');
+  const u = usualOf(s, id);
+  const mine = s.players.some((p) => p.teamId === id && p.personId === meOf(s));
+  const takenBy = (n) => s.teams.find((x) => x.id !== id && cartIds(s).includes(x.id) && same(x.name, n));
+  const usedOn = u?.last ? new Date(`${u.last}T12:00:00`).toLocaleDateString([], { month: 'short', day: 'numeric' }).toUpperCase() : '';
+  const usual = u ? `<div class="ts-label tn-k">${mine ? 'Your usual' : 'Their usual'}</div>
+    <div class="usual-card"><span class="uc-main"><span class="uc-name ellipsis">${esc(u.name)}</span><span class="ts-label uc-stats">Used ${u.uses} time${u.uses === 1 ? '' : 's'}${usedOn ? ` · last ${usedOn}` : ''}</span></span>
+      ${same(t.name, u.name) ? '<span class="ts-label uc-tag">In use</span>' : takenBy(u.name) ? `<span class="ts-label uc-tag dim">Cart ${takenBy(u.name).id}</span>` : `<button class="btn" data-act="tn-pick" data-v="${esc(u.name)}">Use</button>`}</div>` : '';
+  const ql = q.trim().toLowerCase();
+  const list = TEAM_NAME_PICKS.filter((n) => !ql || n.toLowerCase().includes(ql));
+  const custom = q.trim() && !TEAM_NAME_PICKS.some((n) => same(n, q.trim())) ? q.trim().slice(0, 20) : '';
+  return `${head(`Name cart ${id}`, pair)}
+    ${usual}
+    <div class="tn-search"><label class="nr-search">${icon('search', 20)}<input id="tn-q" type="search" maxlength="20" placeholder="Search or type your own" value="${esc(q)}" autocomplete="off" autocapitalize="words" data-input="tn-q" data-enter="tn-custom"></label>
+      <button class="btn" data-act="tn-shuffle">${icon('shuffle', 18)} Shuffle</button></div>
+    <div id="tn-list">${tnList(s, id, list, custom, takenBy)}</div>`;
+}
+
+function tnList(s, id, list, custom, takenBy) {
+  const t = s.teams.find((x) => x.id === id);
+  return `${custom ? `<button class="tn-row custom" data-act="tn-pick" data-v="${esc(custom)}">${icon('plus', 18)}<span>Use “${esc(custom)}”</span></button>` : ''}
+    <div class="ts-label tn-k">All names · ${list.length}</div>
+    <div class="tn-list">${list.map((n) => {
+      const other = takenBy(n);
+      const on = same(t.name, n);
+      return `<button class="tn-row${on ? ' on' : ''}" data-act="tn-pick" data-v="${esc(n)}" ${other ? 'disabled aria-disabled="true"' : ''}>
+        <span class="ellipsis">${esc(n)}</span>${other ? `<span class="ts-label tn-tag">Cart ${other.id}</span>` : on ? '<span class="ts-label tn-tag on">In use</span>' : ''}</button>`;
+    }).join('')}</div>`;
+}
+
 function cartsView(s) {
+  applyUsual(s);
   const c = course(s);
   const n = s.players.length;
   const ids = cartIds(s);
@@ -627,12 +819,13 @@ function cartsView(s) {
   const sched = ids.length === 3 ? 'everyone plays everyone' : s.schedule === 'turn' ? '2 rotations' : '3 rotations';
   return `${topBar(s)}${headline('Step 4 · Partner “Rider” Cup', `${n} players, ${ids.length} carts`)}
     <div class="nr-course small"><div class="ellipsis" style="flex:1"><b>Partner “Rider” Cup</b> <span class="soft">· ${n} players${c ? ` · ${esc(c.shortName || c.name)}` : ''}</span></div><button class="btn small" data-act="setup-go" data-v="game">Change</button></div>
-    <p class="meta nr-hint">${s.pairedFromLast ? 'Paired like your last round · ' : ''}Tap two names to swap.</p>
+    <p class="meta nr-hint">${s.pairedFromLast ? 'Paired like your last round · ' : ''}Tap two names to swap. Pairs that have played together before get their usual name back. Tap a name to change it.</p>
     <div class="cart-grid">${ids.map((id) => {
       const t = s.teams.find((x) => x.id === id);
       return `<div class="cart-card" style="--jersey:${CART_TINT[id]}">
         <div class="cc-k mono">CART ${id}</div>
-        <input class="cc-name" maxlength="20" placeholder="Names itself on join" value="${esc(t.name)}" aria-label="Team name for cart ${id}" data-input="setup-teamname" data-v="${id}">
+        <button class="tn-cart" data-act="tn-open" data-v="${id}" aria-label="Name cart ${id}: ${esc(t.name || 'not named')}">
+          <span class="tn-cart-main"><span class="tn-cart-name ellipsis${t.name ? '' : ' empty'}">${esc(t.name || 'Pick a name')}</span>${cartTag(s, id) ? `<span class="ts-label tn-cart-tag">${esc(cartTag(s, id))}</span>` : ''}</span>${icon('fwd', 16)}</button>
         ${idx(id).map((i) => swapBtn(s, i, s.players[i].strokes !== '' && s.players[i].strokes != null ? `<span class="mono soft">${esc(s.players[i].strokes)}</span>` : '')).join('')}
       </div>`;
     }).join('')}</div>
@@ -871,7 +1064,9 @@ export default {
     if (!app.setup.mine.length) app.setup.mine = yourCourses([]);
     if (from) loadFrom(app, from);
     else {
-      const crew = db.recent.all().find((r) => r.crew_id)?.crew_id;
+      // The crew Home shows (feature 006), else the newest crew from your rounds.
+      const crew = app.setup.crewId || db.crews.current()?.id || db.recent.all().find((r) => r.crew_id)?.crew_id;
+      if (crew && !app.setup.crewId && !app.setup.players.length) app.setup.crewId = crew;
       loadPast(app, crew);
     }
   },
@@ -1114,6 +1309,44 @@ export default {
       app.closeSheet();
       app.render();
     },
+    'tn-open': (el, ev, app) => app.openSheet('teamName', { id: el.dataset.v, q: '' }),
+    'tn-q': (el, ev, app) => {
+      const s = app.setup;
+      const id = app.sheet.props.id;
+      app.sheet.props.q = el.value;
+      const ql = el.value.trim().toLowerCase();
+      const list = TEAM_NAME_PICKS.filter((n) => !ql || n.toLowerCase().includes(ql));
+      const custom = el.value.trim() && !TEAM_NAME_PICKS.some((n) => same(n, el.value.trim())) ? el.value.trim().slice(0, 20) : '';
+      const takenBy = (n) => s.teams.find((x) => x.id !== id && cartIds(s).includes(x.id) && same(x.name, n));
+      const box = document.getElementById('tn-list');
+      if (box) box.innerHTML = tnList(s, id, list, custom, takenBy);
+    },
+    'tn-pick': (el, ev, app) => {
+      const s = app.setup;
+      const t = s.teams.find((x) => x.id === app.sheet.props.id);
+      if (s.teams.some((x) => x !== t && cartIds(s).includes(x.id) && same(x.name, el.dataset.v))) return;
+      Object.assign(t, { name: el.dataset.v.slice(0, 20), auto: false });
+      persist(s);
+      app.closeSheet();
+      app.render();
+    },
+    'tn-custom': (el, ev, app) => {
+      const v = el.value.trim().slice(0, 20);
+      if (!v) return;
+      el.dataset.v = v;
+      app.actions['tn-pick'](el, ev, app);
+    },
+    'tn-shuffle': (el, ev, app) => {
+      const s = app.setup;
+      const id = app.sheet.props.id;
+      const free = TEAM_NAME_PICKS.filter((n) => !s.teams.some((x) => cartIds(s).includes(x.id) && same(x.name, n)));
+      const n = free[Math.floor(Math.random() * free.length)];
+      if (!n) return;
+      Object.assign(s.teams.find((x) => x.id === id), { name: n, auto: false });
+      persist(s);
+      app.closeSheet();
+      app.render();
+    },
     'setup-teamname': (el, ev, app) => {
       app.setup.teams.find((t) => t.id === el.dataset.v).name = el.value.slice(0, 20);
       persist(app.setup);
@@ -1268,6 +1501,63 @@ export default {
       persist(s);
       app.render();
       document.getElementById('content').scrollTop = 0;
+    },
+    // Quick players (feature 007)
+    'qp-toggle': (el, ev, app) => {
+      if (ev?.target?.closest?.('[data-act="setup-hcp"]')) return;
+      const s = app.setup;
+      const pid = el.dataset.v;
+      const i = s.players.findIndex((x) => x.personId === pid);
+      if (i >= 0) s.players.splice(i, 1);
+      else {
+        const p = s.past.find((x) => x.personId === pid);
+        if (!p) return;
+        s.players.push(newPlayer({ personId: p.personId, firstName: p.firstName, lastName: p.lastName, nickname: p.nickname, strokes: lastHcpOf(s, p.personId) }));
+      }
+      persist(s);
+      const box = document.getElementById('qp-results');
+      if (box) box.innerHTML = quickResults(s);
+      else app.render();
+    },
+    'qp-group': (el, ev, app) => {
+      const s = app.setup;
+      const g = s.groups?.[Number(el.dataset.i)];
+      if (!g) return;
+      for (const p of g.people) {
+        if (s.players.some((x) => x.personId === p.personId)) continue;
+        const known = s.past.find((x) => x.personId === p.personId) || p;
+        s.players.push(newPlayer({ personId: p.personId, firstName: known.firstName, lastName: known.lastName, nickname: known.nickname, strokes: lastHcpOf(s, p.personId) }));
+      }
+      persist(s);
+      app.render();
+    },
+    'qp-before': (el, ev, app) => {
+      const s = app.setup;
+      const p = (s.pastPeople || []).find((x) => x.personId === el.dataset.v);
+      if (!p || s.players.some((x) => x.personId === p.personId)) return;
+      const nm = names.splitName(p.name);
+      s.players.push(newPlayer({ personId: p.personId, firstName: nm.first, lastName: nm.last }));
+      persist(s);
+      const box = document.getElementById('qp-results');
+      if (box) box.innerHTML = quickResults(s);
+    },
+    'qp-search': (el, ev, app) => {
+      app.setup.qpSearch = true;
+      app.render({ force: true });
+      document.getElementById('new-player')?.focus();
+    },
+    'qp-search-done': (el, ev, app) => {
+      app.setup.qpSearch = false;
+      app.setup.newName = '';
+      app.setup.nickAsk = null;
+      app.render({ force: true });
+    },
+    'qp-query': (el, ev, app) => {
+      const s = app.setup;
+      s.newName = el.value;
+      if (s.nickAsk) { s.nickAsk = null; app.render({ force: true }); document.getElementById('new-player')?.focus(); return; }
+      const box = document.getElementById('qp-results');
+      if (box) box.innerHTML = quickResults(s);
     },
     'setup-remove': (el, ev, app) => {
       app.setup.players.splice(Number(el.dataset.i), 1);
