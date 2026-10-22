@@ -1,0 +1,97 @@
+<title>Twin Creeks Yardage Check</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@500;700;800&family=Geist+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: one phone column, hole header, green card (numbers + outline), source controls. Dark-first, Night Round tokens. */
+:root{--bg:#0b0c0e;--surface:#17191d;--surface-2:#22252b;--fg:#f3f4f6;--muted:#8b919c;--good:#39d98a;--warn:#f0b35a;--line:#2b2f36;
+ --display:"Geist",system-ui,sans-serif;--mono:"Geist Mono",ui-monospace,SFMono-Regular,Menlo,monospace;color-scheme:dark}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){--bg:#f4f5f7;--surface:#ffffff;--surface-2:#e9ebef;--fg:#111317;--muted:#5d646f;--good:#16925a;--warn:#b7711c;--line:#d9dce2;color-scheme:light}}
+:root[data-theme="light"]{--bg:#f4f5f7;--surface:#ffffff;--surface-2:#e9ebef;--fg:#111317;--muted:#5d646f;--good:#16925a;--warn:#b7711c;--line:#d9dce2;color-scheme:light}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--display);padding-block:12px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:14px;max-width:480px;margin:0 auto;box-sizing:border-box}
+.head{display:grid;grid-template-columns:44px 1fr 44px;align-items:center}
+.head h1{margin:0;text-align:center;font-size:30px;font-weight:800;letter-spacing:-.02em}
+.meta{grid-column:1/-1;text-align:center;color:var(--muted);font-size:14px;margin-top:2px}
+.meta .gps{font-family:var(--mono);font-size:12px;letter-spacing:.06em}
+.arrow{height:44px;border:0;background:var(--surface);color:var(--fg);border-radius:12px;font-size:20px;cursor:pointer}
+.arrow:disabled{opacity:.3}
+.card{background:var(--surface);border-radius:22px;padding:18px;display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:center;min-height:200px}
+canvas{width:100%;max-width:100%;aspect-ratio:1;display:block}
+.nums{display:grid;gap:10px;font-family:var(--mono)}
+.row{display:flex;justify-content:space-between;align-items:baseline}
+.row .k{font-size:12px;letter-spacing:.12em;color:var(--muted);font-weight:700}
+.row .v{font-size:30px;font-weight:700;font-variant-numeric:tabular-nums}
+.row.mid .v{font-size:52px;line-height:1}
+.state{grid-column:1/-1;color:var(--muted);font-size:14px;text-align:center;min-height:1.2em}
+.ctl{background:var(--surface);border-radius:16px;padding:14px;display:grid;gap:12px}
+.seg{display:grid;grid-template-columns:1fr 1fr;background:var(--surface-2);border-radius:12px;padding:3px}
+.seg button{border:0;background:transparent;color:var(--muted);padding:10px;border-radius:10px;font:600 14px var(--display);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--fg)}
+label{display:grid;gap:6px;font-size:13px;color:var(--muted)}
+input[type=range]{width:100%;accent-color:var(--good)}
+.hint{font-size:12px;color:var(--muted);line-height:1.4}
+.ok{color:var(--good)}.warnc{color:var(--warn)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--good);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<div class="head">
+  <button class="arrow" id="prev" aria-label="Previous hole">&#8249;</button>
+  <h1 id="title">Hole 1</h1>
+  <button class="arrow" id="next" aria-label="Next hole">&#8250;</button>
+  <div class="meta"><span id="par">Par 5</span> · <span class="gps" id="gps">GPS · —</span></div>
+</div>
+<div class="card">
+  <canvas id="cv" width="320" height="320" aria-label="Green outline"></canvas>
+  <div class="nums">
+    <div class="row"><span class="k">BACK</span><span class="v" id="back">—</span></div>
+    <div class="row mid"><span class="k">MIDDLE</span><span class="v" id="mid">—</span></div>
+    <div class="row"><span class="k">FRONT</span><span class="v" id="front">—</span></div>
+  </div>
+  <div class="state" id="state"></div>
+</div>
+<div class="ctl">
+  <div class="seg" role="group" aria-label="Position source">
+    <button id="mSim" aria-pressed="true">Simulate</button>
+    <button id="mLive" aria-pressed="false">Live GPS</button>
+  </div>
+  <label id="walkLbl">Walk from the tee toward the green · <span id="pct">0%</span>
+    <input type="range" id="walk" min="0" max="110" value="0" step="1"></label>
+  <div class="hint">Twin Creeks greens and tees from OpenStreetMap (ODbL), renumbered to our scorecard (hole 1 = the par 5). Middle = center of the green outline; front and back = where your line of play enters and leaves it. Live GPS needs this page on the Golf Board site; here it will say so.</div>
+</div>
+<script>
+const DATA={"course":"Twin Creeks","holes":[{"hole":1,"par":5,"tee":[33.10573,-96.71436],"green":[[33.11032,-96.7148],[33.1103,-96.71478],[33.11027,-96.71475],[33.11025,-96.71471],[33.11022,-96.71467],[33.11019,-96.71465],[33.11017,-96.71465],[33.11014,-96.71466],[33.11008,-96.71469],[33.11005,-96.71472],[33.11004,-96.71475],[33.11004,-96.71478],[33.11006,-96.71481],[33.11008,-96.71483],[33.11011,-96.71483],[33.11015,-96.71484],[33.11018,-96.71485],[33.1102,-96.71487],[33.11023,-96.71489],[33.11026,-96.7149],[33.11029,-96.71489],[33.11032,-96.71488],[33.11033,-96.71484],[33.11033,-96.71481]]},{"hole":2,"par":4,"tee":[33.11151,-96.71567],"green":[[33.11447,-96.71456],[33.11447,-96.71452],[33.11445,-96.71448],[33.11443,-96.71447],[33.11439,-96.71446],[33.11435,-96.71446],[33.11431,-96.71447],[33.11426,-96.71451],[33.11421,-96.71456],[33.11419,-96.7146],[33.11419,-96.71463],[33.1142,-96.71466],[33.11422,-96.71467],[33.11424,-96.71468],[33.11427,-96.71468],[33.1143,-96.71467],[33.11432,-96.71466],[33.11435,-96.71465],[33.11437,-96.71465],[33.1144,-96.71465],[33.11442,-96.71465],[33.11444,-96.71464],[33.11445,-96.71462],[33.11447,-96.71456]]},{"hole":3,"par":3,"tee":[33.11396,-96.71379],"green":[[33.11495,-96.71265],[33.11497,-96.71266],[33.115,-96.71265],[33.11503,-96.71262],[33.11505,-96.7126],[33.11506,-96.71256],[33.11507,-96.71249],[33.11507,-96.71245],[33.11507,-96.71241],[33.11505,-96.71237],[33.11503,-96.71234],[33.115,-96.71233],[33.11498,-96.71233],[33.11496,-96.71234],[33.11494,-96.71237],[33.11494,-96.7124],[33.11494,-96.71244],[33.11494,-96.71248],[33.11493,-96.71253],[33.11492,-96.71258],[33.11492,-96.71261],[33.11493,-96.71264],[33.11495,-96.71265]]},{"hole":4,"par":4,"tee":[33.11522,-96.70996],"green":[[33.11293,-96.71364],[33.11296,-96.7136],[33.11299,-96.71355],[33.11301,-96.7135],[33.11304,-96.71348],[33.11307,-96.71346],[33.11309,-96.71345],[33.11312,-96.71346],[33.11313,-96.71348],[33.11314,-96.71351],[33.11315,-96.71354],[33.11314,-96.71357],[33.11313,-96.7136],[33.11311,-96.71363],[33.1131,-96.71366],[33.11309,-96.7137],[33.11307,-96.71374],[33.11306,-96.71378],[33.11304,-96.7138],[33.11301,-96.71381],[33.11298,-96.71382],[33.11295,-96.71381],[33.11293,-96.71379],[33.11291,-96.71376],[33.1129,-96.71373],[33.1129,-96.71369],[33.11291,-96.71366],[33.11293,-96.71364]]},{"hole":5,"par":4,"tee":[33.11303,-96.71411],"green":[[33.11083,-96.71533],[33.11085,-96.71531],[33.11086,-96.71528],[33.11086,-96.71525],[33.11085,-96.71521],[33.11083,-96.71519],[33.11081,-96.71518],[33.11078,-96.71519],[33.11076,-96.7152],[33.11073,-96.71521],[33.11069,-96.71522],[33.11065,-96.71522],[33.11062,-96.71522],[33.1106,-96.71523],[33.11059,-96.71526],[33.11058,-96.71529],[33.11058,-96.71533],[33.11059,-96.71536],[33.11062,-96.71539],[33.11065,-96.71541],[33.11068,-96.71541],[33.11071,-96.7154],[33.11073,-96.71538],[33.11075,-96.71536],[33.11079,-96.71535],[33.11083,-96.71533]]},{"hole":6,"par":5,"tee":[33.11087,-96.71692],"green":[[33.10681,-96.71774],[33.1068,-96.7177],[33.10679,-96.71766],[33.10676,-96.71764],[33.10672,-96.71761],[33.10668,-96.7176],[33.10665,-96.7176],[33.1066,-96.71761],[33.10658,-96.71764],[33.10657,-96.71767],[33.10656,-96.71771],[33.10657,-96.71774],[33.1066,-96.71778],[33.10663,-96.71781],[33.10668,-96.71782],[33.10672,-96.71782],[33.10676,-96.71781],[33.10679,-96.71778],[33.1068,-96.71775]]},{"hole":7,"par":3,"tee":[33.10563,-96.71692],"green":[[33.10717,-96.71623],[33.10724,-96.71618],[33.1073,-96.71613],[33.10734,-96.71612],[33.10737,-96.71612],[33.1074,-96.71614],[33.10741,-96.71616],[33.10742,-96.7162],[33.10742,-96.71624],[33.10741,-96.71628],[33.10738,-96.71631],[33.10736,-96.71633],[33.10728,-96.71638],[33.10724,-96.7164],[33.10721,-96.7164],[33.10718,-96.71639],[33.10715,-96.71636],[33.10714,-96.71634],[33.10713,-96.7163],[33.10714,-96.71627],[33.10717,-96.71623]]},{"hole":8,"par":4,"tee":[33.10856,-96.71559],"green":[[33.10566,-96.71619],[33.10565,-96.71617],[33.10564,-96.71615],[33.10561,-96.71613],[33.10556,-96.71612],[33.10553,-96.71612],[33.10547,-96.71614],[33.10542,-96.71617],[33.10539,-96.71619],[33.10538,-96.71623],[33.10538,-96.71627],[33.10539,-96.71631],[33.10542,-96.71635],[33.10544,-96.71638],[33.10547,-96.71639],[33.1055,-96.71639],[33.10554,-96.71637],[33.10557,-96.71636],[33.1056,-96.71633],[33.10562,-96.71629],[33.10564,-96.71625],[33.10565,-96.71621]]},{"hole":9,"par":4,"tee":[33.1054,-96.71753],"green":[[33.1052,-96.71411],[33.10523,-96.71405],[33.10526,-96.71401],[33.10527,-96.71398],[33.10527,-96.71395],[33.10527,-96.71393],[33.10525,-96.7139],[33.10523,-96.71387],[33.1052,-96.71384],[33.10518,-96.71381],[33.10515,-96.7138],[33.10512,-96.71379],[33.10509,-96.71379],[33.10508,-96.71379],[33.10507,-96.71381],[33.10506,-96.71383],[33.10506,-96.71385],[33.10506,-96.71388],[33.10506,-96.71391],[33.10507,-96.71394],[33.10509,-96.71398],[33.10509,-96.71402],[33.1051,-96.71405],[33.10511,-96.71408],[33.10511,-96.7141],[33.10513,-96.71411],[33.10515,-96.71412],[33.10517,-96.71412],[33.10519,-96.71411]]},{"hole":10,"par":4,"tee":[33.10413,-96.71261],"green":[[33.10258,-96.71509],[33.10257,-96.71506],[33.10255,-96.71505],[33.10253,-96.71505],[33.10251,-96.71505],[33.10249,-96.71506],[33.10247,-96.7151],[33.10245,-96.71514],[33.10243,-96.71517],[33.10241,-96.7152],[33.10239,-96.71522],[33.10239,-96.71524],[33.10239,-96.71527],[33.10239,-96.71529],[33.10241,-96.71531],[33.10244,-96.71533],[33.10246,-96.71534],[33.10248,-96.71534],[33.10251,-96.71532],[33.10253,-96.7153],[33.10255,-96.71526],[33.10258,-96.71523],[33.10259,-96.7152],[33.1026,-96.71516],[33.1026,-96.71513],[33.10259,-96.7151]]},{"hole":11,"par":3,"tee":[33.104,-96.71624],"green":[[33.10503,-96.71745],[33.10498,-96.71746],[33.1049,-96.71744],[33.10479,-96.71741],[33.10476,-96.71737],[33.10475,-96.71732],[33.10475,-96.71729],[33.10478,-96.71727],[33.10482,-96.71726],[33.10486,-96.71726],[33.1049,-96.71726],[33.10496,-96.71729],[33.10502,-96.7173],[33.10506,-96.71733],[33.10507,-96.71735],[33.10507,-96.71738],[33.10505,-96.71743]]},{"hole":12,"par":4,"tee":[33.10606,-96.71868],"green":[[33.10904,-96.72038],[33.10909,-96.72033],[33.10913,-96.72031],[33.10917,-96.7203],[33.10921,-96.72031],[33.10923,-96.72034],[33.10924,-96.72037],[33.10923,-96.72041],[33.10921,-96.72045],[33.10918,-96.72049],[33.10915,-96.72051],[33.10911,-96.72052],[33.10908,-96.72052],[33.10905,-96.72051],[33.10902,-96.72049],[33.10901,-96.72047],[33.10901,-96.72044],[33.10902,-96.72041]]},{"hole":13,"par":5,"tee":[33.10954,-96.72067],"green":[[33.1121,-96.7245],[33.11203,-96.72447],[33.11201,-96.72446],[33.11199,-96.72443],[33.11199,-96.72441],[33.11199,-96.72438],[33.112,-96.72436],[33.11202,-96.72433],[33.11205,-96.72432],[33.11208,-96.72432],[33.1121,-96.72432],[33.11217,-96.72434],[33.1122,-96.72436],[33.11222,-96.72438],[33.11223,-96.72441],[33.11224,-96.72443],[33.11223,-96.72446],[33.11222,-96.72448],[33.11221,-96.7245],[33.11219,-96.7245],[33.11217,-96.72451],[33.11214,-96.7245]]},{"hole":14,"par":4,"tee":[33.11289,-96.72505],"green":[[33.11036,-96.72632],[33.11031,-96.7263],[33.11027,-96.72627],[33.11023,-96.72623],[33.11021,-96.72622],[33.11018,-96.72622],[33.11015,-96.72624],[33.11013,-96.72626],[33.11012,-96.72629],[33.11012,-96.72633],[33.11013,-96.72636],[33.11014,-96.72638],[33.11018,-96.72641],[33.11024,-96.72644],[33.11028,-96.72647],[33.11033,-96.72647],[33.11036,-96.72646],[33.11038,-96.72644],[33.11039,-96.72642],[33.1104,-96.72639],[33.11039,-96.72636],[33.11038,-96.72633]]},{"hole":15,"par":3,"tee":[33.10832,-96.7265],"green":[[33.1073,-96.7264],[33.10727,-96.72641],[33.10723,-96.72642],[33.10719,-96.7264],[33.10713,-96.72637],[33.1071,-96.72634],[33.10708,-96.72629],[33.10707,-96.72625],[33.10707,-96.7262],[33.10709,-96.72616],[33.10711,-96.72612],[33.10713,-96.72611],[33.10717,-96.72611],[33.1072,-96.72612],[33.10723,-96.72616],[33.10728,-96.72622],[33.10731,-96.72625],[33.10733,-96.72629],[33.10734,-96.72632],[33.10734,-96.72634],[33.10734,-96.72637],[33.10732,-96.72639]]},{"hole":16,"par":5,"tee":[33.10571,-96.72552],"green":[[33.10404,-96.72078],[33.104,-96.72078],[33.10397,-96.72076],[33.10394,-96.72073],[33.10393,-96.7207],[33.10392,-96.72066],[33.10392,-96.72062],[33.10394,-96.72054],[33.10396,-96.72048],[33.10398,-96.72046],[33.104,-96.72045],[33.10402,-96.72046],[33.10405,-96.72047],[33.10406,-96.72049],[33.10407,-96.72055],[33.10408,-96.72059],[33.10408,-96.72064],[33.10409,-96.72069],[33.10409,-96.72072],[33.10408,-96.72074],[33.10407,-96.72076],[33.10406,-96.72078],[33.10404,-96.72078]]},{"hole":17,"par":4,"tee":[33.10381,-96.71942],"green":[[33.10185,-96.7165],[33.10184,-96.71647],[33.10184,-96.71644],[33.10182,-96.71643],[33.1018,-96.71642],[33.10179,-96.71641],[33.10177,-96.71641],[33.10175,-96.71643],[33.10173,-96.71645],[33.10171,-96.71647],[33.10168,-96.71649],[33.10166,-96.71651],[33.10162,-96.71653],[33.1016,-96.71655],[33.10159,-96.71657],[33.10158,-96.7166],[33.10158,-96.71663],[33.10158,-96.71666],[33.1016,-96.7167],[33.10162,-96.71672],[33.10164,-96.71673],[33.10166,-96.71674],[33.10169,-96.71673],[33.10171,-96.71671],[33.10173,-96.71667],[33.10175,-96.71665],[33.10179,-96.71661],[33.10182,-96.71658],[33.10184,-96.71655],[33.10184,-96.71652]]},{"hole":18,"par":4,"tee":[33.10193,-96.71539],"green":[[33.10357,-96.71228],[33.10359,-96.71224],[33.10362,-96.71222],[33.10364,-96.7122],[33.10366,-96.71216],[33.10368,-96.71212],[33.10369,-96.71208],[33.10372,-96.71204],[33.10374,-96.71202],[33.10377,-96.71202],[33.1038,-96.71202],[33.10382,-96.71203],[33.10383,-96.71205],[33.10384,-96.71207],[33.10384,-96.7121],[33.10384,-96.71215],[33.10383,-96.71219],[33.10382,-96.71222],[33.10381,-96.71225],[33.10379,-96.71228],[33.10376,-96.7123],[33.10375,-96.71231],[33.10372,-96.71233],[33.10369,-96.71234],[33.10367,-96.71236],[33.10365,-96.71237],[33.10363,-96.71238],[33.10361,-96.71238],[33.10359,-96.71238],[33.10357,-96.71237],[33.10356,-96.71235],[33.10356,-96.71233],[33.10356,-96.7123],[33.10357,-96.71228]]}]};
+const $=(id)=>document.getElementById(id);
+const R=6371000,t=(d)=>d*Math.PI/180,K=111320/0.9144;
+const meters=(a,b)=>{const h=Math.sin(t(b[0]-a[0])/2)**2+Math.cos(t(a[0]))*Math.cos(t(b[0]))*Math.sin(t(b[1]-a[1])/2)**2;return 2*R*Math.asin(Math.sqrt(h));};
+const yd=(m)=>m/0.9144;
+const cen=(p)=>[p.reduce((s,q)=>s+q[0],0)/p.length,p.reduce((s,q)=>s+q[1],0)/p.length];
+// Yardages from a position to a green outline: middle = center, front/back = extent of the outline along the line of play.
+function yards(from,poly){const c=cen(poly);const cl=Math.cos(t(c[0]));const ux=(c[1]-from[1])*cl,uy=c[0]-from[0];const L=Math.hypot(ux,uy)||1e-9;let lo=1e9,hi=-1e9;for(const p of poly){const s=(((p[1]-from[1])*cl)*ux+(p[0]-from[0])*uy)/L;lo=Math.min(lo,s);hi=Math.max(hi,s);}return{front:Math.round(lo*K),middle:Math.round(yd(meters(from,c))),back:Math.round(hi*K),bearing:Math.atan2(ux,uy)};}
+let hole=1,mode="sim",pos=null,acc=null,watch=null;
+const H=()=>DATA.holes[hole-1];
+function simPos(){const h=H(),c=cen(h.green),f=+$("walk").value/100;return[h.tee[0]+(c[0]-h.tee[0])*f,h.tee[1]+(c[1]-h.tee[1])*f];}
+function draw(from){const cv=$("cv"),ctx=cv.getContext("2d"),W=cv.width;ctx.clearRect(0,0,W,W);const h=H(),c=cen(h.green),cl=Math.cos(t(c[0]));
+ // local yards, rotated so the line of play points up
+ const y=yards(from,h.green);const rot=-y.bearing;const toXY=(p)=>{const ex=(p[1]-c[1])*cl*K,ny=(p[0]-c[0])*K;const rx=ex*Math.cos(rot)-ny*Math.sin(rot),ry=ex*Math.sin(rot)+ny*Math.cos(rot);return[rx,ry];};
+ const pts=h.green.map(toXY);let m=1;for(const p of pts)m=Math.max(m,Math.abs(p[0]),Math.abs(p[1]));const s=(W*0.36)/m;const X=(p)=>W/2+p[0]*s,Y=(p)=>W/2-p[1]*s;
+ const cs=getComputedStyle(document.documentElement);ctx.fillStyle=cs.getPropertyValue("--surface-2");ctx.strokeStyle=cs.getPropertyValue("--muted");ctx.lineWidth=2;ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(X(p),Y(p)):ctx.moveTo(X(p),Y(p)));ctx.closePath();ctx.fill();ctx.stroke();
+ // front / back thirds
+ ctx.strokeStyle=cs.getPropertyValue("--line");ctx.lineWidth=1;const ys=pts.map(p=>p[1]),lo=Math.min(...ys),hi=Math.max(...ys);for(const f of[1/3,2/3]){const yy=lo+(hi-lo)*f;ctx.beginPath();ctx.moveTo(W*0.1,W/2-yy*s);ctx.lineTo(W*0.9,W/2-yy*s);ctx.stroke();}
+ ctx.fillStyle=cs.getPropertyValue("--fg");ctx.beginPath();ctx.arc(W/2,W/2,5,0,7);ctx.fill();
+ // you: an arrow at the bottom pointing up the line of play
+ ctx.fillStyle=cs.getPropertyValue("--good");ctx.beginPath();ctx.moveTo(W/2,W*0.9);ctx.lineTo(W/2-7,W*0.97);ctx.lineTo(W/2+7,W*0.97);ctx.closePath();ctx.fill();}
+function render(){const h=H();$("title").textContent="Hole "+hole;$("par").textContent="Par "+h.par;$("prev").disabled=hole<=1;$("next").disabled=hole>=18;$("walkLbl").hidden=mode!=="sim";$("pct").textContent=$("walk").value+"%";
+ const from=mode==="sim"?simPos():pos;const gps=$("gps"),st=$("state");
+ if(!from){$("front").textContent=$("mid").textContent=$("back").textContent="—";draw(h.tee);gps.textContent="GPS · finding you";st.textContent=mode==="live"?(st.dataset.err||"Waiting for a fix…"):"";return;}
+ const y=yards(from,h.green);const bad=acc!=null&&yd(acc)>25;$("front").textContent=y.front;$("mid").textContent=bad?"—":y.middle;$("back").textContent=y.back;
+ gps.textContent=mode==="sim"?"SIM · ±0 YD":"GPS · ±"+Math.round(yd(acc||0))+" YD";gps.className="gps "+(bad?"warnc":"ok");
+ st.textContent=bad?"Weak fix, numbers hidden until it tightens":(mode==="sim"?"Simulated: "+$("walk").value+"% of the way from the tee":"");draw(from);}
+function setMode(m){mode=m;$("mSim").setAttribute("aria-pressed",m==="sim");$("mLive").setAttribute("aria-pressed",m==="live");if(watch!=null){navigator.geolocation.clearWatch(watch);watch=null;}
+ if(m==="live"){pos=null;acc=null;$("state").dataset.err="";if(!("geolocation"in navigator)){$("state").dataset.err="No location on this page. Open it on the Golf Board site for live GPS.";}
+ else watch=navigator.geolocation.watchPosition((p)=>{pos=[p.coords.latitude,p.coords.longitude];acc=p.coords.accuracy;$("state").dataset.err="";render();},(e)=>{$("state").dataset.err=e.code===1?"Location is off for this page. Live GPS needs the Golf Board site (Safari: aA → Website Settings → Location).":"Could not get a fix ("+e.message+").";render();},{enableHighAccuracy:true,maximumAge:2000,timeout:15000});}
+ render();}
+$("prev").onclick=()=>{hole=Math.max(1,hole-1);render();};$("next").onclick=()=>{hole=Math.min(18,hole+1);render();};
+$("walk").oninput=render;$("mSim").onclick=()=>setMode("sim");$("mLive").onclick=()=>setMode("live");
+document.addEventListener("visibilitychange",()=>{if(document.hidden&&watch!=null){navigator.geolocation.clearWatch(watch);watch=null;}else if(!document.hidden&&mode==="live")setMode("live");});
+render();
+</script>
