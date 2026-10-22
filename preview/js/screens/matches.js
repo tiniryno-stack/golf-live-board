@@ -5,10 +5,10 @@
 // Fore Play"), theirs opens below in an outlined "WATCHING" box in its own colors only. Never a
 // separate screen (people confuse it with their own score). Split point keeps its own view.
 
-import { esc, seg, seg2, icon, foldIn, mark } from '../ui.js?v=a430e8d';
-import { raceState, holeShares, holeOutcomes, showStakes } from '../race.js?v=a430e8d';
-import { fmtPts, fmtSigned, rotationIndexFor, holeAt, HOLES, playOrder, sideOn } from '../scoring.js?v=a430e8d';
-import { teamColor, shortTeam } from '../teams.js?v=a430e8d';
+import { esc, seg, seg2, icon, foldIn, mark } from '../ui.js?v=ae9e2c4';
+import { raceState, holeShares, holeOutcomes, showStakes } from '../race.js?v=ae9e2c4';
+import { fmtPts, fmtSigned, rotationIndexFor, holeAt, HOLES, playOrder, sideOn } from '../scoring.js?v=ae9e2c4';
+import { teamColor, shortTeam } from '../teams.js?v=ae9e2c4';
 
 /** The matches to switch between: yours (one per rotation, or two at once with 3 carts), or each
  *  rotation's first match when you're watching. [{ ri, m, my }] */
@@ -250,7 +250,7 @@ export function teamGameView(app) {
 
 /** Split point (2–6 players, each their own): totals up top, then a hole-by-hole table of who
  *  took the point and how it split. Kept simple on purpose. */
-/** "The race" (handoff golf-race-tabbar/02): individual split point, 2–6 players. Math + copy in race.js. */
+/** "The race" (feature 002-matches-race): individual split point, 2–6 players. Math + copy in race.js. */
 let lastLock = null;
 function splitView(app) {
   const snap = app.snapshot;
@@ -288,7 +288,7 @@ function splitView(app) {
     ? `<div class="rc-lock" style="--at:${lockFrom / HOLES}"><span class="rc-lock-l mono">LOCK ${fmtPts(r.lock)}</span></div>` : '';
   const explain = r.done < 6 && !r.finished && r.chaser
     ? `<p class="rc-explain">The <b>lock line</b> is the most ${esc(chaser)} can still reach. Get past it and the match is yours. Dashes show how far each player can still climb.</p>` : '';
-  // Bottom card (handoff golf-race-bottom): Points by hole, or What this hole does when it matters.
+  // Bottom card (feature 003-race-bottom): Points by hole, or What this hole does when it matters.
   const args = { players: ids.map((id) => ({ id, name: name(id) })), holes: raceHoles, me, lastHole: order[HOLES - 1] };
   let bottom;
   if (showStakes(args)) {
@@ -307,9 +307,9 @@ function splitView(app) {
   }
   return `<div class="plain race">
       <div class="race-top">
-        <div class="race-title"><div class="ts-label mono">MATCHES · SPLIT POINT · ${r.finished ? 'FINAL' : `THRU ${r.done}`}</div>
-          <h1 class="race-h">${esc(r.headline)}</h1><p class="race-sub">${esc(r.subline)}</p></div>
-        <button class="btn ghost race-rules" data-act="rules-open" aria-label="Rules of today’s game">${icon('info', 18)} Rules</button>
+        <div class="race-kick"><span class="ts-label mono">MATCHES · SPLIT POINT · ${r.finished ? 'FINAL' : `THRU ${r.done}`}</span>
+          <button class="btn ghost race-rules" data-act="rules-open" aria-label="Rules of today’s game">${icon('info', 18)} Rules</button></div>
+        <h1 class="race-h">${esc(r.headline)}</h1><p class="race-sub">${esc(r.subline)}</p>
       </div>
       <div class="race-card">
         <div class="rc-lanes">${lock}${lanes}</div>

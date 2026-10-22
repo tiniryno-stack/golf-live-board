@@ -1,5 +1,5 @@
 // race.js — pure math + headline copy for "The race" (individual split point, 2–6 players).
-// Design handoff golf-race-tabbar/02 SPEC.md. No DOM, no app state: give it holes, get the race.
+// Design feature 002-matches-race SPEC.md. No DOM, no app state: give it holes, get the race.
 //
 //   points:   1 a hole; the low score takes it, k tied for low get 1/k each. A hole counts only
 //             once every player has a score on it.
@@ -11,7 +11,7 @@
 //   reach:    [points, min(points + left, total)] for players still alive and not leading.
 //   tiebreak: level on points after the last hole → most outright wins; still level = shared.
 
-import { fmtPts } from './scoring.js?v=a430e8d';
+import { fmtPts } from './scoring.js?v=ae9e2c4';
 
 const EPS = 1e-9;
 const eq = (a, b) => Math.abs(a - b) < EPS;
@@ -137,9 +137,14 @@ export function copy(s, name, lastHole = 18) {
   // Tied for the lead.
   if (top.length > 1) {
     const ids = top.map((r) => r.id);
-    const headline = ids.some(you) ? `All square with ${list(ids.filter((id) => !you(id)).map(name))}` : `${list(ids.map(name))} are all square`;
-    const subline = s.left === 1 ? `Low score on ${lastHole} takes it.` : `${left}${outLine()}`;
-    return { headline: s.left === 1 ? `${lastHole} decides it` : headline, subline: s.left === 1 ? `${headline}. ${subline}` : subline };
+    // Two level: "All square with Justin". Three or more: a short headline, the names underneath.
+    const names = list(ids.map((id) => (you(id) ? 'You' : name(id))));
+    const many = ids.length > 2;
+    const headline = many ? `${ids.length}-way tie at the top`
+      : ids.some(you) ? `All square with ${name(ids.find((id) => !you(id)))}` : `${list(ids.map(name))} are all square`;
+    const who = many ? `${names} on ${fmtPts(s.points[ids[0]])}. ` : '';
+    if (s.left === 1) return { headline: `${lastHole} decides it`, subline: `${many ? who : `${headline}. `}Low score on ${lastHole} takes it.` };
+    return { headline, subline: `${who}${left}${outLine()}` };
   }
 
   const leadLine = `${who(s.leader)} lead${you(s.leader) ? '' : 's'} by ${fmtPts(s.lead)}`;
@@ -158,7 +163,7 @@ export function copy(s, name, lastHole = 18) {
   return { headline: leadLine, subline: `${left}${outLine()}` };
 }
 
-// ───────────────────────────────────────────── bottom card (handoff golf-race-bottom)
+// ───────────────────────────────────────────── bottom card (feature 003-race-bottom)
 
 /** Each player's share of every hole in play order: 1 / ½ / ⅓ / ¼ / 0, or null while not complete. */
 export function holeShares(holes, ids, total = 18) {

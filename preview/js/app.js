@@ -2,22 +2,22 @@
 //
 // Render flow: Supabase ─realtime─► app state ─► scoring.compute() ─► snapshot ─► active screen render
 
-import * as db from './db.js?v=a430e8d';
-import { compute, nextHoleFor, currentHoleOf, sameFoursome, matchFor, playOrder, posOf, holeAt, HOLES, sideOn, teeTimeName, groupIndex } from './scoring.js?v=a430e8d';
-import { roundSummary } from './screens/home.js?v=a430e8d';
-import { isDefaultTeamName } from './teams.js?v=a430e8d';
-import { replayHeadlines, latestMoment } from './headlines.js?v=a430e8d';
-import { esc, icon, initials, roundLink, copyText } from './ui.js?v=a430e8d';
-import * as fx from './screens/toasts.js?v=a430e8d';
-import * as sheets from './screens/sheets.js?v=a430e8d';
-import home from './screens/home.js?v=a430e8d';
-import setup from './screens/setup.js?v=a430e8d';
-import season from './screens/season.js?v=a430e8d';
-import enter from './screens/enter.js?v=a430e8d';
-import matches from './screens/matches.js?v=a430e8d';
-import board from './screens/board.js?v=a430e8d';
-import card from './screens/card.js?v=a430e8d';
-import host from './screens/host.js?v=a430e8d';
+import * as db from './db.js?v=ae9e2c4';
+import { compute, nextHoleFor, currentHoleOf, sameFoursome, matchFor, playOrder, posOf, holeAt, HOLES, sideOn, teeTimeName, groupIndex } from './scoring.js?v=ae9e2c4';
+import { roundSummary } from './screens/home.js?v=ae9e2c4';
+import { isDefaultTeamName } from './teams.js?v=ae9e2c4';
+import { replayHeadlines, latestMoment } from './headlines.js?v=ae9e2c4';
+import { esc, icon, initials, roundLink, copyText } from './ui.js?v=ae9e2c4';
+import * as fx from './screens/toasts.js?v=ae9e2c4';
+import * as sheets from './screens/sheets.js?v=ae9e2c4';
+import home from './screens/home.js?v=ae9e2c4';
+import setup from './screens/setup.js?v=ae9e2c4';
+import season from './screens/season.js?v=ae9e2c4';
+import enter from './screens/enter.js?v=ae9e2c4';
+import matches from './screens/matches.js?v=ae9e2c4';
+import board from './screens/board.js?v=ae9e2c4';
+import card from './screens/card.js?v=ae9e2c4';
+import host from './screens/host.js?v=ae9e2c4';
 
 const SCREENS = { home, setup, season, enter, matches, board, card, host };
 const TABS = [
@@ -1154,7 +1154,7 @@ function renderTopbar(screen, inRound) {
   return `${chip}<div class="round-title ellipsis">${esc(name)}</div>${share}${menuBtn}`;
 }
 
-/** Floating glass tab bar (handoff golf-race-tabbar/01): icons only, four equal tabs, one highlight that
+/** Floating glass tab bar (feature 001-tab-bar): icons only, four equal tabs, one highlight that
  *  slides to the active tab. Built once, then updated in place so the slide can animate (the render
  *  loop redraws constantly). The screen title says where you are. */
 function renderTabbar(el, show) {

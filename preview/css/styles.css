@@ -1340,13 +1340,14 @@ details.fold summary::-webkit-details-marker { display: none; }
   box-shadow: var(--shadow-float); font-size: 13px; line-height: 18px; white-space: nowrap; color: var(--text); }
 .netpill .np-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--warn); }
 
-/* ───────────────────────────────────────────── Matches · The race (handoff golf-race-tabbar/02) */
+/* ───────────────────────────────────────────── Matches · The race (feature 002-matches-race) */
 .race { padding-top: 12px; }
-.race-top { display: flex; align-items: flex-end; gap: 8px; padding: 0 4px; }
-.race-title { flex: 1; min-width: 0; }
-.race-title .ts-label { font-size: 12px; letter-spacing: .08em; color: var(--text-muted); }
-.race-h { font-size: 32px; font-weight: 800; letter-spacing: -1px; line-height: 1.1; margin: 4px 0 0; }
-.race-sub { font-size: 13px; color: var(--text-muted); margin: 4px 0 0; }
+.race-top { padding: 0 4px; }
+/* label + Rules share the top line, so the headline gets the full width; two lines are fine, balanced */
+.race-kick { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: -12px 0 -8px; }
+.race-kick .ts-label { font-size: 12px; letter-spacing: .08em; color: var(--text-muted); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.race-h { font-size: 32px; font-weight: 800; letter-spacing: -1px; line-height: 1.1; margin: 4px 0 0; text-wrap: balance; overflow-wrap: anywhere; }
+.race-sub { font-size: 13px; color: var(--text-muted); margin: 4px 0 0; text-wrap: pretty; }
 .race-rules { flex: none; min-height: var(--tap-min); padding: 0 12px; gap: 6px; font-size: 15px; color: var(--text-muted); }
 .race-card { margin-top: 12px; padding: 8px 14px 10px; border-radius: 18px; background: var(--surface-1); box-shadow: var(--shadow-card); }
 .rc-lanes { position: relative; padding-top: 22px; }
@@ -1373,7 +1374,7 @@ details.fold summary::-webkit-details-marker { display: none; }
 .rc-lock-l { position: absolute; top: 0; transform: translateX(-50%); font-size: 12px; font-weight: 700; letter-spacing: .06em; white-space: nowrap; color: var(--text); background: var(--surface-1); padding: 0 4px; }
 .rc-axis { display: flex; justify-content: space-between; margin: 4px 18px 0 86px; font-size: 12px; color: var(--text-muted); }
 .rc-explain { margin: 10px 0 0; padding: 10px 12px; border-radius: 12px; background: var(--surface-2); font-size: 13px; line-height: 1.4; }
-/* bottom card: Points by hole / What this hole does (handoff golf-race-bottom) */
+/* bottom card: Points by hole / What this hole does (feature 003-race-bottom) */
 .race-bottom { padding: 12px 14px; }
 .rb-head { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; letter-spacing: .06em; color: var(--text-muted); margin-bottom: 6px; }
 .pb-row { display: flex; align-items: center; gap: 8px; height: 30px; }
