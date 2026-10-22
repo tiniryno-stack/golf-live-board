@@ -12,9 +12,6 @@ import { teamColor, shortTeam } from '../teams.js';
 
 /** The matches to switch between: yours (one per rotation, or two at once with 3 carts), or each
  *  rotation's first match when you're watching. [{ ri, m, my }] */
-/** Matches → Rules, on every game type: a filled secondary button, top right, easy to spot. */
-const RULES_BTN = '<div class="m-rules"><button class="btn small" data-act="rules-open" aria-label="Rules of today’s game">Rules</button></div>';
-
 function matchList(app) {
   const g = app.snapshot.game;
   const out = [];
@@ -158,7 +155,6 @@ function waitingView(app) {
       return `<div class="mu-item"><span class="mi-h">${m.firstHole}–${m.lastHole}</span><span class="mi-v">${who}</span></div>`;
     }).join('');
   return `<div class="plain wait">
-      ${RULES_BTN}
       <div class="ts-label wait-k">Before the first tee</div>
       <h1 class="ts-title wait-t">Waiting for the first scores</h1>
       <p class="wait-p">Matchups fill in as soon as anyone enters hole 1.</p>
@@ -242,7 +238,6 @@ export function teamGameView(app) {
   }).join('');
 
   return `<div class="plain matches-nr">
-      ${RULES_BTN}
       ${watching ? mineBar : heroFull}
       ${otherBoxes}
     </div>`;
@@ -311,8 +306,7 @@ function splitView(app) {
   }
   return `<div class="plain race">
       <div class="race-top">
-        <div class="race-kick"><span class="ts-label mono">MATCHES · SPLIT POINT · ${r.finished ? 'FINAL' : `THRU ${r.done}`}</span>
-          <button class="btn ghost race-rules" data-act="rules-open" aria-label="Rules of today’s game">${icon('info', 18)} Rules</button></div>
+        <div class="race-kick"><span class="ts-label mono">MATCHES · SPLIT POINT · ${r.finished ? 'FINAL' : `THRU ${r.done}`}</span></div>
         <h1 class="race-h">${esc(r.headline)}</h1><p class="race-sub">${esc(r.subline)}</p>
       </div>
       <div class="race-card">
@@ -336,7 +330,7 @@ export default {
       const why = casual
         ? ` The organizer can turn on Match play under ${app.isOrganizer() ? '<b>Host</b> → Rules' : 'Host → Rules'}: 1 point a hole, a tie for low splits it. It counts back from hole 1.`
         : [3, 4].includes(snap.roster.teams?.length) ? '' : ' (Partner “Rider” Cup needs carts of 2)';
-      return `<div class="plain">${RULES_BTN}<h1 class="title">Matches</h1>
+      return `<div class="plain"><h1 class="title">Matches</h1>
         <p class="soft">No game on this round.${why} The live leaderboard is on the Board.</p>
         ${casual && app.isOrganizer() ? '<button class="btn block" style="margin:0 0 10px" data-act="tab" data-v="host">Turn on Match play</button>' : ''}
         <button class="btn primary block" data-act="tab" data-v="board">See the Board</button></div>`;
