@@ -307,9 +307,9 @@ function splitView(app) {
   }
   return `<div class="plain race">
       <div class="race-top">
-        <div class="race-title"><div class="ts-label mono">MATCHES · SPLIT POINT · ${r.finished ? 'FINAL' : `THRU ${r.done}`}</div>
-          <h1 class="race-h">${esc(r.headline)}</h1><p class="race-sub">${esc(r.subline)}</p></div>
-        <button class="btn ghost race-rules" data-act="rules-open" aria-label="Rules of today’s game">${icon('info', 18)} Rules</button>
+        <div class="race-kick"><span class="ts-label mono">MATCHES · SPLIT POINT · ${r.finished ? 'FINAL' : `THRU ${r.done}`}</span>
+          <button class="btn ghost race-rules" data-act="rules-open" aria-label="Rules of today’s game">${icon('info', 18)} Rules</button></div>
+        <h1 class="race-h">${esc(r.headline)}</h1><p class="race-sub">${esc(r.subline)}</p>
       </div>
       <div class="race-card">
         <div class="rc-lanes">${lock}${lanes}</div>

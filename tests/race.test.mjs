@@ -150,3 +150,11 @@ test('Points by hole: each played cell is that player’s share; the hole in pro
   assert.equal(sh.m.length, 18);
   assert.equal(showStakes({ players: P, holes: rep(7, 'm'), me: 'm' }), false, 'thru 7 with a big lead: points by hole');
 });
+
+test('Headline: two level = All square with Justin; three or more = "3-way tie at the top" with the names underneath', () => {
+  assert.equal(race([hole('m'), hole('j')]).headline, 'All square with Justin');
+  const three = race([hole('m'), hole('a'), hole('j')]);
+  assert.equal(three.headline, '3-way tie at the top');
+  assert.match(three.subline, /^You, Andrew and Justin on 1\. 15 left\./);
+  assert.equal(race([hole('a'), hole('j')], 'm').headline, 'Andrew and Justin are all square');
+});

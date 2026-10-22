@@ -1342,11 +1342,12 @@ details.fold summary::-webkit-details-marker { display: none; }
 
 /* ───────────────────────────────────────────── Matches · The race (feature 002-matches-race) */
 .race { padding-top: 12px; }
-.race-top { display: flex; align-items: flex-end; gap: 8px; padding: 0 4px; }
-.race-title { flex: 1; min-width: 0; }
-.race-title .ts-label { font-size: 12px; letter-spacing: .08em; color: var(--text-muted); }
-.race-h { font-size: 32px; font-weight: 800; letter-spacing: -1px; line-height: 1.1; margin: 4px 0 0; }
-.race-sub { font-size: 13px; color: var(--text-muted); margin: 4px 0 0; }
+.race-top { padding: 0 4px; }
+/* label + Rules share the top line, so the headline gets the full width; two lines are fine, balanced */
+.race-kick { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: -12px 0 -8px; }
+.race-kick .ts-label { font-size: 12px; letter-spacing: .08em; color: var(--text-muted); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.race-h { font-size: 32px; font-weight: 800; letter-spacing: -1px; line-height: 1.1; margin: 4px 0 0; text-wrap: balance; overflow-wrap: anywhere; }
+.race-sub { font-size: 13px; color: var(--text-muted); margin: 4px 0 0; text-wrap: pretty; }
 .race-rules { flex: none; min-height: var(--tap-min); padding: 0 12px; gap: 6px; font-size: 15px; color: var(--text-muted); }
 .race-card { margin-top: 12px; padding: 8px 14px 10px; border-radius: 18px; background: var(--surface-1); box-shadow: var(--shadow-card); }
 .rc-lanes { position: relative; padding-top: 22px; }

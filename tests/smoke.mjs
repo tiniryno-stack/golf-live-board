@@ -1291,7 +1291,7 @@ await SP.page.waitForTimeout(500);
 await clearOverlays(SP.page);
 const tots = await SP.page.$$eval('.rc-lane', (els) => els.map((e) => `${e.querySelector('.rc-name').textContent} ${e.querySelector('.rc-puck').textContent}`));
 ok(JSON.stringify(tots) === JSON.stringify(['Josh 3½', 'Sean 2½', 'Andrew 1']), `recounted from hole 1, the race in order: ${tots.join(', ')}`);
-const raceTop = await SP.page.evaluate(() => [document.querySelector('.race-title .ts-label')?.textContent, document.querySelector('.race-h')?.textContent, document.querySelector('.rc-lock-l')?.textContent]);
+const raceTop = await SP.page.evaluate(() => [document.querySelector('.race-kick .ts-label')?.textContent, document.querySelector('.race-h')?.textContent, document.querySelector('.rc-lock-l')?.textContent]);
 ok(raceTop[0] === 'MATCHES · SPLIT POINT · THRU 7' && raceTop[1] === 'Josh leads by 1' && raceTop[2] === 'LOCK 13½', `The race: label, headline, lock line (${raceTop.join(' / ')})`);
 await SP.page.tap('[data-act="tab"][data-v="board"]');
 await SP.page.waitForTimeout(500);
