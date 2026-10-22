@@ -2,11 +2,11 @@
 // full-screen cards (Switch it up, Lock in / Close it out), the "While you were
 // away" card, and coach marks.
 
-import { esc, icon, reducedMotion } from '../ui.js';
-import { briefPages } from './brief.js';
-import { recapImages, saveImage } from './recap.js';
-import { local } from '../db.js';
-import { TEAM_NAME_PICKS, isDefaultTeamName, headlineColor } from '../teams.js';
+import { esc, icon, reducedMotion } from '../ui.js?v=dd940bc';
+import { briefPages } from './brief.js?v=dd940bc';
+import { recapImages, saveImage } from './recap.js?v=dd940bc';
+import { local } from '../db.js?v=dd940bc';
+import { TEAM_NAME_PICKS, isDefaultTeamName, headlineColor } from '../teams.js?v=dd940bc';
 
 const $ = (id) => document.getElementById(id);
 

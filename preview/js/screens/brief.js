@@ -3,9 +3,9 @@
 // the ⋯ menu. Only the high-yield stuff: what a hole is worth, pushes, your matchups,
 // what's up for grabs, how the day is won.
 
-import { esc } from '../ui.js';
-import { componentNames, foursomeTeams, fmtPts, holesLabel } from '../scoring.js';
-import { teamColor } from '../teams.js';
+import { esc } from '../ui.js?v=dd940bc';
+import { componentNames, foursomeTeams, fmtPts, holesLabel } from '../scoring.js?v=dd940bc';
+import { teamColor } from '../teams.js?v=dd940bc';
 
 const half = (n) => fmtPts(n); // 0.5 → "½"
 

@@ -2,22 +2,22 @@
 //
 // Render flow: Supabase ─realtime─► app state ─► scoring.compute() ─► snapshot ─► active screen render
 
-import * as db from './db.js';
-import { compute, nextHoleFor, currentHoleOf, sameFoursome, matchFor, playOrder, posOf, holeAt, HOLES, sideOn, teeTimeName, groupIndex } from './scoring.js';
-import { roundSummary } from './screens/home.js';
-import { isDefaultTeamName } from './teams.js';
-import { replayHeadlines, latestMoment } from './headlines.js';
-import { esc, icon, initials, roundLink, copyText } from './ui.js';
-import * as fx from './screens/toasts.js';
-import * as sheets from './screens/sheets.js';
-import home from './screens/home.js';
-import setup from './screens/setup.js';
-import season from './screens/season.js';
-import enter from './screens/enter.js';
-import matches from './screens/matches.js';
-import board from './screens/board.js';
-import card from './screens/card.js';
-import host from './screens/host.js';
+import * as db from './db.js?v=dd940bc';
+import { compute, nextHoleFor, currentHoleOf, sameFoursome, matchFor, playOrder, posOf, holeAt, HOLES, sideOn, teeTimeName, groupIndex } from './scoring.js?v=dd940bc';
+import { roundSummary } from './screens/home.js?v=dd940bc';
+import { isDefaultTeamName } from './teams.js?v=dd940bc';
+import { replayHeadlines, latestMoment } from './headlines.js?v=dd940bc';
+import { esc, icon, initials, roundLink, copyText } from './ui.js?v=dd940bc';
+import * as fx from './screens/toasts.js?v=dd940bc';
+import * as sheets from './screens/sheets.js?v=dd940bc';
+import home from './screens/home.js?v=dd940bc';
+import setup from './screens/setup.js?v=dd940bc';
+import season from './screens/season.js?v=dd940bc';
+import enter from './screens/enter.js?v=dd940bc';
+import matches from './screens/matches.js?v=dd940bc';
+import board from './screens/board.js?v=dd940bc';
+import card from './screens/card.js?v=dd940bc';
+import host from './screens/host.js?v=dd940bc';
 
 const SCREENS = { home, setup, season, enter, matches, board, card, host };
 const TABS = [

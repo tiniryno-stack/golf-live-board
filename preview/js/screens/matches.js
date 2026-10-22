@@ -5,10 +5,10 @@
 // Fore Play"), theirs opens below in an outlined "WATCHING" box in its own colors only. Never a
 // separate screen (people confuse it with their own score). Split point keeps its own view.
 
-import { esc, seg, seg2, icon, foldIn, mark } from '../ui.js';
-import { raceState } from '../race.js';
-import { fmtPts, fmtSigned, rotationIndexFor, holeAt, HOLES, playOrder, sideOn } from '../scoring.js';
-import { teamColor, shortTeam } from '../teams.js';
+import { esc, seg, seg2, icon, foldIn, mark } from '../ui.js?v=dd940bc';
+import { raceState } from '../race.js?v=dd940bc';
+import { fmtPts, fmtSigned, rotationIndexFor, holeAt, HOLES, playOrder, sideOn } from '../scoring.js?v=dd940bc';
+import { teamColor, shortTeam } from '../teams.js?v=dd940bc';
 
 /** The matches to switch between: yours (one per rotation, or two at once with 3 carts), or each
  *  rotation's first match when you're watching. [{ ri, m, my }] */

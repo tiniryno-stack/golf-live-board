@@ -8,8 +8,8 @@
 //
 // Everything here except the fetch helpers is pure (unit-tested in tests/courses.test.mjs).
 
-import { SUPABASE_URL } from './config.js';
-import { COURSES } from './courses.js';
+import { SUPABASE_URL } from './config.js?v=dd940bc';
+import { COURSES } from './courses.js?v=dd940bc';
 
 export const OGA = 'https://api.opengolfapi.org/api/v1/courses';
 export const PROXY = `${SUPABASE_URL}/functions/v1/course-search`;
