@@ -196,7 +196,12 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
   `glb.recent` entries also carry Home's summary for each round (`recent.note`, from
   `home.roundSummary`: game, your name, live hole / place / points, or how it went).
 
-## Testing (run before every push; all headless, no network needed)
+## Testing (all headless, no network needed)
+
+**How much to run (Andrew, Oct 21):** `npm test` (seconds) after every change. UI-only work: one
+`FIT_SIZE=393x852 npm run test:fit` (iPhone 16 size only) per batch; no screenshot reviews unless Andrew
+asks: he tries the app and reports back. `npm run test:smoke` only when a change touches score
+sync, joining, the engine or the database, and once before anything merges to `main`.
 
 ```bash
 npm install
