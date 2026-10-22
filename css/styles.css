@@ -130,6 +130,8 @@ a { color: inherit; }
 /* content clears the bar: scrolling screens get room to scroll the last row past it */
 .has-tabbar .content { padding-bottom: calc(110px + var(--sab)); }
 .has-tabbar .content.noscroll { padding-bottom: calc(92px + var(--sab)); } /* 24 + 68 bar */
+/* short screens (SE): the bar sits lower so Enter keeps 48px score boxes */
+@media (max-height: 600px) { .tabbar { bottom: calc(10px + var(--sab)); } .has-tabbar .content.noscroll { padding-bottom: calc(76px + var(--sab)); } }
 
 /* circular icon buttons */
 .icon-btn {
