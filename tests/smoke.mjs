@@ -547,7 +547,9 @@ await R6.page.waitForTimeout(700);
 ok((await R6.page.$$('.seg2 button')).length === 2 && (await R6.page.$$('.watch-box')).length === 1 && /MATCH 1 OF 2/.test(await R6.page.textContent('.m-kicker')),
   'Matches: a segment for each of your 2 matchups, the third (B v C) under ALSO');
 await R6.page.screenshot({ path: 'tests/screenshots/matches-3-carts.png' });
-await R6.page.tap('[data-act="rules-open"]');
+await R6.page.tap('[data-act="round-menu"]');
+await R6.page.waitForTimeout(300);
+await R6.page.tap('[data-act="menu-rules"]');
 await R6.page.waitForTimeout(300);
 const rules6 = (await R6.page.textContent('#sheet')).replace(/\s+/g, ' ');
 ok(/Partner “Rider” Cup · Match play/.test(rules6) && /4 a hole/.test(rules6) && /Same opponents all 18/.test(rules6) && /Full, off zero/.test(rules6) && /Double par/.test(rules6) && /better matchup record/.test(rules6),
@@ -1023,7 +1025,9 @@ await X.page.tap('[data-act="tile-step"][data-pid="p1"][data-d="1"]');
 await X.page.waitForTimeout(900);
 const s18 = be.tables.scores.find((x) => x.event_id === r5.id && x.player_id === 'p1' && x.hole === 18);
 ok(s18.strokes === before18 + 1 && s18.updated_by === 'Organizer', `fixed a score with the PIN while final (${before18} → ${s18.strokes}, by ${s18.updated_by})`);
-await Y.page.tap('.host-btn');
+await Y.page.tap('[data-act="round-menu"]');
+await Y.page.waitForTimeout(400);
+await Y.page.tap('[data-act="menu-host"]');
 await Y.page.waitForTimeout(500);
 await Y.page.tap('[data-act="host-reopen"]');
 await Y.page.waitForTimeout(300);
@@ -1287,10 +1291,10 @@ ok(JSON.stringify(spEv.settings.teeTimes) === '["08:40"]', `saved the tee time (
 await SP.page.tap('[data-act="tab"][data-v="matches"]');
 await SP.page.waitForTimeout(500);
 await clearOverlays(SP.page);
-const tots = await SP.page.$$eval('.sp-tot', (els) => els.map((e) => `${e.querySelector('.sp-name').textContent.replace(' (you)', '')} ${e.querySelector('.sp-pts').textContent}`));
-ok(JSON.stringify(tots) === JSON.stringify(['Josh 3½', 'Sean 2½', 'Andrew 1']), `recounted from hole 1: ${tots.join(', ')}`);
-const spRows = await SP.page.$$eval('.sp-table tbody tr', (trs) => trs.map((tr) => [...tr.querySelectorAll('td')].map((td) => td.querySelector('.pt')?.textContent || '').join('|')));
-ok(spRows.length === 7 && spRows[0] === '½||½' && spRows[1] === '1||' && spRows[6] === '⅓|⅓|⅓', `Matches: hole by hole, who took the point and how it split (${spRows.join(' / ')})`);
+const tots = await SP.page.$$eval('.rc-lane', (els) => els.map((e) => `${e.querySelector('.rc-name').textContent} ${e.querySelector('.rc-puck').textContent}`));
+ok(JSON.stringify(tots) === JSON.stringify(['Josh 3½', 'Sean 2½', 'Andrew 1']), `recounted from hole 1, the race in order: ${tots.join(', ')}`);
+const raceTop = await SP.page.evaluate(() => [document.querySelector('.race-kick .ts-label')?.textContent, document.querySelector('.race-h')?.textContent, document.querySelector('.rc-lock-l')?.textContent]);
+ok(raceTop[0] === 'MATCHES · SPLIT POINT · THRU 7' && raceTop[1] === 'Josh leads by 1' && raceTop[2] === 'LOCK 13½', `The race: label, headline, lock line (${raceTop.join(' / ')})`);
 await SP.page.tap('[data-act="tab"][data-v="board"]');
 await SP.page.waitForTimeout(500);
 await clearOverlays(SP.page);

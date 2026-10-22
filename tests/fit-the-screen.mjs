@@ -358,7 +358,9 @@ for (const size of SIZES) {
   await check(page, size, 'Enter (fixing a finalized round)', 'enter');
   // Matches → Rules sheet (the round's real settings).
   await go(`#/e/${r.code}/matches`);
-  await page.tap('[data-act="rules-open"]');
+  await page.tap('[data-act="round-menu"]');
+  await page.waitForTimeout(300);
+  await page.tap('[data-act="menu-rules"]');
   await page.waitForTimeout(400);
   await check(page, size, 'Rules sheet');
   await page.tap('#sheet .panel [data-act="sheet-close"]');

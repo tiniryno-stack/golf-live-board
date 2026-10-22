@@ -42,6 +42,14 @@ after the first playtest; section 13 is the V2 backlog.
   change with `npm run design:compare` → `tests/screenshots/design/vs-*.png` (mockup left, app right).
   Light/dark toggle: Home + round ⋯ menu only.
 
+## Design handoffs
+- New features arrive as docs/design/features/NNN-name/. SPEC.md is the source of truth; screenshots show the target; mockups are reference only.
+- A feature folder is never edited after it's handed off. Changes come as a new numbered folder that says what it changes.
+- When I attach NNN-name.zip, unzip it into docs/design/features/ and build it: plan first, then build on a branch, then commit.
+- Follow docs/design/design-system/. No new colors, sizes or type styles; flag anything that needs a new token or pattern.
+- When a feature is done, set its SPEC.md status to "Status: built in <commit>".
+- Don't run the full test suite or take screenshots after small changes; run only the tests for what changed. I test on my phone.
+
 ## Home screen app (Oct 21)
 
 - iPhone gives a home screen app (standalone, no Safari bars) **its own storage**, so it starts as
@@ -131,9 +139,12 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
   matches per hole, so use `matchesFor()`; `matchFor()` returns the first).
 - **Small groups:** any roster that isn't 4 carts of 2 is a scorecard round (no teams).
   With 2–6 players, `settings.solo` = **split point** (`game.type 'splitPoint'`): 1 point a hole to the
-  low net score, ties for low split it 1/k. Teams A–D are made in `soloView`, so Host can switch it on
-  mid-round and it recounts from hole 1. Matches tab: totals + hole-by-hole table (kept simple; Andrew
-  may redesign it).
+  low net score, ties for low split it 1/k; level after 18 → **most outright wins** (`rankStandings`), still level = shared. Teams A–D are made in `soloView`, so Host can switch it on
+  mid-round and it recounts from hole 1. Matches tab = **The race** (feature 002-matches-race, 2–6 players): math + headline copy in pure
+  `js/race.js` (lock line = 2nd + holes left, locked when the lead beats it, OUT, reach tails), tests in
+  `tests/race.test.mjs`; explainer shows for the first 6 holes. Bottom card (feature 003-race-bottom):
+  **Points by hole** (`holeShares`) or **What this hole does** (`holeOutcomes`, shown per `showStakes`: hole 16+,
+  13+ within 1, or this hole could lock it); no tap action.
 - **Crews + people (Oct 21):** a crew = a friend group (`events.crew_id`; Andrew wants the word
   "crew", not "league"). A person = `personId`, with first + last name (+ nickname when that full
   name is taken; unique app-wide). Roster players carry `firstName`/`lastName`/`nickname`; `name` is
@@ -165,6 +176,10 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
 - **Jerseys:** your cart is always green on your phone; others fixed away colors A orange, B blue,
   C pink, D violet (no red — red = double bogey). On rounded cards use a tint + full ring, never
   an edge stripe (it clips at the corners).
+- **Tab bar (Oct 21, feature 001-tab-bar):** full-width glass bar, icons only, 4 equal tabs, one
+  `surface-3` highlight that slides (`.tab-hl`), built once in `renderTabbar` and updated in place; the
+  screen title says where you are (Hole N · MATCHES · Board · Scorecard); Enter dot = your group's hole still
+  missing scores. Host is no longer a button beside it: ⋯ → **Host settings · organizer**.
 - No back button inside a round. Name pill / avatar → short **You** sheet (Go to Home, Switch to
   watching); ⋯ → round actions (Recap when final, Rules, How today's game works, Share, Theme, Run it back). Your cart is always first (Card, Matches).
 - Headlines: colored by `hero`; one at a time, two for ~10 s when they land together.
@@ -208,7 +223,7 @@ sync, joining, the engine or the database, and once before anything merges to `m
 
 ```bash
 npm install
-npm test               # 77 unit tests: scoring + headlines + course data + names/crews + games (2v2, at the turn, 6-player match play, Partner “Rider” Cup for 6, tee times) + score marks + design tokens (drift, retired colors, type scale)
+npm test               # 84 unit tests (incl. race.test.mjs): scoring + headlines + course data + names/crews + games (2v2, at the turn, 6-player match play, Partner “Rider” Cup for 6, tee times) + score marks + design tokens (drift, retired colors, type scale)
 npm run test:fit       # 160 checks: every screen at SE / 13 mini / 15-16 / Pro Max, no scroll on Enter
 npm run test:smoke     # 256 checks: multi-phone flows against the mock (join, swap, offline, rejoin,
                        # reset/delete, back nine, Next waits for every score, grid/locks, recap,
