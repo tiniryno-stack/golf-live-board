@@ -166,8 +166,9 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
 - **Jerseys:** your cart is always green on your phone; others fixed away colors A orange, B blue,
   C pink, D violet (no red — red = double bogey). On rounded cards use a tint + full ring, never
   an edge stripe (it clips at the corners).
-- **Tab bar (Oct 21, handoff `golf-race-tabbar/01`):** floating glass pill (`--glass`, `--glass-line`), built once in
-  `renderTabbar` and updated in place so the active label animates; Enter dot = your group's hole still
+- **Tab bar (Oct 21, handoff `golf-race-tabbar/01` v2):** full-width glass bar, icons only, 4 equal tabs, one
+  `surface-3` highlight that slides (`.tab-hl`), built once in `renderTabbar` and updated in place; the
+  screen title says where you are (Hole N · MATCHES · Board · Scorecard); Enter dot = your group's hole still
   missing scores. Host is no longer a button beside it: ⋯ → **Host settings · organizer**.
 - No back button inside a round. Name pill / avatar → short **You** sheet (Go to Home, Switch to
   watching); ⋯ → round actions (Recap when final, Rules, How today's game works, Share, Theme, Run it back). Your cart is always first (Card, Matches).

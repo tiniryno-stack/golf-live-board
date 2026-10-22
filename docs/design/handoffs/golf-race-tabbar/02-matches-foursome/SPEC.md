@@ -40,7 +40,7 @@ The Matches tab for an **individual 4-player split-point game** (no teams). This
    - `NOW · HOLE 8 · PAR 5` and `1 PT UP FOR GRABS`.
    - The 4 players, each with a score mark (circle, square, etc.) if entered, or a dashed empty circle if not.
    - Tapping it goes to Enter.
-5. **Tab bar:** the new floating glass pill from `01-tab-bar`, with Matches active. Content needs bottom padding so nothing hides behind it.
+5. **Tab bar:** the new icon-only glass tab bar from `01-tab-bar`, with Matches active. Content needs bottom padding so nothing hides behind it.
 
 ## Headline copy (computed)
 - Leading, not locked: "You lead by 1" / "Andrew leads by ½" (fractions as ½ ¼ ¾ ⅓ ⅔).

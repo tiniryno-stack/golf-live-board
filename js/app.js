@@ -1154,19 +1154,24 @@ function renderTopbar(screen, inRound) {
   return `${chip}<div class="round-title ellipsis">${esc(name)}</div>${share}${menuBtn}`;
 }
 
-/** Floating glass tab bar (design handoff golf-race-tabbar/01). Built once, then updated in place
- *  so the active pill's label can animate (the render loop redraws constantly). */
+/** Floating glass tab bar (handoff golf-race-tabbar/01): icons only, four equal tabs, one highlight that
+ *  slides to the active tab. Built once, then updated in place so the slide can animate (the render
+ *  loop redraws constantly). The screen title says where you are. */
 function renderTabbar(el, show) {
   if (!show) { if (el.innerHTML) el.innerHTML = ''; return; }
   if (!el.querySelector('.tab')) {
-    el.innerHTML = `<div class="dock">${TABS.map(([id, label, ic]) =>
-      `<button class="tab" data-act="tab" data-v="${id}" aria-label="${label}">${icon(ic, 22)}<span class="tab-label">${label}</span>${id === 'enter' ? '<i class="tab-dot" hidden></i>' : ''}</button>`).join('')}</div>`;
+    el.innerHTML = `<div class="dock"><i class="tab-hl" aria-hidden="true"></i>${TABS.map(([id, label, ic]) =>
+      `<button class="tab" data-act="tab" data-v="${id}" aria-label="${label}">${icon(ic, 22)}${id === 'enter' ? '<i class="tab-dot" hidden></i>' : ''}</button>`).join('')}</div>`;
   }
   const tab = app.route.tab;
+  const i = TABS.findIndex(([id]) => id === tab);
   for (const b of el.querySelectorAll('.tab')) {
     if (b.dataset.v === tab) b.setAttribute('aria-current', 'page');
     else b.removeAttribute('aria-current');
   }
+  const hl = el.querySelector('.tab-hl');
+  hl.hidden = i < 0; // Host: no tab is active
+  if (i >= 0) hl.style.transform = `translateX(${i * 100}%)`;
   // Enter dot: your group's current hole is still missing scores (neutral, never green or red).
   const dot = el.querySelector('.tab-dot');
   const waiting = !!(app.me && app.snapshot && !app.isFinal() && tab !== 'enter' && nextHoleFor(app.snapshot, app.me) != null);

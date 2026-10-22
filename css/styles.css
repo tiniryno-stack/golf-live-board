@@ -101,37 +101,34 @@ a { color: inherit; }
   position: relative;
 }
 .content.noscroll { overflow: hidden; }
-/* floating glass tab bar (Enter · Matches · Board · Card): content-width capsule over the content */
+/* floating glass tab bar (Enter · Matches · Board · Card): full width, icons only, four equal tabs */
 .tabbar {
-  position: fixed; left: 0; right: 0; bottom: calc(26px + var(--sab)); z-index: 6;
-  display: flex; justify-content: center; pointer-events: none;
+  position: fixed; left: 16px; right: 16px; bottom: calc(24px + var(--sab)); z-index: 6;
 }
 .tabbar:empty { display: none; }
 .dock {
-  pointer-events: auto; display: flex; gap: 4px; padding: 6px; border-radius: 32px;
+  position: relative; display: flex; padding: 6px; border-radius: 34px;
   background: var(--glass); border: 1px solid var(--glass-line); box-shadow: var(--shadow-float);
   -webkit-backdrop-filter: blur(22px) saturate(1.8); backdrop-filter: blur(22px) saturate(1.8);
 }
+.tab-hl {
+  position: absolute; top: 6px; left: 6px; width: calc((100% - 12px) / 4); height: 56px; border-radius: 28px;
+  background: var(--surface-3); transition: transform .28s cubic-bezier(.25, .1, .25, 1);
+}
+.tab-hl[hidden] { display: none; }
 .tab {
-  position: relative; height: 52px; min-width: 52px; padding: 0 15px; border-radius: 26px;
-  display: flex; align-items: center; justify-content: center; color: var(--text-muted);
-  transition: background .3s cubic-bezier(.2, .9, .3, 1), padding .3s cubic-bezier(.2, .9, .3, 1), color .3s;
+  position: relative; z-index: 1; flex: 1; height: 56px; display: flex; align-items: center; justify-content: center;
+  color: var(--text-muted); transition: color .25s ease-out;
 }
-.tab svg { width: 22px; height: 22px; stroke-width: 2; flex: none; }
-.tab-label {
-  font-size: 15px; font-weight: 700; max-width: 0; opacity: 0; overflow: hidden; white-space: nowrap;
-  transition: max-width .3s cubic-bezier(.2, .9, .3, 1), opacity .2s, margin .3s;
-}
-.tab[aria-current="page"] { background: var(--button); color: var(--on-button); padding: 0 18px 0 16px; }
-.tab[aria-current="page"] .tab-label { max-width: 90px; opacity: 1; margin-left: 8px; }
-.tab:active { transform: scale(.96); }
-.tab:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
-.tab-dot { position: absolute; top: 12px; right: 12px; width: 8px; height: 8px; border-radius: 4px; background: var(--text); box-shadow: 0 0 0 2px var(--surface-1); }
+.tab svg { width: 22px; height: 22px; stroke-width: 2; }
+.tab[aria-current="page"] { color: var(--text); }
+.tab:focus-visible { outline: 2px solid var(--text); outline-offset: -2px; border-radius: 28px; }
+.tab-dot { position: absolute; top: 15px; left: calc(50% + 6px); width: 8px; height: 8px; border-radius: 4px; background: var(--text); box-shadow: 0 0 0 2px var(--surface-1); }
 .tab-dot[hidden] { display: none; }
-@media (prefers-reduced-motion: reduce) { .tab, .tab-label { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .tab-hl, .tab { transition: none; } }
 /* content clears the bar: scrolling screens get room to scroll the last row past it */
 .has-tabbar .content { padding-bottom: calc(110px + var(--sab)); }
-.has-tabbar .content.noscroll { padding-bottom: calc(92px + var(--sab)); }
+.has-tabbar .content.noscroll { padding-bottom: calc(92px + var(--sab)); } /* 24 + 68 bar */
 
 /* circular icon buttons */
 .icon-btn {

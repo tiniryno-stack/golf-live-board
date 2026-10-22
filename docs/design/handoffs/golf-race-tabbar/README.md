@@ -2,7 +2,7 @@
 
 Two pieces of work, done in this order:
 
-1. **`01-tab-bar/`: new floating glass tab bar.** A shared component, so build it first. The Matches screen uses it.
+1. **`01-tab-bar/`: new floating glass tab bar (icons only, calm sliding highlight).** A shared component, so build it first. The Matches screen uses it.
 2. **`02-matches-foursome/`: "The race" Matches screen** for 4-player split-point (individual) rounds.
 
 Each folder has a `SPEC.md` (the source of truth) plus visual references. Everything follows the existing design system in `docs/design/design-system/` (tokens.css, README rules). This handoff adds two tokens, `--glass` and `--glass-line`, listed in `01-tab-bar/SPEC.md`.
