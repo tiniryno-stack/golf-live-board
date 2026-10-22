@@ -23,7 +23,8 @@ const ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 export function createBackend() {
   const t = {
     events: [], secrets: new Map(), claims: [], joins: [], jdev: new Map(), audit: [], scores: [],
-    crews: new Set(), people: new Map(), members: new Map(), // crews + people (mirrors _sync_crew)
+    crews: new Map(), people: new Map(), members: new Map(), // crews + people (mirrors _sync_crew)
+    crewClaims: [], seasons: [], // features 006 / 008
   };
   let auditId = 1;
   const now = () => new Date().toISOString();
@@ -43,7 +44,7 @@ export function createBackend() {
   const fullKey = (x) => [x.first_name, x.last_name, x.nickname || ''].map((v) => String(v).toLowerCase()).join('|');
   function syncCrew(e, oldRoster = null) {
     if (!e.crew_id || String(e.settings?.practice) === 'true') return;
-    t.crews.add(e.crew_id);
+    if (!t.crews.has(e.crew_id)) t.crews.set(e.crew_id, { id: e.crew_id, name: null, invite_code: null, owner_device: null, owner_person: null });
     for (const p of e.roster?.players || []) {
       if (!UUID.test(p.personId || '')) continue;
       const first = trimmed(p.firstName ?? String(p.name || '').trim().split(' ')[0], 24);
@@ -56,12 +57,45 @@ export function createBackend() {
       const isNew = !oldRoster || !(oldRoster.players || []).some((o) => o.personId === p.personId);
       const k = `${e.crew_id}|${p.personId}`;
       const m = t.members.get(k);
-      if (!m) t.members.set(k, { crew_id: e.crew_id, person_id: p.personId, last_played: e.played_on, rounds: 1 });
+      if (!m) t.members.set(k, { crew_id: e.crew_id, person_id: p.personId, last_played: e.played_on, rounds: 1, removed: false });
       else {
         if (String(e.played_on) > String(m.last_played)) m.last_played = e.played_on;
         if (isNew) m.rounds += 1;
       }
     }
+  }
+
+  // crews step 2+ helpers (mirror _invite_code / _crew_owner_ok / _crew_card)
+  const inviteCode = () => {
+    let c;
+    do { c = Array.from({ length: 6 }, () => ALPHABET[Math.floor(Math.random() * ALPHABET.length)]).join(''); }
+    while ([...t.crews.values()].some((x) => x.invite_code === c));
+    return c;
+  };
+  const crewRounds = (id) => t.events.filter((e) => e.crew_id === id && String(e.settings?.practice) !== 'true');
+  function ownerOk(id, dev) {
+    const c = t.crews.get(id);
+    if (!c) return false;
+    if (!c.owner_device) {
+      c.owner_device = dev;
+      c.owner_person = t.crewClaims.find((x) => x.crew_id === id && x.device_id === dev)?.person_id || null;
+      return true;
+    }
+    return c.owner_device === dev;
+  }
+  function crewCard(id, dev) {
+    const c = t.crews.get(id);
+    const rounds = crewRounds(id);
+    const dates = rounds.map((e) => e.played_on).filter(Boolean).sort();
+    return {
+      id, name: c.name, code: c.invite_code, isOwner: !c.owner_device || c.owner_device === dev, hasOwner: !!c.owner_device,
+      owner: t.people.get(c.owner_person)?.first_name || null,
+      players: [...t.members.values()].filter((m) => m.crew_id === id && !m.removed).length,
+      rounds: rounds.length, since: dates[0] || null,
+      me: t.crewClaims.find((x) => x.crew_id === id && x.device_id === dev)?.person_id || null,
+      claimed: t.crewClaims.filter((x) => x.crew_id === id && x.device_id !== dev).map((x) => x.person_id),
+      seasons: t.seasons.filter((x) => x.crew_id === id).map((x) => ({ id: x.id, name: x.name, startsOn: x.starts_on, createdAt: x.created_at })),
+    };
   }
 
   function approver(e, pid, dev, pin) {
@@ -310,7 +344,7 @@ export function createBackend() {
       return { ok: true };
     },
     crew_people({ p_crew_id }) {
-      const people = [...t.members.values()].filter((m) => m.crew_id === p_crew_id)
+      const people = [...t.members.values()].filter((m) => m.crew_id === p_crew_id && !m.removed)
         .map((m) => ({ m, pe: t.people.get(m.person_id) })).filter((x) => x.pe)
         .sort((a, b) => String(b.m.last_played || '').localeCompare(String(a.m.last_played || '')) || b.m.rounds - a.m.rounds || a.pe.first_name.localeCompare(b.pe.first_name))
         .map(({ m, pe }) => ({ id: pe.id, firstName: pe.first_name, lastName: pe.last_name, nickname: pe.nickname, lastPlayed: m.last_played, rounds: m.rounds }));
@@ -323,6 +357,81 @@ export function createBackend() {
       if (!hit) return { ok: true, taken: false };
       const crewMate = !!p_crew_id && t.members.has(`${p_crew_id}|${hit.id}`);
       return { ok: true, taken: true, crewMate, ...(crewMate ? { id: hit.id } : {}) };
+    },
+
+    // ── crews step 2+ (features 006–009), mirrors schema.sql
+    crew_info({ p_crew_id, p_device_id }) {
+      const c = t.crews.get(p_crew_id);
+      if (!c) return no('not_found');
+      if (!c.invite_code) c.invite_code = inviteCode();
+      return { ok: true, crew: crewCard(p_crew_id, p_device_id) };
+    },
+    crew_by_invite({ p_code }) {
+      const c = [...t.crews.values()].find((x) => x.invite_code && x.invite_code === String(p_code || '').trim().toUpperCase());
+      if (!c) return no('not_found');
+      const rounds = crewRounds(c.id).sort((a, b) => String(b.played_on).localeCompare(String(a.played_on)));
+      const mem = [...t.members.values()].filter((m) => m.crew_id === c.id && !m.removed);
+      return { ok: true, crew: { id: c.id, name: c.name, owner: t.people.get(c.owner_person)?.first_name || null, players: mem.length,
+        since: rounds.length ? rounds[rounds.length - 1].played_on : null,
+        people: mem.map((m) => t.people.get(m.person_id)).filter(Boolean).map((pe) => ({ first: pe.first_name, last: pe.last_name })),
+        recent: rounds.slice(0, 3).map((e) => ({ name: e.name, playedOn: e.played_on, course: e.course?.shortName || null })) } };
+    },
+    create_crew({ p_device_id, p_name, p_person_id = null }) {
+      const name = String(p_name || '').trim().slice(0, 24);
+      if (!name) return no('name_required');
+      const id = crypto.randomUUID();
+      const person = p_person_id && t.people.has(p_person_id) ? p_person_id : null;
+      t.crews.set(id, { id, name, invite_code: inviteCode(), owner_device: p_device_id, owner_person: person });
+      if (person) {
+        t.members.set(`${id}|${person}`, { crew_id: id, person_id: person, last_played: null, rounds: 0, removed: false });
+        t.crewClaims.push({ crew_id: id, person_id: person, device_id: p_device_id });
+      }
+      return { ok: true, crew: crewCard(id, p_device_id) };
+    },
+    rename_crew({ p_crew_id, p_device_id, p_name }) {
+      const name = String(p_name || '').trim().slice(0, 24);
+      if (!name) return no('name_required');
+      if (!ownerOk(p_crew_id, p_device_id)) return no('not_owner');
+      t.crews.get(p_crew_id).name = name;
+      return { ok: true, crew: crewCard(p_crew_id, p_device_id) };
+    },
+    reset_invite({ p_crew_id, p_device_id }) {
+      if (!ownerOk(p_crew_id, p_device_id)) return no('not_owner');
+      t.crews.get(p_crew_id).invite_code = inviteCode();
+      return { ok: true, crew: crewCard(p_crew_id, p_device_id) };
+    },
+    claim_crew_person({ p_crew_id, p_device_id, p_person_id }) {
+      if (!t.members.has(`${p_crew_id}|${p_person_id}`)) return no('not_in_crew');
+      if (t.crewClaims.some((x) => x.crew_id === p_crew_id && x.person_id === p_person_id && x.device_id !== p_device_id)) return no('claimed');
+      t.crewClaims = t.crewClaims.filter((x) => !(x.crew_id === p_crew_id && x.device_id === p_device_id));
+      t.crewClaims.push({ crew_id: p_crew_id, person_id: p_person_id, device_id: p_device_id });
+      return { ok: true, crew: crewCard(p_crew_id, p_device_id) };
+    },
+    crew_new_person({ p_crew_id, p_device_id, p_first, p_last, p_nickname = null }) {
+      const first = trimmed(p_first, 24), last = trimmed(p_last, 30), nick = trimmed(p_nickname, 24);
+      if (!first || !last) return no('name_required');
+      if (!t.crews.has(p_crew_id)) return no('not_found');
+      const next = { id: crypto.randomUUID(), first_name: first, last_name: last, nickname: nick };
+      if ([...t.people.values()].some((x) => x.last_name && fullKey(x) === fullKey(next))) return no('name_taken');
+      t.people.set(next.id, next);
+      t.members.set(`${p_crew_id}|${next.id}`, { crew_id: p_crew_id, person_id: next.id, last_played: null, rounds: 0, removed: false });
+      t.crewClaims = t.crewClaims.filter((x) => !(x.crew_id === p_crew_id && x.device_id === p_device_id));
+      t.crewClaims.push({ crew_id: p_crew_id, person_id: next.id, device_id: p_device_id });
+      return { ok: true, personId: next.id, crew: crewCard(p_crew_id, p_device_id) };
+    },
+    remove_crew_person({ p_crew_id, p_device_id, p_person_id }) {
+      if (!ownerOk(p_crew_id, p_device_id)) return no('not_owner');
+      const m = t.members.get(`${p_crew_id}|${p_person_id}`);
+      if (m) m.removed = true;
+      t.crewClaims = t.crewClaims.filter((x) => !(x.crew_id === p_crew_id && x.person_id === p_person_id));
+      return { ok: true, crew: crewCard(p_crew_id, p_device_id) };
+    },
+    start_season({ p_crew_id, p_device_id, p_name, p_starts_on = null }) {
+      const name = String(p_name || '').trim().slice(0, 24);
+      if (!name) return no('name_required');
+      if (!ownerOk(p_crew_id, p_device_id)) return no('not_owner');
+      t.seasons.push({ id: crypto.randomUUID(), crew_id: p_crew_id, name, starts_on: p_starts_on || null, created_at: now() });
+      return { ok: true, crew: crewCard(p_crew_id, p_device_id) };
     },
     get_audit_log({ p_code, p_admin_pin }) {
       const e = ev(p_code);

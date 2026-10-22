@@ -265,10 +265,21 @@ function onQueueSaved(item, res) {
 
 // ───────────────────────────────────────────── identity
 
+/** The crew learns which person this phone is from the name it plays as (feature 006, "you" across rounds). */
+function rememberCrewMe() {
+  const ev = app.event;
+  if (!ev?.crew_id || !app.me || String(ev.settings?.practice) === 'true') return;
+  const pid = (ev.roster?.players || []).find((p) => p.id === app.me)?.personId;
+  if (!pid) return;
+  const c = db.crews.get(ev.crew_id);
+  if (!c?.me) db.crews.put({ id: ev.crew_id, me: pid });
+}
+
 function setMe(pid) {
   if ((pid || null) !== app.me) app.ui.hole = null;
   app.me = pid || null;
   db.me.set(app.code, app.me);
+  rememberCrewMe();
   try { db.recent.note(app.code, roundSummary(app)); } catch { /* Home's summary is a nice-to-have */ }
   render();
 }
@@ -721,6 +732,7 @@ async function loadRound(code) {
   app.scores = new Map(res.scores.map((r) => [`${r.player_id}:${r.hole}`, r]));
   app.joinRequests = new Map(res.joinRequests.map((r) => [r.id, r]));
   db.recent.remember(app.event);
+  rememberCrewMe();
   recompute({ headlines: 'now' });
   // Coming back to a round that's over (finalized, or every score in): show the result, not Enter.
   if (app.route.tab === 'enter' && app.roundOver()) {
