@@ -9,7 +9,10 @@ after the first playtest; section 13 is the V2 backlog.
 - Mobile web app for Andrew's friend group: each foursome enters hole-by-hole scores on their
   phones; everyone sees one live board across tee times, plus the rotating 2v2 cart game
   **Partner “Rider” Cup** (Rotation Match Play or Plus/Minus; 8 players in 4 carts, or 6 in 3). Night Round design (docs/design/design-system), dark by default.
-- Live: https://tiniryno-stack.github.io/golf-live-board/ (GitHub Pages, `main`, root). Repo:
+- Live: https://tiniryno-stack.github.io/golf-live-board/ (GitHub Pages, `main`, root).
+  **Preview of a work branch:** `npm run preview` copies the branch's app files to `main` under
+  `/preview/` → https://tiniryno-stack.github.io/golf-live-board/preview/ (live app untouched; same
+  database and same phone storage as the live site, so make practice rounds and delete them). Repo:
   `tiniryno-stack/golf-live-board`.
 - **Played for real on Oct 16, 2026** ("Chucks Bday", code `V4T3M`, Twin Creeks, 8 phones). It
   went well. All BUILD.md stages are done; everything since is playtest-driven iteration.
