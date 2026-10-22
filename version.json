@@ -1,5 +1,5 @@
 {
- "v": "20261022182400",
+ "v": "20261022194531",
  "files": [
   "css/styles.css",
   "css/tokens.css",
@@ -9,6 +9,9 @@
   "js/courses.js",
   "js/db.js",
   "js/flags.js",
+  "js/geo.js",
+  "js/geodata.js",
+  "js/gps.js",
   "js/headlines.js",
   "js/names.js",
   "js/race.js",
@@ -18,6 +21,7 @@
   "js/screens/card.js",
   "js/screens/crew.js",
   "js/screens/enter.js",
+  "js/screens/greencard.js",
   "js/screens/home.js",
   "js/screens/host.js",
   "js/screens/matches.js",

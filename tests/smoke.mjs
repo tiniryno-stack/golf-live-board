@@ -529,8 +529,8 @@ await R6.page.waitForTimeout(500);
 ok(/both other carts on every hole/.test(await R6.page.textContent('.fullcard.brief').catch(() => '')), 'Today’s game: your cart plays both other carts on every hole');
 await R6.page.tap('[data-act="brief-done"]').catch(() => {});
 await R6.page.waitForTimeout(500);
-const line6 = (await R6.page.textContent('.matchup-line').catch(() => '')).replace(/\s+/g, ' ');
-ok((line6.match(/vs /g) || []).length === 2, `Enter: the match line shows both matchups (${line6.trim()})`);
+// 013: no rotation strip on team Enter — match status lives on Matches.
+ok(!(await R6.page.$('.enter:not(.solo-enter) .matchup-line')), 'Enter: no rotation strip (013); the matchups are on the Matches tab');
 await R6.page.goto(`${srv.origin}/#/e/${r6.code}/board`);
 await R6.page.waitForTimeout(900);
 const wait6 = (await R6.page.textContent('#content')).replace(/\s+/g, ' ');

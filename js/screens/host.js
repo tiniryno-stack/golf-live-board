@@ -3,6 +3,8 @@
 // mid-round, rename teams, strokes, swap players, fix par / hole handicap,
 // approve "let them in", free up a spot, and read the audit log.
 
+import { FLAGS } from '../flags.js';
+import { geoFor } from '../geo.js';
 import { esc, icon, seg, clock, copyText, roundLink } from '../ui.js';
 import * as db from '../db.js';
 import { teeTimeName } from '../scoring.js';
@@ -93,9 +95,15 @@ function rules(app, d) {
 }
 
 /** Course fixes + Finish the round + cleanup (shared by every round type). */
+/** 011: GPS yardages on Enter — only offered when the course has green data (else nothing to switch). */
+function gpsField(d) {
+  if (!FLAGS.gps || !geoFor(d.course)) return '';
+  return `<div class="chips" style="margin:0 0 16px"><button class="pill" data-act="host-gps" aria-pressed="${d.settings.gps !== false}"><span class="dot"></span>GPS yardages on Enter</button></div>`;
+}
+
 function courseAndFinish(app, d) {
   const par = d.course.par, si = d.course.strokeIndex;
-  return `<details class="fold"><summary>Course: par + hole handicap</summary>
+  return `${gpsField(d)}<details class="fold"><summary>Course: par + hole handicap</summary>
       <p class="help" style="margin:0 0 10px">Fix a hole if the card at the course disagrees. Every score recomputes.</p>
       <div class="par-grid"><span class="micro">Hole</span><span class="micro">Par</span><span class="micro">Hcp</span>
       ${par.map((p, i) => `<span class="h">${i + 1}</span>
@@ -237,6 +245,12 @@ export default {
     'host-toggle': (el, ev, app) => {
       const st = draft(app).settings;
       st[el.dataset.k] = !st[el.dataset.k];
+      touch(app);
+      app.render();
+    },
+    'host-gps': (el, ev, app) => {
+      const st = draft(app).settings;
+      st.gps = st.gps === false;
       touch(app);
       app.render();
     },

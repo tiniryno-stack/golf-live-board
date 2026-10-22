@@ -1,5 +1,7 @@
 # 011 · Green card on Enter (compact, replaces 010's design)
 
+Status: built in 338441f (behind `FLAGS.gps`, off)
+
 This replaces the **design** in 010. Step 0 in 010 (the feasibility report on OSM data, GPS and effort) still applies, so do that first if you haven't. Changes from 010:
 - The card is the compact **one-row** version (92px tall instead of 164px).
 - **There is no green view.** The card isn't tappable. Ignore 010's Yds-B2 screen and its pin, carries and course-map colors.

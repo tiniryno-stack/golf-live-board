@@ -29,8 +29,8 @@ after the first playtest; section 13 is the V2 backlog.
   built on `design/design-system`.
 - **012 (Oct 22, live):** the dock is the only thing that glows in dark mode (`--shadow-dock`, from the design
   system's tokens.css → `npm run tokens`); Matches = score card (`.m-card`: kicker `standingLine()` "THRU 4 · YOU'RE
-  UP 2", score, bar, points-left line) with the hole table on the background. **011 (green card on Enter)** is
-  unzipped in `docs/design/features/` but on hold until the yardages are trusted (see `docs/design/yardages/`).
+  UP 2", score, bar, points-left line) with the hole table on the background. **011 + 013 (green card on Enter,
+  rotation strip gone)** built Oct 22, card behind `FLAGS.gps` — see Open items.
 - Tokens in `css/styles.css` `:root` (dark + light): `--bg/--surface/--surface-2/--surface-3`,
   `--good` (me) + `--good-ink` (green text), `--warn` amber (warnings only), `--bad` + `--dbl-bg`
   (double bogey only), jerseys `--t-A…F`. Score marks everywhere: `ui.mark(score, par, size)`.
@@ -293,11 +293,21 @@ npm run test:smoke     # 272 checks (incl. crews): multi-phone flows against the
 - V2 backlog (ARCHITECTURE.md §13): carryovers, shared courses table, more teams/games,
   round history, deeper season stats, add-to-home-screen (PWA) + lock-screen notifications,
   stronger security (PIN attempt limits).
-- **NEXT UP: GPS yardages (Oct 22).** Andrew's priority: "if it's not a good golf app, people won't use
-  it." Status: architecture discussion only, nothing built. Plan lives in `docs/design/yardages/NOTES.md`
-  (questions + options); a designer mockup will be attached in the session. Constraints: green
-  coordinates are not in OpenGolfAPI (checked Oct 19), static site + Supabase only, iPhone Safari /
-  home screen app, never a blank screen, ship behind a flag (`settings.gps` / `FLAGS`).
+- **GPS yardages (Oct 22): built behind `FLAGS.gps` (off).** Andrew's priority: "if it's not a good golf app,
+  people won't use it." Decisions + source plan in `docs/design/yardages/NOTES.md` (OSM greens first, AI-traced
+  satellite for the rest, long-press / organizer fixes; shared `course_geo` table + Edge Function = next).
+  What's built (features 011 + 013): `js/geo.js` (pure: front/middle/back along the line of play from a green
+  outline, `greenSvg` with the three bands), `js/geodata.js` (Twin Creeks' 18 greens from OpenStreetMap, keyed by
+  course id + `oga:` id; OSM numbers the nines the other way round, renumbered), `js/gps.js` (one `watchPosition`,
+  only while Enter is open + visible; states off/finding/ok/weak(>±15 yd)/denied; `app._gps._fake()` for tests),
+  `js/screens/greencard.js` (card + badge; hidden when no green data, `settings.gps` off, or > 600 yd away),
+  Enter: card under the hole header, name row hidden (`screen.hideTop`), course name in the subtitle (team) /
+  GPS badge (individual, and team when finding/weak), **Regular/Compact picked by measuring** the pads in
+  `enter.mount` (compact when they'd shrink under 88px; never under 80px), Host → Rules "GPS yardages" pill,
+  `_setting_label('gps')` in schema.sql (**not yet applied to the live DB**: additive `create or replace`). Fit
+  test has "Enter (GPS card)" scenes with Playwright geolocation at the tee. To turn on: `FLAGS.gps = true`, stamp,
+  push. Dev check page: `docs/design/yardages/geo-check.html` (also published as an artifact).
+  **013 also removed the rotation strip from team Enter (live).**
 - Other open items (Oct 22): standings rework (ELO-style across games, needs design), `FLAGS.crewHandicaps`
   off until Andrew asks, practice rounds HXPY4 / B5PGH to delete in-app, neutral recap images,
   "hasn't entered" chip (awaiting handoff), multi-course club warning, merged branches

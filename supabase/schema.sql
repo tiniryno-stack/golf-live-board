@@ -213,6 +213,7 @@ returns text language sql immutable set search_path = public as $$
     when 'matchBonus'       then 'Matchup win bonus'
     when 'startHole'        then 'First tee'
     when 'teeTimes'         then 'Tee times'
+    when 'gps'              then 'GPS yardages'
     else p_key end
 $$;
 

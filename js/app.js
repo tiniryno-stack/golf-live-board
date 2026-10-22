@@ -19,6 +19,7 @@ import board from './screens/board.js';
 import card from './screens/card.js';
 import host from './screens/host.js';
 import crew from './screens/crew.js';
+import { gps } from './gps.js';
 
 const SCREENS = { home, setup, season, enter, matches, board, card, host, crew };
 const TABS = [
@@ -1096,7 +1097,10 @@ function draw(opts) {
   appEl.classList.toggle('has-hero', hasHero);
   content.classList.toggle('noscroll', ready && !!screen.noscroll);
 
-  $('topbar').innerHTML = renderTopbar(screen, inRound);
+  const hideTop = ready && !!screen.hideTop?.(app);
+  appEl.classList.toggle('no-top', hideTop);
+  $('topbar').innerHTML = hideTop ? '' : renderTopbar(screen, inRound);
+  if (screen !== SCREENS.enter) gps.stop();
   renderTabbar($('tabbar'), inRound && ready);
   appEl.classList.toggle('has-tabbar', inRound && ready);
 
@@ -1382,6 +1386,7 @@ $('content').addEventListener('touchend', (ev) => {
 // ───────────────────────────────────────────── boot
 
 window.__glb = app; // handy for debugging from the console
+app._gps = gps; // tests + console: the location watcher
 // Realtime handlers, reachable from the console / headless checks to simulate a push.
 app._remote = { score: onRemoteScore, event: onRemoteEvent, joinRequest: onRemoteJoinRequest, note: onRemoteNote };
 document.documentElement.classList.toggle('standalone', db.STANDALONE); // home screen app: no Safari bars

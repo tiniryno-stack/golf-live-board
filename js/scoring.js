@@ -25,6 +25,7 @@ export const DEFAULT_SETTINGS = {
   rotationMode: 'swap',
   startHole: 1, // 1 = front nine first; 10 = start on the back nine
   teeTimes: [], // optional clock time per tee time (group order), "HH:MM"; '' = not set
+  gps: true, // yardages on Enter when the course has green data (feature 011); Host → Rules can turn it off
   rotation: DEFAULT_ROTATION,
 };
 

@@ -717,6 +717,14 @@ Still open: nothing blocking. Design direction (section 9) is final.
 
 ## 13a. Changes from the Oct 16 playtest (built)
 
+- **Oct 22 · features 011 + 013 (green card on Enter, behind `FLAGS.gps`) + 012 (dock glow, Matches card).**
+  Team Enter lost the rotation strip (live). With the flag on and a course that has green data, Enter shows
+  front / middle / back yards from the phone to the green under the hole header (one component, Regular 92px or
+  Compact 68px, picked by measuring whether the score pads still fit at full size), the name row goes, the course
+  name moves into the hole subtitle; states finding / weak / denied / hidden (no data, GPS off for the round,
+  > 600 yd). Math in `js/geo.js`, Twin Creeks' greens from OpenStreetMap in `js/geodata.js`, the watcher in
+  `js/gps.js`. See `docs/design/yardages/NOTES.md` for the plan beyond Twin Creeks.
+
 - **Start on hole 1 or 10** (`settings.startHole`, Setup → Course and Host → Rules). Rotations are play-order positions, so starting on 10 the matchups are holes 10–15, 16–18 + 1–3, 4–9; the official line, swap cards, alerts, foursome editing rights (`_same_foursome`) and let-them-in all follow play order. Screens always show real hole numbers.
 - **Team names by the carts:** after joining, an unnamed cart gets a full-screen "Name your cart" card with six quick names (Bulbasaur, Charmander, Squirtle, Chikorita, Cyndaquil, Totodile). Either partner can pick; a name another cart has is greyed out and refused by `pick_team_name` (locks the round row). Tap your cart's name on Enter to change it. The organizer can still type names in Setup (team names now sit at the top of the Teams step) or Host.
 - **Jerseys:** your own cart is always green on your phone; every other cart has a fixed away color that's the same for everyone — A orange, B blue, C pink, D violet (no red: red means double bogey). Used on Enter, Matches (counters, tug-of-war, pips), Board, Card and Who are you.

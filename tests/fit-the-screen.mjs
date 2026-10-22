@@ -377,6 +377,60 @@ for (const size of SIZES) {
   await go(`#/e/${r.code}/enter`);
   await go('#/');
   await check(page, size, 'Home (with rounds)');
+
+  // 011/013: the green card on Enter (flag on, location granted at the tee of the hole you're on).
+  // Team Enter at hole 10 and "you first" Enter: the card shows, the name row is gone, the size
+  // (regular / compact) is picked from the room, and Enter still fits (or scrolls only when compact).
+  {
+    const g = await import('../js/geodata.js');
+    const tee10 = g.GEO['twin-creeks-allen-tx'].holes[9].tee;
+    const ctxG = await themed(await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, permissions: ['geolocation'], geolocation: { latitude: tee10[0], longitude: tee10[1], accuracy: 4 } }));
+    await attach(ctxG, be, srv.origin);
+    await ctxG.addInitScript(([codes, dev, pin]) => {
+      window.__GLB_FLAGS = { gps: true };
+      localStorage.setItem('glb.device', JSON.stringify(dev));
+      for (const k of ['tile5', 'prov2', 'oppcart3']) localStorage.setItem('glb.coach.' + k, 'true');
+      for (const code of codes) {
+        localStorage.setItem('glb.who.' + code, 'true');
+        localStorage.setItem('glb.brief.' + code, 'true');
+        localStorage.setItem('glb.me.' + code, '"p1"');
+        localStorage.setItem('glb.seen.' + code, JSON.stringify({ last: Date.now(), ids: [] }));
+        localStorage.setItem('glb.admin.' + code, JSON.stringify(pin));
+      }
+    }, [[r.code, yr.code], DEV, r.admin_pin]);
+    const pg = await ctxG.newPage();
+    pg.on('pageerror', (e) => errors.push(e.message));
+    const gpsCheck = async (pg, name) => {
+      await pg.waitForSelector('#splash', { state: 'detached', timeout: 8000 }).catch(() => {});
+      await pg.waitForTimeout(700);
+      await pg.evaluate(() => { document.getElementById('overlay').innerHTML = ''; document.getElementById('overlay').className = 'overlay-root'; document.getElementById('banners').innerHTML = ''; });
+      const info = await pg.evaluate(() => {
+        const card = document.querySelector('.green-card');
+        const nums = [...document.querySelectorAll('.green-nums .gn b')].map((b) => b.textContent);
+        return { card: !!card, nums, top: getComputedStyle(document.querySelector('.topbar')).display, size: document.querySelector('.enter')?.className.match(/\b(regular|compact)\b/)?.[1], step: Math.round(document.querySelector('.tile .step')?.getBoundingClientRect().width || 0), strip: !!document.querySelector('.enter:not(.solo-enter) .matchup-line') };
+      });
+      const problems = [];
+      if (!info.card) problems.push('no green card');
+      if (info.nums.some((n) => !/^\d+$/.test(n))) problems.push(`numbers not ready: ${info.nums.join(' / ')}`);
+      if (info.top !== 'none') problems.push('name row still showing');
+      if (info.step && info.step < 80) problems.push(`pads shrank to ${info.step}px`);
+      if (info.strip) problems.push('rotation strip still on team Enter');
+      if (problems.length) { failures.push(`${size[0]} · ${name}: ${problems.join('; ')}`); console.log(`${size[0]} · ${name.padEnd(28)} FAIL ${problems.join('; ')}`); }
+      else console.log(`${size[0]} · ${name.padEnd(28)} ok   (${info.size}, pads ${info.step}px, ${info.nums.join('/')})`);
+      await pg.screenshot({ path: `${OUT}${size[1]}x${size[2]}-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.png` });
+    };
+    await pg.goto(`${srv.origin}/#/e/${r.code}/enter`);
+    await gpsCheck(pg, 'Enter (GPS card)');
+    await check(pg, size, 'Enter (GPS card, fit)', 'enter');
+    await pg.close();
+    const tee1 = g.GEO['twin-creeks-allen-tx'].holes[0].tee;
+    await ctxG.setGeolocation({ latitude: tee1[0], longitude: tee1[1], accuracy: 4 }); // this round is on hole 1 (tee 10 is 750 yd away: the card hides past ~600)
+    const pg2 = await ctxG.newPage(); // a fresh page: a hash change alone would not reload the app
+    pg2.on('pageerror', (e) => errors.push(e.message));
+    await pg2.goto(`${srv.origin}/#/e/${yr.code}/enter`);
+    await gpsCheck(pg2, 'Enter (GPS card, you first)');
+    await ctxG.close();
+  }
   if (process.env.FIT_SIZE) {
     // Extra states the design mockups show (tests/design-pairs.py puts them side by side).
     const shot = (n) => page.screenshot({ path: `${OUT}${size[1]}x${size[2]}-design-${n}.png` });

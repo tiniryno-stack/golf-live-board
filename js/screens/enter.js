@@ -16,6 +16,9 @@ import {
 import { matchupAlert } from '../headlines.js';
 import { teamColor, isDefaultTeamName, shortTeam } from '../teams.js';
 import { local } from '../db.js';
+import { cardOn, cardState, gpsBadge, greenCard } from './greencard.js';
+import { shortCourseName } from '../coursedata.js';
+import { gps } from '../gps.js';
 
 /** "+2 thru 4" / "All square" from this team's side of its current matchup. */
 export function matchStatus(snap, m, teamId) {
@@ -272,8 +275,8 @@ function individualView(app, h, parts) {
   const strip = app.isFinal()
     ? `<span class="teams">${icon('lock', 13)} Fixing a finalized round</span><button class="link-btn relock" data-act="final-relock">Done</button>`
     : `<span class="teams">${kind}</span>${pos ? `<span class="status">${esc(pos)}</span>` : ''}`;
-  return `<div class="enter nr solo-enter${others.some((p) => app.ui.pad?.hole === h && app.ui.pad?.pid === p.id) ? ' pad-open' : ''}">
-      <div class="hero">${parts.holeRow}<div class="matchup-line">${strip}</div></div>
+  return `<div class="enter nr solo-enter${others.some((p) => app.ui.pad?.hole === h && app.ui.pad?.pid === p.id) ? ' pad-open' : ''}${parts.gcard ? ` gps-card ${app.ui.gpsSize || 'regular'}` : ''}">
+      <div class="hero">${parts.holeRow}${parts.gcard || ''}<div class="matchup-line">${strip}</div></div>
       <div class="sheet">
         <section class="cart mine focus you-card${locked ? ' locked' : ''}" style="--jersey:var(--cart-you)"${tap}>
           ${locked ? `<div class="cart-head"><span class="name">Your score</span><span class="focus-chip lock-chip">${icon('lock', 12)} Tap to edit</span></div>` : ''}
@@ -316,6 +319,8 @@ function finalView(app) {
 export default {
   hero: true,
   noscroll: true,
+  /** 011/013: the name row goes while the green card shows (the hole header is the top of the screen). */
+  hideTop(app) { return !!app.myPlayer() && !app.isFinal() && !!cardState(app, currentHole(app)); },
 
   render(app) {
     const snap = app.snapshot;
@@ -356,7 +361,16 @@ export default {
       matchLine = `<span class="teams">${snap.hasStrokes ? 'Stroke play · net' : 'Stroke play'}</span>`;
     }
     // Fixing a finalized round: say so, with Done to lock this phone again.
-    if (app.isFinal()) matchLine = `<span class="teams">${icon('lock', 13)} Fixing a finalized round</span><button class="link-btn relock" data-act="final-relock">Done</button>`;
+    // 013: no rotation strip on team Enter (match status lives on Matches). Only the fixing line stays.
+    matchLine = app.isFinal() ? `<span class="teams">${icon('lock', 13)} Fixing a finalized round</span><button class="link-btn relock" data-act="final-relock">Done</button>` : '';
+    const gstate = cardState(app, h);
+    const gcard = greenCard(gstate, app.ui.gpsSize || 'regular');
+    // 013 (team): the course name replaces the max label while the card shows; the GPS badge only when
+    // something's off (finding / weak / denied). 011 (individual): the badge always (see individualView).
+    const solo = individual(app);
+    const subtitle = gstate
+      ? `Par ${hole.par} · Hcp ${hole.si} · ${solo || gstate.kind !== 'ok' ? gpsBadge(gstate) : esc(shortCourseName(snap.course?.name || ''))}`
+      : `Par ${hole.par} · Hcp ${hole.si} · ${esc(maxLabel(snap.course, st, h))}`;
     const carts = cartsFor(app, h);
     const focus = focusSide(app, h, carts);
     const locked = isLocked(app, h);
@@ -389,15 +403,16 @@ export default {
           <button class="arrow" data-act="hole-prev" aria-label="Previous hole" ${pos <= 1 ? 'disabled' : ''}>${icon('back')}</button>
           <button class="hole-head" data-act="hole-grid" aria-label="Hole ${h}: all holes">
             <span class="hole-title">Hole ${h}</span>
-            <span class="hole-meta">Par ${hole.par} · Hcp ${hole.si} · ${esc(maxLabel(snap.course, st, h))}</span>
+            <span class="hole-meta">${subtitle}</span>
           </button>
           <button class="arrow" data-act="hole-next" aria-label="Next hole" ${pos >= limitPos ? 'disabled' : ''}>${icon('fwd')}</button>
           ${app.isOrganizer() ? `<button class="hole-more" data-act="fixhole-open" data-v="${h}" aria-label="Hole menu: fix hole ${h}">${icon('more', 20)}</button>` : ''}
         </div>`;
-    if (individual(app)) return individualView(app, h, { holeRow, dots, footBtn });
-    return `<div class="enter nr">
+    if (individual(app)) return individualView(app, h, { holeRow, dots, footBtn, gcard, gstate });
+    return `<div class="enter nr${gcard ? ` gps-card ${app.ui.gpsSize || 'regular'}` : ''}">
       <div class="hero">
         ${holeRow}
+        ${gcard}
         ${matchLine ? `<div class="matchup-line">${matchLine}</div>` : ''}
       </div>
       <div class="sheet${focus === 'opp' ? ' even' : ''}">
@@ -411,6 +426,16 @@ export default {
 
   mount(root, app) {
     if (!app.myPlayer()) return;
+    // 011: location only while Enter is open and the card is on for this hole.
+    const h = currentHole(app);
+    if (cardOn(app, h) && !app.isFinal()) {
+      if (!gps.isOn() && gps.state().status !== 'denied') gps.start(() => app.render());
+      // 013: Regular when the score pads fit at full size, else Compact (measured, per screen height).
+      const key = `${innerWidth}x${innerHeight}`;
+      if (app.ui.gpsSizeKey !== key) { app.ui.gpsSizeKey = key; app.ui.gpsSize = 'regular'; }
+      const step = root.querySelector('.enter.gps-card .cart.focus .tile .step');
+      if (step && app.ui.gpsSize === 'regular' && step.getBoundingClientRect().width < 87) { app.ui.gpsSize = 'compact'; requestAnimationFrame(() => app.render()); return; }
+    } else if (gps.isOn()) gps.stop();
     if (document.querySelector('.coach')) return; // one tip at a time
     const first = root.querySelector('.cart.focus .tile.empty .face');
     const mine = root.querySelector('.cart.mine.focus');
@@ -424,6 +449,7 @@ export default {
   },
 
   actions: {
+    'gps-on': (el, ev, app) => { gps.stop(true); gps.start(() => app.render()); },
     'tile-tap': (el, ev, app) => {
       const pid = el.dataset.pid;
       const h = app.ui.hole;

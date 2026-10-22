@@ -1551,3 +1551,32 @@ details.fold summary::-webkit-details-marker { display: none; }
 .tn-tag { color: var(--text-muted); flex: none; }
 .tn-tag.on { color: var(--cart-you-text); }
 .pr-last { padding: 0 var(--space-3) var(--space-3) 64px; border-bottom: 1px solid var(--line); }
+
+/* ───────────────────────────────────────────── Green card (features 011 + 013): one component, two sizes */
+.gps-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; letter-spacing: .06em; color: var(--text-muted); }
+.gps-badge.dim { color: var(--ink-faint); }
+.green-card {
+  display: flex; align-items: center; gap: 14px; height: 92px; margin: 10px 8px 0; padding: 0 14px;
+  border-radius: 22px; background: var(--surface-1); color: var(--text);
+}
+.green-card.compact { height: 68px; }
+.green-pic { flex: none; display: grid; place-items: center; }
+.green-svg { display: block; }
+.green-nums { flex: 1; min-width: 0; display: grid; grid-template-columns: 1fr 1.35fr 1fr; align-items: center; text-align: center; }
+.green-nums .gn { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; }
+.green-nums .gn b { font-size: 17px; font-weight: 600; line-height: 1; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.green-nums .gn .label { font-size: 12px; letter-spacing: .08em; color: var(--text-muted); }
+.green-nums .gn.mid b { font-size: 32px; font-weight: 700; letter-spacing: -1.5px; color: var(--text); }
+.green-nums .gn.mid .label { color: var(--text); }
+.green-card.compact .gn b { font-size: 15px; }
+.green-card.compact .gn.mid b { font-size: 32px; }
+.green-card.weak .gn b, .green-card.finding .gn b { color: var(--text-muted); }
+.green-card.denied { height: 56px; justify-content: space-between; gap: 10px; font-size: 15px; color: var(--ink-soft); }
+.green-card.denied .btn { min-height: 36px; padding: 0 14px; flex: none; }
+/* while the card shows, the hole header is the top of the screen (the name row is gone) */
+.no-top .topbar { display: none; }
+.no-top .enter .hero { padding-top: calc(6px + var(--sat)); }
+.no-top .enter { --ht: 36px; } /* 013: 36px hole title while the card shows */
+/* compact: the pads never go under 80px; if it still doesn't fit, Enter scrolls */
+.enter.gps-card.compact .tile .step { width: max(80px, min(88px, 100cqh)); height: max(80px, min(88px, 100cqh)); }
+.enter.gps-card.compact .sheet { overflow-y: auto; }
