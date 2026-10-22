@@ -49,9 +49,15 @@ function sideColor(app, teamId) {
   return teamColor(app.myTeam(), teamId);
 }
 
-/** Furthest hole you can step forward to: the next one your foursome hasn't finished. */
+/** The next hole your foursome hasn't finished (where "Next hole" lands). ◀ ▶ can browse past it:
+ *  holes ahead open as a read-only preview (`isAhead`), so you can see what's coming. */
 function holeLimit(app) {
   return app.nextHole();
+}
+
+/** A hole your group hasn't reached yet: look, don't touch. */
+function isAhead(app, h) {
+  return posOf(app.snapshot.settings, h) > frontierPos(app);
 }
 
 function currentHole(app) {
@@ -153,8 +159,9 @@ function cartCard(app, cart, hole, mine, locked) {
     ? `<button class="name name-btn" data-act="team-picker" aria-label="Name your cart"><i class="jd"></i><span class="ellipsis">${esc(label)}</span>${isDefaultTeamName(team) ? '<span class="pick">Name it</span>' : ''}</button>`
     : `<span class="name"><i class="jd"></i><span class="ellipsis">${esc(label)}</span></span>`;
   // A locked (finished) hole: the whole card is the tap target that unlocks it for editing.
-  const tap = locked ? ` data-act="hole-unlock" data-enter="hole-unlock" role="button" tabindex="0" aria-label="Edit hole ${hole}"` : '';
-  const chip = locked ? `<span class="focus-chip lock-chip">${icon('lock', 12)} Tap to edit</span>` : `<span class="lblt">${esc(teamLine(app, cart, hole))}</span>`;
+  const ahead = isAhead(app, hole);
+  const tap = locked && !ahead ? ` data-act="hole-unlock" data-enter="hole-unlock" role="button" tabindex="0" aria-label="Edit hole ${hole}"` : '';
+  const chip = ahead ? '<span class="focus-chip lock-chip">Up next</span>' : locked ? `<span class="focus-chip lock-chip">${icon('lock', 12)} Tap to edit</span>` : `<span class="lblt">${esc(teamLine(app, cart, hole))}</span>`;
   return `<section class="cart ${mine ? 'mine' : 'opp'} focus${locked ? ' locked' : ''}" style="--jersey:${jersey}"${tap}>
     <div class="cart-head">${name}${chip}</div>
     <div class="tiles">${cart.players.map((p) => tile(app, p, hole, locked)).join('')}</div>
@@ -261,7 +268,8 @@ function individualView(app, h, parts) {
   const snap = app.snapshot;
   const st = snap.settings;
   const me = app.myPlayer();
-  const locked = isLocked(app, h);
+  const ahead = isAhead(app, h);
+  const locked = isLocked(app, h) || ahead;
   const ids = foursomeFor(snap.roster, st, app.me, h).filter((id) => id !== app.me);
   const others = ids.map((id) => snap.playerById.get(id));
   const blanks = others.filter((p) => p.gross[h - 1] == null && app.canEdit(p.id, h));
@@ -271,7 +279,7 @@ function individualView(app, h, parts) {
     ? snap.game.liveStandings.filter((x) => x.teamId !== me.teamId).map((x) => `${esc(snap.teamById.get(x.teamId).name)} <span class="status">${fmtPts(x.points)}</span>`).join(' <span class="faint">·</span> ') || 'Match play'
     : snap.hasStrokes ? 'Stroke play · net' : 'Stroke play';
   const pos = myPosition(app);
-  const tap = locked ? ` data-act="hole-unlock" data-enter="hole-unlock" role="button" tabindex="0" aria-label="Edit hole ${h}"` : '';
+  const tap = locked && !ahead ? ` data-act="hole-unlock" data-enter="hole-unlock" role="button" tabindex="0" aria-label="Edit hole ${h}"` : '';
   const strip = app.isFinal()
     ? `<span class="teams">${icon('lock', 13)} Fixing a finalized round</span><button class="link-btn relock" data-act="final-relock">Done</button>`
     : `<span class="teams">${kind}</span>${pos ? `<span class="status">${esc(pos)}</span>` : ''}`;
@@ -279,7 +287,7 @@ function individualView(app, h, parts) {
       <div class="hero">${parts.holeRow}${parts.gcard || ''}<div class="matchup-line">${strip}</div></div>
       <div class="sheet">
         <section class="cart mine focus you-card${locked ? ' locked' : ''}" style="--jersey:var(--cart-you)"${tap}>
-          ${locked ? `<div class="cart-head"><span class="name">Your score</span><span class="focus-chip lock-chip">${icon('lock', 12)} Tap to edit</span></div>` : ''}
+          ${ahead ? '<div class="cart-head"><span class="name">Your score</span><span class="focus-chip lock-chip">Up next</span></div>' : locked ? `<div class="cart-head"><span class="name">Your score</span><span class="focus-chip lock-chip">${icon('lock', 12)} Tap to edit</span></div>` : ''}
           <div class="tiles">${youTile}</div>
         </section>
         ${others.length ? `<div class="group-head"><span class="lbl">Your group</span><span class="meta">${blanks.length ? `${blanks.length} still to go · tap to enter for them` : 'All in'}</span></div>
@@ -330,7 +338,7 @@ export default {
     const h = currentHole(app);
     const pos = posOf(st, h);
     const hole = snap.holes[h - 1];
-    const limitPos = posOf(st, holeLimit(app));
+    const limitPos = HOLES; // browse every hole; scores lock themselves (isLocked / isAhead)
     const lastHole = playOrder(st)[HOLES - 1];
     const myTeam = app.myTeam(h);
     const rot = rotationFor(st, h);
@@ -373,7 +381,8 @@ export default {
       : `Par ${hole.par} · Hcp ${hole.si} · ${esc(maxLabel(snap.course, st, h))}`;
     const carts = cartsFor(app, h);
     const focus = focusSide(app, h, carts);
-    const locked = isLocked(app, h);
+    const ahead = isAhead(app, h);
+    const locked = isLocked(app, h) || ahead;
     const cur = app.nextHole();
     const done = app.foursomeDone();
     // 18-hole progress strip; a gap where the opponents switch (or at the turn).
@@ -392,7 +401,7 @@ export default {
       : ' →';
     const nextLabel = `${h === lastHole ? 'Finish' : 'Next hole'}${left}`;
     // Looking back at a finished hole: the button takes you back to where you are.
-    const footBtn = pos >= frontierPos(app) - 1
+    const footBtn = pos >= frontierPos(app) - 1 && !ahead
       ? `<button class="btn primary block next-btn${blanks.length ? ' waiting' : ''}" data-act="next-hole">${esc(nextLabel)}</button>`
       : done
         ? '<button class="btn primary block next-btn" data-act="tab" data-v="board">See the Board →</button>'
@@ -498,7 +507,7 @@ export default {
       if (!app.myPlayer()) return;
       const st = app.snapshot.settings;
       const pos = posOf(st, app.ui.hole);
-      if (pos < posOf(st, holeLimit(app))) {
+      if (pos < HOLES) {
         app.ui.hole = holeAt(st, pos + 1);
         app.render();
       }

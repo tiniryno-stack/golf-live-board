@@ -20,6 +20,7 @@ export const gps = {
     if (watch != null) return;
     const geo = globalThis.navigator?.geolocation;
     if (!geo) { set({ status: 'error' }); return; }
+    watch = -1; // claimed: a re-render from the state change below must not start a second watch
     if (st.status !== 'ok' && st.status !== 'weak') set({ status: 'finding' });
     watch = geo.watchPosition(
       (p) => {
@@ -32,7 +33,7 @@ export const gps = {
   },
   /** Stop watching. Keeps the last fix (greyed "updating" when it comes back) unless `clear`. */
   stop(clear = false) {
-    if (watch != null) globalThis.navigator?.geolocation?.clearWatch(watch);
+    if (watch != null && watch !== -1) globalThis.navigator?.geolocation?.clearWatch(watch);
     watch = null;
     if (clear) set({ status: 'off', pos: null, acc: null });
     else if (st.status === 'finding') set({ status: 'off' });

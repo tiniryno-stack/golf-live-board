@@ -172,7 +172,8 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
   empty boxes, names who's missing, and opens the other cart if only theirs are blank. Nothing is
   ever auto-saved as par. Name pinned at the top of
   a tile, score dead center level with − / +.
-- **Holes:** tap the hole number → grid of 18 (one row per matchup). **No swiping between holes**
+- **Holes:** ◀ ▶ browse **all 18** (Oct 22): holes ahead of your group open as a read-only preview ("Up next" chip,
+  Back to hole N); only score entry is locked. Tap the hole number → grid of 18 (one row per matchup). **No swiping between holes**
   (design system, Oct 21): ◀ ▶ and the grid only. Swipe right = back in Setup; swipe down closes a sheet. The current hole and the one
   just finished are editable; **2+ holes back open locked** ("Tap to edit"). Switch it up shows
   once per swap.
