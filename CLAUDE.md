@@ -307,7 +307,8 @@ npm run test:smoke     # 272 checks (incl. crews): multi-phone flows against the
   `enter.mount` (compact when they'd shrink under 88px; never under 80px), Host → Rules "GPS yardages" pill,
   `_setting_label('gps')` in schema.sql (**not yet applied to the live DB**: additive `create or replace`). Fit
   test has "Enter (GPS card)" scenes with Playwright geolocation at the tee. To turn on: `FLAGS.gps = true`, stamp,
-  push. **Flag ON since Oct 22 (testing).** Dev check page: `docs/design/yardages/geo-check.html` (also published as an
+  push. **Flag ON since Oct 22.** **NEXT: stage 3 = `course_geo` table + `course-geo` Edge Function (OSM → AI tracing),
+  fully spec'd in `docs/design/yardages/NOTES.md` §7 — start there.** Dev check page: `docs/design/yardages/geo-check.html` (also published as an
   artifact).
   **013 also removed the rotation strip from team Enter (live).**
 - Other open items (Oct 22): standings rework (ELO-style across games, needs design), `FLAGS.crewHandicaps`
