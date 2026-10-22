@@ -11,6 +11,9 @@ import { teamColor, shortTeam } from '../teams.js';
 
 /** The matches to switch between: yours (one per rotation, or two at once with 3 carts), or each
  *  rotation's first match when you're watching. [{ ri, m, my }] */
+/** Matches → Rules, on every game type: a filled secondary button, top right, easy to spot. */
+const RULES_BTN = '<div class="m-rules"><button class="btn small" data-act="rules-open" aria-label="Rules of today’s game">Rules</button></div>';
+
 function matchList(app) {
   const g = app.snapshot.game;
   const out = [];
@@ -154,7 +157,7 @@ function waitingView(app) {
       return `<div class="mu-item"><span class="mi-h">${m.firstHole}–${m.lastHole}</span><span class="mi-v">${who}</span></div>`;
     }).join('');
   return `<div class="plain wait">
-      <div class="m-rules"><button class="btn small ghost" data-act="rules-open">Rules</button></div>
+      ${RULES_BTN}
       <div class="ts-label wait-k">Before the first tee</div>
       <h1 class="ts-title wait-t">Waiting for the first scores</h1>
       <p class="wait-p">Matchups fill in as soon as anyone enters hole 1.</p>
@@ -238,7 +241,7 @@ export function teamGameView(app) {
   }).join('');
 
   return `<div class="plain matches-nr">
-      <div class="m-rules"><button class="btn small ghost" data-act="rules-open">Rules</button></div>
+      ${RULES_BTN}
       ${watching ? mineBar : heroFull}
       ${otherBoxes}
     </div>`;
@@ -284,6 +287,7 @@ function splitView(app) {
       <div class="sp-tots" style="grid-template-columns:repeat(${ids.length > 4 ? 3 : ids.length},minmax(0,1fr))">${totals}</div>
     </div>
     <div class="sheet">
+      ${RULES_BTN}
       <p class="meta" style="margin:0 0 12px">Low ${net ? 'net ' : ''}score takes the hole’s point. A tie for low splits it: 2 tied = ½ each, 3 = ⅓, 4 = ¼.</p>
       ${rows
         ? `<table class="sp-table"><thead><tr><th scope="col">Hole</th>${head}</tr></thead><tbody>${rows}</tbody><tfoot>${foot}</tfoot></table>`
@@ -303,7 +307,7 @@ export default {
       const why = casual
         ? ` The organizer can turn on Match play under ${app.isOrganizer() ? '<b>Host</b> → Rules' : 'Host → Rules'}: 1 point a hole, a tie for low splits it. It counts back from hole 1.`
         : [3, 4].includes(snap.roster.teams?.length) ? '' : ' (Partner “Rider” Cup needs carts of 2)';
-      return `<div class="plain"><h1 class="title">Matches</h1>
+      return `<div class="plain">${RULES_BTN}<h1 class="title">Matches</h1>
         <p class="soft">No game on this round.${why} The live leaderboard is on the Board.</p>
         ${casual && app.isOrganizer() ? '<button class="btn block" style="margin:0 0 10px" data-act="tab" data-v="host">Turn on Match play</button>' : ''}
         <button class="btn primary block" data-act="tab" data-v="board">See the Board</button></div>`;
