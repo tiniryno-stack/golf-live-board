@@ -320,6 +320,9 @@ npm run test:smoke     # 283 checks (incl. crews): multi-phone flows against the
   `tests/fixtures/geo.json` (fake Mesquite Hollow 18 greens, partial Cedar Bend). **Open:** the function saw no
   `MAPBOX_TOKEN`/`ANTHROPIC_API_KEY` secrets and Overpass was down — real Bridlewood / Indian Creek builds not yet verified.
   To redeploy the function: `deploy_edge_function` with index.ts + geobuild.js + geo.js (the app's files) + the stub geodata.js.
+  **NEXT (Andrew, Oct 22 evening): stage 3b, NOTES.md §7b — use the scorecard's per-tee yardages (OpenGolfAPI
+  `holes_data[].yardages`, already saved as each hole's `yards`) to number AI-traced tee→green pairs and to verify the
+  trace, instead of par bands + routing hints. Not built yet; agreed as the next stage before stage 4.**
   Dev check page: `docs/design/yardages/geo-check.html` (also published as an artifact).
   **013 also removed the rotation strip from team Enter (live).**
 - Other open items (Oct 22): standings rework (ELO-style across games, needs design), `FLAGS.crewHandicaps`

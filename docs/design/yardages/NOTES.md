@@ -1,6 +1,6 @@
 # GPS yardages — architecture notes
 
-Status: **decided Oct 22, 2026; spike done the same day (Twin Creeks greens from OSM, `geo-check.html`); features 011 + 013 built, `FLAGS.gps` on; stage 3 (§7) built and deployed Oct 22 evening** (table live, function `course-geo` v3, app `loadGeo`). Next: confirm the Supabase secrets exist and build Bridlewood + Indian Creek for real, then stage 4 (§8).
+Status: **decided Oct 22, 2026; spike done the same day (Twin Creeks greens from OSM, `geo-check.html`); features 011 + 013 built, `FLAGS.gps` on; stage 3 (§7) built and deployed Oct 22 evening** (table live, function `course-geo` v3, app `loadGeo`). Next: confirm the Supabase secrets exist and build Bridlewood + Indian Creek for real, then stage 3b (§7b: match traced holes to the card's per-tee yardages), then stage 4 (§8).
 
 Goal: on Enter, a green card above your score with front / middle / back yards from your phone to the green,
 the green outline with a flag, and `GPS · ±N YD` in the hole header (designer mockup
@@ -193,6 +193,46 @@ loads and the table's `updated_at` is newer.
    Edge Functions → Secrets → `MAPBOX_TOKEN`.
 2. **Anthropic API key** (console.anthropic.com, billing on) → Supabase secret `ANTHROPIC_API_KEY`.
 3. Nothing else: Edge Functions get `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` automatically.
+
+## 7b. Stage 3b — the scorecard's yardages as the source of truth (Andrew, Oct 22 evening; NEXT, not built)
+
+**The idea (Andrew):** every scorecard says how long each hole is from each tee set ("hole 1, par 4, 403 from the
+blues"). That's the ground truth we already trust for pars and handicaps. So instead of asking the model to guess
+hole numbers from routing hints, and instead of our loose "par 4 ≈ 300–450 yd" bands: trace **tee boxes + greens**
+off the imagery, pair them into 18 tee→green candidates, measure each one, and **match the measured lengths to the
+card's per-tee yardages**. A traced pair that measures 428 / 403 / 391 / 354 from its back / middle / forward boxes
+*is* Bridlewood's 1st. The par sequence (3 → 4 → 5 …) and the walk from each green to the next tee are secondary
+checks. The same match also confirms the trace itself: if no pairing fits the card's numbers, the GPS coordinates
+are off and the hole should be flagged, not shipped.
+
+**Why it's better than §7.2 step 4:** per-tee yardages are far more specific than par bands (18 holes rarely share
+a length within ±10 yd across 3–4 tees), they catch nines swapped / miscounted holes, and they double as an
+accuracy check on the tracing. Cheaper too: one overview trace, then plain math.
+
+**We already have the data.** OpenGolfAPI returns `holes_data[].yardages` keyed by tee (`black / blue / white /
+red …`, checked on Bridlewood Oct 22: hole 1 = 428 / 403 / 391 / 354) and `fromOpenGolf` keeps it as each hole's
+`yards`, so every round's saved course carries it; `tees[]` has each set's total yardage too. Twin Creeks' built-in
+card has none yet (add from the GolfPass card). OSM's hole lines carry no yardages, so this applies to the AI path
+(and as a sanity check on OSM holes).
+
+**Sketch (pure, unit-testable, lives in `js/geobuild.js`):**
+1. Trace: ask the model for **every tee box** (as small polygons or points, with "same hole" grouping if it can
+   tell — boxes in a line) and **every green**, plus the clubhouse. No numbering asked for.
+2. Candidates: for each green, the tee groups within 100–650 yd of it that "point at" it (the line tee→green doesn't
+   cross another green; the boxes of a group lie roughly on that line). Measure tee box → green center for each box,
+   sorted longest → shortest = back → forward.
+3. Match: for each card hole, the card's yardages sorted the same way; score a candidate by the summed |measured −
+   card| over the tees it has (allow one missing box; measured yardage is to the green **center**, cards measure to
+   the center too, so expect ±10–15 yd incl. GPS/trace error). Solve the assignment (Hungarian / the beam search we
+   have, with this score replacing the par-band score) so each green and tee group is used once; the par sequence and
+   green→next-tee walk stay as small tie-breakers.
+4. Confidence = how tight the fit is; a hole whose best fit is > 25 yd off on average → `partial` + "check hole N".
+   A course whose fits are all loose → the trace is misregistered → `failed` with that reason rather than wrong greens.
+5. For courses with a card but no tee yardages (manual cards), fall back to today's par bands.
+
+Tests: Twin Creeks' OSM greens + tees as the "trace", the GolfPass yardages as the card → 18/18 numbered, and still
+18/18 with the nines' numbers shuffled; a trace shifted 40 yd → every hole flagged. Then try it for real on
+Bridlewood and Indian Creek (Indian Creek is a 36-hole club: the yardage match should also tell the two courses apart).
 
 ## 8. Stage 4 — fixes (after stage 3)
 - Long-press the green card → "Mark this as the middle of N?" → `fix_green` RPC (slides the outline).
