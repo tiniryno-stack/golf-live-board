@@ -1010,14 +1010,14 @@ end $$;
 create or replace function public.claim_crew_person(p_crew_id uuid, p_device_id uuid, p_person_id uuid)
 returns jsonb language plpgsql security definer set search_path = public as $$
 begin
-  if not exists (select 1 from public.crew_members where crew_id = p_crew_id and person_id = p_person_id) then
+  if not exists (select 1 from public.crew_members where crew_id = p_crew_id and person_id = p_person_id and not removed) then
     return jsonb_build_object('ok', false, 'error', 'not_in_crew');
   end if;
   if exists (select 1 from public.crew_claims where crew_id = p_crew_id and person_id = p_person_id and device_id <> p_device_id) then
     return jsonb_build_object('ok', false, 'error', 'claimed');
   end if;
-  delete from public.crew_claims where crew_id = p_crew_id and device_id = p_device_id;
-  insert into public.crew_claims (crew_id, person_id, device_id) values (p_crew_id, p_person_id, p_device_id);
+  insert into public.crew_claims (crew_id, person_id, device_id) values (p_crew_id, p_person_id, p_device_id)
+  on conflict (crew_id, device_id) do update set person_id = excluded.person_id, claimed_at = now();
   return jsonb_build_object('ok', true, 'crew', public._crew_card(p_crew_id, p_device_id));
 end $$;
 
@@ -1035,8 +1035,8 @@ begin
     return jsonb_build_object('ok', false, 'error', 'name_taken');
   end;
   insert into public.crew_members (crew_id, person_id) values (p_crew_id, v_id);
-  delete from public.crew_claims where crew_id = p_crew_id and device_id = p_device_id;
-  insert into public.crew_claims (crew_id, person_id, device_id) values (p_crew_id, v_id, p_device_id);
+  insert into public.crew_claims (crew_id, person_id, device_id) values (p_crew_id, v_id, p_device_id)
+  on conflict (crew_id, device_id) do update set person_id = excluded.person_id, claimed_at = now();
   return jsonb_build_object('ok', true, 'personId', v_id, 'crew', public._crew_card(p_crew_id, p_device_id));
 end $$;
 
@@ -1046,7 +1046,6 @@ returns jsonb language plpgsql security definer set search_path = public as $$
 begin
   if not public._crew_owner_ok(p_crew_id, p_device_id) then return jsonb_build_object('ok', false, 'error', 'not_owner'); end if;
   update public.crew_members set removed = true where crew_id = p_crew_id and person_id = p_person_id;
-  delete from public.crew_claims where crew_id = p_crew_id and person_id = p_person_id;
   return jsonb_build_object('ok', true, 'crew', public._crew_card(p_crew_id, p_device_id));
 end $$;
 

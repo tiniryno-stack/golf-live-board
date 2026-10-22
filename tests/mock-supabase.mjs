@@ -401,7 +401,7 @@ export function createBackend() {
       return { ok: true, crew: crewCard(p_crew_id, p_device_id) };
     },
     claim_crew_person({ p_crew_id, p_device_id, p_person_id }) {
-      if (!t.members.has(`${p_crew_id}|${p_person_id}`)) return no('not_in_crew');
+      if (!t.members.has(`${p_crew_id}|${p_person_id}`) || t.members.get(`${p_crew_id}|${p_person_id}`).removed) return no('not_in_crew');
       if (t.crewClaims.some((x) => x.crew_id === p_crew_id && x.person_id === p_person_id && x.device_id !== p_device_id)) return no('claimed');
       t.crewClaims = t.crewClaims.filter((x) => !(x.crew_id === p_crew_id && x.device_id === p_device_id));
       t.crewClaims.push({ crew_id: p_crew_id, person_id: p_person_id, device_id: p_device_id });
@@ -423,7 +423,6 @@ export function createBackend() {
       if (!ownerOk(p_crew_id, p_device_id)) return no('not_owner');
       const m = t.members.get(`${p_crew_id}|${p_person_id}`);
       if (m) m.removed = true;
-      t.crewClaims = t.crewClaims.filter((x) => !(x.crew_id === p_crew_id && x.person_id === p_person_id));
       return { ok: true, crew: crewCard(p_crew_id, p_device_id) };
     },
     start_season({ p_crew_id, p_device_id, p_name, p_starts_on = null }) {
