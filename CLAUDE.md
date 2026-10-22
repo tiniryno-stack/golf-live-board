@@ -257,8 +257,8 @@ npm run test:smoke     # 272 checks (incl. crews): multi-phone flows against the
   link, new season, remove player); `db.crews` keeps this phone's crews (`glb.crews`, `glb.crew`); Quick players in
   Setup (chips, regulars, search, guests); Standings by season (`js/seasons.js`, pure + tested; first season is
   implicit from the first round; points = Partner Rider Cup until the standings rework); usual cart names per pair
-  + 151 Pokémon. Handicap numbers on crew screens behind `FLAGS.crewHandicaps` (off). New DB pieces in `schema.sql`
-  (crews columns, `crew_claims`, `seasons`, RPCs `crew_info … start_season`) need the live migration before merge.
+  + 151 Pokémon. Handicap numbers on crew screens behind `FLAGS.crewHandicaps` (off). **Merged to `main` and live
+  Oct 22** (DB migration applied in parts, verified with a rollback test; `supabase/migrations/2026-10-22-crews-step2.sql`).
 - **Crews roadmap (agreed Oct 21, step 1 built):** 2) crew name + invite link + "Start a crew",
   3) seasons = date ranges per crew (standings default to the current one), 4) Players step: recent
   groups as one-tap chips + ~8 frequent players + search within the crew, 5) team names reserved per
@@ -288,5 +288,13 @@ npm run test:smoke     # 272 checks (incl. crews): multi-phone flows against the
   whether phones can call OpenGolfAPI directly (CORS) or always use the backup route.
 - V2 backlog (ARCHITECTURE.md §13): carryovers, shared courses table, more teams/games,
   round history, deeper season stats, add-to-home-screen (PWA) + lock-screen notifications,
-  stronger security (PIN attempt limits), **GPS yardages behind `settings.gps`** (front/middle/back
-  from OpenStreetMap or our own course mapping; first step: check if Twin Creeks is in OSM).
+  stronger security (PIN attempt limits).
+- **NEXT UP: GPS yardages (Oct 22).** Andrew's priority: "if it's not a good golf app, people won't use
+  it." Status: architecture discussion only, nothing built. Plan lives in `docs/design/yardages/NOTES.md`
+  (questions + options); a designer mockup will be attached in the session. Constraints: green
+  coordinates are not in OpenGolfAPI (checked Oct 19), static site + Supabase only, iPhone Safari /
+  home screen app, never a blank screen, ship behind a flag (`settings.gps` / `FLAGS`).
+- Other open items (Oct 22): standings rework (ELO-style across games, needs design), `FLAGS.crewHandicaps`
+  off until Andrew asks, practice rounds HXPY4 / B5PGH to delete in-app, neutral recap images,
+  "hasn't entered" chip (awaiting handoff), multi-course club warning, merged branches
+  `design/race-tabbar` + `design/crews` can be deleted.
