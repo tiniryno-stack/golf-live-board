@@ -40,13 +40,29 @@ export function yardages(from, green) {
   return { front: Math.round(lo), middle: Math.round(yards(metersBetween(from, c))), back: Math.round(hi), bearing: Math.atan2(ux, uy) };
 }
 
+/** Dev override (db.geoTest): the whole course slid so hole 1's green center sits at [lat, lng]. */
+let testAt = null;
+const shifted = new Map();
+export function setGeoTest(at) { testAt = Array.isArray(at) ? at : null; shifted.clear(); }
+function slide(g) {
+  if (!testAt) return g;
+  if (shifted.has(g)) return shifted.get(g);
+  const h1 = g.holes.find((h) => h.hole === 1) || g.holes[0];
+  const c = center(h1.green);
+  const d = [testAt[0] - c[0], testAt[1] - c[1]];
+  const mv = (p) => [p[0] + d[0], p[1] + d[1]];
+  const out = { ...g, name: `${g.name} (test)`, holes: g.holes.map((h) => ({ ...h, tee: mv(h.tee), green: h.green.map(mv) })) };
+  shifted.set(g, out);
+  return out;
+}
+
 /** Course geo for a round's course, or null. `course` is the snapshot's course ({ id, ogaId }). */
 export function geoFor(course) {
   if (!course) return null;
   const keys = [course.id, course.ogaId && `oga:${course.ogaId}`, course.source, course.key].filter(Boolean);
   for (const k of keys) {
     const g = GEO[k] || GEO[String(k).replace(/#\d+$/, '')];
-    if (g) return g;
+    if (g) return slide(g);
   }
   return null;
 }
