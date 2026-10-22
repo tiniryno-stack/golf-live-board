@@ -342,3 +342,15 @@ New questions from this handoff (default in bold):
   CLAUDE.md. New tests: token drift, no old alias names, no green / red outside the allowed selectors.
 - Nothing goes to `main` until Andrew says so, and only after checking nobody is mid-round (no
   unfinalized round with recent scores).
+
+## 10. Andrew's preview feedback (Oct 21 evening) — next session's to-do
+
+1. **"Who are you?" join sheet:** in a 4-player Match play round it groups players under jersey headers as if they were carts and uses half-width buttons. It should adapt to the game: no carts → one simple list (one column, full width) of every player; carts → grouped by cart. It must fit everyone in the round.
+2. **Individual Enter, entering another player's score:** the expanded pad is too big and scrolls *inside* the "Your group" box (a nested scroll). Instead, the expanded row should push the page content up out of the way (no inner scroll). When the pick is made it closes and everything goes back to normal. This matters most for the bottom player in a 4-player Match play round.
+3. **Score pad choices:** on a par 5 you can pick 6, 7 and 10 (Max) but not 8 or 9. The pad must offer every number from birdie up to the max with no gaps. The max is at least double bogey on any par; keep double par as the cap. Use more pad buttons or a row of numbers.
+4. **Pick a game screen:** the game cards are too tall. One card has a single word on its own line, and the "Cap at double par" option was pushed off screen. Make the cards compact (name + player count on one line, a one-line description), allow the list to scroll when more games are added, and move "cap at double par" into round settings (Host → Rules / the setup's Scorecard settings), not this screen. Follow the design system's list-row / selectable-card pattern; flag if it needs a new pattern.
+5. **Destructive buttons** (Delete round, Reset scores, Leave) are grey and look disabled. Make them clearly destructive: red text on the neutral button (use `--bad` as text only, so red still mostly means double bogey), plus a confirm step. Check the design system's Button README for a destructive variant first.
+6. **Round menu:** the ⋯ button and your initials avatar open the same long sheet. Split them: the avatar → a short "You" sheet (your name, Switch to watching, Go to Home); the ⋯ → round actions (Rules / How today's game works, Share, Round recap, Theme). Keep each sheet short. Home's Settings button stays out for now.
+7. **Matches "Rules" button:** Andrew didn't see one, only the text scoring breakdowns. Check it shows in every game type (individual Match play too) and is easy to spot.
+8. Decided: the winner card uses the winning team's colors (keep it). The birdie label stays green.
+9. Still open, to explain to Andrew: "sheet titles" = the bold heading on every bottom sheet (e.g. "Who are you?"), and "watching score" = the big number in the box when you're watching another group. Both use sizes outside the design system's 6 type styles, so they need a design-system decision or should be moved to the nearest style.
