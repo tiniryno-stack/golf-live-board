@@ -88,9 +88,18 @@ export function moveLink() {
   return `#move=${toB64(JSON.stringify({ v: 1, keys }))}`;
 }
 
-/** Dev: `#geotest=lat,lng` slides every course's greens so hole 1's green sits there (stored on this
- *  phone only, `glb.geoTest`); `#geotest=off` clears it. Lets Andrew test the green card from home. */
-export const geoTest = (() => {
+/** Dev: `#geotest=lat,lng` (or Host → Rules → "Put hole 1's green where I'm standing") slides every
+ *  course's greens so hole 1's green sits there (this phone only, `glb.geoTest`); `#geotest=off` / the
+ *  same button clears it. Lets Andrew test the green card from home. `setGeoTest` updates it live. */
+export let geoTest = null;
+export function setGeoTest(at) {
+  geoTest = Array.isArray(at) ? at : null;
+  if (geoTest) local.set('glb.geoTest', geoTest); else local.del('glb.geoTest');
+  geoTestHook?.(geoTest);
+}
+let geoTestHook = null;
+export function onGeoTest(fn) { geoTestHook = fn; }
+geoTest = (() => {
   try {
     const m = /^#geotest=(off|-?\d+(?:\.\d+)?,-?\d+(?:\.\d+)?)$/.exec(location.hash);
     if (m) {
