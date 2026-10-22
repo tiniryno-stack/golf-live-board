@@ -108,7 +108,7 @@ a { color: inherit; }
 .tabbar:empty { display: none; }
 .dock {
   position: relative; display: flex; padding: 6px; border-radius: 34px;
-  background: var(--glass); border: 1px solid var(--glass-line); box-shadow: var(--shadow-float);
+  background: var(--glass); border: 1px solid var(--glass-line); box-shadow: var(--shadow-dock); /* 012: the dock is the only thing that glows (dark) */
   -webkit-backdrop-filter: blur(22px) saturate(1.8); backdrop-filter: blur(22px) saturate(1.8);
 }
 .tab-hl {
@@ -507,6 +507,9 @@ a { color: inherit; }
 .m-title { font-size: 32px; font-weight: 800; letter-spacing: -0.03em; margin-top: 2px; }
 .m-sub { font-size: 15px; color: var(--ink-soft); margin-top: 2px; }
 .m-hero .seg2 { margin: 14px 0 0; }
+.m-card { margin-top: 14px; padding: 18px 14px 14px; border-radius: 24px; background: var(--surface-1); box-shadow: var(--shadow-card); } /* 012: the score is the card */
+.m-card .m-kicker { margin-bottom: 10px; }
+.m-card .m-score { margin-top: 0; }
 .m-score { display: flex; align-items: center; justify-content: center; gap: 18px; margin-top: 16px; }
 .ms-side { width: 96px; text-align: left; font-size: 15px; font-weight: 700; min-width: 0; }
 .ms-side.r { text-align: right; }
@@ -526,6 +529,7 @@ a { color: inherit; }
 .m-line b { font-weight: 600; }
 .m-line.small { font-size: 13px; margin-top: 8px; }
 .mtable { margin-top: 14px; border-radius: 18px; background: var(--surface); padding: 4px 14px; text-align: left; }
+.m-hero > .mtable { margin: 14px 8px 0; padding: 0; border-radius: 0; background: transparent; } /* 012: hole table on the background, 24px side margins */
 .mt-row { width: 100%; display: grid; gap: 8px; align-items: center; height: 44px; border-top: 1px solid var(--line); text-align: left; }
 .mt-head { height: auto; padding: 10px 0 6px; border-top: 0; font-size: 12px; color: var(--ink-soft); letter-spacing: .06em; }
 .mt-row .r { text-align: right; }

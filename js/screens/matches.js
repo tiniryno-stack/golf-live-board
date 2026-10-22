@@ -100,6 +100,20 @@ function statusPair(app, g, m, left, yours = false) {
   return [`${fmtPts(m.left)} pt${m.left === 1 ? '' : 's'} left`, m.played ? `${who}${fmtPts(need)} more ${who ? 'to clinch' : 'clinches it'}` : `${fmtPts(target)} clinches it`];
 }
 
+/** 012: the score card's kicker — "THRU 4 · YOU'RE UP 2" / "YOU'RE DOWN 1" / "ALL SQUARE" (a team's
+ *  name instead of "you're" when watching another match). Plus/Minus counts strokes the same way. */
+function standingLine(app, g, m, left, yours) {
+  const snap = app.snapshot;
+  const right = m.teams.find((t) => t !== left);
+  const name = (t) => shortTeam(snap.teamById.get(t).name).toUpperCase();
+  const thru = m.final ? 'FINAL' : m.played ? `THRU ${m.played}` : 'UP NEXT';
+  const diff = g.type === 'rotationPlusMinus' ? m.margin[left] : m.points[left] - m.points[right];
+  if (diff === 0) return `${thru} · ALL SQUARE`;
+  const who = yours ? 'YOU’RE' : name(diff > 0 ? left : right);
+  const by = g.type === 'rotationPlusMinus' ? Math.abs(diff) : fmtPts(Math.abs(diff));
+  return `${thru} · ${who} ${yours ? (diff > 0 ? 'UP' : 'DOWN') : 'UP'} ${by}`;
+}
+
 /** Hole · Low Ball · Low Total · Pts, one row per hole of the matchup. */
 function table(app, g, m, left, lc, rc, liveHole) {
   const snap = app.snapshot;
@@ -196,13 +210,16 @@ export function teamGameView(app) {
        <div class="m-sub">holes ${hero.firstHole} → ${hero.lastHole}</div>`;
   const heroFull = `<div class="m-hero">${head}
       ${segs.length > 1 ? seg2('matches-rot', segs, String(sel)) : ''}
-      <div class="m-score">
-        <div class="ms-side r"><div style="color:${lc}">${esc(shortTeam(name(left)))}</div><small>${mine ? 'you' : esc(playersOf(app, left))}</small></div>
-        <div class="ms-num mono"><span style="color:${lc}">${esc(cl)}</span><span class="dash">–</span><span style="color:${rc}">${esc(cr)}</span></div>
-        <div class="ms-side"><div style="color:${rc}">${esc(shortTeam(name(right)))}</div><small>${mine ? 'them' : esc(playersOf(app, right))}</small></div>
+      <div class="m-card">
+        <div class="m-kicker mono">${esc(standingLine(app, g, hero, left, !!mine))}</div>
+        <div class="m-score">
+          <div class="ms-side r"><div style="color:${lc}">${esc(shortTeam(name(left)))}</div><small>${mine ? 'you' : esc(playersOf(app, left))}</small></div>
+          <div class="ms-num mono"><span style="color:${lc}">${esc(cl)}</span><span class="dash">–</span><span style="color:${rc}">${esc(cr)}</span></div>
+          <div class="ms-side"><div style="color:${rc}">${esc(shortTeam(name(right)))}</div><small>${mine ? 'them' : esc(playersOf(app, right))}</small></div>
+        </div>
+        ${g.type === 'rotationPlusMinus' ? '' : pointsBar(app, g, hero, left, lc, rc, 18)}
+        <div class="m-line"><b>${esc(st1)}</b><span class="soft">${esc(st2)}</span></div>
       </div>
-      ${g.type === 'rotationPlusMinus' ? '' : pointsBar(app, g, hero, left, lc, rc, 18)}
-      <div class="m-line"><b>${esc(st1)}</b><span class="soft">${esc(st2)}</span></div>
       ${table(app, g, hero, left, lc, rc, liveHoleOf(hero))}
     </div>`;
   const mineBar = `<button class="mine-bar${foldIn(app.ui)}" style="--fold-h:80px" data-act="match-mine">

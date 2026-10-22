@@ -27,6 +27,10 @@ after the first playtest; section 13 is the V2 backlog.
   on `design/night-round`, merged to `main` Oct 21 (both real rounds replayed through the new engine
   first: identical results). The second handoff (design system, Home, sheets, empty states) is being
   built on `design/design-system`.
+- **012 (Oct 22, live):** the dock is the only thing that glows in dark mode (`--shadow-dock`, from the design
+  system's tokens.css → `npm run tokens`); Matches = score card (`.m-card`: kicker `standingLine()` "THRU 4 · YOU'RE
+  UP 2", score, bar, points-left line) with the hole table on the background. **011 (green card on Enter)** is
+  unzipped in `docs/design/features/` but on hold until the yardages are trusted (see `docs/design/yardages/`).
 - Tokens in `css/styles.css` `:root` (dark + light): `--bg/--surface/--surface-2/--surface-3`,
   `--good` (me) + `--good-ink` (green text), `--warn` amber (warnings only), `--bad` + `--dbl-bg`
   (double bogey only), jerseys `--t-A…F`. Score marks everywhere: `ui.mark(score, par, size)`.
