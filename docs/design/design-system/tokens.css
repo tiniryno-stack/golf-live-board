@@ -49,6 +49,8 @@
   --error: var(--double);
   --shadow-card: none;
   --shadow-float: 0 8px 24px rgba(0,0,0,0.45);
+  --glass: rgba(24,26,31,0.72);
+  --glass-line: rgba(255,255,255,0.09);
   --shadow-sheet: 0 -8px 32px rgba(0,0,0,0.5);
 }
 html.light, [data-theme="light"]{
@@ -81,6 +83,8 @@ html.light, [data-theme="light"]{
   --error: var(--double);
   --shadow-card: 0 1px 2px rgba(11,13,16,0.06), 0 4px 12px rgba(11,13,16,0.05);
   --shadow-float: 0 8px 24px rgba(11,13,16,0.12);
+  --glass: rgba(255,255,255,0.74);
+  --glass-line: rgba(11,13,16,0.08);
   --shadow-sheet: 0 -8px 32px rgba(11,13,16,0.16);
 }
 /* Type styles */
