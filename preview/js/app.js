@@ -2,22 +2,22 @@
 //
 // Render flow: Supabase ─realtime─► app state ─► scoring.compute() ─► snapshot ─► active screen render
 
-import * as db from './db.js?v=ae9e2c4';
-import { compute, nextHoleFor, currentHoleOf, sameFoursome, matchFor, playOrder, posOf, holeAt, HOLES, sideOn, teeTimeName, groupIndex } from './scoring.js?v=ae9e2c4';
-import { roundSummary } from './screens/home.js?v=ae9e2c4';
-import { isDefaultTeamName } from './teams.js?v=ae9e2c4';
-import { replayHeadlines, latestMoment } from './headlines.js?v=ae9e2c4';
-import { esc, icon, initials, roundLink, copyText } from './ui.js?v=ae9e2c4';
-import * as fx from './screens/toasts.js?v=ae9e2c4';
-import * as sheets from './screens/sheets.js?v=ae9e2c4';
-import home from './screens/home.js?v=ae9e2c4';
-import setup from './screens/setup.js?v=ae9e2c4';
-import season from './screens/season.js?v=ae9e2c4';
-import enter from './screens/enter.js?v=ae9e2c4';
-import matches from './screens/matches.js?v=ae9e2c4';
-import board from './screens/board.js?v=ae9e2c4';
-import card from './screens/card.js?v=ae9e2c4';
-import host from './screens/host.js?v=ae9e2c4';
+import * as db from './db.js?v=2d64e16';
+import { compute, nextHoleFor, currentHoleOf, sameFoursome, matchFor, playOrder, posOf, holeAt, HOLES, sideOn, teeTimeName, groupIndex } from './scoring.js?v=2d64e16';
+import { roundSummary } from './screens/home.js?v=2d64e16';
+import { isDefaultTeamName } from './teams.js?v=2d64e16';
+import { replayHeadlines, latestMoment } from './headlines.js?v=2d64e16';
+import { esc, icon, initials, roundLink, copyText } from './ui.js?v=2d64e16';
+import * as fx from './screens/toasts.js?v=2d64e16';
+import * as sheets from './screens/sheets.js?v=2d64e16';
+import home from './screens/home.js?v=2d64e16';
+import setup from './screens/setup.js?v=2d64e16';
+import season from './screens/season.js?v=2d64e16';
+import enter from './screens/enter.js?v=2d64e16';
+import matches from './screens/matches.js?v=2d64e16';
+import board from './screens/board.js?v=2d64e16';
+import card from './screens/card.js?v=2d64e16';
+import host from './screens/host.js?v=2d64e16';
 
 const SCREENS = { home, setup, season, enter, matches, board, card, host };
 const TABS = [

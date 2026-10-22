@@ -5,10 +5,10 @@
 // phone 1 the organizer. "Play a hole" enters a realistic score on each phone, the way a
 // player would on their own phone, then taps Next hole.
 
-import { api, sb, uuid, fetchEvent, normCode } from './db.js?v=ae9e2c4';
-import { COURSES } from './courses.js?v=ae9e2c4';
-import { DEFAULT_SETTINGS, DEFAULT_ROTATION } from './scoring.js?v=ae9e2c4';
-import { TEAM_NAME_PICKS } from './teams.js?v=ae9e2c4';
+import { api, sb, uuid, fetchEvent, normCode } from './db.js?v=2d64e16';
+import { COURSES } from './courses.js?v=2d64e16';
+import { DEFAULT_SETTINGS, DEFAULT_ROTATION } from './scoring.js?v=2d64e16';
+import { TEAM_NAME_PICKS } from './teams.js?v=2d64e16';
 
 const PHONES = 8;
 const NAMES = ['Andrew', 'Sean', 'Mike', 'Tyler', 'Sam', 'Jake', 'Chris', 'Matt'];

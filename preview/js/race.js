@@ -11,7 +11,7 @@
 //   reach:    [points, min(points + left, total)] for players still alive and not leading.
 //   tiebreak: level on points after the last hole → most outright wins; still level = shared.
 
-import { fmtPts } from './scoring.js?v=ae9e2c4';
+import { fmtPts } from './scoring.js?v=2d64e16';
 
 const EPS = 1e-9;
 const eq = (a, b) => Math.abs(a - b) < EPS;
@@ -71,7 +71,7 @@ export function raceState({ players, holes, me = null, total = 18, lastHole = 18
     const leading = rank[id] === 1;
     return {
       id, name: name(id), me: id === me, points: points[id], won: won[id], rank: rank[id], out,
-      rankLabel: out ? 'OUT' : `${tied ? 'T' : ''}${ordinal(rank[id])}`,
+      rankLabel: out ? 'OUT' : tied ? `T${rank[id]}` : ordinal(rank[id]),
       reach: !out && !leading && left ? [points[id], Math.min(points[id] + left, total)] : null,
     };
   });

@@ -5,8 +5,8 @@
 // Always the dark Sundown look, so a saved image reads the same in anyone's camera roll.
 // Jerseys follow the app: your cart green, everyone else their away color.
 
-import { fmtPts, fmtSigned, fmtToPar, HOLES, recordLabel } from '../scoring.js?v=ae9e2c4';
-import { prettyDate } from '../ui.js?v=ae9e2c4';
+import { fmtPts, fmtSigned, fmtToPar, HOLES, recordLabel } from '../scoring.js?v=2d64e16';
+import { prettyDate } from '../ui.js?v=2d64e16';
 
 const W = 1080;
 const PAD = 64;
