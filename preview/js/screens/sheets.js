@@ -2,11 +2,11 @@
 // leave round, player detail, edit a past score, hole detail, headline feed, confirm,
 // organizer PIN (unlock a finalized round).
 
-import { esc, icon, scoreClass, clock, mark, seg } from '../ui.js?v=dd940bc';
-import { fmtToPar, fmtPts, fmtSigned, maxHoleScore, componentNames, posOf, holeAt, holesLabel, matchesFor, playOrder, teeTimeName, groupIndex } from '../scoring.js?v=dd940bc';
-import { teamColor, headlineColor, shortTeam } from '../teams.js?v=dd940bc';
-import { codeField } from './home.js?v=dd940bc';
-import { handicapSheet } from './setup.js?v=dd940bc';
+import { esc, icon, scoreClass, clock, mark, seg } from '../ui.js?v=a430e8d';
+import { fmtToPar, fmtPts, fmtSigned, maxHoleScore, componentNames, posOf, holeAt, holesLabel, matchesFor, playOrder, teeTimeName, groupIndex } from '../scoring.js?v=a430e8d';
+import { teamColor, headlineColor, shortTeam } from '../teams.js?v=a430e8d';
+import { codeField } from './home.js?v=a430e8d';
+import { handicapSheet } from './setup.js?v=a430e8d';
 
 let lastHtml = '';
 let closeTimer = null;

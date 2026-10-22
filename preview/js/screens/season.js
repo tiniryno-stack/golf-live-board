@@ -1,9 +1,9 @@
 // season.js — Season standings (V1-lite), reached from Home and the final board only.
 // Recomputes every round in the crew with scoring.compute() and adds them up by person.
 
-import { esc, seg } from '../ui.js?v=dd940bc';
-import { fmtPts, seasonStandings } from '../scoring.js?v=dd940bc';
-import * as db from '../db.js?v=dd940bc';
+import { esc, seg } from '../ui.js?v=a430e8d';
+import { fmtPts, seasonStandings } from '../scoring.js?v=a430e8d';
+import * as db from '../db.js?v=a430e8d';
 
 async function load(app, crew) {
   try {

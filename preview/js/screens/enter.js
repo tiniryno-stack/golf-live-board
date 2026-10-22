@@ -8,14 +8,14 @@
 // Holes two or more back open locked. Holes follow play order (start on 1 or 10).
 // Must fit an iPhone SE with no scrolling (rows and buttons shrink to the space).
 
-import { esc, icon, mark, scoreName, foldIn } from '../ui.js?v=dd940bc';
+import { esc, icon, mark, scoreName, foldIn } from '../ui.js?v=a430e8d';
 import {
   maxHoleScore, maxLabel, rotationFor, rotationIndexFor, foursomeFor, matchFor, matchesFor, componentNames,
   fmtPts, fmtSigned, playOrder, posOf, holeAt, HOLES, sideOn,
-} from '../scoring.js?v=dd940bc';
-import { matchupAlert } from '../headlines.js?v=dd940bc';
-import { teamColor, isDefaultTeamName, shortTeam } from '../teams.js?v=dd940bc';
-import { local } from '../db.js?v=dd940bc';
+} from '../scoring.js?v=a430e8d';
+import { matchupAlert } from '../headlines.js?v=a430e8d';
+import { teamColor, isDefaultTeamName, shortTeam } from '../teams.js?v=a430e8d';
+import { local } from '../db.js?v=a430e8d';
 
 /** "+2 thru 4" / "All square" from this team's side of its current matchup. */
 export function matchStatus(snap, m, teamId) {

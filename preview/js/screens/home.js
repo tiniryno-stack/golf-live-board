@@ -4,9 +4,9 @@
 // a code field. Season standings and Add to Home Screen stay as rows under the list. Run it back
 // lives in a round's ⋯ menu. Everything here comes from this phone (glb.recent), no network.
 
-import { esc, icon, prettyDate, initials, empty } from '../ui.js?v=dd940bc';
-import { recent, normCode, STANDALONE, moveLink } from '../db.js?v=dd940bc';
-import { fmtPts, fmtToPar, playerLeaderboard } from '../scoring.js?v=dd940bc';
+import { esc, icon, prettyDate, initials, empty } from '../ui.js?v=a430e8d';
+import { recent, normCode, STANDALONE, moveLink } from '../db.js?v=a430e8d';
+import { fmtPts, fmtToPar, playerLeaderboard } from '../scoring.js?v=a430e8d';
 
 /** iPhone or iPad in Safari (iPadOS says it's a Mac, but has touch). Tests set `__GLB_IOS`. */
 const isIOS = () => {
