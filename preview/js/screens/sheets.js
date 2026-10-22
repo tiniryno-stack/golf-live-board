@@ -55,7 +55,8 @@ export function rulesRows(app) {
     rows.push(['Format', snap.hasStrokes ? 'Stroke play · net' : 'Stroke play', 'Everyone plays their own ball. Lowest total wins.']);
   } else if (g.type === 'splitPoint') {
     rows.push(['Format', 'Match play · everyone vs everyone', 'Everyone plays their own ball.']);
-    rows.push(['Points', '1 a hole', 'Low net score takes it. A tie for low splits it (½, ⅓, ¼…).']);
+    rows.push(['Points', '1 a hole', `Low ${snap.hasStrokes ? 'net ' : ''}score takes it, ties split it (½, ⅓, ¼).`]);
+    rows.push(['Lock line', '2nd place’s points + holes left', 'Lead by more than the holes left and it’s locked. Dashes on Matches show how far each player can still climb.']);
   } else {
     const three = !st.pairs && snap.teams.length === 3;
     rows.push(['Format', `${st.pairs ? '2v2' : 'Partner “Rider” Cup'} · ${g.type === 'rotationPlusMinus' ? 'Plus/Minus' : 'Match play'}${snap.hasStrokes ? ' · net' : ''}`,
@@ -76,7 +77,7 @@ export function rulesRows(app) {
   rows.push(['Max score', ({ doublePar: 'Double par', netDoubleBogey: 'Net double bogey', none: 'None' })[st.maxHoleScore] || 'Double par',
     st.maxHoleScore === 'none' ? 'Play every hole out.' : `Pick up once you hit it; it counts as that score.${st.par3NoMax ? ' No max on par 3s.' : ''}`]);
   if (g && g.type !== 'splitPoint') rows.push(['Winner', g.type === 'rotationPlusMinus' ? 'Best +/− after 18' : 'Most points after 18', 'Tie at the top: better matchup record, then who won between the two, then the stroke margin. Still tied = shared.']);
-  else if (g) rows.push(['Winner', 'Most points after 18', 'A tie at the top is shared.']);
+  else if (g) rows.push(['Winner', 'Most points after 18', 'Tie at the end: most outright wins (holes won alone). Still tied = shared.']);
   else rows.push(['Winner', `Lowest ${snap.hasStrokes ? 'net ' : ''}total`, 'A tie is shared.']);
   if (st.teeTimes?.some(Boolean)) rows.push(['Tee times', st.teeTimes.map((t, i) => teeTimeName(st, i)).join(' · '), '']);
   return rows;

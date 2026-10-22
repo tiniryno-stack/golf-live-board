@@ -5,7 +5,8 @@
 // Fore Play"), theirs opens below in an outlined "WATCHING" box in its own colors only. Never a
 // separate screen (people confuse it with their own score). Split point keeps its own view.
 
-import { esc, seg, seg2, icon, foldIn } from '../ui.js';
+import { esc, seg, seg2, icon, foldIn, mark } from '../ui.js';
+import { raceState } from '../race.js';
 import { fmtPts, fmtSigned, rotationIndexFor, holeAt, HOLES, playOrder, sideOn } from '../scoring.js';
 import { teamColor, shortTeam } from '../teams.js';
 
@@ -249,49 +250,69 @@ export function teamGameView(app) {
 
 /** Split point (2–6 players, each their own): totals up top, then a hole-by-hole table of who
  *  took the point and how it split. Kept simple on purpose. */
+/** "The race" (handoff golf-race-tabbar/02): individual split point, 2–6 players. Math + copy in race.js. */
+let lastLock = null;
 function splitView(app) {
   const snap = app.snapshot;
+  const st = snap.settings;
   const g = snap.game;
-  const mine = app.myTeam();
-  const ids = g.teamIds;
-  const order = playOrder(snap.settings);
-  const color = (t) => teamColor(mine, t);
-  const pname = (t) => snap.teamById.get(t).name;
-  const pid = (t) => snap.teamById.get(t).playerIds[0];
-  const net = snap.hasStrokes;
-  const live = g.liveStandings;
-  const totals = live
-    .map((s) => `<div class="sp-tot" style="--jersey:${color(s.teamId)}">
-      <div class="sp-name ellipsis">${esc(pname(s.teamId))}${s.teamId === mine ? ' <span class="faint">(you)</span>' : ''}</div>
-      <div class="sp-pts num">${fmtPts(s.points)}</div>
-      <div class="sp-rec">${s.won} won · ${s.split} split</div></div>`)
-    .join('');
-  const rows = order
-    .filter((h) => ids.some((t) => snap.playerById.get(pid(t)).gross[h - 1] != null))
-    .map((h) => {
-      const hh = g.holes[h - 1];
-      const cells = ids.map((t) => {
-        const p = snap.playerById.get(pid(t));
-        const v = net ? p.net[h - 1] : p.gross[h - 1];
-        const pts = hh.complete ? hh.points[t] : 0;
-        const win = hh.complete && pts > 0;
-        return `<td class="${win ? 'win' : ''}" style="--jersey:${color(t)}"><span class="sc">${v ?? '–'}</span>${win ? `<span class="pt">${fmtPts(pts)}</span>` : ''}</td>`;
-      }).join('');
-      return `<tr><th scope="row">${h}<small>Par ${snap.holes[h - 1].par}</small></th>${cells}</tr>`;
-    })
-    .join('');
-  const head = ids.map((t) => `<th scope="col" class="ellipsis" style="color:${color(t)}">${esc(pname(t))}</th>`).join('');
-  const foot = live.length ? `<tr class="sp-sum"><th scope="row">Pts</th>${ids.map((t) => `<td style="color:${color(t)}">${fmtPts(live.find((s) => s.teamId === t).points)}</td>`).join('')}</tr>` : '';
-  return `<div class="hero split-hero">
-      <div class="micro" style="text-align:center;margin:6px 0 12px">Split point · 1 point a hole</div>
-      <div class="sp-tots" style="grid-template-columns:repeat(${ids.length > 4 ? 3 : ids.length},minmax(0,1fr))">${totals}</div>
-    </div>
-    <div class="sheet">
-      ${RULES_BTN}
-      <p class="meta" style="margin:0 0 12px">Low ${net ? 'net ' : ''}score takes the hole’s point. A tie for low splits it: 2 tied = ½ each, 3 = ⅓, 4 = ¼.</p>
-      ${rows
-        ? `<table class="sp-table"><thead><tr><th scope="col">Hole</th>${head}</tr></thead><tbody>${rows}</tbody><tfoot>${foot}</tfoot></table>`
-        : '<p class="empty-state">Points show up once everyone has a score on the first hole.</p>'}
+  const order = playOrder(st);
+  const ids = snap.teams.map((t) => t.id);
+  const name = (t) => snap.teamById.get(t)?.name || t;
+  const me = app.myTeam();
+  const r = raceState({
+    players: ids.map((id) => ({ id, name: name(id) })),
+    holes: order.map((h) => ({ hole: h, scores: g.holes[h - 1].complete ? g.holes[h - 1].net : {} })),
+    me, lastHole: order[HOLES - 1],
+  });
+  const pct = (v) => `${(Math.max(0, Math.min(HOLES, v)) / HOLES) * 100}%`;
+  // Lock line slides from where it was to where it is now (the screen redraws, so animate by hand).
+  const lockTo = r.done && !r.finished ? Math.min(HOLES, r.lock) : null;
+  const lockFrom = lastLock != null && lockTo != null && lastLock !== lockTo ? lastLock : lockTo;
+  if (lockFrom !== lockTo) requestAnimationFrame(() => requestAnimationFrame(() => {
+    const el = document.querySelector('.rc-lock');
+    if (el) el.style.setProperty('--at', String(lockTo / HOLES));
+  }));
+  lastLock = lockTo;
+  const lanes = r.rows.map((row) => {
+    const puck = `<span class="rc-puck mono${row.me ? ' me' : ''}" style="left:${pct(row.points)}">${fmtPts(row.points)}</span>`;
+    const tail = row.reach ? `<i class="rc-tail" style="left:${pct(row.reach[0])};width:calc(${pct(row.reach[1] - row.reach[0])})"></i>` : '';
+    return `<div class="rc-lane${row.out ? ' out' : ''}">
+      <div class="rc-who"><div class="rc-name ellipsis${row.me ? ' me' : ''}">${esc(row.name)}</div><div class="rc-rank mono">${row.rankLabel}</div></div>
+      <div class="rc-track"><i class="rc-rail"></i><i class="rc-fill${row.me ? ' me' : ''}" style="width:${pct(row.points)}"></i>${tail}${puck}</div>
+    </div>`;
+  }).join('');
+  const chaser = r.chaser ? (r.chaser === me ? 'you' : name(r.chaser)) : '';
+  const lock = lockTo != null
+    ? `<div class="rc-lock" style="--at:${lockFrom / HOLES}"><span class="rc-lock-l mono">LOCK ${fmtPts(r.lock)}</span></div>` : '';
+  const explain = r.done < 6 && !r.finished && r.chaser
+    ? `<p class="rc-explain">The <b>lock line</b> is the most ${esc(chaser)} can still reach. Get past it and the match is yours. Dashes show how far each player can still climb.</p>` : '';
+  // Now: your group's hole, everyone's score so far (dashed circle = not in yet). Tap → Enter.
+  let now = '';
+  if (!r.finished && app.me) {
+    const h = app.nextHole();
+    const par = snap.holes[h - 1].par;
+    const cells = r.rows.map((row) => {
+      const p = snap.playerById.get(snap.teamById.get(row.id)?.playerIds?.[0]);
+      const v = p?.gross[h - 1];
+      return `<div class="nw-p"><div class="nw-n ellipsis${row.me ? ' me' : ''}">${esc(row.name)}</div>${v != null ? mark(v, par, 30) : '<span class="nw-empty"></span>'}</div>`;
+    }).join('');
+    now = `<button class="race-now" data-act="tab" data-v="enter" aria-label="Hole ${h}: go to Enter">
+      <span class="nw-head mono"><span>NOW · HOLE ${h} · PAR ${par}</span><b>1 PT UP FOR GRABS</b></span>
+      <span class="nw-grid" style="grid-template-columns:repeat(${r.rows.length},minmax(0,1fr))">${cells}</span></button>`;
+  }
+  return `<div class="plain race">
+      <div class="race-top">
+        <div class="race-title"><div class="ts-label mono">SPLIT POINT · ${r.finished ? 'FINAL' : `THRU ${r.done}`}</div>
+          <h1 class="race-h">${esc(r.headline)}</h1><p class="race-sub">${esc(r.subline)}</p></div>
+        <button class="btn ghost race-rules" data-act="rules-open" aria-label="Rules of today’s game">${icon('info', 18)} Rules</button>
+      </div>
+      <div class="race-card">
+        <div class="rc-lanes">${lock}${lanes}</div>
+        <div class="rc-axis mono"><span>0</span><span>9</span><span>18</span></div>
+        ${explain}
+      </div>
+      ${now}
     </div>`;
 }
 

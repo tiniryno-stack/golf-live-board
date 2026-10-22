@@ -758,7 +758,7 @@ function headToHead(game, a, b, official) {
   return 0;
 }
 
-/** Final-standings tiebreakers: value → match record → head-to-head → secondary margin → shared. */
+/** Final-standings tiebreakers (split point: points → outright wins once all holes are in): value → match record → head-to-head → secondary margin → shared. */
 export function rankStandings(game, rows, official) {
   const isPM = game.type === 'rotationPlusMinus';
   const val = (r) => (isPM ? (official ? r.officialPm : r.pm) : official ? r.officialPoints : r.points);
@@ -768,6 +768,8 @@ export function rankStandings(game, rows, official) {
   const cmp = (a, b) => {
     const d = val(b) - val(a);
     if (Math.abs(d) > 1e-9) return d;
+    // Split point: level after the last hole → most outright wins (holes won alone), else shared.
+    if (game.type === 'splitPoint') return game.holeComplete.every(Boolean) ? (b.won || 0) - (a.won || 0) : 0;
     const ra = rec(a), rb = rec(b);
     if (rb.w - rb.l !== ra.w - ra.l) return rb.w - rb.l - (ra.w - ra.l);
     if (rb.w !== ra.w) return rb.w - ra.w;
