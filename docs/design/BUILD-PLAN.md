@@ -343,7 +343,9 @@ New questions from this handoff (default in bold):
 - Nothing goes to `main` until Andrew says so, and only after checking nobody is mid-round (no
   unfinalized round with recent scores).
 
-## 10. Andrew's preview feedback (Oct 21 evening) — next session's to-do
+## 10. Andrew's preview feedback (Oct 21 evening) — items 1–7 built Oct 21 (night), on preview
+
+Notes from the build: the Button README has no destructive variant, so §10.5 uses the neutral button with an `--error` label (flag for the design system). The pad (§10.3) shows 4 across: eagle/birdie up to double par with every number in between. The open pad (§10.2) lets the Enter page scroll as a whole and scrolls the open row into view.
 
 1. **"Who are you?" join sheet:** in a 4-player Match play round it groups players under jersey headers as if they were carts and uses half-width buttons. It should adapt to the game: no carts → one simple list (one column, full width) of every player; carts → grouped by cart. It must fit everyone in the round.
 2. **Individual Enter, entering another player's score:** the expanded pad is too big and scrolls *inside* the "Your group" box (a nested scroll). Instead, the expanded row should push the page content up out of the way (no inner scroll). When the pick is made it closes and everything goes back to normal. This matters most for the bottom player in a 4-player Match play round.

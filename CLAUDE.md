@@ -165,8 +165,8 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
 - **Jerseys:** your cart is always green on your phone; others fixed away colors A orange, B blue,
   C pink, D violet (no red — red = double bogey). On rounded cards use a tint + full ring, never
   an edge stripe (it clips at the corners).
-- No back button inside a round (name pill / ⋯ menu: Round recap when final, How today's game
-  works, Share, Go to Home, Switch to watching). Your cart is always first (Card, Matches).
+- No back button inside a round. Name pill / avatar → short **You** sheet (Go to Home, Switch to
+  watching); ⋯ → round actions (Recap when final, Rules, How today's game works, Share, Theme, Run it back). Your cart is always first (Card, Matches).
 - Headlines: colored by `hero`; one at a time, two for ~10 s when they land together.
 - Board → Teams: ranked on **all points won so far** (`g.liveStandings`); big number includes the
   provisional part, shown as a "1½ prov." chip and, on the bar, striped past a divider line (`.cut`).
