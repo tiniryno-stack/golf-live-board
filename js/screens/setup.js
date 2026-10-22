@@ -17,6 +17,7 @@ import { DEFAULT_SETTINGS, DEFAULT_ROTATION, GAMES, gameFix, autoGroups, cartRot
 import * as db from '../db.js';
 import * as names from '../names.js';
 import { FLAGS } from '../flags.js';
+import { TEAM_NAME_PICKS, isDefaultTeamName } from '../teams.js';
 import { initials } from '../ui.js';
 
 const TEAM_IDS = ['A', 'B', 'C', 'D'];
@@ -109,6 +110,20 @@ async function loadPast(app, crewId) {
       game: event.settings?.pairs ? '2v2' : (event.roster?.teams || []).length >= 3 ? 'Cart game' : event.settings?.solo ? 'Match' : '',
       people: (event.roster?.players || []).filter((p) => p.personId).map((p) => ({ personId: p.personId, firstName: p.firstName || String(p.name || '').split(' ')[0], lastName: p.lastName || '', nickname: p.nickname || '' })),
     })).filter((g) => g.people.length);
+    // Usual cart names (feature 009): per pair (either order), the name they used most recently in the crew.
+    const usual = {};
+    for (const { event } of live) {
+      for (const t of event.roster?.teams || []) {
+        const ids = (event.roster.players || []).filter((p) => p.teamId === t.id && p.personId).map((p) => p.personId);
+        if (ids.length !== 2 || !t.name || isDefaultTeamName(t)) continue;
+        const k = ids.sort().join('|');
+        const u = (usual[k] ||= { counts: {} });
+        u.counts[t.name] = (u.counts[t.name] || 0) + 1;
+        u.name = t.name;
+        u.last = event.played_on || u.last;
+      }
+    }
+    for (const u of Object.values(usual)) u.uses = u.counts[u.name];
     for (const { event } of rounds) {
       for (const p of event.roster?.players || []) {
         if (p.personId) people.set(p.personId, p.name);
@@ -131,6 +146,7 @@ async function loadPast(app, crewId) {
       app.setup.mine = yourCourses([...courses.values()].reverse().map((c) => ({ ...c, plays: plays.get(c.id) || 0 })));
       app.setup.lastHcp = lastHcp;
       app.setup.freq = freq;
+      app.setup.usual = usual;
       app.setup.groups = groups;
       app.setup.pastPeople = [...people].map(([personId, name]) => ({ personId, name })); // incl. people off the crew list
       app.setup.pastLoaded = true;
@@ -731,7 +747,71 @@ function pairsView(s) {
 const CART_TINT = { A: 'var(--cart-you)', B: 'var(--t-B)', C: 'var(--t-C)', D: 'var(--t-D)' };
 
 /** ④ Partner “Rider” Cup: 8 players in 4 carts, or 6 in 3. */
+// ───────────────────────────────────────────── team names per crew (feature 009-team-names-per-crew)
+
+const pairKey = (s, id) => {
+  const ids = s.players.filter((p) => p.teamId === id).map((p) => p.personId);
+  return ids.length === 2 ? [...ids].sort().join('|') : null;
+};
+const usualOf = (s, id) => (pairKey(s, id) && s.usual?.[pairKey(s, id)]) || null;
+
+/** Pairs that played together before get their usual name back (unless someone named the cart by hand). */
+function applyUsual(s) {
+  for (const t of s.teams) {
+    if (!cartIds(s).includes(t.id)) continue;
+    const key = pairKey(s, t.id);
+    if (t.auto && t.autoKey !== key) { t.name = ''; t.auto = false; }
+    if (t.name || !key) continue;
+    const u = s.usual?.[key];
+    if (u && !s.teams.some((x) => x.id !== t.id && same(x.name, u.name))) Object.assign(t, { name: u.name, auto: true, autoKey: key });
+  }
+}
+
+function cartTag(s, id) {
+  const u = usualOf(s, id);
+  const t = s.teams.find((x) => x.id === id);
+  const mine = s.players.some((p) => p.teamId === id && p.personId === meOf(s));
+  if (!u) return 'New pair';
+  if (t?.name && same(t.name, u.name)) return mine ? 'Your usual' : 'Their usual';
+  return '';
+}
+
+export function teamNameSheet(app, { id, q = '' }, head) {
+  const s = app.setup;
+  const t = s?.teams.find((x) => x.id === id);
+  if (!t) return head('Name cart');
+  const pair = s.players.filter((p) => p.teamId === id).map((p) => p.firstName || p.name).join(' + ');
+  const u = usualOf(s, id);
+  const mine = s.players.some((p) => p.teamId === id && p.personId === meOf(s));
+  const takenBy = (n) => s.teams.find((x) => x.id !== id && cartIds(s).includes(x.id) && same(x.name, n));
+  const usedOn = u?.last ? new Date(`${u.last}T12:00:00`).toLocaleDateString([], { month: 'short', day: 'numeric' }).toUpperCase() : '';
+  const usual = u ? `<div class="ts-label tn-k">${mine ? 'Your usual' : 'Their usual'}</div>
+    <div class="usual-card"><span class="uc-main"><span class="uc-name ellipsis">${esc(u.name)}</span><span class="ts-label uc-stats">Used ${u.uses} time${u.uses === 1 ? '' : 's'}${usedOn ? ` · last ${usedOn}` : ''}</span></span>
+      ${same(t.name, u.name) ? '<span class="ts-label uc-tag">In use</span>' : takenBy(u.name) ? `<span class="ts-label uc-tag dim">Cart ${takenBy(u.name).id}</span>` : `<button class="btn" data-act="tn-pick" data-v="${esc(u.name)}">Use</button>`}</div>` : '';
+  const ql = q.trim().toLowerCase();
+  const list = TEAM_NAME_PICKS.filter((n) => !ql || n.toLowerCase().includes(ql));
+  const custom = q.trim() && !TEAM_NAME_PICKS.some((n) => same(n, q.trim())) ? q.trim().slice(0, 20) : '';
+  return `${head(`Name cart ${id}`, pair)}
+    ${usual}
+    <div class="tn-search"><label class="nr-search">${icon('search', 20)}<input id="tn-q" type="search" maxlength="20" placeholder="Search or type your own" value="${esc(q)}" autocomplete="off" autocapitalize="words" data-input="tn-q" data-enter="tn-custom"></label>
+      <button class="btn" data-act="tn-shuffle">${icon('shuffle', 18)} Shuffle</button></div>
+    <div id="tn-list">${tnList(s, id, list, custom, takenBy)}</div>`;
+}
+
+function tnList(s, id, list, custom, takenBy) {
+  const t = s.teams.find((x) => x.id === id);
+  return `${custom ? `<button class="tn-row custom" data-act="tn-pick" data-v="${esc(custom)}">${icon('plus', 18)}<span>Use “${esc(custom)}”</span></button>` : ''}
+    <div class="ts-label tn-k">All names · ${list.length}</div>
+    <div class="tn-list">${list.map((n) => {
+      const other = takenBy(n);
+      const on = same(t.name, n);
+      return `<button class="tn-row${on ? ' on' : ''}" data-act="tn-pick" data-v="${esc(n)}" ${other ? 'disabled aria-disabled="true"' : ''}>
+        <span class="ellipsis">${esc(n)}</span>${other ? `<span class="ts-label tn-tag">Cart ${other.id}</span>` : on ? '<span class="ts-label tn-tag on">In use</span>' : ''}</button>`;
+    }).join('')}</div>`;
+}
+
 function cartsView(s) {
+  applyUsual(s);
   const c = course(s);
   const n = s.players.length;
   const ids = cartIds(s);
@@ -739,12 +819,13 @@ function cartsView(s) {
   const sched = ids.length === 3 ? 'everyone plays everyone' : s.schedule === 'turn' ? '2 rotations' : '3 rotations';
   return `${topBar(s)}${headline('Step 4 · Partner “Rider” Cup', `${n} players, ${ids.length} carts`)}
     <div class="nr-course small"><div class="ellipsis" style="flex:1"><b>Partner “Rider” Cup</b> <span class="soft">· ${n} players${c ? ` · ${esc(c.shortName || c.name)}` : ''}</span></div><button class="btn small" data-act="setup-go" data-v="game">Change</button></div>
-    <p class="meta nr-hint">${s.pairedFromLast ? 'Paired like your last round · ' : ''}Tap two names to swap.</p>
+    <p class="meta nr-hint">${s.pairedFromLast ? 'Paired like your last round · ' : ''}Tap two names to swap. Pairs that have played together before get their usual name back. Tap a name to change it.</p>
     <div class="cart-grid">${ids.map((id) => {
       const t = s.teams.find((x) => x.id === id);
       return `<div class="cart-card" style="--jersey:${CART_TINT[id]}">
         <div class="cc-k mono">CART ${id}</div>
-        <input class="cc-name" maxlength="20" placeholder="Names itself on join" value="${esc(t.name)}" aria-label="Team name for cart ${id}" data-input="setup-teamname" data-v="${id}">
+        <button class="tn-cart" data-act="tn-open" data-v="${id}" aria-label="Name cart ${id}: ${esc(t.name || 'not named')}">
+          <span class="tn-cart-main"><span class="tn-cart-name ellipsis${t.name ? '' : ' empty'}">${esc(t.name || 'Pick a name')}</span>${cartTag(s, id) ? `<span class="ts-label tn-cart-tag">${esc(cartTag(s, id))}</span>` : ''}</span>${icon('fwd', 16)}</button>
         ${idx(id).map((i) => swapBtn(s, i, s.players[i].strokes !== '' && s.players[i].strokes != null ? `<span class="mono soft">${esc(s.players[i].strokes)}</span>` : '')).join('')}
       </div>`;
     }).join('')}</div>
@@ -1225,6 +1306,44 @@ export default {
       app.render();
     },
     'hcp-done': (el, ev, app) => {
+      app.closeSheet();
+      app.render();
+    },
+    'tn-open': (el, ev, app) => app.openSheet('teamName', { id: el.dataset.v, q: '' }),
+    'tn-q': (el, ev, app) => {
+      const s = app.setup;
+      const id = app.sheet.props.id;
+      app.sheet.props.q = el.value;
+      const ql = el.value.trim().toLowerCase();
+      const list = TEAM_NAME_PICKS.filter((n) => !ql || n.toLowerCase().includes(ql));
+      const custom = el.value.trim() && !TEAM_NAME_PICKS.some((n) => same(n, el.value.trim())) ? el.value.trim().slice(0, 20) : '';
+      const takenBy = (n) => s.teams.find((x) => x.id !== id && cartIds(s).includes(x.id) && same(x.name, n));
+      const box = document.getElementById('tn-list');
+      if (box) box.innerHTML = tnList(s, id, list, custom, takenBy);
+    },
+    'tn-pick': (el, ev, app) => {
+      const s = app.setup;
+      const t = s.teams.find((x) => x.id === app.sheet.props.id);
+      if (s.teams.some((x) => x !== t && cartIds(s).includes(x.id) && same(x.name, el.dataset.v))) return;
+      Object.assign(t, { name: el.dataset.v.slice(0, 20), auto: false });
+      persist(s);
+      app.closeSheet();
+      app.render();
+    },
+    'tn-custom': (el, ev, app) => {
+      const v = el.value.trim().slice(0, 20);
+      if (!v) return;
+      el.dataset.v = v;
+      app.actions['tn-pick'](el, ev, app);
+    },
+    'tn-shuffle': (el, ev, app) => {
+      const s = app.setup;
+      const id = app.sheet.props.id;
+      const free = TEAM_NAME_PICKS.filter((n) => !s.teams.some((x) => cartIds(s).includes(x.id) && same(x.name, n)));
+      const n = free[Math.floor(Math.random() * free.length)];
+      if (!n) return;
+      Object.assign(s.teams.find((x) => x.id === id), { name: n, auto: false });
+      persist(s);
       app.closeSheet();
       app.render();
     },

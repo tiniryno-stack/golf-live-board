@@ -1524,3 +1524,25 @@ details.fold summary::-webkit-details-marker { display: none; }
 .explain .ts-label { color: var(--text-muted); margin-bottom: var(--space-2); }
 .explain p { font-size: 15px; line-height: 20px; margin: 0 0 var(--space-2); }
 .explain p:last-child { margin-bottom: 0; }
+
+/* ───────────────────────────────────────────── Team names per crew (feature 009-team-names-per-crew) */
+.tn-cart { display: flex; align-items: center; gap: var(--space-2); width: 100%; min-height: 48px; text-align: left; color: var(--text-muted); }
+.tn-cart-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.tn-cart-name { font-size: 15px; line-height: 20px; font-weight: 700; color: var(--text); }
+.tn-cart-name.empty { font-style: italic; font-weight: 500; color: var(--text-muted); }
+.tn-cart-tag { color: var(--text-muted); }
+.tn-k { color: var(--text-muted); margin: var(--space-4) 0 var(--space-2); }
+.usual-card { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-radius: var(--radius-xl); border: 1.5px solid var(--line-strong); }
+.uc-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.uc-name { font-size: 17px; line-height: 22px; font-weight: 700; }
+.uc-stats, .uc-tag.dim { color: var(--text-muted); }
+.uc-tag { color: var(--cart-you-text); flex: none; }
+.tn-search { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-4); }
+.tn-search .nr-search { flex: 1; margin: 0; }
+.tn-list { max-height: 46vh; overflow-y: auto; -webkit-mask-image: linear-gradient(#000 85%, transparent); mask-image: linear-gradient(#000 85%, transparent); padding-bottom: var(--space-5); }
+.tn-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); width: 100%; min-height: 52px; padding: 0 var(--space-2); border-bottom: 1px solid var(--line); font-size: 17px; font-weight: 600; text-align: left; }
+.tn-row[disabled] { opacity: .55; }
+.tn-row.on { color: var(--cart-you-text); }
+.tn-row.custom { justify-content: flex-start; border: 1.5px dashed var(--line-strong); border-radius: var(--radius-xl); margin-top: var(--space-3); padding: 0 var(--space-3); }
+.tn-tag { color: var(--text-muted); flex: none; }
+.tn-tag.on { color: var(--cart-you-text); }

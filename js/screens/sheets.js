@@ -6,7 +6,7 @@ import { esc, icon, scoreClass, clock, mark, seg } from '../ui.js';
 import { fmtToPar, fmtPts, fmtSigned, maxHoleScore, componentNames, posOf, holeAt, holesLabel, matchesFor, playOrder, teeTimeName, groupIndex } from '../scoring.js';
 import { teamColor, headlineColor, shortTeam } from '../teams.js';
 import { codeField } from './home.js';
-import { handicapSheet } from './setup.js';
+import { handicapSheet, teamNameSheet } from './setup.js';
 import { crewSheets } from './crew.js';
 import { seasonSheets } from './season.js';
 
@@ -239,6 +239,7 @@ const BODIES = {
   crewRemove: (app, props) => crewSheets.crewRemove(app, props, head),
   crewNew: (app, props) => crewSheets.crewNew(app, props, head),
   seasonNew: (app, props) => seasonSheets.seasonNew(app, props, head),
+  teamName: (app, props) => teamNameSheet(app, props, head),
 
   /** Home → Join with code. */
   join() {
