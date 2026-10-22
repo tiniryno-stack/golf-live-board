@@ -230,6 +230,24 @@ card has none yet (add from the GolfPass card). OSM's hole lines carry no yardag
    A course whose fits are all loose → the trace is misregistered → `failed` with that reason rather than wrong greens.
 5. For courses with a card but no tee yardages (manual cards), fall back to today's par bands.
 
+**Refinements (Andrew, same evening):**
+- **Fingerprints, not bands.** Each card hole's fingerprint = its yardages per tee set, longest → shortest (Bridlewood 1
+  = 428 · 403 · 391 · 354). Each traced candidate's fingerprint = its tee boxes' distances to the green center, longest
+  → shortest (so the back box is assumed black, then blue, then white — no need to read tee colors off the imagery).
+  Match fingerprint to fingerprint; the fit error is the confidence.
+- **AI is the last crutch, not the brain.** The only model call is "here are greens and tee boxes" (vision — the one
+  thing code can't do). No numbering, no routing, no "which box is which tee" asked of it; those are code. Prefer
+  tracing passes that are cheap and deterministic (one overview image, maybe one zoom per unsure green) and spend AI
+  only where code can't get to confidence.
+- **Sequence as a chain, not a global guess.** Find hole 1 as the best fingerprint match near the clubhouse, then ask
+  "how well does hole 2's fingerprint match the candidates whose tees are near hole 1's green?", and so on. Doglegs and
+  winding layouts don't matter: the tee→green length is measured straight-line on the card too, and the walk green →
+  next tee is only a tie-breaker between candidates whose fingerprints both fit. Where the chain gets ambiguous, the
+  beam search we already have keeps the few best partial chains alive instead of committing early.
+- **Confidence from the fit.** A hole whose best candidate is within ~10–15 yd on every tee is `ai` with high
+  confidence; 15–25 yd → keep but flag ("check hole N", stage 4's organizer page); worse → leave the hole missing
+  rather than ship a wrong green. If most holes miss, the trace is misregistered → `failed` with that reason.
+
 Tests: Twin Creeks' OSM greens + tees as the "trace", the GolfPass yardages as the card → 18/18 numbered, and still
 18/18 with the nines' numbers shuffled; a trace shifted 40 yd → every hole flagged. Then try it for real on
 Bridlewood and Indian Creek (Indian Creek is a 36-hole club: the yardage match should also tell the two courses apart).
