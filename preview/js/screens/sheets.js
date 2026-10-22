@@ -120,6 +120,11 @@ function playersByCart(app) {
   const snap = app.snapshot;
   const groups = [];
   const teams = snap.roster.teams || [];
+  // Carts only in the cart game (Partner "Rider" Cup): solo match play and 2v2 make teams too,
+  // but there the sheet is one plain list of everyone.
+  const carts = teams.length && !snap.settings.solo && !snap.settings.pairs
+    && teams.some((t) => snap.players.filter((p) => p.teamId === t.id).length > 1);
+  if (!carts) return [{ label: '', players: snap.players, list: true }];
   if (teams.length) {
     for (const t of teams) {
       const ps = snap.players.filter((p) => p.teamId === t.id);
@@ -143,7 +148,7 @@ const BODIES = {
     if (!app.snapshot) return head('Who are you?');
     const groups = playersByCart(app)
       .map(
-        (g) => `<div class="who-group"><span class="micro">${g.teamId ? `<i class="jdot" style="--jersey:${teamColor(null, g.teamId)};margin-right:6px"></i>` : ''}${esc(g.label)}</span><div class="who-grid">${g.players
+        (g) => `<div class="who-group">${g.list ? '' : `<span class="micro">${g.teamId ? `<i class="jdot" style="--jersey:${teamColor(null, g.teamId)};margin-right:6px"></i>` : ''}${esc(g.label)}</span>`}<div class="who-grid${g.list ? ' one' : ''}">${g.players
           .map((p) => {
             const taken = app.claimed.has(p.id) && p.id !== app.me;
             return `<button class="who-btn${taken ? ' taken' : ''}" data-act="who-pick" data-v="${esc(p.id)}">
@@ -243,24 +248,34 @@ const BODIES = {
       <button class="btn ghost block" data-act="sheet-close" style="margin-top:14px">Not now</button>`;
   },
 
+  /** ⋯ → round actions only. Who you are lives on the avatar ("you" sheet). */
   menu(app) {
     const p = app.myPlayer();
+    const light = document.documentElement.dataset.theme === 'light';
     const meta = [app.code, app.event?.course?.shortName || app.event?.course?.name].filter(Boolean).join(' · ');
-    return `${head(app.event?.name || 'Round')}
-      <p class="meta" style="margin:-4px 0 16px">${esc(meta)} · ${p ? `you\u2019re <b>${esc(p.name)}</b> on this phone` : 'watching on this phone'}</p>
+    return `${head(app.event?.name || 'Round', meta)}
       <div class="stack">
         ${p ? '' : '<button class="btn primary big block" data-act="menu-pick">Pick my name</button>'}
         ${app.snapshot?.roundComplete ? `<button class="btn primary block" data-act="menu-recap">${icon('trophy', 18)} Round recap &amp; scorecards</button>` : ''}
+        ${app.snapshot ? '<button class="btn block" data-act="menu-rules">Rules</button>' : ''}
         ${app.snapshot?.game ? `<button class="btn block" data-act="menu-brief">${icon('spark', 18)} How today’s game works</button>` : ''}
         <button class="btn block" data-act="menu-share">${icon('share', 18)} Share round link</button>
-        <button class="btn block" data-act="theme">${icon(document.documentElement.dataset.theme === 'light' ? 'moon' : 'sun', 18)} ${document.documentElement.dataset.theme === 'light' ? 'Dark mode' : 'Light mode'}</button>
-        <button class="btn block" data-act="go" data-v="#/setup/${esc(app.code)}">${icon('shuffle', 18)} Run it back as a new round</button>
-        <button class="btn ghost block" data-act="menu-home">${icon('home', 18)} Go to Home</button>
-        ${p ? '<button class="btn danger block" data-act="menu-leave">Switch to watching</button>' : ''}
+        <button class="btn block" data-act="theme">${icon(light ? 'moon' : 'sun', 18)} ${light ? 'Dark mode' : 'Light mode'}</button>
+        <button class="btn ghost block" data-act="go" data-v="#/setup/${esc(app.code)}">${icon('shuffle', 18)} Run it back as a new round</button>
+        ${p ? '' : `<button class="btn ghost block" data-act="menu-home">${icon('home', 18)} Go to Home</button>`}
+      </div>`;
+  },
+
+  /** Avatar → you: your name, Go to Home, Switch to watching. */
+  you(app) {
+    const p = app.myPlayer();
+    if (!p) return head('Watching');
+    return `${head(p.name, 'You on this phone')}
+      <div class="stack">
+        <button class="btn block" data-act="menu-home">${icon('home', 18)} Go to Home</button>
+        <button class="btn danger block" data-act="menu-leave">Switch to watching</button>
       </div>
-      <p class="meta" style="margin-top:12px">${p
-        ? `Go to Home keeps you as ${esc(p.name)}; open the round again from Recent rounds. Switch to watching frees your name so the right person can pick it.`
-        : 'Go to Home any time; the round stays in Recent rounds.'}</p>`;
+      <p class="meta" style="margin-top:12px">Go to Home keeps you as ${esc(p.name)}; the round stays in Recent rounds. Switch to watching frees your name so the right person can pick it.</p>`;
   },
 
   leave(app) {
@@ -269,7 +284,7 @@ const BODIES = {
       <p class="soft" style="margin:0 0 16px">${esc(name)} becomes open again and this phone watches. Picked the wrong name? This is how you fix it: switch to watching, then pick the right one.</p>
       <div class="stack">
         <button class="btn danger big block" data-act="leave-confirm">Switch to watching</button>
-        <button class="btn ghost block" data-act="round-menu">Cancel</button>
+        <button class="btn ghost block" data-act="you-menu">Cancel</button>
       </div>`;
   },
 
@@ -569,6 +584,8 @@ export const actions = {
     app.refreshClaimed();
     app.openSheet('who', {});
   },
+  'you-menu': (el, ev, app) => app.openSheet('you', {}),
+  'menu-rules': (el, ev, app) => app.openSheet('rules', {}),
   'leave-confirm': (el, ev, app) => app.leave(),
   'menu-leave': (el, ev, app) => app.openSheet('leave', {}),
   'menu-home': (el, ev, app) => {

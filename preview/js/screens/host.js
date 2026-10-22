@@ -114,7 +114,7 @@ function courseAndFinish(app, d) {
     <div class="micro" style="margin:0 0 6px">Practice rounds &amp; cleanup</div>
     <p class="help" style="margin:0 0 12px"><b>Reset</b> clears every score (and reopens a finalized round) but keeps players, carts, settings and everyone\u2019s phones joined, so you can replay from hole 1. <b>Delete</b> removes the round for everyone.</p>
     <div class="stack" style="gap:8px;margin:0 0 8px">
-      <button class="btn ghost block" data-act="host-reset">Reset scores</button>
+      <button class="btn danger block" data-act="host-reset">Reset scores</button>
       <button class="btn danger block" data-act="host-delete">Delete round</button>
     </div>`;
 }

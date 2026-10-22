@@ -195,17 +195,24 @@ function sourceLine(app, p, hole) {
 
 /** One-tap score pad: birdie … triple (eagle on a par 5) + the max, par outlined. */
 function padChips(app, p, hole) {
+  // Every number from birdie (eagle on a par 5) up to the cap, no gaps: at least double bogey,
+  // at most double par (or the round's max, if lower).
   const snap = app.snapshot;
   const par = snap.holes[hole - 1].par;
   const max = maxHoleScore(snap.course, snap.settings, hole, p.dots[hole - 1]);
   const names = { '-2': 'Eagle', '-1': 'Birdie', 0: 'Par', 1: 'Bogey', 2: 'Double', 3: 'Triple' };
   const from = par >= 5 ? par - 2 : par - 1;
+  const top = Math.min(max, Math.max(par + 2, Math.min(max, par * 2)));
   const vals = [];
-  for (let v = from; v <= Math.min(from + 4, max); v++) vals.push([v, names[v - par]]);
-  if (max > from + 4) vals.push([max, 'Max']);
+  for (let v = from; v <= top; v++) vals.push([v, v === max && v - par > 3 ? 'Max' : names[v - par] || `+${v - par}`]);
   const g = p.gross[hole - 1];
   return vals.map(([v, label]) => `<button class="pad-chip${v === par ? ' par' : ''}${v === g ? ' on' : ''}" data-act="pad-pick" data-pid="${esc(p.id)}" data-v="${v}" aria-label="${esc(p.name)}: ${v}, ${label}">
       ${mark(v, par, 30, { cls: 'pad-mk' })}<span>${label}</span></button>`).join('');
+}
+
+/** The open pad pushes the page up (the Enter page scrolls), never scrolls inside the group box. */
+function padIntoView() {
+  requestAnimationFrame(() => document.querySelector('.grow.open')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }));
 }
 
 function groupRow(app, p, hole, locked) {
@@ -224,7 +231,7 @@ function groupRow(app, p, hole, locked) {
       <span class="gname"><span class="ellipsis">${esc(p.name)}${strokeDots(p.dots[hole - 1])}</span><span class="gsub ellipsis${src.cls}">${esc(src.text)}</span></span>
       ${right}
     </button>
-    ${open ? `<div class="pad${foldIn(app.ui)}" style="--fold-h:160px">${padChips(app, p, hole)}</div>` : ''}
+    ${open ? `<div class="pad${foldIn(app.ui)}" style="--fold-h:124px">${padChips(app, p, hole)}</div>` : ''}
   </div>`;
 }
 
@@ -265,7 +272,7 @@ function individualView(app, h, parts) {
   const strip = app.isFinal()
     ? `<span class="teams">${icon('lock', 13)} Fixing a finalized round</span><button class="link-btn relock" data-act="final-relock">Done</button>`
     : `<span class="teams">${kind}</span>${pos ? `<span class="status">${esc(pos)}</span>` : ''}`;
-  return `<div class="enter nr solo-enter">
+  return `<div class="enter nr solo-enter${others.some((p) => app.ui.pad?.hole === h && app.ui.pad?.pid === p.id) ? ' pad-open' : ''}">
       <div class="hero">${parts.holeRow}<div class="matchup-line">${strip}</div></div>
       <div class="sheet">
         <section class="cart mine focus you-card${locked ? ' locked' : ''}" style="--jersey:var(--cart-you)"${tap}>
@@ -483,6 +490,7 @@ export default {
       app.ui.pad = app.ui.pad?.pid === pid && app.ui.pad?.hole === h ? null : { pid, hole: h };
       app.ui.foldAt = Date.now();
       app.render();
+      padIntoView();
     },
     'pad-pick': (el, ev, app) => {
       // Car-ride mode: pick a score and the pad jumps to the next player still waiting.
@@ -494,6 +502,7 @@ export default {
       const next = ids.find((id) => id !== pid && snap.playerById.get(id).gross[h - 1] == null && app.canEdit(id, h));
       app.ui.pad = next ? { pid: next, hole: h } : null;
       app.render();
+      padIntoView();
     },
     'pin-open': (el, ev, app) => app.unlockFinal(),
     'final-relock': (el, ev, app) => {

@@ -1238,7 +1238,7 @@ Object.assign(actions, {
   },
   'round-menu': () => app.openSheet('menu', {}),
   'name-chip': () => {
-    if (app.me) app.openSheet('menu', {});
+    if (app.me) app.openSheet('you', {});
     else {
       refreshClaimed();
       app.openSheet('who', {});

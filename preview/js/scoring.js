@@ -32,13 +32,13 @@ export const DEFAULT_SETTINGS = {
 
 /** Which games fit a player count (designspec §6 ③). */
 export const GAMES = [
-  { id: 'scorecard', name: 'Scorecard only', count: 'ANY NUMBER', min: 1, max: 99, desc: 'Everyone plays their own ball. One leaderboard, net or gross.' },
-  { id: 'match', name: 'Match play', count: '2–6 PLAYERS', min: 2, max: 6, desc: 'Low net score wins each hole for 1 point. Ties split it.' },
-  { id: '2v2', name: '2v2', count: 'EXACTLY 4', min: 4, max: 4, desc: 'Two teams of two in one foursome. Partners can switch every 6.' },
+  { id: 'scorecard', name: 'Scorecard only', count: 'ANY NUMBER', min: 1, max: 99, desc: 'Own ball, one leaderboard.' },
+  { id: 'match', name: 'Match play', count: '2–6 PLAYERS', min: 2, max: 6, desc: 'Low net wins each hole. Ties split.' },
+  { id: '2v2', name: '2v2', count: 'EXACTLY 4', min: 4, max: 4, desc: 'Two teams of two in one foursome.' },
   {
     id: 'carts', name: 'Partner “Rider” Cup', count: '6 OR 8 PLAYERS', min: 6, max: 8, sizes: [6, 8],
-    desc: '4 carts of 2. Opponents rotate every 6 holes across tee times.',
-    desc6: '3 carts of 2. Every cart plays both other carts, all 18 holes.',
+    desc: '4 carts of 2. Opponents rotate.',
+    desc6: '3 carts of 2. Everyone plays everyone.',
   },
 ];
 

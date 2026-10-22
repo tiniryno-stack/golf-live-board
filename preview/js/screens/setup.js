@@ -541,7 +541,6 @@ function playersView(s) {
 function gameView(s) {
   const n = s.players.length;
   const pick = gameOf(s);
-  const maxLbl = { doublePar: 'Double par', netDoubleBogey: 'Net double bogey', none: 'None' }[s.settings.maxHoleScore] || 'Double par';
   const next = pick === '2v2' || pick === 'carts';
   return `${topBar(s)}${headline(`Step 3 · Game · ${n} player${n === 1 ? '' : 's'}`, 'Pick a game', 'Games that don’t fit your player count are greyed out.')}
     <div class="game-list">${GAMES.map((g) => {
@@ -549,11 +548,10 @@ function gameView(s) {
       const on = g.id === pick;
       return `<button class="game-opt${on ? ' on' : ''}" data-act="setup-game" data-v="${g.id}" ${fix ? 'aria-disabled="true"' : ''} aria-pressed="${on}">
         <span class="radio"></span>
-        <span style="flex:1;min-width:0"><span class="spread"><b>${esc(g.name)}</b><span class="mono g-count">${g.count}</span></span>
-        <span class="g-desc">${esc(n === 6 && g.desc6 ? g.desc6 : g.desc)}</span>${fix ? `<span class="g-fix">${esc(fix)}</span>` : ''}</span>
+        <span style="flex:1;min-width:0"><span class="spread"><b class="ellipsis">${esc(g.name)}</b><span class="mono g-count">${g.count}</span></span>
+        <span class="g-desc ellipsis">${esc(n === 6 && g.desc6 ? g.desc6 : g.desc)}</span>${fix ? `<span class="g-fix">${esc(fix)}</span>` : ''}</span>
       </button>`;
     }).join('')}</div>
-    <button class="nr-row" data-act="setup-max"><span style="flex:1">Max score per hole</span><b>${maxLbl}</b>${icon('fwd', 16)}</button>
     ${pick === 'match' ? '<p class="meta nr-hint">Match play: everyone plays their own ball. Each hole is worth 1 point; low net score takes it, a tie for low splits it.</p>' : ''}
     <div class="nr-foot">
       ${next ? '' : '<p class="meta" style="text-align:center;margin:0 0 8px">2v2 and Partner “Rider” Cup go to one more screen to set teams.</p>'}
