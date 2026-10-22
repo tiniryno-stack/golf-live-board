@@ -59,7 +59,7 @@ function grid(app, g, from, mode, cur, tint, curColor) {
       if (v != null) { sum += v; n++; }
       const pending = i === ci && v == null;
       const editable = app.canEdit(p.id, h.n);
-      const inner = pending ? `<span class="mk cg-pend" style="--mk:26px;border-color:${curColor};color:${curColor}">·</span>` : mark(v, h.par, 26);
+      const inner = pending ? `<span class="mk cg-pend" style="--mk:24px;border-color:${curColor};color:${curColor}">·</span>` : mark(v, h.par, 24);
       return `<button class="cg-c cell${col(i)}${editable ? ' editable' : ''}" ${editable ? 'data-act="cell-edit"' : ''} data-hold="cell-who" data-pid="${esc(p.id)}" data-h="${h.n}" aria-label="${esc(p.name)} hole ${h.n}: ${v ?? 'no score'}">${inner}</button>`;
     }).join('');
     return `<div class="cg-row cg-p"><button class="cg-l cg-name ellipsis" data-act="card-player" data-v="${esc(p.id)}">${esc(p.name)}</button>${cells}<span class="cg-t mono">${n ? sum : '–'}</span></div>`;
