@@ -112,8 +112,7 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
   or clear a score the player entered on their own phone (`updated_by` = their name) when someone else
   sends a different number → `{ ok: false, error: 'own_entry', strokes, updated_by }`; the app takes their
   number and toasts why. The player can always change it; `admin_upsert_score` still overrides.
-  **In `schema.sql` + the mock, NOT yet on the live database:** apply it (and the `_setting_label`
-  additions) with `apply_migration` right before the branch merges to `main` (BUILD-PLAN.md §8).
+  **Live since Oct 22** (migration `own_entry_wins_and_setting_labels`, with the `_setting_label` additions).
 - **Applying changes:** additive SQL (`create or replace function`, `grant`) works with
   `apply_migration`. Anything with drop / delete / revoke tends to stall on an approval prompt —
   give Andrew a snippet to run in Supabase → SQL Editor → New snippet instead. Always mirror the
@@ -264,8 +263,6 @@ npm run test:smoke     # 256 checks: multi-phone flows against the mock (join, s
   courses table = V2). "Start now, finish the card during the round" not built.
 - **Split point played for real Oct 20** (Bridlewood, 3 players, switched on mid-round). Worked;
   Andrew may want some optimization later but asked for no changes for now.
-- `_setting_label` in the DB doesn't know `matchBonus` (audit log shows the raw key): one-line
-  additive migration if wanted.
 - The recap images use the viewer's perspective (their cart green); a neutral "everyone's jersey"
   variant could be nicer for group-chat sharing.
 - **OpenGolfAPI coverage (checked Oct 19):** 25 of 29 courses in Flower Mound / Plano / Richardson /
