@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tab bar demo</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600;700&display=swap">
+<style>
+/* Values match design-system/tokens.css. glass + glass-line are new tokens (see SPEC.md). */
+:root{--bg:#0a0b0d;--surface-1:#15171b;--surface-2:#1f2227;--text:#f4f5f7;--text-muted:#a7acb4;--line:#2b2f36;--button:#f4f5f7;--on-button:#0a0b0d;--glass:rgba(24,26,31,0.72);--glass-line:rgba(255,255,255,0.09);--shadow-float:0 8px 24px rgba(0,0,0,0.45)}
+html.light{--bg:#f2f3f5;--surface-1:#ffffff;--surface-2:#e8eaee;--text:#0b0d10;--text-muted:#4f555e;--line:#d5d9df;--button:#0b0d10;--on-button:#ffffff;--glass:rgba(255,255,255,0.74);--glass-line:rgba(11,13,16,0.08);--shadow-float:0 8px 24px rgba(11,13,16,0.12)}
+*{box-sizing:border-box}
+body{margin:0;background:#888;font-family:Geist,system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;gap:16px;padding:24px}
+.phone{width:393px;height:600px;background:var(--bg);color:var(--text);border-radius:32px;position:relative;overflow:hidden}
+.list{height:100%;overflow:auto;padding:20px 16px 110px}
+.row{display:flex;justify-content:space-between;padding:16px 4px;border-bottom:1px solid var(--line);font-size:17px;font-weight:600}
+.row b{font-family:'Geist Mono',monospace;font-size:24px}
+.tabbar{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(26px + env(safe-area-inset-bottom));display:flex;gap:4px;padding:6px;border-radius:32px;background:var(--glass);-webkit-backdrop-filter:blur(22px) saturate(1.8);backdrop-filter:blur(22px) saturate(1.8);border:1px solid var(--glass-line);box-shadow:var(--shadow-float)}
+.tab{height:52px;min-width:52px;border:0;border-radius:26px;display:flex;align-items:center;justify-content:center;padding:0 15px;background:transparent;color:var(--text-muted);font:inherit;cursor:pointer;position:relative;transition:background .3s cubic-bezier(.2,.9,.3,1),padding .3s cubic-bezier(.2,.9,.3,1),color .3s}
+.tab .label{font-size:15px;font-weight:700;max-width:0;opacity:0;overflow:hidden;white-space:nowrap;transition:max-width .3s cubic-bezier(.2,.9,.3,1),opacity .2s,margin .3s}
+.tab[aria-current="page"]{background:var(--button);color:var(--on-button);padding:0 18px 0 16px}
+.tab[aria-current="page"] .label{max-width:90px;opacity:1;margin-left:8px}
+.tab:active{transform:scale(.96)}
+.tab:focus-visible{outline:2px solid var(--text);outline-offset:2px}
+.dot{position:absolute;top:12px;right:12px;width:8px;height:8px;border-radius:4px;background:var(--text);box-shadow:0 0 0 2px var(--surface-1)}
+.tab[aria-current="page"] .dot{display:none}
+@media (prefers-reduced-motion:reduce){.tab,.tab .label{transition:none}}
+.controls button{font:inherit;padding:10px 16px;border-radius:10px;border:0;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="controls"><button id="theme">Toggle light / dark</button> <button id="dot">Toggle Enter dot</button></div>
+<div class="phone">
+  <div class="list" id="list"></div>
+  <nav class="tabbar" aria-label="Round">
+    <button class="tab" data-tab="Enter" aria-label="Enter"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4h11l-2 4 2 4H5"/></svg><span class="label">Enter</span><span class="dot" id="enterDot"></span></button>
+    <button class="tab" data-tab="Matches" aria-label="Matches" aria-current="page"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8.5" cy="12" r="5"/><circle cx="15.5" cy="12" r="5"/></svg><span class="label">Matches</span></button>
+    <button class="tab" data-tab="Board" aria-label="Board"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h11M4 18h7"/></svg><span class="label">Board</span></button>
+    <button class="tab" data-tab="Card" aria-label="Card"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18M9 4v16M15 4v16"/></svg><span class="label">Card</span></button>
+  </nav>
+</div>
+<script>
+const list=document.getElementById('list');
+['Mitchell','Andrew','Justin','Peter','Mike','Tyler','Sam','Jake','Chris','Sean'].forEach((n,i)=>{list.insertAdjacentHTML('beforeend',`<div class="row">${n}<b>${(i*1.25).toFixed(2).replace('.00','')}</b></div>`)});
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{document.querySelectorAll('.tab').forEach(x=>x.removeAttribute('aria-current'));t.setAttribute('aria-current','page')}));
+document.getElementById('theme').onclick=()=>document.documentElement.classList.toggle('light');
+document.getElementById('dot').onclick=()=>{const d=document.getElementById('enterDot');d.hidden=!d.hidden};
+</script>
+</body>
+</html>
