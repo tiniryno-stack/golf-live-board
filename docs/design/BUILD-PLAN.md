@@ -4,7 +4,7 @@ Branch `design/design-system`, from `main` at `bfa48a2` (Oct 21). Source of trut
 `docs/design/design-system/` (README rules, `tokens.css`, `components/*/README.md`). Product rules:
 `designspec.md`. Mockups in `screens/` are reference only.
 
-Status: **plan only, nothing built yet.** Takes over the open items from the first `PLAN.md`
+Status (Oct 21 evening): **sections 2–6 built** (tokens, colors, type, shared pieces, all 7 new screens) plus the decided game changes; section 7 polish of the older screens is next, driven by Andrew trying the app. Takes over the open items from the first `PLAN.md`
 (section 9). Andrew answered the spec's open items, tee times and the Rules sheet on Oct 21 (section 9).
 Questions still open are marked **Ask**; until he answers, the default in bold is what gets built.
 

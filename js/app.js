@@ -1166,6 +1166,17 @@ function renderTabbar() {
 }
 
 function renderSyncChip() {
+  // Connection pill (design system → Toast): under the header while offline with scores waiting to send.
+  const off = app.code && (typeof navigator !== 'undefined' && navigator.onLine === false) && app.unsynced > 0;
+  let pill = document.getElementById('netpill');
+  if (off && !pill) {
+    pill = document.createElement('div');
+    pill.id = 'netpill';
+    pill.className = 'netpill';
+    pill.setAttribute('role', 'status');
+    pill.innerHTML = '<span class="np-dot"></span>Reconnecting… scores will send when you’re back';
+    document.body.append(pill);
+  } else if (!off && pill) pill.remove();
   const el = document.querySelector('[data-sync]');
   if (!el) return;
   const n = app.unsynced;
@@ -1173,6 +1184,8 @@ function renderSyncChip() {
   el.textContent = n ? `${n} unsynced` : app.live === 'live' ? 'Synced' : app.live === 'reconnecting' ? 'Reconnecting' : 'Synced';
 }
 app.renderSyncChip = renderSyncChip;
+window.addEventListener('online', () => renderSyncChip());
+window.addEventListener('offline', () => renderSyncChip());
 
 function renderSheet() {
   sheets.render($('sheet'), app);
