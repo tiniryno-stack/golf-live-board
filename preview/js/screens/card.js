@@ -5,9 +5,9 @@
 // Tap a cell from your matchup to fix it (organizer: any cell); long-press = who entered it.
 // Tap a name for the player card.
 
-import { esc, icon, seg, mark, clock, foldIn } from '../ui.js?v=2d64e16';
-import { foursomeFor, nextHoleFor, playOrder, HOLES } from '../scoring.js?v=2d64e16';
-import { teamColor, shortTeam } from '../teams.js?v=2d64e16';
+import { esc, icon, seg, mark, clock, foldIn } from '../ui.js?v=e634f01';
+import { foursomeFor, nextHoleFor, playOrder, HOLES } from '../scoring.js?v=e634f01';
+import { teamColor, shortTeam } from '../teams.js?v=e634f01';
 
 /** Foursomes on a hole, yours first (cart order inside: your cart, then the other). */
 function groupsAt(app, hole) {
