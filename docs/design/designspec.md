@@ -1,8 +1,8 @@
 # Golf Live Board — Design Spec
 
 Running notes from design sessions. Source of truth for rules the screens can't show on their own.
-Visual reference: the "Golf Live Board — Visual Directions" Design canvas (direction A · Night Round).
-Last updated: 2026-10-21
+Visual reference: the "Golf Live Board — Visual Directions" design board (rows 1–5 are the current design; ARCHIVE is reference only). See §11 for links.
+Last updated: 2026-10-22
 
 ---
 
@@ -15,7 +15,7 @@ Last updated: 2026-10-21
 - Dark is default; every screen has a light theme.
 - Phone-first. Design target is **iPhone 15 (393 × 852)**; must still work on iPhone SE.
 - Tap targets ≥ 48px. Readable in direct sun.
-- Bottom tab bar: **Enter · Matches · Board · Card**.
+- Bottom tab bar: **Enter · Matches · Board · Card** (floating glass, icons only; see §9).
 
 ### Color rules
 - **Your own cart/team is always green on your phone.** Other carts: A orange, B blue, C pink, D violet.
@@ -211,9 +211,91 @@ Added from the two UI/UX video takeaways. The design system ("Golf Live Board") 
 - Setup: player count drives available games; removed "Never" from opponent switching (8-somes should play everyone).
 - Setup: game is always picked on its own step after Players; team screens come after and never re-ask the game.
 - Applied UI/UX video takeaways: 6 type styles, green only for you, button and input states, toasts, bottom sheets, empty states, light-mode shadows, gesture rules.
+- Tab bar: frosted glass, full width, icons only, calm sliding highlight. Rejected: labels that grow (too busy), a live hole row inside the dock (too much info), a big separate Enter button.
+- Status like "Sean hasn't entered" never goes in the tab bar: a quiet dot on Enter, plus (later) a floating alert chip shown only when needed.
+- Foursome split point Matches = "the race" (lock line), chosen over hole chips and a momentum chart.
+- Split point tiebreak: most outright wins, then a shared win.
+- The race's bottom card: Points by hole by default, What this hole does near the end. Rejected: a static "Now · hole X" card, head-to-head records.
+- Design work reaches the coder as numbered feature folders (§11); a handed-off feature is never edited, and changes get a new number.
 
 ## 8. Open items
 - **Name for the 8-player cart game.** Candidates: Ryder Cup Pairs (likes it; "Ryder Cup" is a trademark, fine for a private app but worth avoiding if published), Cart Cup, Pairs Rotation, Round Robin.
 - Conflict rule when two people enter different scores for the same player.
 - Score-entry stepper for the narrow scorecard-check cells (tap a cell → big stepper).
 - Whether 6-player rounds get a 3-cart version of the cart game.
+- The floating "hasn't entered" alert chip above the tab bar: trigger rules are sketched (current hole incomplete, you've left Enter for about a minute), but no design yet.
+- Matches for other individual games (match play with 2–3 or 5–6 players, stroke play): the race is designed for 4. Decide whether it scales to 2–6 lanes.
+- Matches empty state for the foursome race (before hole 1 is complete).
+
+## 9. Tab bar (all in-round screens)
+- Floating frosted-glass capsule, full width with 16px gutters, 24px above the bottom (plus the safe area).
+- **Icons only, no labels.** The screen title says where you are, so every in-round screen needs a clear title (Hole 11, Matches, Board, Scorecard).
+- Four equal tabs (about 87×56 each on iPhone 15). Tabs never change size.
+- The active tab has a soft highlight one tab wide. Switching tabs slides the highlight over 280ms with an ease-out curve: no bounce, no growing, no label animation. No animation with reduced motion.
+- **Dot on Enter:** shows when your group's current hole is missing scores. Neutral color, hidden while you're on Enter.
+- The bar never shows status text and never changes height. It hides during setup and while a bottom sheet is open.
+- The old settings button beside the bar moves into the header's ⋯ round menu.
+- New tokens: `glass`, `glass-line`. Spec: feature 001.
+
+## 10. Matches: foursome split point ("the race")
+For an **individual 4-player split-point game** (no teams). Team and cart games keep the §3 screen.
+
+**Game rules**
+- 1 point per hole, 18 total. Low score takes the point; ties for low split it (½, ⅓, ¼).
+- A hole counts once all 4 scores are in.
+- Winner: most points after 18. Tiebreak: **most outright wins** (holes won alone), then a shared win.
+
+**The math**
+- `left` = 18 − holes completed. The **lock line** = 2nd place's points + `left`.
+- The leader has **locked** it when their lead is bigger than `left`. A lead exactly equal to `left` means the chaser can only tie, and then the tiebreak decides.
+- A player is **OUT** when their points + `left` < the leader's points.
+
+**Screen, top to bottom**
+1. **Header:** `SPLIT POINT · THRU 7`, a headline (You lead by 1 / All square with Andrew / 18 decides it / You've locked it / Mitchell wins), a one-line subline, and a Rules button that opens the rules sheet.
+2. **Race card:** one lane per player, sorted by points, on a 0–18 track.
+   - Each lane has a filled bar, a puck with the player's points (`3¼`, green for you), and a dotted tail showing how far they can still climb.
+   - A dashed **LOCK** line crosses all lanes and moves in every hole.
+   - OUT players fade.
+   - The track is inset 20px at both ends. The LOCK label right-aligns near 18 and left-aligns near 0, so nothing touches the card edge (feature 004).
+3. **Bottom card**, which switches on its own:
+   - **Points by hole** (default): 18 cells per player, each filled by their share of the hole (full, half, quarter). Unplayed holes are dashed.
+   - **What this hole does**: from hole 16, or from hole 13 when the top two are within 1 point, or when the hole could lock it. Up to 4 outcomes worded from your side: UP x, STILL UP, ALL SQUARE, DOWN x, LOCKED, YOU WIN, [NAME] WINS.
+   - No toggle and no tap action.
+4. **Tab bar** (§9), with Matches active.
+
+**Rules**
+- No team colors in an individual game: you're green, everyone else is neutral.
+- Fractions use real glyphs.
+
+Specs: features 002 (race), 003 (bottom card), 004 (track edges).
+
+## 11. Where things live and how work is handed off
+**Design (claude.ai, saved to Andrew's account)**
+- Design board, "Golf Live Board — Visual Directions": https://claude.ai/artifact/VGVHfzakP4NtQxMQ9rtoJF
+  - Rows: 1 In the round · 2 Empty states, edge cases, sheets · 3 Home and new round · 4 Scorecard check · 5 Components · ARCHIVE (explored, not chosen).
+- Design system, "Golf Live Board" (tokens, rules, 17 components): https://claude.ai/artifact/QwDPXUHrooVcCrx3t8ezxM
+
+**Repo (GitHub, built by Claude Code in the cloud)**
+- `docs/design/designspec.md`: this file.
+- `docs/design/design-system/`: tokens.css, README rules, component notes.
+- `docs/design/screens/`: the original handoff mockups.
+- `docs/design/features/NNN-name/`: one folder per feature, with SPEC.md (the source of truth, plus a Status line), screenshots in dark and light, and optional mockups.
+
+**Features so far**
+| # | Feature |
+|---|---|
+| 001 | Tab bar: glass, icons only, full width, sliding highlight |
+| 002 | Foursome Matches: the race |
+| 003 | Race bottom card: Points by hole / What this hole does |
+| 004 | Race track edges: inset and label anchoring |
+
+The next feature is **005**.
+
+**Workflow**
+1. Design it in a Cowork session, which updates the board and the design system.
+2. Package it as `NNN-name.zip`, a single feature folder.
+3. Attach it in Claude Code with "Build the attached NNN-name."
+4. The coder unzips it into `docs/design/features/`, plans, builds, commits, and pushes.
+5. A handed-off feature is never edited; changes come as a new number.
+6. Coder sessions don't run full test suites or screenshots after small changes. Andrew tests on his phone.
+7. Before leaving a long design session, update this file. Start new sessions from the board and design system links above.
