@@ -74,12 +74,14 @@ function draw(from){const cv=$("cv"),ctx=cv.getContext("2d"),W=cv.width;ctx.clea
  // local yards, rotated so the line of play points up
  const y=yards(from,h.green);const rot=-y.bearing;const toXY=(p)=>{const ex=(p[1]-c[1])*cl*K,ny=(p[0]-c[0])*K;const rx=ex*Math.cos(rot)-ny*Math.sin(rot),ry=ex*Math.sin(rot)+ny*Math.cos(rot);return[rx,ry];};
  const pts=h.green.map(toXY);let m=1;for(const p of pts)m=Math.max(m,Math.abs(p[0]),Math.abs(p[1]));const s=(W*0.36)/m;const X=(p)=>W/2+p[0]*s,Y=(p)=>W/2-p[1]*s;
- const cs=getComputedStyle(document.documentElement);ctx.fillStyle=cs.getPropertyValue("--surface-2");ctx.strokeStyle=cs.getPropertyValue("--muted");ctx.lineWidth=2;ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(X(p),Y(p)):ctx.moveTo(X(p),Y(p)));ctx.closePath();ctx.fill();ctx.stroke();
+ const cs=getComputedStyle(document.documentElement);ctx.fillStyle=cs.getPropertyValue("--surface-2");ctx.strokeStyle=cs.getPropertyValue("--muted");ctx.lineWidth=2;ctx.lineJoin="round";smoothPath(ctx,pts.map(p=>[X(p),Y(p)]));ctx.fill();ctx.stroke();
  // front / back thirds
  ctx.strokeStyle=cs.getPropertyValue("--line");ctx.lineWidth=1;const ys=pts.map(p=>p[1]),lo=Math.min(...ys),hi=Math.max(...ys);for(const f of[1/3,2/3]){const yy=lo+(hi-lo)*f;ctx.beginPath();ctx.moveTo(W*0.1,W/2-yy*s);ctx.lineTo(W*0.9,W/2-yy*s);ctx.stroke();}
  ctx.fillStyle=cs.getPropertyValue("--fg");ctx.beginPath();ctx.arc(W/2,W/2,5,0,7);ctx.fill();
  // you: an arrow at the bottom pointing up the line of play
  ctx.fillStyle=cs.getPropertyValue("--good");ctx.beginPath();ctx.moveTo(W/2,W*0.9);ctx.lineTo(W/2-7,W*0.97);ctx.lineTo(W/2+7,W*0.97);ctx.closePath();ctx.fill();}
+// Closed Catmull-Rom spline through the outline points, drawn as cubic Béziers (display only; yardages use the raw points).
+function smoothPath(ctx,p){const n=p.length;if(n<3){ctx.beginPath();p.forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1]));ctx.closePath();return;}ctx.beginPath();ctx.moveTo(p[0][0],p[0][1]);for(let i=0;i<n;i++){const p0=p[(i-1+n)%n],p1=p[i],p2=p[(i+1)%n],p3=p[(i+2)%n];ctx.bezierCurveTo(p1[0]+(p2[0]-p0[0])/6,p1[1]+(p2[1]-p0[1])/6,p2[0]-(p3[0]-p1[0])/6,p2[1]-(p3[1]-p1[1])/6,p2[0],p2[1]);}ctx.closePath();}
 function render(){const h=H();$("title").textContent="Hole "+hole;$("par").textContent="Par "+h.par;$("prev").disabled=hole<=1;$("next").disabled=hole>=18;$("walkLbl").hidden=mode!=="sim";$("pct").textContent=$("walk").value+"%";
  const from=mode==="sim"?simPos():pos;const gps=$("gps"),st=$("state");
  if(!from){$("front").textContent=$("mid").textContent=$("back").textContent="—";draw(h.tee);gps.textContent="GPS · finding you";st.textContent=mode==="live"?(st.dataset.err||"Waiting for a fix…"):"";return;}
