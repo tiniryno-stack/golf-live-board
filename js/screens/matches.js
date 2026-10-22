@@ -266,7 +266,11 @@ function splitView(app) {
     holes: raceHoles,
     me, lastHole: order[HOLES - 1],
   });
-  const pct = (v) => `${(Math.max(0, Math.min(HOLES, v)) / HOLES) * 100}%`;
+  // Inset track (feature 004): 0 and 18 sit 20px in from each end, so pucks and the lock line never touch the edge.
+  const frac = (v) => Math.max(0, Math.min(HOLES, v)) / HOLES;
+  const pos = (v) => `calc(20px + (100% - 40px) * ${frac(v)})`;
+  const span = (v) => `calc((100% - 40px) * ${frac(v)})`;
+  const anchor = (v) => (frac(v) > 0.78 ? ' right' : frac(v) < 0.22 ? ' left' : '');
   // Lock line slides from where it was to where it is now (the screen redraws, so animate by hand).
   const lockTo = r.done && !r.finished ? Math.min(HOLES, r.lock) : null;
   const lockFrom = lastLock != null && lockTo != null && lastLock !== lockTo ? lastLock : lockTo;
@@ -276,16 +280,16 @@ function splitView(app) {
   }));
   lastLock = lockTo;
   const lanes = r.rows.map((row) => {
-    const puck = `<span class="rc-puck mono${row.me ? ' me' : ''}" style="left:${pct(row.points)}">${fmtPts(row.points)}</span>`;
-    const tail = row.reach ? `<i class="rc-tail" style="left:${pct(row.reach[0])};width:calc(${pct(row.reach[1] - row.reach[0])})"></i>` : '';
+    const puck = `<span class="rc-puck mono${row.me ? ' me' : ''}" style="left:${pos(row.points)}">${fmtPts(row.points)}</span>`;
+    const tail = row.reach ? `<i class="rc-tail" style="left:${pos(row.reach[0])};width:${span(row.reach[1] - row.reach[0])}"></i>` : '';
     return `<div class="rc-lane${row.out ? ' out' : ''}">
       <div class="rc-who"><div class="rc-name ellipsis${row.me ? ' me' : ''}">${esc(row.name)}</div><div class="rc-rank mono">${row.rankLabel}</div></div>
-      <div class="rc-track"><i class="rc-rail"></i><i class="rc-fill${row.me ? ' me' : ''}" style="width:${pct(row.points)}"></i>${tail}${puck}</div>
+      <div class="rc-track"><i class="rc-rail"></i><i class="rc-fill${row.me ? ' me' : ''}" style="width:${span(row.points)}"></i>${tail}${puck}</div>
     </div>`;
   }).join('');
   const chaser = r.chaser ? (r.chaser === me ? 'you' : name(r.chaser)) : '';
   const lock = lockTo != null
-    ? `<div class="rc-lock" style="--at:${lockFrom / HOLES}"><span class="rc-lock-l mono">LOCK ${fmtPts(r.lock)}</span></div>` : '';
+    ? `<div class="rc-lock" style="--at:${lockFrom / HOLES}"><span class="rc-lock-l mono${anchor(lockTo)}">LOCK ${fmtPts(r.lock)}</span></div>` : '';
   const explain = r.done < 6 && !r.finished && r.chaser
     ? `<p class="rc-explain">The <b>lock line</b> is the most ${esc(chaser)} can still reach. Get past it and the match is yours. Dashes show how far each player can still climb.</p>` : '';
   // Bottom card (feature 003-race-bottom): Points by hole, or What this hole does when it matters.

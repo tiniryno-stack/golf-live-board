@@ -1359,9 +1359,9 @@ details.fold summary::-webkit-details-marker { display: none; }
 .rc-name { font-size: 15px; font-weight: 700; color: var(--text); }
 .rc-name.me { color: var(--cart-you-text); }
 .rc-rank { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
-.rc-track { flex: 1; position: relative; height: 28px; margin-right: 18px; }
-.rc-rail { position: absolute; left: 0; right: -18px; top: 13px; height: 2px; background: var(--line); }
-.rc-fill { position: absolute; left: 0; top: 11px; height: 6px; border-radius: 3px; background: var(--text-muted); transition: width .5s; }
+.rc-track { flex: 1; position: relative; height: 28px; }
+.rc-rail { position: absolute; left: 20px; right: 20px; top: 13px; height: 2px; background: var(--line); }
+.rc-fill { position: absolute; left: 20px; top: 11px; height: 6px; border-radius: 3px; background: var(--text-muted); transition: width .5s; }
 .rc-fill.me { background: var(--cart-you); }
 .rc-tail { position: absolute; top: 12px; height: 4px; border-radius: 2px; opacity: .55; background: repeating-linear-gradient(90deg, var(--text-muted) 0 3px, transparent 3px 6px); }
 .rc-puck {
@@ -1372,9 +1372,15 @@ details.fold summary::-webkit-details-marker { display: none; }
 .rc-puck.me { background: var(--cart-you); color: var(--on-button); }
 .rc-lane.out .rc-puck { background: var(--text-muted); }
 /* the lock line: one dashed vertical across every lane at the lock value (track = lane minus 86px name column, minus 18px end room) */
-.rc-lock { position: absolute; top: 0; bottom: -2px; left: calc(86px + (100% - 104px) * var(--at)); width: 0; border-left: 2px dashed var(--text); opacity: .8; transition: left .5s cubic-bezier(.2, .9, .3, 1); pointer-events: none; z-index: 1; }
-.rc-lock-l { position: absolute; top: 0; transform: translateX(-50%); font-size: 12px; font-weight: 700; letter-spacing: .06em; white-space: nowrap; color: var(--text); background: var(--surface-1); padding: 0 4px; }
-.rc-axis { display: flex; justify-content: space-between; margin: 4px 18px 0 86px; font-size: 12px; color: var(--text-muted); }
+.rc-lock { position: absolute; top: 0; bottom: -2px; left: calc(106px + (100% - 126px) * var(--at)); width: 0; border-left: 2px dashed var(--text); opacity: .8; transition: left .5s cubic-bezier(.2, .9, .3, 1); pointer-events: none; z-index: 1; }
+.rc-lock-l { position: absolute; top: 0; left: 0; transform: translateX(-50%); font-size: 12px; font-weight: 700; letter-spacing: .06em; white-space: nowrap; color: var(--text); background: var(--surface-1); padding: 0 4px; }
+.rc-lock-l.right { transform: translateX(-100%); }
+.rc-lock-l.left { transform: none; }
+.rc-axis { position: relative; height: 16px; margin: 4px 0 0 86px; font-size: 12px; color: var(--text-muted); }
+.rc-axis span { position: absolute; top: 0; transform: translateX(-50%); }
+.rc-axis span:nth-child(1) { left: 20px; }
+.rc-axis span:nth-child(2) { left: 50%; }
+.rc-axis span:nth-child(3) { left: calc(100% - 20px); }
 .rc-explain { margin: 10px 0 0; padding: 10px 12px; border-radius: 12px; background: var(--surface-2); font-size: 13px; line-height: 1.4; }
 /* bottom card: Points by hole / What this hole does (feature 003-race-bottom) */
 .race-bottom { padding: 12px 14px; }
