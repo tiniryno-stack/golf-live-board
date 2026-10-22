@@ -250,7 +250,7 @@ export function teamGameView(app) {
 
 /** Split point (2–6 players, each their own): totals up top, then a hole-by-hole table of who
  *  took the point and how it split. Kept simple on purpose. */
-/** "The race" (handoff golf-race-tabbar/02): individual split point, 2–6 players. Math + copy in race.js. */
+/** "The race" (feature 002-matches-race): individual split point, 2–6 players. Math + copy in race.js. */
 let lastLock = null;
 function splitView(app) {
   const snap = app.snapshot;
@@ -288,7 +288,7 @@ function splitView(app) {
     ? `<div class="rc-lock" style="--at:${lockFrom / HOLES}"><span class="rc-lock-l mono">LOCK ${fmtPts(r.lock)}</span></div>` : '';
   const explain = r.done < 6 && !r.finished && r.chaser
     ? `<p class="rc-explain">The <b>lock line</b> is the most ${esc(chaser)} can still reach. Get past it and the match is yours. Dashes show how far each player can still climb.</p>` : '';
-  // Bottom card (handoff golf-race-bottom): Points by hole, or What this hole does when it matters.
+  // Bottom card (feature 003-race-bottom): Points by hole, or What this hole does when it matters.
   const args = { players: ids.map((id) => ({ id, name: name(id) })), holes: raceHoles, me, lastHole: order[HOLES - 1] };
   let bottom;
   if (showStakes(args)) {

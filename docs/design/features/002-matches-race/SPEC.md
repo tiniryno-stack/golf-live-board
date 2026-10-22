@@ -1,3 +1,5 @@
+Status: built in cf232b3
+
 # Matches: foursome split point ("The race")
 
 The Matches tab for an **individual 4-player split-point game** (no teams). This replaces the current screen with the four colored player boxes and the hole table. Board stays the ranked list and Card stays the grid; this screen should feel like a game.

@@ -1,5 +1,5 @@
 // race.js — pure math + headline copy for "The race" (individual split point, 2–6 players).
-// Design handoff golf-race-tabbar/02 SPEC.md. No DOM, no app state: give it holes, get the race.
+// Design feature 002-matches-race SPEC.md. No DOM, no app state: give it holes, get the race.
 //
 //   points:   1 a hole; the low score takes it, k tied for low get 1/k each. A hole counts only
 //             once every player has a score on it.
@@ -158,7 +158,7 @@ export function copy(s, name, lastHole = 18) {
   return { headline: leadLine, subline: `${left}${outLine()}` };
 }
 
-// ───────────────────────────────────────────── bottom card (handoff golf-race-bottom)
+// ───────────────────────────────────────────── bottom card (feature 003-race-bottom)
 
 /** Each player's share of every hole in play order: 1 / ½ / ⅓ / ¼ / 0, or null while not complete. */
 export function holeShares(holes, ids, total = 18) {

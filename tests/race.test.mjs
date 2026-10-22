@@ -100,7 +100,7 @@ test('Engine: split point ties at the end go to most outright wins (Board, recap
   assert.ok(mid.filter((x) => x.rank === 1).length >= 1);
 });
 
-// ── bottom card (handoff golf-race-bottom): the spec's thru 14 and thru 17 cases
+// ── bottom card (feature 003-race-bottom): the spec's thru 14 and thru 17 cases
 import { holeOutcomes, holeShares, showStakes } from '../js/race.js';
 const rep = (n, ...w) => [...Array(n)].map(() => hole(...w));
 // Thru 14: Mitchell 6, Andrew 5½, Justin 1½, Peter 1 (4 left).

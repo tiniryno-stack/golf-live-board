@@ -1,3 +1,5 @@
+Status: built in eee3874
+
 # Tab bar: floating glass pill, icons only
 
 Replaces the current solid bottom bar on every in-round screen (Enter, Matches, Board, Card). Open `tab-bar-demo.html` in a browser to see and click it; it's plain HTML/CSS/JS and is the reference for behavior. `design-system-rules.md` is the same rule set as it appears in the design system.

@@ -1,3 +1,5 @@
+Status: built in a430e8d
+
 # Race screen: bottom card (replaces "Now · hole 8")
 
 An update to the foursome split-point Matches screen ("The race", in `golf-race-tabbar/02-matches-foursome/`). The static **"NOW · HOLE 8 · PAR 5 · 1 PT UP FOR GRABS"** card under the race is removed: it never changed and only linked to Enter. In its place is **one card that switches between two views** on its own:

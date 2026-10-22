@@ -1154,7 +1154,7 @@ function renderTopbar(screen, inRound) {
   return `${chip}<div class="round-title ellipsis">${esc(name)}</div>${share}${menuBtn}`;
 }
 
-/** Floating glass tab bar (handoff golf-race-tabbar/01): icons only, four equal tabs, one highlight that
+/** Floating glass tab bar (feature 001-tab-bar): icons only, four equal tabs, one highlight that
  *  slides to the active tab. Built once, then updated in place so the slide can animate (the render
  *  loop redraws constantly). The screen title says where you are. */
 function renderTabbar(el, show) {
