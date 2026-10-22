@@ -1,6 +1,6 @@
 # 004 · Race track: keep the lock line and pucks off the card edge
 
-Status: not started
+Status: built in 3a2346b
 Changes: 002-matches-race (the race card on the foursome Matches screen)
 
 ## Problem
