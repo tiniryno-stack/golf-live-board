@@ -192,10 +192,10 @@ export function teamGameView(app) {
   const state = hero.final ? 'FINAL' : hero.played ? 'LIVE' : 'UP NEXT';
   const [st1, st2] = statusPair(app, g, hero, left, !!mine);
   const head = mine
-    ? `<div class="m-kicker mono">MATCH ${sel + 1} OF ${list.length} · ${state}</div>
+    ? `<div class="m-kicker mono">MATCHES · MATCH ${sel + 1} OF ${list.length} · ${state}</div>
        <div class="m-title">vs <span style="color:${rc}">${esc(name(right))}</span></div>
        <div class="m-sub">${esc(playersOf(app, right))} · holes ${hero.firstHole} → ${hero.lastHole}</div>`
-    : `<div class="m-kicker mono">ROTATION ${ri + 1} OF ${g.rotations.length} · ${state}</div>
+    : `<div class="m-kicker mono">MATCHES · ROTATION ${ri + 1} OF ${g.rotations.length} · ${state}</div>
        <div class="m-title"><span style="color:${lc}">${esc(shortTeam(name(left)))}</span> <span class="soft">vs</span> <span style="color:${rc}">${esc(shortTeam(name(right)))}</span></div>
        <div class="m-sub">holes ${hero.firstHole} → ${hero.lastHole}</div>`;
   const heroFull = `<div class="m-hero">${head}
@@ -303,7 +303,7 @@ function splitView(app) {
   }
   return `<div class="plain race">
       <div class="race-top">
-        <div class="race-title"><div class="ts-label mono">SPLIT POINT · ${r.finished ? 'FINAL' : `THRU ${r.done}`}</div>
+        <div class="race-title"><div class="ts-label mono">MATCHES · SPLIT POINT · ${r.finished ? 'FINAL' : `THRU ${r.done}`}</div>
           <h1 class="race-h">${esc(r.headline)}</h1><p class="race-sub">${esc(r.subline)}</p></div>
         <button class="btn ghost race-rules" data-act="rules-open" aria-label="Rules of today’s game">${icon('info', 18)} Rules</button>
       </div>

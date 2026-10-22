@@ -127,7 +127,7 @@ function hero(app, mode) {
     const me = g.people.find((r) => r.playerId === app.me);
     const you = me && started ? (top.some((r) => r.playerId === app.me) ? 'that’s you' : `up ${fmtPts(top[0].points - me.points)} on you`) : '';
     return `<div class="hero board-hero">
-      <div class="lbl">${snap.roundComplete ? 'Final' : snap.officialThrough ? `Leader · official thru ${snap.officialHole}` : 'Leader'} · 2v2</div>
+      <div class="lbl">Board · ${snap.roundComplete ? 'Final' : snap.officialThrough ? `Leader · official thru ${snap.officialHole}` : 'Leader'} · 2v2</div>
       <div class="spread" style="align-items:flex-end"><div style="flex:1;min-width:0"><div class="leader-name">${esc(lead)}</div>${you ? `<div class="you">${esc(you)}</div>` : ''}</div>
       ${started ? `<div class="leader-pts">${fmtPts(top[0].points)}</div>` : ''}</div></div>`;
   }
@@ -151,7 +151,7 @@ function hero(app, mode) {
       || (mine && started ? `You: ${mine.shared ? 'T-' : ''}${ordinal(mine.rank)} · ${val(mine)}${isPM ? '' : ' pts'}` : '');
     const anyProv = st.some((s) => (isPM ? s.provisionalPm : s.provisionalPoints));
     return `<div class="hero board-hero">
-      <div class="lbl">${snap.roundComplete ? 'Final' : snap.officialThrough ? `Leader · official thru ${snap.officialHole}` : 'Leader'}${top.length > 1 && started ? ' · tied' : ''}</div>
+      <div class="lbl">Board · ${snap.roundComplete ? 'Final' : snap.officialThrough ? `Leader · official thru ${snap.officialHole}` : 'Leader'}${top.length > 1 && started ? ' · tied' : ''}</div>
       <div class="spread" style="align-items:flex-end">
         <div style="flex:1;min-width:0"><div class="leader-name" style="color:${leadColor}">${esc(lead)}</div>
         ${you ? `<div class="you">${esc(you)}</div>` : ''}</div>
@@ -162,7 +162,7 @@ function hero(app, mode) {
   const board = playerLeaderboard(snap, mode);
   const lead = board[0];
   return `<div class="hero board-hero">
-    <div class="lbl">Leader${lead?.thru ? ` · thru ${lead.thru}` : ''}</div>
+    <div class="lbl">Board · Leader${lead?.thru ? ` · thru ${lead.thru}` : ''}</div>
     <div class="spread" style="align-items:flex-end"><div style="flex:1;min-width:0"><div class="leader-name">${lead?.thru ? esc(lead.name) : 'Nobody yet'}</div>
     ${app.myPlayer()?.thru ? `<div class="you">You: ${fmtToPar(mode === 'gross' ? app.myPlayer().grossToPar : app.myPlayer().netToPar)} thru ${app.myPlayer().thru}</div>` : ''}</div>
     ${lead?.thru ? `<div class="leader-pts">${fmtToPar(mode === 'gross' ? lead.grossToPar : lead.netToPar)}</div>` : ''}</div>
