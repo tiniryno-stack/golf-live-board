@@ -19,11 +19,37 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600;700&display=swap">
-  <link rel="stylesheet" href="css/tokens.css">
-  <link rel="stylesheet" href="css/styles.css">
   <!-- Supabase client (pinned; no build step) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
-  <script type="module" src="js/app.js"></script>
+  <script>
+    // Loader: ask for version.json fresh (never from cache), then load that version's CSS and JS.
+    // An import map points every module at ?v=<version>, so imports inside the app get the new files
+    // too. Phones (home screen apps especially) otherwise keep running cached files for minutes.
+    // Offline or missing version.json → the last version this phone saw, else plain URLs.
+    (function () {
+      var base = document.baseURI;
+      function go(info) {
+        var v = info && info.v;
+        var q = v ? '?v=' + v : '';
+        var imports = {};
+        (info && info.files || []).forEach(function (f) { if (/\.js$/.test(f) && v) imports[new URL(f, base).href] = new URL(f + q, base).href; });
+        var map = document.createElement('script');
+        map.type = 'importmap';
+        map.textContent = JSON.stringify({ imports: imports });
+        document.head.appendChild(map);
+        ['css/tokens.css', 'css/styles.css'].forEach(function (f) {
+          var l = document.createElement('link'); l.rel = 'stylesheet'; l.href = f + q; document.head.appendChild(l);
+        });
+        var start = function () { var s = document.createElement('script'); s.type = 'module'; s.src = 'js/app.js' + q; document.head.appendChild(s); };
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
+      }
+      var key = 'glb.version';
+      fetch('version.json', { cache: 'no-store' })
+        .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+        .then(function (info) { try { localStorage.setItem(key, JSON.stringify(info)); } catch (e) {} go(info); })
+        .catch(function () { var saved = null; try { saved = JSON.parse(localStorage.getItem(key)); } catch (e) {} go(saved); });
+    })();
+  </script>
 </head>
 <body>
   <div id="app" class="app">

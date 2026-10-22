@@ -242,8 +242,10 @@ npm run test:smoke     # 256 checks: multi-phone flows against the mock (join, s
 
 ## Workflow
 
-- Small commits straight to `main`, push after each change (Pages redeploys in ~1 min; phones can
-  cache files up to 10 min — tell people to refresh/reopen). End commit messages with the
+- Small commits straight to `main`, push after each change (Pages redeploys in ~1 min). **Run `npm run stamp`
+  before every push to `main`** (commit `version.json`): index.html's loader fetches `version.json` uncached and
+  loads that version's JS/CSS via an import map + `?v=`, so phones (home screen apps too) get the update on
+  the next open instead of running cached files. `npm run preview` stamps its own copy. End commit messages with the
   attribution lines your session provides.
 - Update `ARCHITECTURE.md` (section 3 for Enter, 13a for changes) and `README.md` when behavior
   changes.

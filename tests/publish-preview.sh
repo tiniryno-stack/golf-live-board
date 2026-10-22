@@ -12,11 +12,10 @@ git worktree add -q "$WT" origin/main
 rm -rf "$WT/preview"
 mkdir -p "$WT/preview"
 cp -r index.html sim.html icon-180.png css js "$WT/preview/"
-# Stamp every CSS/JS URL with this commit so phones can't keep running an older preview's cached files
-# (iPhone Safari holds on to ES modules; a fresh page alone doesn't refetch them). Preview copy only.
-V="$SHA"
-sed -i -E "s#(href=\"css/[a-z]+\.css)\"#\1?v=$V\"#g; s#(src=\"js/[a-z]+\.js)\"#\1?v=$V\"#g" "$WT/preview/index.html" "$WT/preview/sim.html"
-find "$WT/preview/js" -name '*.js' -exec sed -i -E "s#((from|import\() *'\.\.?/[^'?]+\.js)'#\1?v=$V'#g" {} +
+# Fresh version id for this preview copy (index.html's loader fetches version.json uncached and
+# loads exactly these files), so phones never keep running an older preview's cached files.
+cp version.json "$WT/preview/" 2>/dev/null || true
+node tools/stamp.mjs "$WT/preview"
 cd "$WT"
 git add -A preview
 if git diff --cached --quiet; then echo "preview already up to date"; else
