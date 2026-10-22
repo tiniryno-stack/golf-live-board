@@ -71,7 +71,7 @@ export function raceState({ players, holes, me = null, total = 18, lastHole = 18
     const leading = rank[id] === 1;
     return {
       id, name: name(id), me: id === me, points: points[id], won: won[id], rank: rank[id], out,
-      rankLabel: out ? 'OUT' : `${tied ? 'T' : ''}${ordinal(rank[id])}`,
+      rankLabel: out ? 'OUT' : tied ? `T${rank[id]}` : ordinal(rank[id]),
       reach: !out && !leading && left ? [points[id], Math.min(points[id] + left, total)] : null,
     };
   });
