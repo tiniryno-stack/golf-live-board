@@ -1,3 +1,5 @@
+Status: built in 777e55c
+
 # 005 · Scorecard spacing
 
 **Screen:** Card tab (scorecard grid), in-round.
