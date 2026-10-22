@@ -4,7 +4,7 @@
 //
 // All headlines come from the OFFICIAL standings (holes every foursome has finished).
 
-import { compute, fmtPts, fmtToPar, posOf, HOLES } from './scoring.js?v=dabeba4';
+import { compute, fmtPts, fmtToPar, posOf, HOLES } from './scoring.js';
 
 /** Thresholds — tune after Friday. */
 export const HEADLINE_CONFIG = {

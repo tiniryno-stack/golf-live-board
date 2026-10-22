@@ -10,12 +10,12 @@
 // never re-ask it. Nothing is required that has a sensible default.
 // "Run it back" (#/setup/CODE) copies players, team names, carts and settings (not the course).
 
-import { esc, icon, seg, todayISO, prettyDate, copyText, roundLink, empty } from '../ui.js?v=dabeba4';
-import { COURSES } from '../courses.js?v=dabeba4';
-import * as cd from '../coursedata.js?v=dabeba4';
-import { DEFAULT_SETTINGS, DEFAULT_ROTATION, GAMES, gameFix, autoGroups, cartRotation, threeCartRotation, cartIdsFor } from '../scoring.js?v=dabeba4';
-import * as db from '../db.js?v=dabeba4';
-import * as names from '../names.js?v=dabeba4';
+import { esc, icon, seg, todayISO, prettyDate, copyText, roundLink, empty } from '../ui.js';
+import { COURSES } from '../courses.js';
+import * as cd from '../coursedata.js';
+import { DEFAULT_SETTINGS, DEFAULT_ROTATION, GAMES, gameFix, autoGroups, cartRotation, threeCartRotation, cartIdsFor } from '../scoring.js';
+import * as db from '../db.js';
+import * as names from '../names.js';
 
 const TEAM_IDS = ['A', 'B', 'C', 'D'];
 const DRAFT_KEY = 'glb.setupDraft';

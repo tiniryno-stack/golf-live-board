@@ -1,12 +1,12 @@
 // home.js — Home (designspec §6b): your name, the round you're playing now as one green-outlined
 // card ("Back to hole 11"), recent rounds as plain rows with how it went, then Join with code
 // (secondary) + New round (primary) at the bottom. First time: the "No rounds yet" empty state with
-// a code field. Season standings and Add to Home Screen stay as rows under the list. Run it back
+// a code field. Season standings sits at the top (Oct 22), Recent rounds at the bottom. Run it back
 // lives in a round's ⋯ menu. Everything here comes from this phone (glb.recent), no network.
 
-import { esc, icon, prettyDate, initials, empty } from '../ui.js?v=dabeba4';
-import { recent, normCode, STANDALONE, moveLink } from '../db.js?v=dabeba4';
-import { fmtPts, fmtToPar, playerLeaderboard } from '../scoring.js?v=dabeba4';
+import { esc, icon, prettyDate, initials, empty } from '../ui.js';
+import { recent, normCode, STANDALONE, moveLink } from '../db.js';
+import { fmtPts, fmtToPar, playerLeaderboard } from '../scoring.js';
 
 /** iPhone or iPad in Safari (iPadOS says it's a Mac, but has touch). Tests set `__GLB_IOS`. */
 const isIOS = () => {
@@ -130,28 +130,30 @@ export default {
     const now = Date.now();
     const live = rounds.find((r) => r.live && !r.done && now - (r.seen || r.at || 0) < LIVE_FOR) || null;
     const rest = rounds.filter((r) => r !== live);
+    const season = crew ? `<div class="home-list"><button class="home-row" data-act="go" data-v="#/season/${esc(crew)}">
+          <span class="hr-ico">${icon('trophy', 22)}</span>
+          <span class="hr-main"><span class="hr-name">Season standings</span><span class="hr-sub">Player and pair records across your crew’s rounds</span></span>
+          <span class="hr-chev">${icon('fwd', 20)}</span></button></div>` : '';
     const extras = `${!STANDALONE && isIOS() ? `<button class="home-row" data-act="home-add">
           <span class="hr-ico">${icon('phone', 22)}</span>
           <span class="hr-main"><span class="hr-name">Add to Home Screen</span><span class="hr-sub">Opens like an app, no Safari bars. Your rounds come with it.</span></span>
           <span class="hr-chev">${icon('fwd', 20)}</span></button>` : ''}
-      ${crew ? `<button class="home-row" data-act="go" data-v="#/season/${esc(crew)}">
-          <span class="hr-ico">${icon('trophy', 22)}</span>
-          <span class="hr-main"><span class="hr-name">Season standings</span><span class="hr-sub">Player and pair records across your crew’s rounds</span></span>
-          <span class="hr-chev">${icon('fwd', 20)}</span></button>` : ''}`;
+`;
     if (!rounds.length) {
       return `<div class="plain home">
         <h1 class="ts-title home-title">Golf Live Board</h1>
         ${empty({ icon: 'flag', headline: 'No rounds yet', help: 'Start one and text the code to your group, or join a round a friend started.' })}
         <div class="home-join">${codeField()}</div>
-        <div class="home-list">${extras}</div>
+        ${season}<div class="home-list">${extras}</div>
         <div class="nr-foot home-foot"><button class="btn primary big block" data-act="go" data-v="#/setup">${icon('plus', 20)} New round</button></div>
       </div>`;
     }
     return `<div class="plain home">
       <h1 class="ts-title home-title">Golf Live Board</h1>
+      ${season}
       ${live ? liveCard(live) : ''}
+      ${extras.trim() ? `<div class="home-list">${extras}</div>` : ''}
       ${rest.length ? `<div class="ts-label home-k">Recent rounds</div><div class="home-list">${rest.map(roundRow).join('')}</div>` : ''}
-      <div class="home-list">${extras}</div>
       <div class="nr-foot home-foot"><div class="home-two">
         <button class="btn big" data-act="home-joinsheet">Join with code</button>
         <button class="btn primary big" data-act="go" data-v="#/setup">${icon('plus', 20)} New round</button>

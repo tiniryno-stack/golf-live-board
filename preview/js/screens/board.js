@@ -8,10 +8,10 @@
 // grow left/right from even. Headlines still fire on the official line (confirmed moments).
 // Players: one compact line each.
 
-import { esc, icon, seg, clock } from '../ui.js?v=dabeba4';
-import { fmtPts, fmtToPar, fmtSigned, playerLeaderboard, teamLeaderboard, holeAt, recordLabel, teeClock, teeTimeName, groupIndex } from '../scoring.js?v=dabeba4';
-import { teamColor, headlineColor } from '../teams.js?v=dabeba4';
-import { latestMoment } from '../headlines.js?v=dabeba4';
+import { esc, icon, seg, clock } from '../ui.js';
+import { fmtPts, fmtToPar, fmtSigned, playerLeaderboard, teamLeaderboard, holeAt, recordLabel, teeClock, teeTimeName, groupIndex } from '../scoring.js';
+import { teamColor, headlineColor } from '../teams.js';
+import { latestMoment } from '../headlines.js';
 
 const ordinal = (n) => `${n}${['th', 'st', 'nd', 'rd'][(n % 100 >= 11 && n % 100 <= 13) || n % 10 > 3 ? 0 : n % 10]}`;
 

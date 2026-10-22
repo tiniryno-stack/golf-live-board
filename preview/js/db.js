@@ -2,7 +2,7 @@
 // claim, leave, let-them-in, RPC writes, realtime, the offline queue, and the
 // organizer's audit log. No DOM here; app.js decides what to show.
 
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from './config.js?v=dabeba4';
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from './config.js';
 
 // ───────────────────────────────────────────── local storage (never throws)
 
