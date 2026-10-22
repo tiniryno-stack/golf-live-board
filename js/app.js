@@ -20,7 +20,6 @@ import card from './screens/card.js';
 import host from './screens/host.js';
 import crew from './screens/crew.js';
 import { gps } from './gps.js';
-import { setGeoTest } from './geo.js';
 
 const SCREENS = { home, setup, season, enter, matches, board, card, host, crew };
 const TABS = [
@@ -1386,8 +1385,6 @@ $('content').addEventListener('touchend', (ev) => {
 
 // ───────────────────────────────────────────── boot
 
-setGeoTest(db.geoTest); // dev: #geotest=lat,lng or Host → Rules slides the greens to your location (see db.js)
-db.onGeoTest(setGeoTest);
 window.__glb = app; // handy for debugging from the console
 app._gps = gps; // tests + console: the location watcher
 // Realtime handlers, reachable from the console / headless checks to simulate a push.

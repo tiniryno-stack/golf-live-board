@@ -88,30 +88,6 @@ export function moveLink() {
   return `#move=${toB64(JSON.stringify({ v: 1, keys }))}`;
 }
 
-/** Dev: `#geotest=lat,lng` (or Host → Rules → "Put hole 1's green where I'm standing") slides every
- *  course's greens so hole 1's green sits there (this phone only, `glb.geoTest`); `#geotest=off` / the
- *  same button clears it. Lets Andrew test the green card from home. `setGeoTest` updates it live. */
-export let geoTest = null;
-export function setGeoTest(at) {
-  geoTest = Array.isArray(at) ? at : null;
-  if (geoTest) local.set('glb.geoTest', geoTest); else local.del('glb.geoTest');
-  geoTestHook?.(geoTest);
-}
-let geoTestHook = null;
-export function onGeoTest(fn) { geoTestHook = fn; }
-geoTest = (() => {
-  try {
-    const m = /^#geotest=(off|-?\d+(?:\.\d+)?,-?\d+(?:\.\d+)?)$/.exec(location.hash);
-    if (m) {
-      history.replaceState(null, '', `${location.pathname}${location.search}#/`);
-      if (m[1] === 'off') local.del('glb.geoTest');
-      else local.set('glb.geoTest', m[1].split(',').map(Number));
-    }
-    const v = local.get('glb.geoTest');
-    return Array.isArray(v) && v.length === 2 && v.every((x) => typeof x === 'number' && Number.isFinite(x)) ? v : null;
-  } catch { return null; }
-})();
-
 /** On load: take a `#move=` link (home screen app only, and only if it isn't set up yet), then clear it. */
 export const moved = (() => {
   try {

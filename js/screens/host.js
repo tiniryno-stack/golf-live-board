@@ -98,9 +98,7 @@ function rules(app, d) {
 /** 011: GPS yardages on Enter — only offered when the course has green data (else nothing to switch). */
 function gpsField(d) {
   if (!FLAGS.gps || !geoFor(d.course)) return '';
-  const testing = !!db.geoTest;
-  return `<div class="chips" style="margin:0 0 16px"><button class="pill" data-act="host-gps" aria-pressed="${d.settings.gps !== false}"><span class="dot"></span>GPS yardages on Enter</button></div>
-    <p class="help" style="margin:-8px 0 16px">Testing from home? <button class="link-btn" data-act="host-geotest" data-v="${testing ? 'off' : 'here'}">${testing ? 'Put the greens back where they belong' : 'Put hole 1’s green where I’m standing'}</button>${testing ? ' · the greens are moved on this phone only' : ''}</p>`;
+  return `<div class="chips" style="margin:0 0 16px"><button class="pill" data-act="host-gps" aria-pressed="${d.settings.gps !== false}"><span class="dot"></span>GPS yardages on Enter</button></div>`;
 }
 
 function courseAndFinish(app, d) {
@@ -249,16 +247,6 @@ export default {
       st[el.dataset.k] = !st[el.dataset.k];
       touch(app);
       app.render();
-    },
-    'host-geotest': (el, ev, app) => {
-      if (el.dataset.v === 'off') { db.setGeoTest(null); app.toast({ title: 'Greens back to normal' }); app.render(); return; }
-      if (!navigator.geolocation) { app.toast({ title: 'No location on this phone', error: true }); return; }
-      app.toast({ title: 'Finding you…' });
-      navigator.geolocation.getCurrentPosition(
-        (p) => { db.setGeoTest([p.coords.latitude, p.coords.longitude]); app.toast({ title: 'Hole 1’s green is here now', sub: 'This phone only. Open Enter to see it.' }); app.render(); },
-        () => app.toast({ title: 'Couldn’t get your location', sub: 'Allow location for this site and try again.', error: true }),
-        { enableHighAccuracy: true, timeout: 15000 },
-      );
     },
     'host-gps': (el, ev, app) => {
       const st = draft(app).settings;

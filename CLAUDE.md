@@ -308,8 +308,7 @@ npm run test:smoke     # 272 checks (incl. crews): multi-phone flows against the
   `_setting_label('gps')` in schema.sql (**not yet applied to the live DB**: additive `create or replace`). Fit
   test has "Enter (GPS card)" scenes with Playwright geolocation at the tee. To turn on: `FLAGS.gps = true`, stamp,
   push. **Flag ON since Oct 22 (testing).** Dev check page: `docs/design/yardages/geo-check.html` (also published as an
-  artifact). **Test from home:** Host → Rules → "Put hole 1’s green where I’m standing" (or open the app at `#geotest=lat,lng` once) → every course's greens slide so hole 1's
-  green sits there (`db.geoTest`, this phone only; course name shows "(test)"); `#geotest=off` clears it.
+  artifact).
   **013 also removed the rotation strip from team Enter (live).**
 - Other open items (Oct 22): standings rework (ELO-style across games, needs design), `FLAGS.crewHandicaps`
   off until Andrew asks, practice rounds HXPY4 / B5PGH to delete in-app, neutral recap images,
