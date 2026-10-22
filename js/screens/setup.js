@@ -564,7 +564,7 @@ function pickRow(s, p) {
       <span class="pr-main"><span class="pr-name ellipsis">${esc(shortOf(p))}</span>${p.me ? '<span class="pr-sub you">You</span>' : p.guest ? '<span class="pr-sub">Guest · joins the crew after the round</span>' : ''}</span>
       ${FLAGS.crewHandicaps && hcp !== '' && i >= 0 ? `<span class="pr-hcp mono" data-act="setup-hcp" data-i="${i}">${esc(hcp)}</span>` : FLAGS.crewHandicaps && hcp !== '' ? `<span class="pr-hcp mono">${esc(hcp)}</span>` : ''}
       <span class="pr-box">${p.on ? icon('check', 18) : ''}</span>
-    </button>`;
+    </button>${i >= 0 && !s.players[i].lastName ? `<div class="pr-last"><input class="input name-fill" maxlength="30" placeholder="${esc(s.players[i].firstName || 'Their')}’s last name" autocapitalize="words" autocomplete="off" aria-label="Last name for ${esc(s.players[i].firstName)}" data-input="setup-last" data-i="${i}"></div>` : ''}`;
 }
 
 /** Search results (repainted in place while typing, so the field keeps focus). */

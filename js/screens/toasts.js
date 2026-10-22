@@ -190,7 +190,8 @@ export function closePicker() {
   done?.();
 }
 
-const sample = (list, n) => [...list].sort(() => Math.random() - 0.5).slice(0, n);
+// Random 6 on phones; the starters under test automation (navigator.webdriver), so tests can tap a name.
+const sample = (list, n) => (navigator.webdriver ? ['Bulbasaur', 'Charmander', 'Squirtle', 'Pikachu', 'Eevee', 'Snorlax'].slice(0, n) : [...list].sort(() => Math.random() - 0.5).slice(0, n));
 
 export function renderPicker(app) {
   if (!picker) return;

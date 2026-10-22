@@ -1546,3 +1546,4 @@ details.fold summary::-webkit-details-marker { display: none; }
 .tn-row.custom { justify-content: flex-start; border: 1.5px dashed var(--line-strong); border-radius: var(--radius-xl); margin-top: var(--space-3); padding: 0 var(--space-3); }
 .tn-tag { color: var(--text-muted); flex: none; }
 .tn-tag.on { color: var(--cart-you-text); }
+.pr-last { padding: 0 var(--space-3) var(--space-3) 64px; border-bottom: 1px solid var(--line); }
