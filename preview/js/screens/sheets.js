@@ -258,6 +258,7 @@ const BODIES = {
         ${p ? '' : '<button class="btn primary big block" data-act="menu-pick">Pick my name</button>'}
         ${app.snapshot?.roundComplete ? `<button class="btn primary block" data-act="menu-recap">${icon('trophy', 18)} Round recap &amp; scorecards</button>` : ''}
         ${app.snapshot ? '<button class="btn block" data-act="menu-rules">Rules</button>' : ''}
+        ${app.adminPin ? `<button class="btn block" data-act="menu-host">${icon('host', 18)} Host settings · organizer</button>` : ''}
         ${app.snapshot?.game ? `<button class="btn block" data-act="menu-brief">${icon('spark', 18)} How today’s game works</button>` : ''}
         <button class="btn block" data-act="menu-share">${icon('share', 18)} Share round link</button>
         <button class="btn block" data-act="theme">${icon(light ? 'moon' : 'sun', 18)} ${light ? 'Dark mode' : 'Light mode'}</button>
@@ -585,6 +586,10 @@ export const actions = {
     app.openSheet('who', {});
   },
   'you-menu': (el, ev, app) => app.openSheet('you', {}),
+  'menu-host': (el, ev, app) => {
+    app.closeSheet();
+    app.go(app.tabHash('host'));
+  },
   'menu-rules': (el, ev, app) => app.openSheet('rules', {}),
   'leave-confirm': (el, ev, app) => app.leave(),
   'menu-leave': (el, ev, app) => app.openSheet('leave', {}),
