@@ -8,6 +8,7 @@ import { teamColor, headlineColor, shortTeam } from '../teams.js';
 import { codeField } from './home.js';
 import { handicapSheet } from './setup.js';
 import { crewSheets } from './crew.js';
+import { seasonSheets } from './season.js';
 
 let lastHtml = '';
 let closeTimer = null;
@@ -237,6 +238,7 @@ const BODIES = {
   crewSettings: (app, props) => crewSheets.crewSettings(app, props, head),
   crewRemove: (app, props) => crewSheets.crewRemove(app, props, head),
   crewNew: (app, props) => crewSheets.crewNew(app, props, head),
+  seasonNew: (app, props) => seasonSheets.seasonNew(app, props, head),
 
   /** Home → Join with code. */
   join() {

@@ -1034,7 +1034,7 @@ function parseHash() {
   const parts = location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
   if (!parts.length) return { name: 'home' };
   if (parts[0] === 'setup') return { name: 'setup', from: parts[1] ? db.normCode(parts[1]) : null };
-  if (parts[0] === 'season') return { name: 'season', crew: parts[1] || null };
+  if (parts[0] === 'season') return { name: 'season', crew: parts[1] || null, view: parts[2] || null };
   // Crews (feature 006): #/crew/start · #/crew/rename/<id> · #/crew/which/<id> · #/crew/<INVITE>
   if (parts[0] === 'crew') {
     if (parts[1] === 'start') return { name: 'crew', mode: 'start' };

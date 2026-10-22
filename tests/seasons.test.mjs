@@ -37,3 +37,9 @@ test('Place labels: 3rd, T2', () => {
   assert.equal(placeLabel({ rank: 3, tied: false }), '3rd');
   assert.equal(placeLabel({ rank: 2, tied: true }), 'T2');
 });
+
+test('Starting a season "Today": a round already started today stays in the old season', () => {
+  const rounds = [r('2026-10-16'), r('2026-10-22', '2026-10-22T13:00:00Z'), r('2026-10-22', '2026-10-22T18:00:00Z')];
+  const s = buildSeasons([{ name: 'Winter 2027', startsOn: '2026-10-22', createdAt: '2026-10-22T15:00:00Z' }], rounds, '2026-10-22');
+  assert.deepEqual(s.map((x) => x.rounds.length), [2, 1]);
+});

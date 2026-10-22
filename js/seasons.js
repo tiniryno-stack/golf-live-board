@@ -32,6 +32,14 @@ export function nextSeasonLabel(current, today) {
   return i === 3 ? `Winter ${y + 1}` : `${order[i + 1]} ${y}`;
 }
 
+/** Is this round on or after the season's start? Same day as a "Today" start: only rounds created after it. */
+const after = (r, season) => {
+  const d = dayOf(r.event);
+  if (d > season.start) return true;
+  if (d < season.start) return false;
+  return !season.at || String(r.event.created_at || '') >= season.at;
+};
+
 const dayOf = (e) => e.played_on || String(e.created_at || '').slice(0, 10) || null;
 
 /** "SEP 6" from YYYY-MM-DD. */
@@ -55,20 +63,20 @@ export function buildSeasons(stored, rounds, today) {
     // "Next round": starts on the day of the first crew round created after the season was started.
     const nextRound = sorted.find((r) => String(r.event.created_at || '') >= String(s.createdAt || ''));
     const start = s.startsOn || (nextRound ? dayOf(nextRound.event) : null);
-    list.push({ key: s.id || s.name, name: s.name, start, pending: !start });
+    // Started "Today": rounds already started today stay in the season before (in-progress rounds count there).
+    const at = s.startsOn && s.startsOn === String(s.createdAt || '').slice(0, 10) ? String(s.createdAt) : null;
+    list.push({ key: s.id || s.name, name: s.name, start, at, pending: !start });
   }
   // A season that hasn't started yet sits at the end; started ones keep their order by start date.
   const started = list.filter((s) => s.start).sort((a, b) => String(a.start).localeCompare(String(b.start)));
   const upcoming = list.filter((s) => !s.start);
   started.forEach((s, i) => {
     s.end = started[i + 1]?.start || null; // exclusive
-    s.rounds = sorted.filter((r) => {
-      const d = dayOf(r.event);
-      return d >= s.start && (!s.end || d < s.end);
-    });
+    const next = started[i + 1];
+    s.rounds = sorted.filter((r) => after(r, s) && (!next || !after(r, next)));
   });
   // Rounds before the first season's start (it starts at the first round, so none) stay in the first one.
-  if (started[0]) started[0].rounds = sorted.filter((r) => !started[1] || dayOf(r.event) < started[1].start);
+  if (started[0]) started[0].rounds = sorted.filter((r) => !started[1] || !after(r, started[1]));
   const live = started.filter((s) => s.start <= today);
   const cur = live[live.length - 1] || started[0];
   for (const s of started) { s.current = s === cur; s.upcoming = s.start > today; }
