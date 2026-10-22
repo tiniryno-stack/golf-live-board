@@ -11,7 +11,7 @@
 //   reach:    [points, min(points + left, total)] for players still alive and not leading.
 //   tiebreak: level on points after the last hole → most outright wins; still level = shared.
 
-import { fmtPts } from './scoring.js?v=e634f01';
+import { fmtPts } from './scoring.js?v=dabeba4';
 
 const EPS = 1e-9;
 const eq = (a, b) => Math.abs(a - b) < EPS;

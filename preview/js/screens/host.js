@@ -3,9 +3,9 @@
 // mid-round, rename teams, strokes, swap players, fix par / hole handicap,
 // approve "let them in", free up a spot, and read the audit log.
 
-import { esc, icon, seg, clock, copyText, roundLink } from '../ui.js?v=e634f01';
-import * as db from '../db.js?v=e634f01';
-import { teeTimeName } from '../scoring.js?v=e634f01';
+import { esc, icon, seg, clock, copyText, roundLink } from '../ui.js?v=dabeba4';
+import * as db from '../db.js?v=dabeba4';
+import { teeTimeName } from '../scoring.js?v=dabeba4';
 
 const clone = (x) => JSON.parse(JSON.stringify(x));
 const TEAM_IDS = ['A', 'B', 'C', 'D'];
