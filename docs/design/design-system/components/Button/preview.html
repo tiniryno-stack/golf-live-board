@@ -1,0 +1,24 @@
+<!-- @dsCard group="Controls" height=330 subtitle="Primary, secondary, ghost · default, pressed, disabled, loading" -->
+<div class="root">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600;700&display=swap');
+.root{font-family:var(--font-sans);color:var(--text);background:var(--bg);padding:16px;max-width:393px;box-sizing:border-box;display:flex;flex-direction:column;gap:10px}
+.b{height:var(--button-primary);border-radius:var(--radius-xl);border:0;font:inherit;font-size:17px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:10px;width:100%}
+.p{background:var(--button);color:var(--on-button)}
+.p.press{transform:scale(.97);opacity:.85}
+.p.off{background:var(--surface-2);color:var(--text-muted)}
+.spin{width:18px;height:18px;border-radius:50%;border:2.5px solid currentColor;border-right-color:transparent;box-sizing:border-box}
+.row{display:flex;gap:8px}
+.sm{height:48px;padding:0 20px;border-radius:var(--radius-md);border:0;font:inherit;font-size:15px;font-weight:600}
+.sec{background:var(--surface-2);color:var(--text)}
+.gh{background:transparent;color:var(--text)}
+.gh.press{background:var(--surface-2)}
+.cap{font-family:var(--font-mono);font-size:12px;letter-spacing:1px;color:var(--text-muted);font-weight:600;margin-top:4px}
+</style>
+<div class="cap">PRIMARY · DEFAULT / PRESSED / LOADING / DISABLED</div>
+<button class="b p">Start round · 5 players</button>
+<div class="row"><button class="b p press" style="flex:1">Pressed</button><button class="b p" style="flex:1"><span class="spin"></span>Saving</button></div>
+<button class="b p off" aria-disabled="true">Next hole · Sean left</button>
+<div class="cap">SECONDARY · GHOST · GHOST PRESSED</div>
+<div class="row"><button class="sm sec">Copy link</button><button class="sm gh">Shuffle</button><button class="sm gh press">Edit</button></div>
+</div>

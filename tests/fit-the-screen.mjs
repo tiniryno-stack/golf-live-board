@@ -26,7 +26,13 @@ if (process.env.FIT_SIZE) {
   SIZES.splice(0, SIZES.length, [`${w}x${h}`, w, h]);
 }
 const DEV = '11111111-1111-4111-8111-111111111111';
-const OUT = new URL('./screenshots/fit/', import.meta.url).pathname;
+// FIT_THEME=light runs every screen in light mode (glb.theme), with screenshots in screenshots/fit-light/.
+const LIGHT = process.env.FIT_THEME === 'light';
+const OUT = new URL(LIGHT ? './screenshots/fit-light/' : './screenshots/fit/', import.meta.url).pathname;
+const themed = async (ctx) => {
+  if (LIGHT) await ctx.addInitScript(() => localStorage.setItem('glb.theme', '"light"'));
+  return ctx;
+};
 mkdirSync(OUT, { recursive: true });
 
 const srv = await serve();
@@ -43,6 +49,11 @@ be.tables.claims.push({ event_id: r.id, player_id: 'p1', device_id: DEV });
 // A finished round (every score in) for the end-of-round screens: Finalize, then locked.
 const rf = seedRound(be, { holesPlayed: 18 });
 be.tables.claims.push({ event_id: rf.id, player_id: 'p1', device_id: DEV });
+
+// A round nobody has scored yet (Board / Matches "Waiting for the first scores"); 7 of 8 joined, tee times set.
+const r0 = seedRound(be, { holesPlayed: 0, extra: { rotationMode: 'fixed', teeTimes: ['08:40', '08:50'] } });
+be.tables.claims.push({ event_id: r0.id, player_id: 'p1', device_id: DEV });
+for (let i = 2; i <= 7; i++) be.tables.claims.push({ event_id: r0.id, player_id: `p${i}`, device_id: `00000000-0000-4000-8000-00000000000${i}` });
 
 // A 4-player round with no carts ("you first" Enter), for the design comparison shots.
 const YP = ['Andrew', 'Sean', 'Sam', 'Jake'].map((n, i) => ({ id: `p${i + 1}`, personId: `yf${i}`, name: n, teamId: null, groupId: 'g1', strokes: null }));
@@ -137,7 +148,7 @@ async function check(page, size, screen, extra) {
 
 for (const size of SIZES) {
   const [, w, h] = size;
-  const ctx = await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  const ctx = await themed(await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 2, isMobile: true, hasTouch: true }));
   await attach(ctx, be, srv.origin);
   await ctx.addInitScript(([code, dev, pin]) => {
     localStorage.setItem('glb.device', JSON.stringify(dev));
@@ -172,6 +183,12 @@ for (const size of SIZES) {
   await check(page, size, 'Home');
   await go('#/setup');
   await check(page, size, 'Setup 1 (find a course)');
+  // A typo: no results → the empty state, "Did you mean" Twin Creeks, Enter the scorecard yourself.
+  await page.fill('#course-q', 'twin crek');
+  await page.waitForTimeout(900);
+  await check(page, size, 'Setup 1 (no results)');
+  await page.fill('#course-q', '');
+  await page.waitForTimeout(400);
   await page.tap('[data-act="setup-mine"][data-v="twin-creeks-allen-tx"]');
   for (const n of ['Andrew Duong', 'Sean Baker', 'Mike Ortiz', 'Tyler Nguyen', 'Sam Patel', 'Jake Miller', 'Chris Young', 'Christopher Abernathy-Wells']) {
     await page.fill('#new-player', n);
@@ -179,6 +196,11 @@ for (const size of SIZES) {
     await page.waitForTimeout(150);
   }
   await check(page, size, 'Setup 2 (players)');
+  await page.tap('[data-act="setup-hcp"][data-i="1"]');
+  await page.waitForTimeout(400);
+  await check(page, size, 'Setup 2 (handicap sheet)');
+  await page.tap('[data-act="hcp-done"]');
+  await page.waitForTimeout(300);
   await page.tap('[data-act="setup-go"][data-v="game"]');
   await check(page, size, 'Setup 3 (pick a game)');
   await page.tap('[data-act="setup-game"][data-v="carts"]');
@@ -197,6 +219,12 @@ for (const size of SIZES) {
   await page.evaluate(() => { window.__glb.setup = null; localStorage.removeItem('glb.setupDraft'); });
   await go(`#/e/${r.code}/enter`);
   await check(page, size, 'Enter', 'enter');
+  // Organizer's hole menu → Fix-a-hole sheet.
+  await page.tap('[data-act="fixhole-open"]');
+  await page.waitForTimeout(400);
+  await check(page, size, 'Fix-a-hole sheet');
+  await page.tap('#sheet .panel [data-act="sheet-close"]');
+  await page.waitForTimeout(350);
   await page.evaluate(() => { window.__glb.ui.hole = 6; window.__glb.ui.unlocked = 6; window.__glb.render(); }); // a past hole, unlocked for editing
   await check(page, size, 'Enter (hole 6)', 'enter');
   await page.tap('.cart.opp.dim');
@@ -293,7 +321,7 @@ for (const size of SIZES) {
   await go(`#/season/${r.crew_id}`);
   await check(page, size, 'Season');
   // Someone who hasn't picked a name yet (fresh phone)
-  const ctx2 = await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  const ctx2 = await themed(await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 2, isMobile: true, hasTouch: true }));
   await attach(ctx2, be, srv.origin);
   await ctx2.addInitScript((codes) => codes.forEach((code) => localStorage.setItem('glb.who.' + code, 'true')), [r.code, rf.code]);
   const watcher = await ctx2.newPage();
@@ -328,6 +356,25 @@ for (const size of SIZES) {
   await page.waitForTimeout(300);
   await page.evaluate(() => { document.getElementById('toasts').innerHTML = ''; });
   await check(page, size, 'Enter (fixing a finalized round)', 'enter');
+  // Matches → Rules sheet (the round's real settings).
+  await go(`#/e/${r.code}/matches`);
+  await page.tap('[data-act="rules-open"]');
+  await page.waitForTimeout(400);
+  await check(page, size, 'Rules sheet');
+  await page.tap('#sheet .panel [data-act="sheet-close"]');
+  await page.waitForTimeout(350);
+  // Before the first scores: the real structure with "–" and "Waiting for the first scores", not zeros.
+  await page.evaluate((c) => {
+    localStorage.setItem('glb.me.' + c, '"p1"'); localStorage.setItem('glb.who.' + c, 'true'); localStorage.setItem('glb.brief.' + c, 'true');
+  }, r0.code);
+  await go(`#/e/${r0.code}/board`);
+  await check(page, size, 'Board (before the first scores)');
+  await go(`#/e/${r0.code}/matches`);
+  await check(page, size, 'Matches (before the first scores)');
+  // Home after playing: the live round as a card, finished ones as rows with how they went.
+  await go(`#/e/${r.code}/enter`);
+  await go('#/');
+  await check(page, size, 'Home (with rounds)');
   if (process.env.FIT_SIZE) {
     // Extra states the design mockups show (tests/design-pairs.py puts them side by side).
     const shot = (n) => page.screenshot({ path: `${OUT}${size[1]}x${size[2]}-design-${n}.png` });

@@ -70,7 +70,7 @@ function grid(app, g, from, mode, cur, tint, curColor) {
     for (const t of teams) {
       const team = snap.teamById.get(t);
       const c = teamColor(app.myTeam(), t);
-      body += `<div class="cg-team"><i class="jdot" style="--jersey:${c}"></i><span class="name" style="color:${t === app.myTeam() ? 'var(--good-ink)' : c}">${esc(team.name)}</span><span class="cg-right mono">${t === app.myTeam() ? 'you' : ''}</span></div>`;
+      body += `<div class="cg-team"><i class="jdot" style="--jersey:${c}"></i><span class="name" style="color:${t === app.myTeam() ? 'var(--cart-you-text)' : c}">${esc(team.name)}</span><span class="cg-right mono">${t === app.myTeam() ? 'you' : ''}</span></div>`;
       body += g.players.filter((p) => p.teamId === t).map(row).join('');
     }
   } else {
@@ -93,7 +93,7 @@ export default {
     const firstHole = groupHole(app, first);
     const mineBar = `<button class="mine-bar${foldIn(app.ui)}" style="--fold-h:80px" data-act="card-mine">
         <span style="flex:1;min-width:0"><span class="mb-k">${app.me ? 'YOUR GROUP' : 'GROUP 1'} · ${firstHole ? `ON ${firstHole}` : 'DONE'}</span>
-        <span class="mb-t ellipsis" style="font-size:14px;font-weight:600">${esc(first.players.map((p) => p.name).join(' · '))}</span></span>
+        <span class="mb-t ellipsis" style="font-size:15px;font-weight:600">${esc(first.players.map((p) => p.name).join(' · '))}</span></span>
         ${icon('fwd', 18).replace('<svg', '<svg style="transform:rotate(90deg)"')}</button>`;
     const others = rest.map((g) => {
       const open = g.key === openKey;
@@ -114,7 +114,7 @@ export default {
         ${snap.hasStrokes ? seg('card-mode', [['gross', 'Gross'], ['net', 'Net']], mode) : ''}
       </div>
       <div class="segs">${seg('card-half', [['front', 'Front 9'], ['back', 'Back 9']], half)}</div>
-      ${openKey ? mineBar : grid(app, first, from, mode, firstHole, app.me ? 'var(--tint)' : 'var(--tint-n)', app.me ? 'var(--good-ink)' : 'var(--ink-soft)')}
+      ${openKey ? mineBar : grid(app, first, from, mode, firstHole, app.me ? 'var(--tint-you)' : 'var(--tint-n)', app.me ? 'var(--cart-you-text)' : 'var(--ink-soft)')}
       ${others}
       <div class="mk-legend" style="margin-top:12px"><span>${mark(2, 4, 12)}Eagle</span><span>${mark(3, 4, 12)}Birdie</span><span>${mark(5, 4, 12)}Bogey</span><span>${mark(6, 4, 12)}Double+</span></div>
       <p class="meta" style="margin-top:10px;text-align:center">${app.isOrganizer() ? 'Organizer: tap any cell to fix it.' : app.me ? 'Tap a score from your matchup to fix it.' : 'Pick your name to enter scores.'} Long-press a score to see who entered it. Tap a name for their card.</p>

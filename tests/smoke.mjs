@@ -109,7 +109,7 @@ ok(be.tables.claims.length === 2, 'server holds two claims');
 const cartsA = await A.page.$$eval('.cart .name', (els) => els.map((e) => e.textContent));
 ok(cartsA.join() === 'Hogan’s Heroes,Shank Redemption', `hole 1 cards on Andrew’s phone: ${cartsA.join(' + ')}`);
 const briefA = await briefText(A.page);
-ok(briefA.length === 2 && /Rotation Match Play/.test(briefA[0]) && /2 points every hole/.test(briefA[0]) && /Push A tie: ½ point each/.test(briefA[0]),
+ok(briefA.length === 2 && /Partner “Rider” Cup/.test(briefA[0]) && /2 points every hole/.test(briefA[0]) && /Push A tie: ½ point each/.test(briefA[0]),
   `joining shows Today\u2019s game: how a hole is scored (${(briefA[0] || 'none').slice(0, 60)}\u2026)`);
 ok(/Holes 1–6 vs Shank Redemption/.test(briefA[1] || '') && /Holes 7–12 vs Fore Play/.test(briefA[1] || '') && /12 points per matchup, \+1 for winning it/.test(briefA[1] || ''),
   'card 2: Andrew\u2019s three matchups and what\u2019s up for grabs');
@@ -388,7 +388,7 @@ await P.page.evaluate((row) => window.__glb._remote.score(row), lastRow);
 await P.page.waitForTimeout(700);
 const bannersNow = await P.page.$$eval('#banners .headline-b', (els) => els.map((e) => [e.textContent.replace(/\s+/g, ' ').trim(), e.style.getPropertyValue('--jersey')]));
 ok(bannersNow.length === 2, `two headlines at once show together (${bannersNow.map((b) => b[0]).join(' | ')})`);
-ok(bannersNow[0]?.[0].startsWith('Charmander swept 3 straight') && bannersNow[0]?.[1] === 'var(--good)', 'your cart\u2019s headline is green on your phone');
+ok(bannersNow[0]?.[0].startsWith('Charmander swept 3 straight') && bannersNow[0]?.[1] === 'var(--cart-you)', 'your cart\u2019s headline is green on your phone');
 ok(bannersNow[1]?.[0].startsWith('Squirtle swept 3 straight') && bannersNow[1]?.[1] === 'var(--t-C)', 'another cart\u2019s headline wears its away jersey (pink)');
 const stripNow = await P.page.$$eval('.headlines.compact .headline', (els) => els.length);
 ok(stripNow === 2, `Board strip shows both for now (${stripNow})`);
@@ -400,7 +400,7 @@ ok(stripLater.length === 1, `and one headline on the Board (${stripLater.join(' 
 await P.page.tap('[data-act="board-headlines"]');
 await P.page.waitForTimeout(300);
 const feed = await P.page.$$eval('#sheet .headline', (els) => els.map((e) => e.style.getPropertyValue('--jersey')));
-ok(feed.includes('var(--good)') && feed.includes('var(--t-C)'), `the full list is color-coded too (${feed.join(', ')})`);
+ok(feed.includes('var(--cart-you)') && feed.includes('var(--t-C)'), `the full list is color-coded too (${feed.join(', ')})`);
 
 // 10. The organizer's path, from a phone that has never seen the app
 const O = await (async () => {
@@ -444,6 +444,130 @@ ok(!!(await O.page.$('.fullcard.brief')) && !(await O.page.$('.coach')), 'kept \
 await O.page.tap('[data-act="brief-done"]');
 await O.page.waitForTimeout(500);
 ok(!!(await O.page.$('.cart.mine')) && /dashed number is par/.test((await O.page.textContent('.coach').catch(() => '')) || ''), 'then Enter, and the first tip shows there');
+
+// 10a. Partner “Rider” Cup for 6: 3 carts, every cart plays both others all 18 (A + B tee off
+//      together, C is the second tee time). 7 players: the fix says add one or remove one.
+const R6 = await (async () => {
+  const ctx = await browser.newContext({ viewport: { width: 393, height: 852 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  await attach(ctx, be, srv.origin);
+  const page = await ctx.newPage();
+  page.errors = [];
+  page.on('pageerror', (e) => page.errors.push(`6-player organizer: ${e.message}`));
+  return { ctx, page };
+})();
+await R6.page.goto(`${srv.origin}/#/setup`);
+await R6.page.waitForTimeout(800);
+await R6.page.tap('[data-act="setup-mine"][data-v="twin-creeks-allen-tx"]');
+await R6.page.waitForTimeout(200);
+for (const n of ['Tara Quinn', 'Uma Reyes', 'Vic Stone', 'Wes Tran', 'Xia Upton', 'Yuri Vance', 'Zed Walsh']) {
+  await R6.page.fill('#new-player', n);
+  await R6.page.press('#new-player', 'Enter');
+  await R6.page.waitForTimeout(150);
+}
+await R6.page.tap('[data-act="setup-go"][data-v="game"]');
+ok(/Add 1 more player \(8\) or remove 1 \(6\) to play this/.test(await R6.page.textContent('[data-act="setup-game"][data-v="carts"]')),
+  '7 players: Partner “Rider” Cup is greyed with “add 1 (8) or remove 1 (6)”');
+await R6.page.tap('[data-act="setup-go"][data-v="players"]');
+await R6.page.waitForTimeout(200);
+await R6.page.locator('.player-row', { hasText: 'Zed' }).locator('[data-act="setup-remove"]').tap().catch(() => {});
+await R6.page.waitForTimeout(200);
+// Handicap sheet: tap the pill → stepper; + from "Add" starts at 1, + again 2; No strokes clears it.
+await R6.page.tap('[data-act="setup-hcp"][data-i="0"]');
+await R6.page.waitForTimeout(300);
+ok(/Tara’s handicap/.test(await R6.page.textContent('#sheet')), 'tap Tara’s HCP pill → her handicap sheet');
+await R6.page.tap('#sheet [data-act="hcp-step"][data-d="1"]');
+await R6.page.tap('#sheet [data-act="hcp-step"][data-d="1"]');
+await R6.page.waitForTimeout(200);
+const st6 = await R6.page.evaluate(() => window.__glb.setup.players[0].strokes);
+ok(st6 === '2' && /^2$/.test((await R6.page.textContent('[data-act="setup-hcp"][data-i="0"]')).trim()), 'stepper: + + → 2, and the pill shows it');
+await R6.page.tap('#sheet [data-act="hcp-mode"][data-v="none"]');
+await R6.page.waitForTimeout(200);
+ok(await R6.page.evaluate(() => window.__glb.setup.players[0].strokes) === '', 'No strokes clears it (plays even)');
+await R6.page.tap('#sheet [data-act="hcp-mode"][data-v="full"]');
+await R6.page.tap('[data-act="hcp-done"]');
+await R6.page.waitForTimeout(300);
+ok(await R6.page.evaluate(() => window.__glb.setup.players[0].strokes) === '2' && !(await R6.page.$('#sheet .panel')), 'Use full brings the 2 back; Done closes the sheet');
+await R6.page.tap('[data-act="setup-go"][data-v="game"]');
+await R6.page.waitForTimeout(200);
+ok(!(await R6.page.$('[data-act="setup-game"][data-v="carts"][aria-disabled]')) && /3 carts of 2/.test(await R6.page.textContent('[data-act="setup-game"][data-v="carts"]')),
+  '6 players: Partner “Rider” Cup fits, described as 3 carts of 2');
+await R6.page.tap('[data-act="setup-game"][data-v="carts"]');
+await R6.page.tap('[data-act="setup-go"][data-v="teams"]');
+await R6.page.waitForTimeout(200);
+ok((await R6.page.$$('.cart-card')).length === 3 && (await R6.page.$$('.cart-card .swap-name')).length === 6 && /6 players, 3 carts/.test(await R6.page.textContent('#content')),
+  'Partner “Rider” Cup setup with 6: 3 carts of 2');
+// Swipe right = back in Setup (design system → gestures).
+const swipeRight = (page) => page.evaluate(() => {
+  const el = document.getElementById('content');
+  const t = (x) => new Touch({ identifier: 1, target: el, clientX: x, clientY: 400 });
+  el.dispatchEvent(new TouchEvent('touchstart', { touches: [t(60)], changedTouches: [t(60)], bubbles: true }));
+  el.dispatchEvent(new TouchEvent('touchend', { touches: [], changedTouches: [t(260)], bubbles: true }));
+});
+await swipeRight(R6.page);
+await R6.page.waitForTimeout(300);
+ok(await R6.page.evaluate(() => window.__glb.setup.screen) === 'game', 'swipe right in Setup goes back a step (carts → game)');
+await R6.page.tap('[data-act="setup-go"][data-v="teams"]');
+await R6.page.waitForTimeout(200);
+await R6.page.tap('[data-act="setup-go"][data-v="matchups"]');
+await R6.page.waitForTimeout(200);
+const mu6 = await R6.page.$$eval('.mu-row', (els) => els.map((e) => e.textContent.replace(/\s+/g, ' ').trim()));
+ok(mu6.length === 3 && mu6.every((t) => t.startsWith('1–18')) && /A \+ B · 2nd: C/.test(await R6.page.textContent('.mu-card')) && !(await R6.page.$('[data-act="setup-schedule"]')),
+  `matchups: A v B, A v C, B v C, all 18, no switching (${mu6.join(' | ')})`);
+await R6.page.tap('[data-act="setup-save"]');
+await R6.page.waitForTimeout(800);
+const r6code = await R6.page.evaluate(() => window.__glb.setup?.saved?.code || location.hash.split('/')[2]);
+const r6 = be.tables.events.find((e) => e.code === r6code) || be.tables.events[be.tables.events.length - 1];
+ok(r6.roster.teams.length === 3 && r6.settings.rotation.length === 1 && r6.settings.rotation[0].matches.length === 3 && r6.settings.rotationMode === 'fixed'
+  && r6.roster.players.filter((p) => p.groupId === 'g1').length === 4 && r6.roster.players.filter((p) => p.groupId === 'g2').length === 2,
+  'saved: 3 carts, one 18-hole rotation of 3 matchups, groups of 4 + 2, fixed tee times');
+await R6.page.tap('[data-act="setup-open"]');
+await R6.page.waitForTimeout(1200);
+await R6.page.locator('.who-btn', { hasText: 'Tara' }).first().tap();
+await R6.page.waitForTimeout(900);
+await R6.page.tap('[data-act="team-later"]').catch(() => {});
+await R6.page.waitForTimeout(500);
+ok(/both other carts on every hole/.test(await R6.page.textContent('.fullcard.brief').catch(() => '')), 'Today’s game: your cart plays both other carts on every hole');
+await R6.page.tap('[data-act="brief-done"]').catch(() => {});
+await R6.page.waitForTimeout(500);
+const line6 = (await R6.page.textContent('.matchup-line').catch(() => '')).replace(/\s+/g, ' ');
+ok((line6.match(/vs /g) || []).length === 2, `Enter: the match line shows both matchups (${line6.trim()})`);
+await R6.page.goto(`${srv.origin}/#/e/${r6.code}/board`);
+await R6.page.waitForTimeout(900);
+const wait6 = (await R6.page.textContent('#content')).replace(/\s+/g, ' ');
+ok(/Waiting for the first scores/.test(wait6) && /1 of 6 joined/.test(wait6) && /1st tee time/.test(wait6) && (await R6.page.$$('.wait-row')).length === 3,
+  `Board before any scores: waiting, who's joined, 3 carts with their tee time (${wait6.slice(0, 90)}…)`);
+await R6.page.goto(`${srv.origin}/#/e/${r6.code}/matches`);
+await R6.page.waitForTimeout(900);
+ok(/Waiting for the first scores/.test(await R6.page.textContent('#content')) && (await R6.page.$$('.mu-item')).length === 2 && !(await R6.page.$('.ms-num')),
+  'Matches before any scores: your 2 matchups, not 0–0');
+// First score in → the match view: a segment for each of your matchups, the third one under ALSO.
+be.tables.scores.push({ event_id: r6.id, player_id: 'p1', hole: 1, strokes: 4, updated_by: 'Tara', updated_at: new Date().toISOString() });
+await R6.page.evaluate(() => window.__glb.refetch());
+await R6.page.waitForTimeout(700);
+ok((await R6.page.$$('.seg2 button')).length === 2 && (await R6.page.$$('.watch-box')).length === 1 && /MATCH 1 OF 2/.test(await R6.page.textContent('.m-kicker')),
+  'Matches: a segment for each of your 2 matchups, the third (B v C) under ALSO');
+await R6.page.screenshot({ path: 'tests/screenshots/matches-3-carts.png' });
+await R6.page.tap('[data-act="rules-open"]');
+await R6.page.waitForTimeout(300);
+const rules6 = (await R6.page.textContent('#sheet')).replace(/\s+/g, ' ');
+ok(/Partner “Rider” Cup · Match play/.test(rules6) && /4 a hole/.test(rules6) && /Same opponents all 18/.test(rules6) && /Full, off zero/.test(rules6) && /Double par/.test(rules6) && /better matchup record/.test(rules6),
+  `Rules sheet: the round's real settings (${rules6.slice(0, 120)}…)`);
+await R6.page.evaluate(() => window.__glb.closeSheet());
+await R6.page.evaluate(() => window.__glb.openSheet('menu', {}));
+await R6.page.waitForTimeout(300);
+ok(!!(await R6.page.$('#sheet [data-act="go"][data-v^="#/setup/"]')), 'the round’s ⋯ menu has Run it back as a new round');
+await R6.page.evaluate(() => window.__glb.closeSheet());
+// Home: the round you're playing is a green card with Back to hole N; Join with code opens a sheet.
+await R6.page.goto(`${srv.origin}/#/`);
+await R6.page.waitForTimeout(600);
+const live6 = (await R6.page.textContent('.live-card').catch(() => '')).replace(/\s+/g, ' ');
+ok(/Live · hole 1/i.test(live6) && /Partner “Rider” Cup/.test(live6) && /Back to hole 1/.test(live6) && /Tara/.test(await R6.page.textContent('#topbar')),
+  `Home: Playing now card, your name up top (${live6.trim().slice(0, 80)})`);
+await R6.page.tap('[data-act="home-joinsheet"]');
+await R6.page.waitForTimeout(400);
+ok(!!(await R6.page.$('#sheet #join-code')) && /Join a round/.test(await R6.page.textContent('#sheet')), 'Join with code → a sheet with the code field');
+await R6.page.evaluate(() => window.__glb.closeSheet());
+await R6.ctx.close();
 
 // 10b. Names: first + last name required; a full name someone else already has asks for a
 //      nickname; two Andrews in one round show as "Andrew D." / "Andrew S."; people + crew saved.
@@ -561,6 +685,41 @@ await YF.page.waitForTimeout(1000);
 ok(be.tables.scores.find((x) => x.event_id === yev.id && x.player_id === 'p2' && x.hole === 1)?.strokes === ypar + 1, 'picked bogey for Sean: saved');
 ok(!!(await YF.page.$('.grow.open [data-act="pad-pick"][data-pid="p4"]')), 'and the pad jumped to Jake (next one waiting)');
 ok(/Entered by you · Sean can still edit/.test(await yText()), 'Sean’s row: “Entered by you · Sean can still edit”');
+// A player's own entry wins: Sam entered 4 on his phone, so Andrew can't change it; the organizer can.
+await YF.page.tap('[data-act="pad-toggle"][data-pid="p3"]');
+await YF.page.waitForTimeout(300);
+await YF.page.tap(`[data-act="pad-pick"][data-pid="p3"][data-v="${ypar + 2}"]`);
+await YF.page.waitForTimeout(1200);
+const samRow = be.tables.scores.find((x) => x.event_id === yev.id && x.player_id === 'p3' && x.hole === 1);
+ok(samRow.strokes === 4 && samRow.updated_by === 'Sam', `own entry wins: Sam’s 4 stays (${samRow.strokes} by ${samRow.updated_by})`);
+const oeToast = await toastText(YF.page);
+ok(/Sam entered 4 on hole 1 on their phone/.test(oeToast) && /own score wins/.test(oeToast) && /From Sam’s phone/.test(await yText()),
+  `Andrew’s phone takes Sam’s 4 back and says why (${oeToast})`);
+const SDEV = '6a6a6a6a-6666-4666-8666-666666666666';
+be.tables.claims.push({ event_id: yev.id, player_id: 'p3', device_id: SDEV });
+ok(be.rpc.upsert_score({ p_code: yr.code, p_device_id: SDEV, p_player_id: 'p3', p_hole: 1, p_strokes: 5 }).ok === true, 'Sam can still change his own score');
+ok(be.rpc.upsert_score({ p_code: yr.code, p_device_id: YDEV, p_player_id: 'p3', p_hole: 1, p_strokes: 5 }).ok === true, 'the same number from Andrew is fine (nothing changes)');
+ok(be.rpc.admin_upsert_score({ p_code: yr.code, p_admin_pin: yr.admin_pin, p_player_id: 'p3', p_hole: 1, p_strokes: 6 }).ok === true, 'the organizer can still fix it');
+ok(be.rpc.upsert_score({ p_code: yr.code, p_device_id: YDEV, p_player_id: 'p3', p_hole: 1, p_strokes: 4 }).ok === true, 'once someone else entered it, Andrew can change it again');
+// Fix a hole (organizer only): the hole menu ⋯ → par + stroke index → Save; SI stays 1–18 once each.
+ok(!(await YF.page.$('[data-act="fixhole-open"]')), 'no hole menu for a player who isn’t the organizer');
+await YF.page.evaluate(([c, pin]) => { localStorage.setItem('glb.admin.' + c, JSON.stringify(pin)); }, [yr.code, yr.admin_pin]);
+await YF.page.reload();
+await YF.page.waitForTimeout(1000);
+await YF.page.tap('[data-act="fixhole-open"]');
+await YF.page.waitForTimeout(300);
+const fh = await YF.page.textContent('#sheet');
+const siWas = yev.course.strokeIndex[0];
+ok(/Fix hole 1/.test(fh) && /Changes the card for all 4 players/.test(fh), 'organizer: ⋯ → Fix hole 1, with the amber note');
+await YF.page.tap('#sheet [data-act="fixhole-par"][data-v="6"]');
+await YF.page.tap('#sheet [data-act="fixhole-si"][data-d="1"]');
+await YF.page.waitForTimeout(150);
+await YF.page.tap('#sheet [data-act="fixhole-save"]');
+await YF.page.waitForTimeout(900);
+const swapped = yev.course.strokeIndex.indexOf(siWas);
+ok(yev.course.par[0] === 6 && yev.course.strokeIndex[0] === siWas + 1 && swapped >= 0 && new Set(yev.course.strokeIndex).size === 18,
+  `saved: par 6, stroke index ${siWas} → ${siWas + 1}, the hole that had ${siWas + 1} took ${siWas} (${swapped + 1})`);
+ok(/Hole 1 saved/.test(await toastText(YF.page)), 'and a toast says so');
 await YF.ctx.close();
 
 // 11c. Matches: one segment per match; the other match expands IN PLACE (yours collapses to a
@@ -1119,9 +1278,12 @@ await SP.page.waitForTimeout(500);
 await SP.page.tap('[data-act="host-solo"][data-v="on"]');
 await SP.page.waitForTimeout(200);
 ok(/ties? for low splits it/.test(await SP.page.textContent('#content')) && !(await SP.page.$('[data-k="matchBonus"]')), 'Host → Rules: Match play explains the split; no match bonus / halved points');
+ok(/1st tee time/.test(await SP.page.textContent('.tee-row')), 'Host → Rules: an optional time for the 1st tee time');
+await SP.page.fill('[data-input="host-tee"][data-i="0"]', '08:40');
 await SP.page.tap('[data-act="host-save"]');
 await SP.page.waitForTimeout(900);
 ok(spEv.settings.solo === true && spEv.settings.game === 'rotationMatch', 'saved: no "needs 4 carts of 2" error');
+ok(JSON.stringify(spEv.settings.teeTimes) === '["08:40"]', `saved the tee time (${JSON.stringify(spEv.settings.teeTimes)})`);
 await SP.page.tap('[data-act="tab"][data-v="matches"]');
 await SP.page.waitForTimeout(500);
 await clearOverlays(SP.page);
@@ -1228,7 +1390,7 @@ await HE.page.goto(`${srv.origin}/#/`);
 await HE.page.waitForTimeout(500);
 ok(!(await HE.page.$('[data-act="home-add"]')), 'not an iPhone: no button');
 
-const errors = [A, C, A2, P, Q, O, F, R, X, Y, Z, G, T, TP, NL, SP, HA, HB, HC, HD, HE, HF].flatMap((p) => p.page.errors);
+const errors = [A, C, A2, P, Q, O, R6, F, R, X, Y, Z, G, T, TP, NL, SP, HA, HB, HC, HD, HE, HF].flatMap((p) => p.page.errors);
 ok(errors.length === 0, `no page errors${errors.length ? `: ${errors.join('; ')}` : ''}`);
 
 await browser.close();

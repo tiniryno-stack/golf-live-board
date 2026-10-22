@@ -5,6 +5,7 @@
 
 import { esc, icon, seg, clock, copyText, roundLink } from '../ui.js';
 import * as db from '../db.js';
+import { teeTimeName } from '../scoring.js';
 
 const clone = (x) => JSON.parse(JSON.stringify(x));
 const TEAM_IDS = ['A', 'B', 'C', 'D'];
@@ -38,6 +39,18 @@ function pinForm() {
   </div>`;
 }
 
+/** Optional clock time for each tee time (settings.teeTimes); blank = "1st tee time" etc. */
+function teeTimesField(d) {
+  const groups = d.roster.groups?.length ? d.roster.groups : [{ id: 'g1' }];
+  const times = Array.isArray(d.settings.teeTimes) ? d.settings.teeTimes : [];
+  const who = (g) => (d.roster.players || []).filter((p) => (p.groupId || 'g1') === g.id).map((p) => p.name.split(' ')[0]).join(', ');
+  return `<div class="field"><span class="label">Tee times</span>
+    <p class="help" style="margin:0 0 8px">Optional. Shown on the Board and the rules; blank says “1st tee time”.</p>
+    ${groups.map((g, i) => `<label class="tee-row"><span class="tee-k">${esc(teeTimeName({ teeTimes: [] }, i))}<small class="ellipsis">${esc(who(g))}</small></span>
+      <input class="input tee-in" type="time" value="${esc(times[i] || '')}" data-input="host-tee" data-i="${i}" aria-label="${esc(teeTimeName({ teeTimes: [] }, i))}"></label>`).join('')}
+  </div>`;
+}
+
 function rules(app, d) {
   const st = d.settings;
   const pm = st.game === 'rotationPlusMinus';
@@ -56,16 +69,18 @@ function rules(app, d) {
     : `<div class="field"><span class="label">Game</span>${seg('host-set', [['none', 'None'], ['rotationMatch', 'Match Play'], ['rotationPlusMinus', 'Plus/Minus']], st.game, 'data-k="game"')}</div>`;
   if (noCarts) {
     return `${gameField}
+      ${teeTimesField(d)}
       <div class="field"><span class="label">Max hole score</span>${seg('host-set', [['doublePar', 'Double par'], ['netDoubleBogey', 'Net dbl bogey'], ['none', 'None']], st.maxHoleScore, 'data-k="maxHoleScore"')}</div>
       ${courseAndFinish(app, d)}`;
   }
   return `${gameField}
     <div class="field"><span class="label">First tee</span>${seg('host-set', [['1', 'Hole 1'], ['10', 'Hole 10']], String(st.startHole || 1), 'data-k="startHole"')}</div>
+    ${teeTimesField(d)}
     <div class="field"><span class="label">Team score</span>${seg('host-set', [['bestBallAggregate', 'Low Ball/Total'], ['bestBall', 'Best ball'], ['aggregate', 'Aggregate']], st.teamScore, 'data-k="teamScore"')}</div>
     <div class="field"><span class="label">Max hole score</span>${seg('host-set', [['doublePar', 'Double par'], ['netDoubleBogey', 'Net dbl bogey'], ['none', 'None']], st.maxHoleScore, 'data-k="maxHoleScore"')}</div>
     <div class="chips" style="margin:0 0 16px">
       <button class="pill" data-act="host-toggle" data-k="par3NoMax" aria-pressed="${!!st.par3NoMax}"><span class="dot"></span>No max on par 3s</button>
-      <button class="pill" data-act="host-swap" aria-pressed="${(st.rotationMode || 'swap') === 'swap'}"><span class="dot"></span>Carts swap every 6</button>
+      ${(d.roster.teams || []).length === 4 ? `<button class="pill" data-act="host-swap" aria-pressed="${(st.rotationMode || 'swap') === 'swap'}"><span class="dot"></span>Carts swap every 6</button>` : ''}
     </div>
     ${st.game === 'rotationMatch' ? `<div class="field"><span class="label">Halved points</span>${seg('host-set', [['0.5', '½ each'], ['0', 'Nothing']], String(st.halvedHolePoints), 'data-k="halvedHolePoints"')}</div>` : ''}
     ${st.game === 'rotationMatch' ? `<div class="field"><span class="label">Matchup win bonus</span>${seg('host-set', [['1', '+1 point'], ['0', 'None']], String(st.matchBonus ?? 1), 'data-k="matchBonus"')}</div>` : ''}
@@ -99,7 +114,7 @@ function courseAndFinish(app, d) {
     <div class="micro" style="margin:0 0 6px">Practice rounds &amp; cleanup</div>
     <p class="help" style="margin:0 0 12px"><b>Reset</b> clears every score (and reopens a finalized round) but keeps players, carts, settings and everyone\u2019s phones joined, so you can replay from hole 1. <b>Delete</b> removes the round for everyone.</p>
     <div class="stack" style="gap:8px;margin:0 0 8px">
-      <button class="btn ghost block" data-act="host-reset">Reset scores</button>
+      <button class="btn danger block" data-act="host-reset">Reset scores</button>
       <button class="btn danger block" data-act="host-delete">Delete round</button>
     </div>`;
 }
@@ -164,8 +179,8 @@ function validate(d) {
   } else if (st.solo && st.game !== 'none') {
     const n = d.roster.players.length;
     if (teams.length || n < 2 || n > 6) return 'Match play (split point) is for 2–6 players with no carts.';
-  } else if (st.game !== 'none' && !(teams.length === 4 && teams.every((t) => d.roster.players.filter((p) => p.teamId === t.id).length === 2))) {
-    return 'The rotating game needs 4 carts of 2.';
+  } else if (st.game !== 'none' && !((teams.length === 4 || teams.length === 3) && teams.every((t) => d.roster.players.filter((p) => p.teamId === t.id).length === 2))) {
+    return 'Partner “Rider” Cup needs 4 carts of 2 (or 3 carts with 6 players).';
   }
   return null;
 }
@@ -236,6 +251,14 @@ export default {
       st.handicapMode = st.handicapMode === 'offLow' ? 'full' : 'offLow';
       touch(app);
       app.render();
+    },
+    'host-tee': (el, ev, app) => {
+      const st = draft(app).settings;
+      const times = Array.isArray(st.teeTimes) ? [...st.teeTimes] : [];
+      times[Number(el.dataset.i)] = /^\d{1,2}:\d{2}$/.test(el.value) ? el.value : '';
+      while (times.length && !times[times.length - 1]) times.pop();
+      st.teeTimes = Array.from(times, (t) => t || '');
+      touch(app);
     },
     'host-allow': (el, ev, app) => {
       const v = el.value.replace(/\D/g, '').slice(0, 3);

@@ -2,15 +2,19 @@
 // leave round, player detail, edit a past score, hole detail, headline feed, confirm,
 // organizer PIN (unlock a finalized round).
 
-import { esc, icon, scoreClass, clock, mark } from '../ui.js';
-import { fmtToPar, fmtPts, fmtSigned, maxHoleScore, componentNames, posOf, holeAt, holesLabel, matchFor, playOrder } from '../scoring.js';
-import { teamColor, headlineColor } from '../teams.js';
+import { esc, icon, scoreClass, clock, mark, seg } from '../ui.js';
+import { fmtToPar, fmtPts, fmtSigned, maxHoleScore, componentNames, posOf, holeAt, holesLabel, matchesFor, playOrder, teeTimeName, groupIndex } from '../scoring.js';
+import { teamColor, headlineColor, shortTeam } from '../teams.js';
+import { codeField } from './home.js';
+import { handicapSheet } from './setup.js';
 
 let lastHtml = '';
 let closeTimer = null;
 
 export function render(root, app) {
   const s = app.sheet;
+  document.documentElement.classList.toggle('sheet-open', !!s); // the tab bar hides while a sheet is open
+  armSwipe(root, app);
   if (!s) {
     if (!root.classList.contains('open')) return;
     root.classList.remove('open');
@@ -37,14 +41,90 @@ export function render(root, app) {
   }
 }
 
-const head = (title) =>
-  `<div class="panel-head"><h2 class="title">${esc(title)}</h2>
+/** The Rules sheet's rows: [label, value, one line of detail], from the round's settings. */
+export function rulesRows(app) {
+  const snap = app.snapshot;
+  const st = snap.settings;
+  const g = snap.game;
+  const mine = app.myTeam();
+  const name = (t) => snap.teamById.get(t)?.name || t;
+  const rows = [];
+  const half = Number(st.halvedHolePoints) ? `A tie splits it, ${fmtPts(Number(st.halvedHolePoints))} each.` : 'A tie is worth nothing.';
+  const two = st.teamScore === 'bestBallAggregate';
+  if (!g) {
+    rows.push(['Format', snap.hasStrokes ? 'Stroke play · net' : 'Stroke play', 'Everyone plays their own ball. Lowest total wins.']);
+  } else if (g.type === 'splitPoint') {
+    rows.push(['Format', 'Match play · everyone vs everyone', 'Everyone plays their own ball.']);
+    rows.push(['Points', '1 a hole', 'Low net score takes it. A tie for low splits it (½, ⅓, ¼…).']);
+  } else {
+    const three = !st.pairs && snap.teams.length === 3;
+    rows.push(['Format', `${st.pairs ? '2v2' : 'Partner “Rider” Cup'} · ${g.type === 'rotationPlusMinus' ? 'Plus/Minus' : 'Match play'}${snap.hasStrokes ? ' · net' : ''}`,
+      st.pairs ? 'Two teams of two in one foursome.' : three ? 'Your cart plays both other carts on every hole.' : 'Your cart vs one other cart at a time.']);
+    if (g.type === 'rotationPlusMinus') rows.push(['Points', 'Every stroke counts', `${two ? 'Low ball and low total' : st.teamScore === 'aggregate' ? 'Both partners added' : 'Best ball'}: beat theirs and the difference is yours.${g.cap != null ? ` A matchup swings ±${g.cap} at most.` : ''}`]);
+    else rows.push(['Points', `${g.ncomp * (three ? 2 : 1)} a hole`, `${two ? '1 for low ball, 1 for low total' : st.teamScore === 'aggregate' ? '1 for the lower total of both partners' : '1 for the best ball'}${three ? ', against each cart' : ''}. ${half}${g.bonus ? ` +${fmtPts(g.bonus)} for winning a matchup.` : ''}`]);
+    const myMatches = mine ? g.matches.filter((m) => m.teams.includes(mine)) : [];
+    const lens = [...new Set(g.rotations.map((r) => r.to - r.from + 1))];
+    const switchLabel = g.rotations.length === 1 ? 'Same opponents all 18' : lens[0] === 9 ? 'Switch at the turn' : `Switch every ${lens[0]} holes`;
+    const vs = myMatches.length
+      ? myMatches.map((m) => `${m.firstHole}–${m.lastHole} vs ${shortTeam(name(m.teams.find((t) => t !== mine)))}`).join(', ')
+      : g.rotations.map((r) => `${r.matches[0] ? `${r.matches[0].firstHole}–${r.matches[0].lastHole}` : ''}`).join(', ');
+    const stay = (st.rotationMode || 'swap') === 'swap' ? 'Carts swap foursomes at the switch.' : 'You keep your tee time.';
+    rows.push([st.pairs ? 'Partners' : 'Opponents', st.pairs ? ({ never: 'Same partner all 18', six: 'Switch every 6 holes', turn: 'Switch at the turn' })[st.pairSwitch] || 'Same partner all 18' : switchLabel, st.pairs ? 'Nobody changes groups.' : `${vs}. ${stay}`]);
+  }
+  const allow = Number(st.allowancePct ?? 100);
+  rows.push(['Handicaps', `${allow === 100 ? 'Full' : `${allow}%`}, ${st.handicapMode === 'offLow' ? 'off the low player' : 'off zero'}`, snap.hasStrokes ? 'Strokes fall on the hardest holes first (stroke index).' : 'Nobody gets strokes in this round.']);
+  rows.push(['Max score', ({ doublePar: 'Double par', netDoubleBogey: 'Net double bogey', none: 'None' })[st.maxHoleScore] || 'Double par',
+    st.maxHoleScore === 'none' ? 'Play every hole out.' : `Pick up once you hit it; it counts as that score.${st.par3NoMax ? ' No max on par 3s.' : ''}`]);
+  if (g && g.type !== 'splitPoint') rows.push(['Winner', g.type === 'rotationPlusMinus' ? 'Best +/− after 18' : 'Most points after 18', 'Tie at the top: better matchup record, then who won between the two, then the stroke margin. Still tied = shared.']);
+  else if (g) rows.push(['Winner', 'Most points after 18', 'A tie at the top is shared.']);
+  else rows.push(['Winner', `Lowest ${snap.hasStrokes ? 'net ' : ''}total`, 'A tie is shared.']);
+  if (st.teeTimes?.some(Boolean)) rows.push(['Tee times', st.teeTimes.map((t, i) => teeTimeName(st, i)).join(' · '), '']);
+  return rows;
+}
+
+/** Swipe down on a sheet (from its top, when it isn't scrolled) to close it. Wired once per root. */
+function armSwipe(root, app) {
+  if (root.dataset.swipe) return;
+  root.dataset.swipe = '1';
+  let start = null;
+  root.addEventListener('touchstart', (ev) => {
+    const panel = ev.target.closest?.('.panel');
+    if (!panel || ev.touches.length !== 1 || panel.scrollTop > 0) { start = null; return; }
+    start = { y: ev.touches[0].clientY, panel, dy: 0 };
+  }, { passive: true });
+  root.addEventListener('touchmove', (ev) => {
+    if (!start) return;
+    start.dy = ev.touches[0].clientY - start.y;
+    if (start.dy <= 0) { start.panel.style.transform = ''; return; }
+    start.panel.classList.add('dragging');
+    start.panel.style.transform = `translateY(${start.dy}px)`;
+  }, { passive: true });
+  const end = () => {
+    if (!start) return;
+    const { panel, dy } = start;
+    start = null;
+    panel.classList.remove('dragging');
+    panel.style.transform = '';
+    if (dy > 90) app.closeSheet();
+  };
+  root.addEventListener('touchend', end, { passive: true });
+  root.addEventListener('touchcancel', end, { passive: true });
+}
+
+/** BottomSheet header: title, an optional one-line subtitle, and the 48px close button. */
+const head = (title, sub = '') =>
+  `<div class="panel-head"><div class="ph-text"><h2 class="title">${esc(title)}</h2>${sub ? `<div class="ph-sub">${esc(sub)}</div>` : ''}</div>
    <button class="icon-btn" data-act="sheet-close" aria-label="Close">${icon('close')}</button></div>`;
 
 function playersByCart(app) {
   const snap = app.snapshot;
   const groups = [];
   const teams = snap.roster.teams || [];
+  // Carts only in the cart game (Partner "Rider" Cup): solo match play and 2v2 make teams too,
+  // but there the sheet is one plain list of everyone.
+  const carts = teams.length && !snap.settings.solo && !snap.settings.pairs
+    && teams.some((t) => snap.players.filter((p) => p.teamId === t.id).length > 1);
+  if (!carts) return [{ label: '', players: snap.players, list: true }];
   if (teams.length) {
     for (const t of teams) {
       const ps = snap.players.filter((p) => p.teamId === t.id);
@@ -55,7 +135,7 @@ function playersByCart(app) {
   } else {
     for (const g of snap.roster.groups || []) {
       const ps = snap.players.filter((p) => p.groupId === g.id);
-      if (ps.length) groups.push({ label: g.name, players: ps });
+      if (ps.length) groups.push({ label: teeTimeName(snap.settings, groupIndex(g.id)), players: ps });
     }
     const loose = snap.players.filter((p) => !snap.roster.groups?.some((g) => g.id === p.groupId));
     if (loose.length) groups.push({ label: 'Players', players: loose });
@@ -68,7 +148,7 @@ const BODIES = {
     if (!app.snapshot) return head('Who are you?');
     const groups = playersByCart(app)
       .map(
-        (g) => `<div class="who-group"><span class="micro">${g.teamId ? `<i class="jdot" style="--jersey:${teamColor(null, g.teamId)};margin-right:6px"></i>` : ''}${esc(g.label)}</span><div class="who-grid">${g.players
+        (g) => `<div class="who-group">${g.list ? '' : `<span class="micro">${g.teamId ? `<i class="jdot" style="--jersey:${teamColor(null, g.teamId)};margin-right:6px"></i>` : ''}${esc(g.label)}</span>`}<div class="who-grid${g.list ? ' one' : ''}">${g.players
           .map((p) => {
             const taken = app.claimed.has(p.id) && p.id !== app.me;
             return `<button class="who-btn${taken ? ' taken' : ''}" data-act="who-pick" data-v="${esc(p.id)}">
@@ -114,6 +194,49 @@ const BODIES = {
       <button class="btn ghost block" data-act="sheet-close">Watch while I wait</button>`;
   },
 
+  /** Enter → hole menu (⋯), organizer only: fix this hole's par and stroke index for everyone. */
+  fixhole(app, { hole, par, si }) {
+    const c = app.event?.course;
+    if (!c) return head('Fix a hole');
+    const was = c.par[hole - 1];
+    const other = c.strokeIndex.findIndex((v, i) => v === si && i !== hole - 1);
+    const n = app.snapshot?.players.length || 0;
+    return `${head(`Fix hole ${hole}`, 'From the hole menu. Organizer only.')}
+      <div class="ts-label fh-k">Par</div>
+      ${seg('fixhole-par', [3, 4, 5, 6].map((p) => [String(p), String(p)]), String(par)).replace('class="seg"', 'class="seg fh-par" aria-label="Par"')}
+      <p class="fh-note">${par !== was ? `The card said par ${was}. ` : ''}Scores already in stay; points are re-counted.</p>
+      <div class="ts-label fh-k">Stroke index</div>
+      <div class="hcp-stepper fh-stepper">
+        <button class="hs-btn" data-act="fixhole-si" data-d="-1" aria-label="Lower" ${si <= 1 ? 'disabled' : ''}>${icon('minus', 28)}</button>
+        <span class="hs-mid"><span class="hs-num">${si}</span><span class="hs-was">${other >= 0 ? `hole ${other + 1} gets ${c.strokeIndex[hole - 1]}` : '1 = hardest, 18 = easiest'}</span></span>
+        <button class="hs-btn" data-act="fixhole-si" data-d="1" aria-label="Higher" ${si >= 18 ? 'disabled' : ''}>${icon('plus', 28)}</button>
+      </div>
+      <div class="fh-warn">${icon('alert', 18)}<span>Changes the card for all ${n} players.</span></div>
+      <button class="btn primary big block" data-act="fixhole-save">Save hole ${hole}</button>`;
+  },
+
+  /** Matches → Rules: the round's real settings in plain words (designspec §6b). */
+  rules(app) {
+    const snap = app.snapshot;
+    if (!snap) return head('Rules');
+    const rows = rulesRows(app).map(([k, v, d]) => `<div class="rl-row"><div class="ts-label rl-k">${esc(k)}</div><div class="rl-v">${esc(v)}</div>${d ? `<div class="rl-d">${esc(d)}</div>` : ''}</div>`).join('');
+    const ev = app.event;
+    const who = ev?.roster?.players?.[0]?.name;
+    return `${head('Rules', [ev?.course?.shortName || ev?.course?.name, ev?.played_on ? new Date(`${ev.played_on}T12:00:00`).toLocaleDateString([], { weekday: 'short' }) : ''].filter(Boolean).join(' · '))}
+      <div class="rl-list">${rows}</div>
+      <div class="rl-btns">${app.isOrganizer() ? '<button class="btn" data-act="rules-edit">Edit · organizer</button>' : ''}
+        <button class="btn" data-act="rules-share">${icon('share', 18)} Share rules</button></div>`;
+  },
+
+  /** Setup → Players: one player's handicap. */
+  hcp: (app, props) => handicapSheet(app, props),
+
+  /** Home → Join with code. */
+  join() {
+    return `${head('Join a round', 'The code is in the group text')}
+      <div class="sheet-join">${codeField()}</div>`;
+  },
+
   homescreen() {
     return `${head('Add to Home Screen')}
       <ol class="hs-steps">
@@ -125,23 +248,34 @@ const BODIES = {
       <button class="btn ghost block" data-act="sheet-close" style="margin-top:14px">Not now</button>`;
   },
 
+  /** ⋯ → round actions only. Who you are lives on the avatar ("you" sheet). */
   menu(app) {
     const p = app.myPlayer();
+    const light = document.documentElement.dataset.theme === 'light';
     const meta = [app.code, app.event?.course?.shortName || app.event?.course?.name].filter(Boolean).join(' · ');
-    return `${head(app.event?.name || 'Round')}
-      <p class="meta" style="margin:-4px 0 16px">${esc(meta)} · ${p ? `you\u2019re <b>${esc(p.name)}</b> on this phone` : 'watching on this phone'}</p>
+    return `${head(app.event?.name || 'Round', meta)}
       <div class="stack">
         ${p ? '' : '<button class="btn primary big block" data-act="menu-pick">Pick my name</button>'}
         ${app.snapshot?.roundComplete ? `<button class="btn primary block" data-act="menu-recap">${icon('trophy', 18)} Round recap &amp; scorecards</button>` : ''}
+        ${app.snapshot ? '<button class="btn block" data-act="menu-rules">Rules</button>' : ''}
         ${app.snapshot?.game ? `<button class="btn block" data-act="menu-brief">${icon('spark', 18)} How today’s game works</button>` : ''}
         <button class="btn block" data-act="menu-share">${icon('share', 18)} Share round link</button>
-        <button class="btn block" data-act="theme">${icon(document.documentElement.dataset.theme === 'light' ? 'moon' : 'sun', 18)} ${document.documentElement.dataset.theme === 'light' ? 'Dark mode' : 'Light mode'}</button>
-        <button class="btn ghost block" data-act="menu-home">${icon('home', 18)} Go to Home</button>
-        ${p ? '<button class="btn danger block" data-act="menu-leave">Switch to watching</button>' : ''}
+        <button class="btn block" data-act="theme">${icon(light ? 'moon' : 'sun', 18)} ${light ? 'Dark mode' : 'Light mode'}</button>
+        <button class="btn ghost block" data-act="go" data-v="#/setup/${esc(app.code)}">${icon('shuffle', 18)} Run it back as a new round</button>
+        ${p ? '' : `<button class="btn ghost block" data-act="menu-home">${icon('home', 18)} Go to Home</button>`}
+      </div>`;
+  },
+
+  /** Avatar → you: your name, Go to Home, Switch to watching. */
+  you(app) {
+    const p = app.myPlayer();
+    if (!p) return head('Watching');
+    return `${head(p.name, 'You on this phone')}
+      <div class="stack">
+        <button class="btn block" data-act="menu-home">${icon('home', 18)} Go to Home</button>
+        <button class="btn danger block" data-act="menu-leave">Switch to watching</button>
       </div>
-      <p class="meta" style="margin-top:12px">${p
-        ? `Go to Home keeps you as ${esc(p.name)}; open the round again from Recent rounds. Switch to watching frees your name so the right person can pick it.`
-        : 'Go to Home any time; the round stays in Recent rounds.'}</p>`;
+      <p class="meta" style="margin-top:12px">Go to Home keeps you as ${esc(p.name)}; the round stays in Recent rounds. Switch to watching frees your name so the right person can pick it.</p>`;
   },
 
   leave(app) {
@@ -150,7 +284,7 @@ const BODIES = {
       <p class="soft" style="margin:0 0 16px">${esc(name)} becomes open again and this phone watches. Picked the wrong name? This is how you fix it: switch to watching, then pick the right one.</p>
       <div class="stack">
         <button class="btn danger big block" data-act="leave-confirm">Switch to watching</button>
-        <button class="btn ghost block" data-act="round-menu">Cancel</button>
+        <button class="btn ghost block" data-act="you-menu">Cancel</button>
       </div>`;
   },
 
@@ -176,7 +310,7 @@ const BODIES = {
     const d = (h) => p.gross[h.n - 1] - h.par;
     const played = snap.holes.filter((h) => p.gross[h.n - 1] != null);
     const count = (f) => played.filter((h) => f(d(h))).length;
-    const stats = [[count((x) => x < 0), 'Birdies', 'var(--sun)'], [count((x) => x === 0), 'Pars', 'var(--ink-soft)'], [count((x) => x === 1), 'Bogeys', 'color-mix(in srgb, var(--ink-soft) 50%, transparent)'], [count((x) => x >= 2), 'Double+', 'var(--bad)']];
+    const stats = [[count((x) => x < 0), 'Birdies', 'var(--text)'], [count((x) => x === 0), 'Pars', 'var(--ink-soft)'], [count((x) => x === 1), 'Bogeys', 'color-mix(in srgb, var(--ink-soft) 50%, transparent)'], [count((x) => x >= 2), 'Double+', 'var(--double)']];
     // One highlight: a birdie run, else the swing between nines, else the birdies.
     const order = playOrder(snap.settings);
     let line = '';
@@ -198,7 +332,7 @@ const BODIES = {
     return `${head(p.name)}
       <div class="pc-top">
         <div style="min-width:0">
-          ${team ? `<div class="pc-team" style="color:${team.id === app.myTeam() ? 'var(--good-ink)' : tc}"><i class="jdot" style="--jersey:${tc}"></i>${esc(team.name)}</div>` : ''}
+          ${team ? `<div class="pc-team" style="color:${team.id === app.myTeam() ? 'var(--cart-you-text)' : tc}"><i class="jdot" style="--jersey:${tc}"></i>${esc(team.name)}</div>` : ''}
           <div class="meta">${p.strokes ? `Hcp ${p.strokes} · ` : ''}thru ${p.thru}${snap.hasStrokes && p.thru ? ` · net ${p.netTotal} (${ntp})` : ''}</div>
         </div>
         <div class="pc-total"><div class="mono">${p.grossTotal || '–'}</div><small class="mono">${p.thru ? `${gtp} gross` : ''}</small></div>
@@ -218,14 +352,15 @@ const BODIES = {
     const here = app.ui.hole;
     const me = app.myPlayer();
     const mine = app.myTeam();
+    // One row per matchup; a matchup longer than 9 holes (2v2 all 18, 3 carts) is split into rows of 6.
+    const sixes = [{ from: 1, to: 6 }, { from: 7, to: 12 }, { from: 13, to: 18 }];
     const groups = snap.game
-      ? snap.game.rotations.map((r) => ({ from: r.from, to: r.to }))
-      : [{ from: 1, to: 6 }, { from: 7, to: 12 }, { from: 13, to: 18 }];
+      ? snap.game.rotations.flatMap((r) => (r.to - r.from + 1 > 9 ? sixes.filter((x) => x.from >= r.from && x.to <= r.to) : [{ from: r.from, to: r.to }]))
+      : sixes;
     const rows = groups
       .map(({ from, to }) => {
-        const m = mine ? matchFor(snap, mine, holeAt(st, from)) : null;
-        const opp = m ? (m.teams[0] === mine ? m.teams[1] : m.teams[0]) : null;
-        const vs = opp ? ` · vs <span style="color:${teamColor(mine, opp)}">${esc(snap.teamById.get(opp)?.name || opp)}</span>` : '';
+        const opps = mine ? matchesFor(snap, mine, holeAt(st, from)).map((m) => (m.teams[0] === mine ? m.teams[1] : m.teams[0])) : [];
+        const vs = opps.length ? ` · vs ${opps.map((opp) => `<span style="color:${teamColor(mine, opp)}">${esc(opps.length > 1 ? shortTeam(snap.teamById.get(opp)?.name || opp) : snap.teamById.get(opp)?.name || opp)}</span>`).join(' &amp; ')}` : '';
         const cells = [];
         for (let pos = from; pos <= to; pos++) {
           const h = holeAt(st, pos);
@@ -399,6 +534,45 @@ function editValue(app, d) {
 
 export const actions = {
   'sheet-close': (el, ev, app) => app.closeSheet(),
+  // Fix a hole (organizer): draft lives in the sheet's props until Save.
+  'rules-open': (el, ev, app) => app.openSheet('rules', {}),
+  'rules-edit': (el, ev, app) => {
+    app.closeSheet();
+    app.go(app.tabHash('host'));
+  },
+  'rules-share': async (el, ev, app) => {
+    const text = `${app.event?.name || 'Our round'} · rules\n${rulesRows(app).map(([k, v, d]) => `${k}: ${v}${d ? `. ${d}` : ''}`).join('\n')}`;
+    try {
+      if (navigator.share) await navigator.share({ title: 'Rules', text });
+      else { await navigator.clipboard.writeText(text); app.toast({ title: 'Rules copied' }); }
+    } catch { /* share sheet dismissed */ }
+  },
+  'fixhole-open': (el, ev, app) => {
+    const h = Number(el.dataset.v);
+    const c = app.event?.course;
+    if (!c || !app.isOrganizer()) return;
+    app.openSheet('fixhole', { hole: h, par: c.par[h - 1], si: c.strokeIndex[h - 1] });
+  },
+  'fixhole-par': (el, ev, app) => app.openSheet('fixhole', { ...app.sheet.props, par: Number(el.dataset.v) }),
+  'fixhole-si': (el, ev, app) => {
+    const p = app.sheet.props;
+    app.openSheet('fixhole', { ...p, si: Math.max(1, Math.min(18, p.si + Number(el.dataset.d))) });
+  },
+  'fixhole-save': async (el, ev, app) => {
+    const { hole, par, si } = app.sheet.props;
+    const c = JSON.parse(JSON.stringify(app.event.course));
+    const old = c.strokeIndex[hole - 1];
+    const other = c.strokeIndex.findIndex((v, i) => v === si && i !== hole - 1);
+    if (other >= 0) c.strokeIndex[other] = old; // keep 1–18 each used once: the two holes swap
+    c.par[hole - 1] = par;
+    c.strokeIndex[hole - 1] = si;
+    el.setAttribute('aria-busy', 'true');
+    const ok = await app.saveEvent({ course: c });
+    if (ok) {
+      app.closeSheet();
+      app.toast({ title: `Hole ${hole} saved`, sub: `Par ${par} · stroke index ${si}${other >= 0 ? ` · hole ${other + 1} is ${old} now` : ''}` });
+    } else el.removeAttribute('aria-busy');
+  },
   'who-pick': (el, ev, app) => {
     const pid = el.dataset.v;
     if (app.claimed.has(pid) && pid !== app.me) app.openSheet('taken', { pid });
@@ -410,6 +584,8 @@ export const actions = {
     app.refreshClaimed();
     app.openSheet('who', {});
   },
+  'you-menu': (el, ev, app) => app.openSheet('you', {}),
+  'menu-rules': (el, ev, app) => app.openSheet('rules', {}),
   'leave-confirm': (el, ev, app) => app.leave(),
   'menu-leave': (el, ev, app) => app.openSheet('leave', {}),
   'menu-home': (el, ev, app) => {

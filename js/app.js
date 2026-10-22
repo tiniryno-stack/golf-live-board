@@ -3,7 +3,8 @@
 // Render flow: Supabase ─realtime─► app state ─► scoring.compute() ─► snapshot ─► active screen render
 
 import * as db from './db.js';
-import { compute, nextHoleFor, currentHoleOf, sameFoursome, matchFor, playOrder, posOf, holeAt, HOLES, sideOn } from './scoring.js';
+import { compute, nextHoleFor, currentHoleOf, sameFoursome, matchFor, playOrder, posOf, holeAt, HOLES, sideOn, teeTimeName, groupIndex } from './scoring.js';
+import { roundSummary } from './screens/home.js';
 import { isDefaultTeamName } from './teams.js';
 import { replayHeadlines, latestMoment } from './headlines.js';
 import { esc, icon, initials, roundLink, copyText } from './ui.js';
@@ -127,6 +128,7 @@ app.coach = (key, target, text) => {
 };
 
 app.openSheet = (type, props = {}) => {
+  fx.clearCoach(); // never a coach tip over a sheet
   app.sheet = { type, props };
   renderSheet();
 };
@@ -165,6 +167,7 @@ function recompute({ headlines = 'soon' } = {}) {
   const hadScores = !!app.snapshot?.anyPosted;
   app.snapshot = compute(app.event, rows);
   if (!app.snapshot.anyPosted) freshStart(hadScores);
+  try { db.recent.note(app.code, roundSummary(app)); } catch { /* Home's summary is a nice-to-have */ }
   if (headlines === 'now') {
     clearTimeout(headlineTimer);
     app.headlines = replayHeadlines(app.event, rows);
@@ -221,10 +224,21 @@ const REJECT_TEXT = {
   bad_pin: 'the organizer PIN didn’t work',
   finalized: 'the round is final (organizer PIN to edit)',
   unknown_player: 'that player isn’t in the round anymore',
+  own_entry: 'they entered it on their own phone, so theirs stays',
 };
 
-function onQueueReject(item, error) {
+function onQueueReject(item, error, res = {}) {
   const name = app.snapshot?.playerById.get(item.playerId)?.name || 'score';
+  if (error === 'own_entry') {
+    // A player's own entry wins: take their number and say so (not an error, nothing to retry).
+    const key = `${item.playerId}:${item.hole}`;
+    app.scores.set(key, { player_id: item.playerId, hole: item.hole, strokes: res.strokes, updated_by: res.updated_by || name, updated_at: new Date().toISOString() });
+    recompute();
+    render();
+    app.toast({ title: `${name} entered ${res.strokes} on hole ${item.hole} on their phone`, sub: 'A player’s own score wins. Theirs stays.' });
+    refetchAll();
+    return;
+  }
   app.toast({ title: `Couldn’t save ${name} on ${item.hole}`, sub: REJECT_TEXT[error] || error, error: true });
   if (error === 'not_claimed') setMe(null);
   if (error === 'bad_pin') setAdmin(null);
@@ -255,6 +269,7 @@ function setMe(pid) {
   if ((pid || null) !== app.me) app.ui.hole = null;
   app.me = pid || null;
   db.me.set(app.code, app.me);
+  try { db.recent.note(app.code, roundSummary(app)); } catch { /* Home's summary is a nice-to-have */ }
   render();
 }
 function setAdmin(pin) {
@@ -268,7 +283,12 @@ async function refreshClaimed() {
   if (!app.code) return;
   try {
     const res = await db.api.claimedPlayers(app.code);
-    if (res.ok) app.claimed = new Set(res.players);
+    if (res.ok) {
+      const before = [...app.claimed].sort().join();
+      app.claimed = new Set(res.players);
+      // The waiting Board says who's joined: redraw when that changes.
+      if (before !== [...app.claimed].sort().join() && app.snapshot && !app.snapshot.anyPosted) render();
+    }
     renderSheet();
   } catch { /* offline */ }
 }
@@ -879,7 +899,7 @@ function foursomeLabel(pid, hole) {
     if (m) return m.teams.map((t) => snap.teamById.get(t)?.name || t).join(' v ');
   }
   const g = (app.event.roster.groups || []).find((x) => x.id === p?.groupId);
-  return g?.name || 'Hole';
+  return g ? teeTimeName(snap.settings, groupIndex(g.id)) : 'Hole';
 }
 function noteIncoming(row) {
   const label = foursomeLabel(row.player_id, row.hole);
@@ -1013,6 +1033,7 @@ function route() {
   const prev = app.route;
   app.route = parseHash();
   fx.closeOverlay();
+  fx.clearCoach();
   if (app.sheet && !app.sheet.props?.keep) app.closeSheet();
   if (app.route.round) {
     if (app.route.code !== app.code) {
@@ -1113,7 +1134,7 @@ function renderTopbar(screen, inRound) {
     const custom = screen.topBack?.(app); // e.g. Setup: back to the previous step
     const home = app.route.name === 'home';
     const back = home
-      ? '<div class="spacer"></div>'
+      ? screen.topLeft?.(app) || '<div class="spacer"></div>' // Home: your name
       : custom || `<button class="back" data-act="go" data-v="#/">${icon('back', 22)}<span>Home</span></button>`;
     // Light/dark lives on Home and in the round's ⋯ menu; Setup's top right shows its progress bars.
     return `${back}${home ? themeBtn : screen.topRight?.(app) || ''}`;
@@ -1145,6 +1166,17 @@ function renderTabbar() {
 }
 
 function renderSyncChip() {
+  // Connection pill (design system → Toast): under the header while offline with scores waiting to send.
+  const off = app.code && (typeof navigator !== 'undefined' && navigator.onLine === false) && app.unsynced > 0;
+  let pill = document.getElementById('netpill');
+  if (off && !pill) {
+    pill = document.createElement('div');
+    pill.id = 'netpill';
+    pill.className = 'netpill';
+    pill.setAttribute('role', 'status');
+    pill.innerHTML = '<span class="np-dot"></span>Reconnecting… scores will send when you’re back';
+    document.body.append(pill);
+  } else if (!off && pill) pill.remove();
   const el = document.querySelector('[data-sync]');
   if (!el) return;
   const n = app.unsynced;
@@ -1152,6 +1184,8 @@ function renderSyncChip() {
   el.textContent = n ? `${n} unsynced` : app.live === 'live' ? 'Synced' : app.live === 'reconnecting' ? 'Reconnecting' : 'Synced';
 }
 app.renderSyncChip = renderSyncChip;
+window.addEventListener('online', () => renderSyncChip());
+window.addEventListener('offline', () => renderSyncChip());
 
 function renderSheet() {
   sheets.render($('sheet'), app);
@@ -1204,7 +1238,7 @@ Object.assign(actions, {
   },
   'round-menu': () => app.openSheet('menu', {}),
   'name-chip': () => {
-    if (app.me) app.openSheet('menu', {});
+    if (app.me) app.openSheet('you', {});
     else {
       refreshClaimed();
       app.openSheet('who', {});
@@ -1297,21 +1331,20 @@ document.addEventListener('keydown', (ev) => {
   }
 });
 
-// Swipe left/right on Enter changes holes.
+// Gestures (design-system README → Motion and gestures): swipe right = back in Setup. Never swipe to
+// change holes on Enter (too easy to do by accident): arrows and the hole grid only.
 let swipe = null;
 $('content').addEventListener('touchstart', (ev) => {
-  if (app.route.tab !== 'enter' || ev.touches.length !== 1) return;
+  if (app.route.name !== 'setup' || ev.touches.length !== 1 || ev.target.closest?.('input, textarea, .chips, .seg')) { swipe = null; return; }
   swipe = { x: ev.touches[0].clientX, y: ev.touches[0].clientY, t: Date.now() };
 }, { passive: true });
 $('content').addEventListener('touchend', (ev) => {
-  if (!swipe || app.route.tab !== 'enter') return;
+  if (!swipe || app.route.name !== 'setup') return;
   const t = ev.changedTouches[0];
   const dx = t.clientX - swipe.x, dy = t.clientY - swipe.y;
   const quick = Date.now() - swipe.t < 600;
   swipe = null;
-  if (quick && Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
-    actions[dx < 0 ? 'hole-next' : 'hole-prev']?.(null, ev, app);
-  }
+  if (quick && dx > 70 && Math.abs(dx) > Math.abs(dy) * 1.5) document.querySelector('#topbar .back[data-act="setup-go"]')?.click();
 }, { passive: true });
 
 // ───────────────────────────────────────────── boot

@@ -7,7 +7,11 @@
     "test": "node --test",
     "test:fit": "node tests/fit-the-screen.mjs",
     "test:smoke": "node tests/smoke.mjs",
-    "design:compare": "node tests/design-mockups.mjs && FIT_SIZE=393x852 node tests/fit-the-screen.mjs && python3 tests/design-pairs.py"
+    "design:compare": "npm run design:compare:dark && npm run design:compare:light",
+    "design:compare:dark": "node tests/design-mockups.mjs && FIT_SIZE=393x852 node tests/fit-the-screen.mjs && python3 tests/design-pairs.py",
+    "design:compare:light": "MOCK_THEME=light node tests/design-mockups.mjs && FIT_THEME=light FIT_SIZE=393x852 node tests/fit-the-screen.mjs && THEME=light python3 tests/design-pairs.py",
+    "tokens": "python3 -I tests/make-tokens.py docs/design/design-system/tokens.css css/tokens.css",
+    "preview": "bash tests/publish-preview.sh"
   },
   "devDependencies": {
     "@supabase/supabase-js": "2.118.0",

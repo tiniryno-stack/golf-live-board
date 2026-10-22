@@ -83,3 +83,14 @@ test('Multi-course club: the same hole numbers twice split into Course 1 / Cours
   const named = fromOpenGolf({ id: '11111111-2222-4333-8444-555555555556', course_name: 'Club', holes_data: holes_data.map((h, i) => ({ ...h, course_name: i % 2 ? 'East' : 'West' })) });
   assert.deepEqual(named.variants.map((v) => v.label), ['West', 'East'], 'uses the listing’s own course names when it has them');
 });
+
+test('Did you mean: near misses for a course search with no results', async () => {
+  const { didYouMean, editDistance } = await import('../js/coursedata.js');
+  const C = [{ id: 'tc', name: 'The Golf Club at Twin Creeks' }, { id: 'bc', name: 'Bear Creek Golf Club' }, { ogaId: '9', name: 'Indian Creek Golf Club' }];
+  assert.equal(editDistance('crek', 'creek'), 1);
+  assert.deepEqual(didYouMean('twin crek', C).map((c) => c.id), ['tc'], 'a typo finds Twin Creeks');
+  assert.deepEqual(didYouMean('bera creek', C).map((c) => c.id), ['bc']);
+  assert.deepEqual(didYouMean('zzzz', C), [], 'nothing close: no suggestions');
+  assert.deepEqual(didYouMean('twin creeks', C), [], 'a real hit is not a "did you mean"');
+  assert.deepEqual(didYouMean('tw', C), [], 'too short to guess');
+});

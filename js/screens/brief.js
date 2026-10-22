@@ -37,8 +37,11 @@ function scoringPage(snap, g, playing) {
     'Low Total': 'Both partners added',
     Total: 'Both partners added',
   };
-  const title = pm ? 'Rotation Plus/Minus' : 'Rotation Match Play';
-  const sub = `${playing ? 'Your cart vs' : 'Each cart plays'} one other cart${len ? `, ${len} holes at a time` : ', one matchup per rotation'}.`;
+  const three = !st.pairs && snap.teams.length === 3; // Partner “Rider” Cup for 6: both other carts at once
+  const title = st.pairs ? (pm ? 'Rotation Plus/Minus' : 'Rotation Match Play') : `Partner “Rider” Cup${pm ? ' · Plus/Minus' : ''}`;
+  const sub = three
+    ? `${playing ? 'Your cart plays' : 'Each cart plays'} both other carts on every hole, all 18.`
+    : `${playing ? 'Your cart vs' : 'Each cart plays'} one other cart${len ? `, ${len} holes at a time` : ', one matchup per rotation'}.`;
   const net = snap.hasStrokes ? '<p class="brief-note">Net scores: each dot by a name is a stroke off.</p>' : '';
   const defs = (rows) => `<dl class="brief-defs">${rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${v}</dd>`).join('')}</dl>`;
 
@@ -71,7 +74,9 @@ function scoringPage(snap, g, playing) {
   }
   return `<div class="fc-title">${title}</div>
     <div class="sub">${sub}</div>
-    <div class="brief-big"><span class="n">${g.ncomp}</span><span>point${g.ncomp === 1 ? '' : 's'} every hole<small>Lower score wins ${g.ncomp === 1 ? 'it' : 'each one'}</small></span></div>
+    ${three
+      ? `<div class="brief-big"><span class="n">${g.ncomp * 2}</span><span>points every hole<small>${g.ncomp} against each of the other 2 carts</small></span></div>`
+      : `<div class="brief-big"><span class="n">${g.ncomp}</span><span>point${g.ncomp === 1 ? '' : 's'} every hole<small>Lower score wins ${g.ncomp === 1 ? 'it' : 'each one'}</small></span></div>`}
     ${defs(rows)}${ex}${net}`;
 }
 
@@ -119,21 +124,24 @@ function dayPage(app, snap, g) {
     .map((r) => {
       const label = holesLabel(st, r.from, r.to);
       if (team) {
-        const m = r.matches.find((x) => x.teams.includes(mine));
-        if (!m) return `<li><span class="rh">${esc(label)}</span><span class="rv">Sitting out</span></li>`;
-        const opp = m.teams[0] === mine ? m.teams[1] : m.teams[0];
-        const away = app.me && !foursomeTeams(snap.roster, st, app.me, m.firstHole).includes(opp);
-        return `<li><span class="rh">${esc(label)}</span><span class="rv">vs <b style="color:${teamColor(mine, opp)}">${tname(opp)}</b><small>${players(opp)}${away ? ' · other group' : ''}</small></span></li>`;
+        const ms = r.matches.filter((x) => x.teams.includes(mine));
+        if (!ms.length) return `<li><span class="rh">${esc(label)}</span><span class="rv">Sitting out</span></li>`;
+        return ms.map((m) => {
+          const opp = m.teams[0] === mine ? m.teams[1] : m.teams[0];
+          const away = app.me && !foursomeTeams(snap.roster, st, app.me, m.firstHole).includes(opp);
+          return `<li><span class="rh">${esc(label)}</span><span class="rv">vs <b style="color:${teamColor(mine, opp)}">${tname(opp)}</b><small>${players(opp)}${away ? ' · other group' : ''}</small></span></li>`;
+        }).join('');
       }
       const ms = r.matches.map((m) => `<b style="color:${teamColor(null, m.teams[0])}">${tname(m.teams[0])}</b> v <b style="color:${teamColor(null, m.teams[1])}">${tname(m.teams[1])}</b>`);
       return `<li><span class="rh">${esc(label)}</span><span class="rv">${ms.join('<br>')}</span></li>`;
     })
     .join('');
 
-  const perMatch = (r) => (r.to - r.from + 1) * g.ncomp;
-  const myMatches = team ? g.rotations.filter((r) => r.matches.some((m) => m.teams.includes(mine))) : g.rotations;
+  const perMatch = (m) => (m.to - m.from + 1) * g.ncomp;
+  // Your matchups (or one per rotation when watching): a 3-cart round has two at once.
+  const myMatches = team ? g.matches.filter((m) => m.teams.includes(mine)) : g.rotations.map((r) => r.matches[0]);
   const each = [...new Set(myMatches.map(perMatch))];
-  const day = myMatches.reduce((a, r) => a + perMatch(r), 0);
+  const day = myMatches.reduce((a, m) => a + perMatch(m), 0);
   const stakes = pm
     ? '<li>Your <b>+/−</b> adds up across matchups. <b>Highest after 18</b> wins.</li>'
     : g.bonus
@@ -148,7 +156,7 @@ function dayPage(app, snap, g) {
   const start = st.startHole === 10 ? '<li>Tee off on <b>10</b>, finish on <b>9</b>.</li>' : '';
 
   const head = team
-    ? `<div class="fc-title" style="color:var(--good)">${esc(team.name)}</div><div class="sub">${players(mine)}</div>`
+    ? `<div class="fc-title" style="color:var(--cart-you)">${esc(team.name)}</div><div class="sub">${players(mine)}</div>`
     : '<div class="fc-title">The matchups</div>';
   const cls = team ? 'brief-rots' : 'brief-rots all';
   return `${head}

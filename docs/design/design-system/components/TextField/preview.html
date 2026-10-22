@@ -1,0 +1,18 @@
+<!-- @dsCard group="Controls" height=330 subtitle="Default, focused, error, warning" -->
+<div class="root">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600;700&display=swap');
+.root{font-family:var(--font-sans);color:var(--text);background:var(--bg);padding:16px;max-width:393px;box-sizing:border-box;display:flex;flex-direction:column;gap:14px}
+label{display:block;font-size:13px;font-weight:600;margin-bottom:6px}
+input{width:100%;box-sizing:border-box;height:52px;border-radius:var(--radius-md);border:1.5px solid var(--line);background:var(--surface-1);padding:0 14px;font:inherit;font-size:17px;color:var(--text);outline:none}
+input::placeholder{color:var(--text-muted)}
+.f{border-color:var(--text);box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--focus)}
+.e{border-color:var(--error)}
+.w{border-color:var(--warn)}
+.m{font-size:13px;margin-top:6px}
+</style>
+<div><label for="tf1">Add a name</label><input id="tf1" placeholder="e.g. Tyler"></div>
+<div><label for="tf2">Course name</label><input id="tf2" class="f" value="Old Mill Links"></div>
+<div><label for="tf3">Hole 14 par</label><input id="tf3" class="e" value="8" inputmode="numeric"><div class="m" style="color:var(--error)">Par is always 3 to 6.</div></div>
+<div><label for="tf4">Join code</label><input id="tf4" class="w" value="TC482"><div class="m" style="color:var(--warn)">Codes are 6 characters. Check the last one.</div></div>
+</div>

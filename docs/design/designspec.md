@@ -6,6 +6,8 @@ Last updated: 2026-10-21
 
 ---
 
+> Visual rules, tokens and components live in `design-system/` (see HANDOFF.md). This spec covers product rules and screen decisions.
+
 ## 1. Visual direction: A · Night Round
 
 - Polished evolution of today's Flighty-style dark look. Calm, precise; numbers do the talking.
@@ -163,6 +165,42 @@ Two separate questions:
 
 ---
 
+## 6b. Home, empty states, sheets and feedback
+Added from the two UI/UX video takeaways. The design system ("Golf Live Board") holds the matching tokens and components.
+
+**Type and color rules**
+- Six type styles only: number-xl 64, title 32, row 17, body 15, small 13, label 12 (mono, uppercase). 12px is the floor.
+- Big type is tight: letter-spacing about −3%, line-height 110–120%.
+- Green = you only. Confirmations ("Copied", "Saved") are neutral with a check, never green. Hint icons are muted.
+- Light mode gets soft shadows on cards, the tab bar, toasts and sheets. Dark mode uses lighter surfaces instead.
+- No cards inside cards: group with spacing; nest only controls.
+
+**Buttons and inputs**
+- Primary (one per screen, full width at the bottom), secondary (surface-2), ghost (no fill until pressed).
+- Every button has pressed, disabled (says what's missing), loading (spinner, label stays) and focus states.
+- Inputs have a visible label, focus ring, error (red border and fix-it message, blocks) and warning (amber, doesn't block).
+
+**Feedback**
+- Every action gets a response. One-off actions show a Toast (2s, or 5s with Undo). Repeated actions like scores get an inline check.
+- Offline: a "Reconnecting… scores will send when you're back" pill under the header.
+
+**Gestures**
+- Swipe right for back in setup; swipe down to close a sheet.
+- No swiping between holes on Enter. Use arrows or the hole grid.
+- Long-press a scorecard cell to see who entered it and edit it.
+
+**New screens (canvas row "Home, empty states and bottom sheets")**
+- **Home:** the live round is one green-outlined card with "Back to hole 11". Recent rounds are plain rows. Bottom: Join with code (secondary) + New round (primary).
+- **Home, first time:** "No rounds yet" empty state, a join-code field, and New round.
+- **Course, no results:** the focused search field, "No courses match '…'", a "Did you mean" row, and "Enter the scorecard yourself".
+- **Handicap sheet:** tap an HCP pill on Players. Big stepper, "was 17 last round", Use full / No strokes, Done.
+- **Fix-a-hole sheet:** opened from the hole menu (⋯) by the organizer or host link. Par 3–6 buttons and a stroke-index stepper. An amber note says it changes the card for everyone. Save hole 14.
+- **Board before first scores:** "Waiting for the first scores", a joined count with Send code, and the teams with tee times showing "–", not zeros.
+- **Rules sheet:** a Rules button on Matches. Rows: format, points (1 low ball + 1 low total, ties ½), opponents (switch every 6), handicaps, max score, winner and tiebreak. Edit is organizer-only; Share rules.
+- Still to draw: an empty Matches screen (same pattern as Board).
+
+---
+
 ## 7. Decisions log
 - Picked direction **A · Night Round** over Members' Card, Sunday Coverage, Trash Talk.
 - Matches: segmented control (v3a) with names/short results only; other match expands in place.
@@ -172,6 +210,7 @@ Two separate questions:
 - iPhone 15 is the main design size.
 - Setup: player count drives available games; removed "Never" from opponent switching (8-somes should play everyone).
 - Setup: game is always picked on its own step after Players; team screens come after and never re-ask the game.
+- Applied UI/UX video takeaways: 6 type styles, green only for you, button and input states, toasts, bottom sheets, empty states, light-mode shadows, gesture rules.
 
 ## 8. Open items
 - **Name for the 8-player cart game.** Candidates: Ryder Cup Pairs (likes it; "Ryder Cup" is a trademark, fine for a private app but worth avoiding if published), Cart Cup, Pairs Rotation, Round Robin.

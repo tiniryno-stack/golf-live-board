@@ -1,0 +1,50 @@
+// The design system is the source of every token: css/tokens.css must carry the variable blocks of
+// docs/design/design-system/tokens.css exactly (regenerate with `npm run tokens` after a design update),
+// and the 6 type styles under our .ts- prefix.
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+
+const read = (p) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
+const blocks = (css) => [
+  css.match(/:root\{[\s\S]*?\n\}/)?.[0],
+  css.match(/html\.light, \[data-theme="light"\]\{[\s\S]*?\n\}/)?.[0],
+];
+
+test('css/tokens.css matches the design system’s tokens.css (dark + light)', () => {
+  const [srcRoot, srcLight] = blocks(read('docs/design/design-system/tokens.css'));
+  const [appRoot, appLight] = blocks(read('css/tokens.css'));
+  assert.ok(srcRoot && srcLight, 'the design system file has both blocks');
+  assert.equal(appRoot, srcRoot, 'dark / default tokens drifted: run npm run tokens');
+  assert.equal(appLight, srcLight, 'light tokens drifted: run npm run tokens');
+});
+
+test('the 6 type styles, and only those, as .ts-*', () => {
+  const css = read('css/tokens.css');
+  const names = [...css.matchAll(/^\.ts-([a-z-]+)\{/gm)].map((m) => m[1]);
+  assert.deepEqual(names, ['number-xl', 'title', 'row', 'body', 'small', 'label']);
+  assert.ok(!/\.ts-/.test(read('css/styles.css').replace(/\/\*[\s\S]*?\*\//g, '').match(/^\.ts-[a-z-]+\s*\{/m)?.[0] || ''), 'styles.css defines no text styles of its own');
+  assert.ok(read('index.html').indexOf('css/tokens.css') < read('index.html').indexOf('css/styles.css'), 'tokens load before styles');
+});
+
+test('retired color names stay retired (green = you, red = double bogey / errors, amber = warnings)', () => {
+  const files = ['css/styles.css', ...['app', 'ui', 'teams', 'db'].map((f) => `js/${f}.js`),
+    ...['enter', 'matches', 'board', 'card', 'host', 'home', 'setup', 'season', 'sheets', 'toasts', 'brief', 'recap'].map((f) => `js/screens/${f}.js`)];
+  for (const f of files) {
+    const src = read(f).replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+    const hit = src.match(/--(good|good-ink|bad|sun|dbl-bg)\b|var\(--tint\)/);
+    assert.equal(hit, null, `${f} uses a retired color name (${hit?.[0]}): use --cart-you, --cart-you-text, --tint-you, --double, --double-bg, --warn`);
+    assert.ok(!/#F4C95D|#14161A/i.test(src), `${f} has a hard-coded amber / ink color`);
+  }
+});
+
+test('every font size in the stylesheet is one of the 6 type styles (64 / 32 / 17 / 15 / 13 / 12)', () => {
+  const css = read('css/styles.css').replace(/\/\*[\s\S]*?\*\//g, '');
+  const sizes = [...css.matchAll(/font-size:\s*([\d.]+)px/g), ...css.matchAll(/font:\s*\d+\s+([\d.]+)px/g)].map((m) => Number(m[1]));
+  const off = [...new Set(sizes.filter((n) => ![12, 13, 15, 17, 32, 64].includes(n)))];
+  assert.deepEqual(off, [], `sizes outside the type scale: ${off.join(', ')}`);
+  for (const f of ['season', 'card', 'setup', 'enter', 'board', 'matches', 'sheets', 'toasts', 'home', 'host', 'brief'].map((x) => `js/screens/${x}.js`)) {
+    const inline = [...read(f).matchAll(/font-size:\s*([\d.]+)px/g)].map((m) => Number(m[1])).filter((n) => ![12, 13, 15, 17, 32, 64].includes(n));
+    assert.deepEqual(inline, [], `${f}: inline font sizes outside the scale`);
+  }
+});

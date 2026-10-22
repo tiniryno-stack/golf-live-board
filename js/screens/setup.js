@@ -10,10 +10,10 @@
 // never re-ask it. Nothing is required that has a sensible default.
 // "Run it back" (#/setup/CODE) copies players, team names, carts and settings (not the course).
 
-import { esc, icon, seg, todayISO, prettyDate, copyText, roundLink } from '../ui.js';
+import { esc, icon, seg, todayISO, prettyDate, copyText, roundLink, empty } from '../ui.js';
 import { COURSES } from '../courses.js';
 import * as cd from '../coursedata.js';
-import { DEFAULT_SETTINGS, DEFAULT_ROTATION, GAMES, gameFix, autoGroups, cartRotation } from '../scoring.js';
+import { DEFAULT_SETTINGS, DEFAULT_ROTATION, GAMES, gameFix, autoGroups, cartRotation, threeCartRotation, cartIdsFor } from '../scoring.js';
 import * as db from '../db.js';
 import * as names from '../names.js';
 
@@ -43,9 +43,11 @@ function relabel(s) {
     p.name = names.fullName(p, { withNick: twin });
   });
 }
-function newPlayer({ personId, firstName, lastName = '', nickname = '' }) {
-  return withName({ key: db.uuid(), personId: personId || db.uuid(), firstName, lastName, nickname, strokes: '', teamId: null, groupId: 'g1' });
+function newPlayer({ personId, firstName, lastName = '', nickname = '', strokes = '' }) {
+  return withName({ key: db.uuid(), personId: personId || db.uuid(), firstName, lastName, nickname, strokes, teamId: null, groupId: 'g1' });
 }
+/** Last round's handicap for a person (from the crew's rounds), or '' — it prefills. */
+const lastHcpOf = (s, personId) => (personId && s.lastHcp && s.lastHcp[personId] != null ? String(s.lastHcp[personId]) : '');
 const same = (a, b) => String(a || '').toLowerCase() === String(b || '').toLowerCase();
 
 function blank(from = null) {
@@ -67,10 +69,14 @@ function gameOf(s) {
   return gameFix(s.game, s.players.length) ? 'scorecard' : s.game;
 }
 
-/** Cart game: every player in a cart, 2 per cart (fills in order when they aren't). */
+/** Carts in play: 3 for 6 players, 4 for 8 (Partner “Rider” Cup). */
+const cartIds = (s) => cartIdsFor(s.players.length);
+
+/** Partner “Rider” Cup: every player in a cart, 2 per cart (fills in order when they aren't). */
 function ensureCarts(s) {
-  const ok = TEAM_IDS.every((id) => s.players.filter((p) => p.teamId === id).length === 2);
-  if (!ok) s.players.forEach((p, i) => { p.teamId = TEAM_IDS[Math.floor(i / 2)] || null; });
+  const ids = cartIds(s);
+  const ok = ids.every((id) => s.players.filter((p) => p.teamId === id).length === 2);
+  if (!ok) s.players.forEach((p, i) => { p.teamId = ids[Math.floor(i / 2)] || null; });
 }
 
 function persist(s) {
@@ -89,9 +95,17 @@ async function loadPast(app, crewId) {
     const rounds = await db.fetchCrewRounds(crewId);
     const people = new Map();
     const courses = new Map(); // course id → the copy from the group's latest round there (with any fixes)
+    const plays = new Map(); // course id → rounds your group played there
+    const lastHcp = {}; // person → strokes in the latest round they played (rounds come oldest first)
     for (const { event } of rounds) {
-      for (const p of event.roster?.players || []) if (p.personId) people.set(p.personId, p.name);
-      if (event.course?.id) courses.set(event.course.id, event.course);
+      for (const p of event.roster?.players || []) {
+        if (p.personId) people.set(p.personId, p.name);
+        if (p.personId && p.strokes != null && p.strokes !== '') lastHcp[p.personId] = Number(p.strokes);
+      }
+      if (event.course?.id) {
+        courses.set(event.course.id, event.course);
+        plays.set(event.course.id, (plays.get(event.course.id) || 0) + 1);
+      }
     }
     let crew = null;
     try {
@@ -102,7 +116,8 @@ async function loadPast(app, crewId) {
       app.setup.past = crew
         ? crew.map((p) => withName({ personId: p.id, firstName: p.firstName, lastName: p.lastName || '', nickname: p.nickname || '', crewId }))
         : [...people].map(([personId, name]) => withName({ personId, name, crewId }));
-      app.setup.mine = yourCourses([...courses.values()].reverse());
+      app.setup.mine = yourCourses([...courses.values()].reverse().map((c) => ({ ...c, plays: plays.get(c.id) || 0 })));
+      app.setup.lastHcp = lastHcp;
       paintCourses(app);
     }
   } catch { /* offline: typing names still works */ }
@@ -127,7 +142,8 @@ async function loadFrom(app, code) {
     const { rotation, ...settings } = ev.settings || {};
     s.settings = { ...s.settings, ...settings };
     // The same game as last time (the course isn't copied).
-    s.game = settings.pairs ? '2v2' : settings.solo ? 'match' : (ev.roster.teams || []).length === 4 ? 'carts' : 'scorecard';
+    const nCarts = (ev.roster.teams || []).length;
+    s.game = settings.pairs ? '2v2' : settings.solo ? 'match' : nCarts === 4 || nCarts === 3 ? 'carts' : 'scorecard';
     s.pairSwitch = settings.pairSwitch || 'never';
     if (Array.isArray(rotation) && rotation.length === 2) s.schedule = 'turn';
     if (Array.isArray(rotation) && rotation.length) s.opps = rotation.map((r) => r.matches?.[0]?.[1]).filter(Boolean);
@@ -208,6 +224,22 @@ function mineRows(list, here) {
     .join('');
 }
 
+/** Course search found nothing (designspec §6b): say what didn't match, offer near misses, and the way out. */
+function noResults(s, q, mine) {
+  const dym = cd.didYouMean(q, [...mine, ...(s.near || [])]);
+  const sub = (c) => {
+    const n = c.plays || 0;
+    const holes = Array.isArray(c.par) ? `${c.par.length} holes` : '';
+    return [n ? `Played ${n} time${n === 1 ? '' : 's'}` : c.location || '', cd.fmtMiles(c.distance), holes].filter(Boolean).join(' · ');
+  };
+  const rows = dym.map((c) => `<div class="dym-row"><span class="dr-main"><span class="dr-name">${esc(c.name)}</span><span class="dr-sub">${esc(sub(c))}</span></span>
+      <button class="btn" data-act="${c.ogaId && !c.plays && c.source !== 'builtin' ? 'setup-pick' : 'setup-mine'}" data-v="${esc(c.ogaId && !c.plays && c.source !== 'builtin' ? c.ogaId : c.id)}">Pick</button></div>`).join('');
+  return `<!--none-->${empty({ icon: 'search', headline: `No courses match \u201c${q}\u201d`, help: 'Check the spelling, or add the course yourself. It takes about a minute.' })}
+    ${rows ? `<div class="ts-label dym-k">Did you mean</div><div class="dym-list">${rows}</div>` : ''}
+    <div class="dym-foot"><button class="btn big block" data-act="setup-manual">Enter the scorecard yourself</button></div>
+    <p class="meta attrib">Course data ${esc(cd.ATTRIBUTION)}</p>`;
+}
+
 /** The list under the search box: results while searching, else your courses + near you. */
 function courseList(s) {
   const q = (s.q || '').trim();
@@ -222,8 +254,9 @@ function courseList(s) {
       : s.searchError
         ? `<p class="meta">${esc(s.searchError)}</p><button class="btn small" data-act="setup-search-retry">Try again</button>`
         : !myHits.length && !api.length
-          ? `<p class="meta">No courses match \u201c${esc(q)}\u201d. Try part of the name, or enter the scorecard yourself.</p>`
+          ? noResults(s, q, mine)
           : '';
+    if (body.startsWith('<!--none-->')) return body; // no results: its own layout (empty state, did you mean, the way out)
     return `<div class="stack">${mineRows(myHits, s.loc)}${api.map((r) => courseRow(r, 'setup-pick', r.ogaId)).join('')}</div>${body}${listFoot(s)}`;
   }
   // At the course (or right next to it): it goes on top, ready to tap.
@@ -292,10 +325,10 @@ function teamName(s, id) {
   return (t?.name || '').trim() || `Cart ${id}`;
 }
 function teamsUsed(s) {
-  return TEAM_IDS.filter((id) => s.players.some((p) => p.teamId === id));
+  return cartIds(s).filter((id) => s.players.some((p) => p.teamId === id));
 }
 function hasFullTeams(s) {
-  return TEAM_IDS.every((id) => s.players.filter((p) => p.teamId === id).length === 2) && s.players.every((p) => p.teamId);
+  return cartIds(s).every((id) => s.players.filter((p) => p.teamId === id).length === 2) && s.players.every((p) => p.teamId);
 }
 
 function problems(s) {
@@ -331,9 +364,10 @@ function buildRound(s) {
   const c = course(s);
   const game = gameOf(s);
   const shown = names.displayNames(s.players);
-  const rotation = game === 'carts' ? cartRotation(s.schedule, s.opps) : clone(DEFAULT_ROTATION);
-  const groupOfTeam = {};
-  rotation[0].matches.forEach((m, i) => m.forEach((t) => (groupOfTeam[t] = `g${i + 1}`)));
+  const three = game === 'carts' && s.players.length === 6; // 3 carts: everyone plays everyone, all 18
+  const rotation = three ? threeCartRotation() : game === 'carts' ? cartRotation(s.schedule, s.opps) : clone(DEFAULT_ROTATION);
+  const groupOfTeam = three ? { A: 'g1', B: 'g1', C: 'g2' } : {};
+  if (!three) rotation[0].matches.forEach((m, i) => m.forEach((t) => (groupOfTeam[t] = `g${i + 1}`)));
   const auto = autoGroups(s.players.length);
   const players = s.players.map((p, i) => ({
     id: `p${i + 1}`, personId: p.personId || db.uuid(), name: shown[i],
@@ -343,10 +377,10 @@ function buildRound(s) {
     strokes: p.strokes === '' || p.strokes == null || Number.isNaN(Number(p.strokes)) ? null : Math.max(0, Math.round(Number(p.strokes))),
   }));
   const nGroups = Math.max(...players.map((p) => Number(p.groupId.slice(1))));
-  const teams = game === 'carts' ? TEAM_IDS.map((id) => ({ id, name: teamName(s, id).slice(0, 20) })) : [];
+  const teams = game === 'carts' ? cartIds(s).map((id) => ({ id, name: teamName(s, id).slice(0, 20) })) : [];
   const base = { ...s.settings };
   const settings = game === 'carts'
-    ? { ...base, solo: false, pairs: false, rotation }
+    ? { ...base, solo: false, pairs: false, rotation, ...(three ? { rotationMode: 'fixed' } : {}) }
     : game === '2v2'
       ? { ...base, game: 'rotationMatch', solo: false, pairs: true, pairSwitch: s.pairSwitch, rotationMode: 'fixed', rotation }
       : game === 'match'
@@ -367,6 +401,29 @@ function buildRound(s) {
     playedOn: todayISO(),
     crewId: s.crewId,
   };
+}
+
+// ───────────────────────────────────────────── handicap sheet (designspec §6b)
+
+/** Bottom sheet for one player's handicap: big stepper, last round's number, full / no strokes. */
+export function handicapSheet(app, { i }) {
+  const s = app.setup;
+  const p = s?.players[i];
+  if (!p) return '';
+  const none = p.strokes === '' || p.strokes == null;
+  const v = none ? 0 : Number(p.strokes);
+  const last = lastHcpOf(s, p.personId);
+  return `<div class="panel-head"><div class="ph-text"><h2 class="title">${esc(p.firstName || p.name)}’s handicap</h2>
+      <div class="ph-sub">Strokes they get over 18 holes. Tap the number to type it.</div></div>
+      <button class="icon-btn" data-act="sheet-close" aria-label="Close">${icon('close')}</button></div>
+    <div class="hcp-stepper">
+      <button class="hs-btn" data-act="hcp-step" data-i="${i}" data-d="-1" aria-label="One less" ${none || v === 0 ? 'disabled' : ''}>${icon('minus', 28)}</button>
+      <span class="hs-mid"><input class="hs-num" inputmode="numeric" pattern="[0-9]*" maxlength="2" value="${none ? '' : esc(v)}" placeholder="0" aria-label="${esc(p.name)} handicap" data-input="hcp-type" data-i="${i}">
+        <span class="hs-was">${last !== '' ? `was ${esc(last)} last round` : none ? 'plays even' : '&nbsp;'}</span></span>
+      <button class="hs-btn" data-act="hcp-step" data-i="${i}" data-d="1" aria-label="One more">${icon('plus', 28)}</button>
+    </div>
+    ${seg('hcp-mode', [['full', 'Use full'], ['none', 'No strokes']], none ? 'none' : 'full', `data-i="${i}"`)}
+    <button class="btn primary big block hs-done" data-act="hcp-done">Done</button>`;
 }
 
 // ───────────────────────────────────────────── screens (designspec §6)
@@ -391,8 +448,9 @@ function headline(kicker, title, sub = '') {
   return `<div class="nr-head"><div class="nr-k"><span class="lbl">${kicker}</span></div><h1 class="nr-title">${title}</h1>${sub ? `<div class="nr-sub">${sub}</div>` : ''}</div>`;
 }
 
-function bottom(label, act, { disabled = false, v = '', arrow = false } = {}) {
-  return `<div class="nr-foot"><button class="btn primary nr-cta" data-act="${act}"${v ? ` data-v="${esc(v)}"` : ''} ${disabled ? 'disabled' : ''}>${esc(label)}${arrow ? icon('fwd', 18) : ''}</button></div>`;
+/** The screen's one primary button. busy = loading state (spinner before the label, still the same width). */
+function bottom(label, act, { disabled = false, busy = false, v = '', arrow = false } = {}) {
+  return `<div class="nr-foot"><button class="btn primary nr-cta" data-act="${act}"${v ? ` data-v="${esc(v)}"` : ''} ${disabled ? 'disabled' : ''}${busy ? ' aria-busy="true"' : ''}>${esc(label)}${arrow ? icon('fwd', 18) : ''}</button></div>`;
 }
 
 /** One line for the picked course's card: "✓ Card ready · par 72 · tap to check". */
@@ -460,7 +518,7 @@ function playersView(s) {
             ? `<input class="input name-fill" maxlength="24" placeholder="Nickname, e.g. Tini Ryno" value="${esc(p.nickname)}" aria-label="Nickname for ${esc(p.name)}" data-input="setup-nick" data-i="${i}">`
             : `<input class="input name-fill" maxlength="30" placeholder="Last name" autocapitalize="words" autocomplete="off" aria-label="Last name for ${esc(p.firstName)}" data-input="setup-last" data-i="${i}">`}`}
         </span>
-        <input class="hcp-pill mono${p.strokes === '' || p.strokes == null ? ' empty' : ''}" inputmode="numeric" pattern="[0-9]*" maxlength="2" placeholder="Add" aria-label="${esc(p.name)} handicap (strokes)" value="${esc(p.strokes ?? '')}" data-input="setup-strokes" data-i="${i}">
+        <button class="hcp-pill mono${p.strokes === '' || p.strokes == null ? ' empty' : ''}" data-act="setup-hcp" data-i="${i}" aria-label="${esc(p.name)} handicap: ${p.strokes === '' || p.strokes == null ? 'none' : esc(p.strokes)}">${p.strokes === '' || p.strokes == null ? 'Add' : esc(p.strokes)}</button>
         <button class="x" data-act="setup-remove" data-i="${i}" aria-label="Remove ${esc(p.name)}">${icon('close', 18)}</button>
       </div>`).join('')}
       <div class="pl-add join-row">
@@ -483,7 +541,6 @@ function playersView(s) {
 function gameView(s) {
   const n = s.players.length;
   const pick = gameOf(s);
-  const maxLbl = { doublePar: 'Double par', netDoubleBogey: 'Net double bogey', none: 'None' }[s.settings.maxHoleScore] || 'Double par';
   const next = pick === '2v2' || pick === 'carts';
   return `${topBar(s)}${headline(`Step 3 · Game · ${n} player${n === 1 ? '' : 's'}`, 'Pick a game', 'Games that don’t fit your player count are greyed out.')}
     <div class="game-list">${GAMES.map((g) => {
@@ -491,15 +548,14 @@ function gameView(s) {
       const on = g.id === pick;
       return `<button class="game-opt${on ? ' on' : ''}" data-act="setup-game" data-v="${g.id}" ${fix ? 'aria-disabled="true"' : ''} aria-pressed="${on}">
         <span class="radio"></span>
-        <span style="flex:1;min-width:0"><span class="spread"><b>${esc(g.name)}</b><span class="mono g-count">${g.count}</span></span>
-        <span class="g-desc">${esc(g.desc)}</span>${fix ? `<span class="g-fix">${esc(fix)}</span>` : ''}</span>
+        <span style="flex:1;min-width:0"><span class="spread"><b class="ellipsis">${esc(g.name)}</b><span class="mono g-count">${g.count}</span></span>
+        <span class="g-desc ellipsis">${esc(n === 6 && g.desc6 ? g.desc6 : g.desc)}</span>${fix ? `<span class="g-fix">${esc(fix)}</span>` : ''}</span>
       </button>`;
     }).join('')}</div>
-    <button class="nr-row" data-act="setup-max"><span style="flex:1">Max score per hole</span><b>${maxLbl}</b>${icon('fwd', 16)}</button>
     ${pick === 'match' ? '<p class="meta nr-hint">Match play: everyone plays their own ball. Each hole is worth 1 point; low net score takes it, a tie for low splits it.</p>' : ''}
     <div class="nr-foot">
-      ${next ? '' : '<p class="meta" style="text-align:center;margin:0 0 8px">2v2 and the cart game go to one more screen to set teams.</p>'}
-      <button class="btn primary nr-cta" data-act="${next ? 'setup-go' : 'setup-save'}" ${next ? 'data-v="teams"' : ''} ${s.saving ? 'disabled' : ''}>${s.saving ? 'Starting…' : next ? `Next: ${pick === '2v2' ? 'pick partners' : 'carts'}` : `Start round · ${n} player${n === 1 ? '' : 's'}`}${next ? icon('fwd', 18) : ''}</button>
+      ${next ? '' : '<p class="meta" style="text-align:center;margin:0 0 8px">2v2 and Partner “Rider” Cup go to one more screen to set teams.</p>'}
+      <button class="btn primary nr-cta" data-act="${next ? 'setup-go' : 'setup-save'}" ${next ? 'data-v="teams"' : ''} ${s.saving ? 'aria-busy="true"' : ''}>${s.saving ? 'Starting…' : next ? `Next: ${pick === '2v2' ? 'pick partners' : 'carts'}` : `Start round · ${n} player${n === 1 ? '' : 's'}`}${next ? icon('fwd', 18) : ''}</button>
     </div>`;
 }
 
@@ -557,20 +613,22 @@ function pairsView(s) {
     ${seg('setup-pairswitch', [['never', 'Never'], ['six', 'Every 6'], ['turn', 'At the turn']], s.pairSwitch)}
     <div class="nr-tip">${icon('bulb', 16)}<span>${SWITCH_TIP[s.pairSwitch]}</span></div>
     ${rulesBlock(s)}
-    ${bottom(s.saving ? 'Starting…' : 'Start round · 2v2', 'setup-save', { disabled: s.saving })}`;
+    ${bottom(s.saving ? 'Starting…' : 'Start round · 2v2', 'setup-save', { busy: s.saving })}`;
 }
 
-const CART_TINT = { A: 'var(--good)', B: 'var(--t-B)', C: 'var(--t-C)', D: 'var(--t-D)' };
+const CART_TINT = { A: 'var(--cart-you)', B: 'var(--t-B)', C: 'var(--t-C)', D: 'var(--t-D)' };
 
-/** ④ Cart game: 8 players, 4 carts. */
+/** ④ Partner “Rider” Cup: 8 players in 4 carts, or 6 in 3. */
 function cartsView(s) {
   const c = course(s);
+  const n = s.players.length;
+  const ids = cartIds(s);
   const idx = (id) => s.players.map((p, i) => [p, i]).filter(([p]) => p.teamId === id).map(([, i]) => i);
-  const sched = s.schedule === 'turn' ? '2 rotations' : '3 rotations';
-  return `${topBar(s)}${headline('Step 4 · Cart game setup', '8 players, 4 carts')}
-    <div class="nr-course small"><div class="ellipsis" style="flex:1"><b>Cart game</b> <span class="soft">· 8 players${c ? ` · ${esc(c.shortName || c.name)}` : ''}</span></div><button class="btn small" data-act="setup-go" data-v="game">Change</button></div>
+  const sched = ids.length === 3 ? 'everyone plays everyone' : s.schedule === 'turn' ? '2 rotations' : '3 rotations';
+  return `${topBar(s)}${headline('Step 4 · Partner “Rider” Cup', `${n} players, ${ids.length} carts`)}
+    <div class="nr-course small"><div class="ellipsis" style="flex:1"><b>Partner “Rider” Cup</b> <span class="soft">· ${n} players${c ? ` · ${esc(c.shortName || c.name)}` : ''}</span></div><button class="btn small" data-act="setup-go" data-v="game">Change</button></div>
     <p class="meta nr-hint">${s.pairedFromLast ? 'Paired like your last round · ' : ''}Tap two names to swap.</p>
-    <div class="cart-grid">${TEAM_IDS.map((id) => {
+    <div class="cart-grid">${ids.map((id) => {
       const t = s.teams.find((x) => x.id === id);
       return `<div class="cart-card" style="--jersey:${CART_TINT[id]}">
         <div class="cc-k mono">CART ${id}</div>
@@ -580,11 +638,26 @@ function cartsView(s) {
     }).join('')}</div>
     <div class="nr-two"><button class="btn ghost" data-act="setup-shuffle">Shuffle carts</button><button class="btn ghost" data-act="setup-go" data-v="players">Edit players</button></div>
     <button class="nr-row" data-act="setup-go" data-v="matchups"><span style="flex:1;min-width:0"><b class="rt">Game &amp; matchups</b><span class="rs ellipsis">${esc(`${rulesSummary(s).split(' · ').slice(0, 2).join(' · ')} · ${sched}`)}</span></span><span class="meta">Optional</span>${icon('fwd', 18)}</button>
-    ${bottom(s.saving ? 'Starting…' : 'Start round · 8 players', 'setup-save', { disabled: s.saving })}`;
+    ${bottom(s.saving ? 'Starting…' : `Start round · ${n} players`, 'setup-save', { busy: s.saving })}`;
+}
+
+/** ④b with 3 carts: nothing to switch; every matchup runs all 18. Rules only. */
+function threeCartView(s) {
+  const name = (id) => (id === 'A' ? 'A · You' : id);
+  const chip = (id) => `<span class="mu-chip" style="--jersey:${CART_TINT[id]}">${name(id)}</span>`;
+  const rows = threeCartRotation()[0].matches
+    .map(([a, b]) => `<div class="mu-row"><span class="mono soft mu-h">1–18</span><span class="mu-m">${chip(a)}<small>vs</small>${chip(b)}</span></div>`).join('');
+  return `${topBar(s)}${headline('Step 5 · Optional · Defaults are set', 'Game &amp; matchups')}
+    <div class="nr-tip">${icon('bulb', 16)}<span>With 3 carts, every cart plays both other carts on every hole. Low ball and low total against each one, so a cart can win up to 4 points a hole.</span></div>
+    <div class="lbl nr-lbl">Matchups</div>
+    <div class="mu-card">${rows}<div class="mu-groups meta">1st tee time: A + B · 2nd: C, all 18. Nobody moves.</div></div>
+    ${rulesBlock(s)}
+    ${bottom(s.saving ? 'Starting…' : `Start round · ${s.players.length} players`, 'setup-save', { busy: s.saving })}`;
 }
 
 /** ④b Game & matchups (optional; defaults set). */
 function matchupsView(s) {
+  if (cartIds(s).length === 3) return threeCartView(s);
   const rot = cartRotation(s.schedule, s.opps);
   const opps = rot.map((r) => r.matches[0][1]);
   const uniq = new Set(opps).size;
@@ -614,7 +687,7 @@ function matchupsView(s) {
     <div class="nr-line"><span class="lbl" style="flex:1">Matchups</span><button class="btn small" data-act="setup-shuffle-mu">Shuffle</button><button class="btn small${s.custom ? ' primary' : ''}" data-act="setup-custom">${s.custom ? 'Done' : 'Custom'}</button></div>
     <div class="mu-card">${rows}<div class="mu-groups meta">${esc(groupLine)}</div></div>
     ${rulesBlock(s)}
-    ${bottom(s.saving ? 'Starting…' : 'Start round · 8 players', 'setup-save', { disabled: s.saving })}`;
+    ${bottom(s.saving ? 'Starting…' : 'Start round · 8 players', 'setup-save', { busy: s.saving })}`;
 }
 
 /** Scorecard check: good / fix / entered by hand. Also tees, first tee and the round name. */
@@ -660,7 +733,7 @@ function checkView(s) {
     ${nine(0)}${nine(9)}
     <p class="meta nr-hint">${ok ? 'Tap any number to change it. The organizer can also fix a hole mid-round from Host.' : 'Copy from the paper card. Hcp is the “Handicap” row: 1 is the hardest hole, 18 the easiest, each used once.'}</p>
     ${c.source === 'opengolfapi' || c.lastSource === 'opengolfapi' ? `<p class="meta attrib">Course data ${esc(cd.ATTRIBUTION)}</p>` : ''}
-    ${c.tees?.length ? `<div class="lbl nr-lbl">Tees</div><div class="chips">${c.tees.map((t) => `<button class="chip" data-act="setup-tee" data-v="${esc(t.name)}" aria-pressed="${s.tee?.name === t.name}">${esc(t.name)}${t.yards ? ` <span class="soft mono" style="font-size:12px">${t.yards}</span>` : ''}</button>`).join('')}</div>` : ''}
+    ${c.tees?.length ? `<div class="lbl nr-lbl">Tees</div><div class="chips">${c.tees.map((t) => `<button class="chip" data-act="setup-tee" data-v="${esc(t.name)}" aria-pressed="${s.tee?.name === t.name}">${esc(t.name)}${t.yards ? ` <span class="soft mono" style="font-size:13px">${t.yards}</span>` : ''}</button>`).join('')}</div>` : ''}
     <div class="lbl nr-lbl">First tee</div>${seg('setup-set', [['1', 'Hole 1'], ['10', 'Hole 10']], String(s.settings.startHole || 1), 'data-k="startHole"')}
     <div class="field" style="margin-top:14px"><label for="round-name">Round name (optional)</label>
       <input class="input" id="round-name" maxlength="60" value="${esc(s.name)}" placeholder="${esc(`${c.shortName || cd.shortCourseName(c.name || '') || 'Round'} · ${prettyDate(todayISO())}`)}" data-input="setup-name"></div>
@@ -968,7 +1041,7 @@ export default {
         s.adding = false;
       }
       if (pick?.crewId) s.crewId = s.crewId || pick.crewId;
-      s.players.push(newPlayer({ personId: pick?.personId, firstName: first, lastName: last, nickname: nick }));
+      s.players.push(newPlayer({ personId: pick?.personId, firstName: first, lastName: last, nickname: nick, strokes: lastHcpOf(s, pick?.personId) }));
       s.newName = '';
       s.nickAsk = null;
       persist(s);
@@ -999,15 +1072,47 @@ export default {
       const p = s.past.find((x) => x.personId === el.dataset.v);
       if (!p || s.players.some((x) => x.personId === p.personId)) return;
       s.crewId = s.crewId || p.crewId;
-      s.players.push(newPlayer({ personId: p.personId, firstName: p.firstName, lastName: p.lastName, nickname: p.nickname }));
+      s.players.push(newPlayer({ personId: p.personId, firstName: p.firstName, lastName: p.lastName, nickname: p.nickname, strokes: lastHcpOf(s, p.personId) }));
       persist(s);
       app.render();
     },
-    'setup-strokes': (el, ev, app) => {
+    // Handicap sheet (designspec §6b): tap an HCP pill → stepper, "was 17 last round", full / no strokes.
+    'setup-hcp': (el, ev, app) => app.openSheet('hcp', { i: Number(el.dataset.i) }),
+    'hcp-step': (el, ev, app) => {
+      const p = app.setup?.players[Number(el.dataset.i)];
+      if (!p) return;
+      const d = Number(el.dataset.d);
+      if (p.strokes === '' || p.strokes == null) {
+        if (d < 0) return;
+        p.strokes = lastHcpOf(app.setup, p.personId) || '1'; // from "no strokes": start at last round's number
+      } else {
+        p.strokes = String(Math.max(0, Math.min(54, Number(p.strokes) + d)));
+      }
+      persist(app.setup);
+      app.openSheet('hcp', { i: Number(el.dataset.i) });
+      app.render();
+    },
+    'hcp-type': (el, ev, app) => {
+      const p = app.setup?.players[Number(el.dataset.i)];
+      if (!p) return;
       const v = el.value.replace(/[^0-9]/g, '').slice(0, 2);
       if (v !== el.value) el.value = v;
-      app.setup.players[Number(el.dataset.i)].strokes = v;
+      p.strokes = v === '' ? '' : String(Math.min(54, Number(v)));
       persist(app.setup);
+    },
+    'hcp-mode': (el, ev, app) => {
+      const s = app.setup;
+      const p = s?.players[Number(el.dataset.i)];
+      if (!p) return;
+      if (el.dataset.v === 'none') { if (p.strokes !== '') p.prevStrokes = p.strokes; p.strokes = ''; }
+      else p.strokes = p.prevStrokes || lastHcpOf(s, p.personId) || p.strokes || '0';
+      persist(s);
+      app.openSheet('hcp', { i: Number(el.dataset.i) });
+      app.render();
+    },
+    'hcp-done': (el, ev, app) => {
+      app.closeSheet();
+      app.render();
     },
     'setup-teamname': (el, ev, app) => {
       app.setup.teams.find((t) => t.id === el.dataset.v).name = el.value.slice(0, 20);
@@ -1247,7 +1352,7 @@ export default {
       const s = app.setup;
       const order = s.players.map((_, i) => i);
       for (let i = order.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
-      if (gameOf(s) === 'carts') order.forEach((pi, k) => { s.players[pi].teamId = TEAM_IDS[Math.floor(k / 2)]; });
+      if (gameOf(s) === 'carts') order.forEach((pi, k) => { s.players[pi].teamId = cartIds(s)[Math.floor(k / 2)]; });
       else s.players = order.map((k) => s.players[k]);
       s.swapSel = null;
       s.pairedFromLast = false;

@@ -203,6 +203,13 @@ export function createBackend() {
       if (!c) return no('not_claimed');
       if (!sameFoursome(e.roster, e.settings, c.player_id, p_player_id, p_hole)) return no('not_your_foursome');
       if (e.finalized_at) return no('finalized');
+      // A player's own entry wins (mirrors upsert_score in schema.sql).
+      if (c.player_id !== p_player_id) {
+        const cur = t.scores.find((s) => s.event_id === e.id && s.player_id === p_player_id && s.hole === p_hole);
+        if (cur && cur.strokes != null && cur.updated_by === pname(e, p_player_id) && cur.strokes !== (p_strokes ?? null)) {
+          return { ok: false, error: 'own_entry', strokes: cur.strokes, updated_by: cur.updated_by };
+        }
+      }
       return writeScore(e, p_player_id, p_hole, p_strokes, pname(e, c.player_id));
     },
     fill_score({ p_code, p_device_id, p_player_id, p_hole, p_strokes }) {

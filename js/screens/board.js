@@ -9,7 +9,7 @@
 // Players: one compact line each.
 
 import { esc, icon, seg, clock } from '../ui.js';
-import { fmtPts, fmtToPar, fmtSigned, playerLeaderboard, teamLeaderboard, holeAt, recordLabel } from '../scoring.js';
+import { fmtPts, fmtToPar, fmtSigned, playerLeaderboard, teamLeaderboard, holeAt, recordLabel, teeClock, teeTimeName, groupIndex } from '../scoring.js';
 import { teamColor, headlineColor } from '../teams.js';
 import { latestMoment } from '../headlines.js';
 
@@ -43,12 +43,12 @@ function peopleRows(app) {
     const isMe = r.playerId === app.me;
     const chip = r.provisionalPoints ? `<span class="prov" data-prov>+${fmtPts(r.provisionalPoints)} prov</span>` : '';
     const s = { points: r.points, officialPoints: r.officialPoints, provisionalPoints: r.provisionalPoints, available: r.available };
-    return `<button class="row team-row${isMe ? ' me' : ''}" data-act="board-player" data-v="${esc(r.playerId)}" style="--jersey:${isMe ? 'var(--good)' : 'var(--t-B)'}">
+    return `<button class="row team-row${isMe ? ' me' : ''}" data-act="board-player" data-v="${esc(r.playerId)}" style="--jersey:${isMe ? 'var(--cart-you)' : 'var(--t-B)'}">
       <span class="rank">${r.rank}</span>
       <div class="body"><div class="row-title ellipsis">${esc(p.name)}${isMe ? ' <span class="you-tag">YOU</span>' : ''}</div>
         <div class="detail ellipsis">thru ${p.thru} · ${fmtToPar(snap.hasStrokes ? p.netToPar : p.grossToPar)}${snap.hasStrokes ? ' net' : ''}</div>
         ${teamBar(false, s, scale)}</div>
-      <div class="tval"><div class="n" style="color:${isMe ? 'var(--good-ink)' : 'var(--ink)'}">${fmtPts(r.points)}</div>${chip}</div></button>`;
+      <div class="tval"><div class="n" style="color:${isMe ? 'var(--cart-you-text)' : 'var(--ink)'}">${fmtPts(r.points)}</div>${chip}</div></button>`;
   }).join('');
 }
 
@@ -78,7 +78,7 @@ function teamRowsGame(app) {
           <div class="detail ellipsis">${names ? `${esc(names)} · ` : ''}${recordLabel(g, s)} · thru ${thru}</div>
           ${teamBar(isPM, s, scale)}
         </div>
-        <div class="tval"><div class="n" style="color:${isMe ? 'var(--good-ink)' : 'var(--jersey)'}">${esc(val)}</div>${chip}</div></div>`;
+        <div class="tval"><div class="n" style="color:${isMe ? 'var(--cart-you-text)' : 'var(--jersey)'}">${esc(val)}</div>${chip}</div></div>`;
     })
     .join('');
 }
@@ -107,7 +107,7 @@ function playerRows(app, mode) {
       const jersey = p.teamId ? `style="--jersey:${teamColor(mine, p.teamId)}"` : '';
       return `<button class="prow" data-act="board-player" data-v="${esc(p.id)}" ${jersey}>
         <span class="rank">${p.thru ? i + 1 : ''}</span>
-        <span class="ptp${p.thru && v < 0 ? ' good' : ''}">${p.thru ? fmtToPar(v) : '–'}</span>
+        <span class="ptp">${p.thru ? fmtToPar(v) : '–'}</span>
         <span class="pwho">${p.teamId ? '<i class="jdot"></i>' : ''}<span class="pname">${esc(p.name)}</span>${p.id === app.me ? '<span class="me-dot"></span>' : ''}<span class="pteam">${esc(p.teamName || '')}${p.strokes ? ` · gets ${p.strokes}` : ''}</span></span>
         <span class="pnum r">${p.thru || '–'}</span>
         <span class="pnum r">${p.thru ? p.grossTotal : '–'}</span>
@@ -173,10 +173,11 @@ function hero(app, mode) {
 function finalCard(app) {
   const snap = app.snapshot;
   const g = snap.game;
-  let who, sub;
+  let who, sub, jersey = '';
   if (g) {
     const isPM = g.type === 'rotationPlusMinus';
     const top = g.standings.filter((s) => s.rank === 1);
+    if (top.length === 1) jersey = teamColor(app.myTeam(), top[0].teamId); // the winner's colors (green if it's you)
     who = top.map((s) => snap.teamById.get(s.teamId).name).join(' & ');
     const v = isPM ? fmtSigned(top[0].officialPm, 'E') : `${fmtPts(top[0].officialPoints)} pts`;
     const names = top.length === 1 && !snap.settings.solo ? snap.teamById.get(top[0].teamId).playerIds.map((id) => snap.playerById.get(id).name).join(' + ') : '';
@@ -193,7 +194,7 @@ function finalCard(app) {
     : app.isOrganizer()
       ? `<button class="btn primary block" style="margin:0 0 14px" data-act="board-finalize">${icon('lock', 16)} Finalize round</button>`
       : '<p class="meta final-note">Scores can still be fixed until the organizer finalizes the round.</p>';
-  return `<button class="final-card" data-act="recap-open">
+  return `<button class="final-card" data-act="recap-open"${jersey ? ` style="--jersey:${jersey}"` : ''}>
       <span class="fc-k">${icon('trophy', 15)} Final${locked ? ` · ${icon('lock', 13)} locked` : ''}</span>
       <span class="fc-w">${esc(who)}</span>
       <span class="fc-s">${esc(sub)}</span>
@@ -203,12 +204,60 @@ function finalCard(app) {
     ${app.event.crew_id ? `<button class="btn ghost block" style="margin:0 0 14px" data-act="go" data-v="#/season/${esc(app.event.crew_id)}">See season standings</button>` : ''}`;
 }
 
+/** "tees off 8:40", or "1st tee time" when the organizer didn't set clock times. */
+function teeLine(snap, groupId) {
+  const i = groupIndex(groupId);
+  const c = teeClock(snap.settings, i);
+  return c ? `tees off ${c}` : teeTimeName(snap.settings, i);
+}
+
+/** Who's joined: "7 of 8 joined" / "Waiting on Tyler" (or "Tyler, Sam and 2 more"). */
+export function joinedLine(app) {
+  const snap = app.snapshot;
+  const missing = snap.players.filter((p) => !app.claimed.has(p.id));
+  const n = snap.players.length;
+  const head = missing.length ? `${n - missing.length} of ${n} joined` : `All ${n} joined`;
+  const names = missing.map((p) => p.name);
+  const sub = !missing.length ? 'Everyone has the round on their phone'
+    : names.length <= 2 ? `Waiting on ${names.join(' and ')}` : `Waiting on ${names.slice(0, 2).join(', ')} and ${names.length - 2} more`;
+  return { head, sub, all: !missing.length };
+}
+
+/** Board before anyone has a score (designspec §6b): the real structure with "–", not zeros. */
+function waitingView(app) {
+  const snap = app.snapshot;
+  const mine = app.myTeam();
+  const teams = (snap.roster.teams || []).length && !snap.settings.solo && !snap.settings.pairs ? snap.teams : null;
+  const j = joinedLine(app);
+  const rows = teams
+    ? teams.map((t) => {
+      const ps = t.playerIds.map((id) => snap.playerById.get(id));
+      const me = t.id === mine;
+      return `<div class="wait-row${me ? ' me' : ''}"><i class="jdot" style="--jersey:${teamColor(mine, t.id)}"></i>
+        <span class="wr-main"><span class="wr-name">${esc(t.name)}${me ? ' <span class="you-tag">YOU</span>' : ''}</span>
+        <span class="wr-sub">${esc(ps.map((p) => p.name).join(' + '))} · ${esc(teeLine(snap, ps[0]?.groupId))}</span></span>
+        <span class="wr-v mono" aria-label="no points yet">–</span></div>`;
+    }).join('')
+    : snap.players.map((p) => `<div class="wait-row${p.id === app.me ? ' me' : ''}"><span class="wr-main"><span class="wr-name">${esc(p.name)}${p.id === app.me ? ' <span class="you-tag">YOU</span>' : ''}</span>
+        <span class="wr-sub">${esc(teeLine(snap, p.groupId))}</span></span><span class="wr-v mono" aria-label="no score yet">–</span></div>`).join('');
+  return `<div class="plain wait">
+      <div class="ts-label wait-k">Before the first tee</div>
+      <h1 class="ts-title wait-t">Waiting for the first scores</h1>
+      <p class="wait-p">${teams ? 'Points show up here as soon as anyone enters hole 1. Every team starts at 0.' : 'Scores show up here as soon as anyone enters hole 1.'}</p>
+      <div class="joined"><span class="j-text"><b>${esc(j.head)}</b><span>${esc(j.sub)}</span></span>
+        <button class="btn" data-act="board-share">${icon('share', 18)} Send code</button></div>
+      <div class="ts-label wait-k">${teams ? 'Teams' : 'Players'}</div>
+      <div class="wait-list">${rows}</div>
+    </div>`;
+}
+
 export default {
   hero: true,
 
   render(app) {
     const snap = app.snapshot;
     const g = snap.game;
+    if (!snap.anyPosted && !app.isFinal()) return waitingView(app);
     const hasTeams = (snap.roster.teams || []).length > 0;
     const view = hasTeams ? app.ui.boardView : 'players';
     const mode = snap.hasStrokes ? app.ui.boardMode : 'gross';

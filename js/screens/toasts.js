@@ -19,12 +19,15 @@ export function toast(opts, app) {
   const root = $('toasts');
   clearTimeout(toastTimer);
   current = { ...opts, app };
+  // Toast (design-system/components/Toast): neutral pill with a check (never green); 2 s, or 5 s with
+  // Undo. Errors keep a red outline, no check, and stay a little longer so the fix can be read.
   const act = opts.action ? `<button class="t-act" data-act="toast-act">${esc(opts.action)}</button>` : '';
+  const check = opts.error ? '' : `<span class="t-ico">${icon('check', 18)}</span>`;
   root.innerHTML = `<div class="toast${opts.error ? ' error' : ''}" data-act="toast-tap" role="status">
-    <div class="t-body"><div class="t-title ellipsis">${esc(opts.title)}</div>${opts.sub ? `<div class="t-sub">${esc(opts.sub)}</div>` : ''}</div>${act}</div>`;
+    ${check}<div class="t-body"><div class="t-title">${esc(opts.title)}</div>${opts.sub ? `<div class="t-sub">${esc(opts.sub)}</div>` : ''}</div>${act}</div>`;
   const el = root.firstElementChild;
   requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('show')));
-  toastTimer = setTimeout(hideToast, opts.ms ?? 3000);
+  toastTimer = setTimeout(hideToast, opts.ms ?? (opts.action ? 5000 : opts.error || opts.sub ? 3500 : 2000));
 }
 
 export function hideToast() {
@@ -208,7 +211,7 @@ export function renderPicker(app) {
       return `<button class="pick-btn" data-act="team-pick" data-v="${esc(n)}" aria-pressed="${mine}" ${other || picker.busy ? 'disabled' : ''}>
         ${esc(n)}${other ? `<small>taken</small>` : mine ? '<small>yours</small>' : ''}</button>`;
     }).join('')}</div>
-    <button class="btn ghost block" data-act="team-later" style="color:var(--hero-ink);border-color:rgba(255,255,255,.2)">${isDefaultTeamName(team) ? `Keep “${esc(team.name)}” for now` : 'Done'}</button>
+    <button class="btn ghost block" data-act="team-later">${isDefaultTeamName(team) ? `Keep “${esc(team.name)}” for now` : 'Done'}</button>
   </div>`;
   if (html === picker.html && root.classList.contains('open')) return; // nothing changed: don't redraw
   picker.html = html;
@@ -319,6 +322,11 @@ function closeRecap() {
 }
 
 // ───────────────────────────────────────────── coach marks (once per phone)
+
+/** Take any coach tip down (it points at something on the screen you're leaving, or a sheet is opening). */
+export function clearCoach() {
+  document.querySelectorAll('.coach-scrim, .coach').forEach((n) => n.remove());
+}
 
 export function coach(key, target, text) {
   const k = `glb.coach.${key}`;

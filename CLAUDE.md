@@ -7,9 +7,12 @@ after the first playtest; section 13 is the V2 backlog.
 ## What it is / where things stand
 
 - Mobile web app for Andrew's friend group: each foursome enters hole-by-hole scores on their
-  phones; everyone sees one live board across tee times, plus a rotating 2v2 cart game
-  (Rotation Match Play or Plus/Minus). Night Round design (docs/design/system), dark by default.
-- Live: https://tiniryno-stack.github.io/golf-live-board/ (GitHub Pages, `main`, root). Repo:
+  phones; everyone sees one live board across tee times, plus the rotating 2v2 cart game
+  **Partner “Rider” Cup** (Rotation Match Play or Plus/Minus; 8 players in 4 carts, or 6 in 3). Night Round design (docs/design/design-system), dark by default.
+- Live: https://tiniryno-stack.github.io/golf-live-board/ (GitHub Pages, `main`, root).
+  **Preview of a work branch:** `npm run preview` copies the branch's app files to `main` under
+  `/preview/` → https://tiniryno-stack.github.io/golf-live-board/preview/ (live app untouched; same
+  database and same phone storage as the live site, so make practice rounds and delete them). Repo:
   `tiniryno-stack/golf-live-board`.
 - **Played for real on Oct 16, 2026** ("Chucks Bday", code `V4T3M`, Twin Creeks, 8 phones). It
   went well. All BUILD.md stages are done; everything since is playtest-driven iteration.
@@ -19,17 +22,23 @@ after the first playtest; section 13 is the V2 backlog.
 
 ## Night Round redesign (Oct 21, live on `main`)
 
-- Design handoff in `docs/design/` (`designspec.md` = source of truth, `screens/` = mockups, `PLAN.md`
-  = the plan + open items). Built on `design/night-round`, merged to `main` Oct 21 (both real rounds
-  replayed through the new engine first: identical results).
+- Design handoff in `docs/design/` (`HANDOFF.md`, `designspec.md` = product rules, `screens/` = mockups,
+  `design-system/` = the look, `BUILD-PLAN.md` = the current build plan + open items). First pass built
+  on `design/night-round`, merged to `main` Oct 21 (both real rounds replayed through the new engine
+  first: identical results). The second handoff (design system, Home, sheets, empty states) is being
+  built on `design/design-system`.
 - Tokens in `css/styles.css` `:root` (dark + light): `--bg/--surface/--surface-2/--surface-3`,
   `--good` (me) + `--good-ink` (green text), `--warn` amber (warnings only), `--bad` + `--dbl-bg`
   (double bogey only), jerseys `--t-A…F`. Score marks everywhere: `ui.mark(score, par, size)`.
   `ui.seg2` (2-line segments), `ui.foldIn(app.ui)` (fold animation only right after a tap — the
   render loop redraws constantly), `.mine-bar` / `.watch-box` = expand-in-place.
-- **Design system** in `docs/design/system/` (tokens.json, README.md, components/*/README.md) is the
-  reference for every visual choice: use its token names in CSS (`--surface-1`, `--text-muted`,
-  `--cart-you`, `--radius-xl`, `--space-4`, `.ts-*` text styles…; old names are aliases). Check a UI
+
+## Design
+- All UI follows docs/design/design-system/ (README.md rules, tokens.css variables, components/*/README.md).
+- Product rules live in docs/design/designspec.md; mockups are in docs/design/screens/ (reference only, rebuild in our components).
+- New features: reuse existing components and tokens; no new colors, sizes or type styles. Flag anything that needs a new pattern.
+- In this repo: CSS uses the design system's token names (`--surface-1`, `--text-muted`, `--cart-you`,
+  `--radius-xl`, `--space-4`…; older names are aliases until `BUILD-PLAN.md` retires them). Check a UI
   change with `npm run design:compare` → `tests/screenshots/design/vs-*.png` (mockup left, app right).
   Light/dark toggle: Home + round ⋯ menu only.
 
@@ -91,6 +100,12 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
   works, and the app routes organizer writes through it when final. `reset_round` clears it.
 - `fill_score` (legacy: the app no longer calls it, kept for older phones' queued fills): one atomic
   insert-or-update-**where strokes is null**, so it never overwrites another phone's score.
+- **A player's own entry wins (Oct 21, branch `design/design-system`):** `upsert_score` refuses to change
+  or clear a score the player entered on their own phone (`updated_by` = their name) when someone else
+  sends a different number → `{ ok: false, error: 'own_entry', strokes, updated_by }`; the app takes their
+  number and toasts why. The player can always change it; `admin_upsert_score` still overrides.
+  **In `schema.sql` + the mock, NOT yet on the live database:** apply it (and the `_setting_label`
+  additions) with `apply_migration` right before the branch merges to `main` (BUILD-PLAN.md §8).
 - **Applying changes:** additive SQL (`create or replace function`, `grant`) works with
   `apply_migration`. Anything with drop / delete / revoke tends to stall on an approval prompt —
   give Andrew a snippet to run in Supabase → SQL Editor → New snippet instead. Always mirror the
@@ -109,8 +124,11 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
 - Official line = holes every foursome has finished (play order); beyond it is provisional.
 - **Games (Oct 21):** Scorecard only (any count, `autoGroups`), Match play 2–6 (`solo`, jerseys A–F),
   **2v2** (`settings.pairs` + `pairSwitch` never/six/turn: `pairView` makes one team per pairing with
-  `members`; `game.people` = each player's summed points; `sideOn()` = your pair on a hole), Cart
-  game (8; `cartRotation('six'|'turn', opps)`, `rotationMode` fixed = keep tee times = new default).
+  `members`; `game.people` = each player's summed points; `sideOn()` = your pair on a hole),
+  **Partner “Rider” Cup** (game id `carts`; 8 = 4 carts, `cartRotation('six'|'turn', opps)`,
+  `rotationMode` fixed = keep tee times = new default; **6 = 3 carts**, `threeCartRotation()`: one
+  18-hole rotation with A v B, A v C, B v C at once, groups A + B / C, always fixed; a cart has two
+  matches per hole, so use `matchesFor()`; `matchFor()` returns the first).
 - **Small groups:** any roster that isn't 4 carts of 2 is a scorecard round (no teams).
   With 2–6 players, `settings.solo` = **split point** (`game.type 'splitPoint'`): 1 point a hole to the
   low net score, ties for low split it 1/k. Teams A–D are made in `soloView`, so Host can switch it on
@@ -125,7 +143,8 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
   backfilled into `people` and both rounds' rosters). Old rounds
   only have `name` — everything must still work with that.
 - Settings are normalized from `DEFAULT_SETTINGS`, so new settings must default sensibly for old
-  rounds.
+  rounds. **Tee times (Oct 21):** `settings.teeTimes` (`"HH:MM"` per group, default `[]`), set in
+  Host → Rules; say them with `teeTimeName()` ("8:40 tee time" / "1st tee time"), never "Group 1".
 
 ## UI conventions (don't regress these)
 
@@ -139,14 +158,15 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
   empty boxes, names who's missing, and opens the other cart if only theirs are blank. Nothing is
   ever auto-saved as par. Name pinned at the top of
   a tile, score dead center level with − / +.
-- **Holes:** tap the hole number → grid of 18 (one row per matchup). The current hole and the one
+- **Holes:** tap the hole number → grid of 18 (one row per matchup). **No swiping between holes**
+  (design system, Oct 21): ◀ ▶ and the grid only. Swipe right = back in Setup; swipe down closes a sheet. The current hole and the one
   just finished are editable; **2+ holes back open locked** ("Tap to edit"). Switch it up shows
   once per swap.
 - **Jerseys:** your cart is always green on your phone; others fixed away colors A orange, B blue,
   C pink, D violet (no red — red = double bogey). On rounded cards use a tint + full ring, never
   an edge stripe (it clips at the corners).
-- No back button inside a round (name pill / ⋯ menu: Round recap when final, How today's game
-  works, Share, Go to Home, Switch to watching). Your cart is always first (Card, Matches).
+- No back button inside a round. Name pill / avatar → short **You** sheet (Go to Home, Switch to
+  watching); ⋯ → round actions (Recap when final, Rules, How today's game works, Share, Theme, Run it back). Your cart is always first (Card, Matches).
 - Headlines: colored by `hero`; one at a time, two for ~10 s when they land together.
 - Board → Teams: ranked on **all points won so far** (`g.liveStandings`); big number includes the
   provisional part, shown as a "1½ prov." chip and, on the bar, striped past a divider line (`.cut`).
@@ -176,17 +196,24 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
   `glb.queue.CODE`, `glb.seen.CODE`, `glb.alert.CODE.H`, `glb.switch.CODE.H`, `glb.brief.CODE`,
   `glb.who.CODE`, `glb.cardOpen.CODE`, `glb.coach.{tile5,oppcart3,prov2}`, `glb.setupDraft`,
   `glb.theme`. Bump a coach key's suffix when its text changes so people see the new tip.
+  `glb.recent` entries also carry Home's summary for each round (`recent.note`, from
+  `home.roundSummary`: game, your name, live hole / place / points, or how it went).
 
-## Testing (run before every push; all headless, no network needed)
+## Testing (all headless, no network needed)
+
+**How much to run (Andrew, Oct 21):** `npm test` (seconds) after every change. UI-only work: one
+`FIT_SIZE=393x852 npm run test:fit` (iPhone 16 size only) per batch; no screenshot reviews unless Andrew
+asks: he tries the app and reports back. `npm run test:smoke` only when a change touches score
+sync, joining, the engine or the database, and once before anything merges to `main`.
 
 ```bash
 npm install
-npm test               # 70 unit tests: scoring + headlines + course data + names/crews + games (2v2, at the turn, 6-player match play) + score marks
-npm run test:fit       # 132 checks: every screen at SE / 13 mini / 15-16 / Pro Max, no scroll on Enter
-npm run test:smoke     # 225 checks: multi-phone flows against the mock (join, swap, offline, rejoin,
+npm test               # 77 unit tests: scoring + headlines + course data + names/crews + games (2v2, at the turn, 6-player match play, Partner “Rider” Cup for 6, tee times) + score marks + design tokens (drift, retired colors, type scale)
+npm run test:fit       # 160 checks: every screen at SE / 13 mini / 15-16 / Pro Max, no scroll on Enter
+npm run test:smoke     # 256 checks: multi-phone flows against the mock (join, swap, offline, rejoin,
                        # reset/delete, back nine, Next waits for every score, grid/locks, recap,
                        # finalize + PIN unlock, add a course, which course?, names/nicknames/crew-mates, you-first pad,
-                       # matches expand in place, 2v2, Add to Home Screen move, test phones, blank-screen guards)
+                       # matches expand in place, 2v2, 3 carts for 6, own entry wins, Add to Home Screen move, test phones, blank-screen guards)
 ```
 
 - Playwright 1.56 with Chromium at `PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers` (don't run
@@ -214,9 +241,11 @@ npm run test:smoke     # 225 checks: multi-phone flows against the mock (join, s
   groups as one-tap chips + ~8 frequent players + search within the crew, 5) team names reserved per
   pair **within a crew** + the first 151 Pokémon (`TEAM_NAME_PICKS`). Keep UI changes small until the
   Claude Design setup redesign lands.
-- **Night Round open items** (docs/design/PLAN.md): cart-game name (shipping as "Cart game"), conflict
-  rule when two phones enter different scores (still last entry wins), stepper for scorecard-check
-  cells, 3-cart game for 6. Naming a course in "Which course?" is remembered per group (shared
+- **Design open items, decided Oct 21** (docs/design/BUILD-PLAN.md §8–9): the cart game is
+  **Partner “Rider” Cup** (built, quotes on purpose) with a **3-carts-for-6** version (built);
+  **a player's own entry wins** over one entered for them (DB rule); scorecard-check cells keep the
+  keypad; optional **tee times** per round (`settings.teeTimes`, else "1st tee time"); the Rules sheet
+  shows the round's real settings. Naming a course in "Which course?" is remembered per group (shared
   courses table = V2). "Start now, finish the card during the round" not built.
 - **Split point played for real Oct 20** (Bridlewood, 3 players, switched on mid-round). Worked;
   Andrew may want some optimization later but asked for no changes for now.

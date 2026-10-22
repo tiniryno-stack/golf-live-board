@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Board · before first scores</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&amp;family=Geist+Mono:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+.t{--bg:#0A0B0D;--s1:#15171B;--s2:#1F2227;--s3:#2A2E35;--tx:#F4F5F7;--tx2:#A7ACB4;--ln:#2B2F36;--me:#3DDC84;--meT:#3DDC84;--org:#FF9A4A;--blue:#5B9BFF;--pink:#FF6FB5;--vio:#B18CFF;--warn:#F5C64A;--warnBg:rgba(245,198,74,0.08);--err:#FF5A5A;--btn:#F4F5F7;--btnT:#0A0B0D;--tint:rgba(61,220,132,0.10);--scrim:rgba(0,0,0,0.6);--shC:none;--shS:0 -8px 32px rgba(0,0,0,0.5)}
+.t.light{--bg:#F2F3F5;--s1:#FFFFFF;--s2:#E8EAEE;--s3:#DDE0E5;--tx:#0B0D10;--tx2:#4F555E;--ln:#D5D9DF;--me:#12A35C;--meT:#0A7A43;--org:#B85A00;--blue:#1A5FD0;--pink:#C02A70;--vio:#6E3FD0;--warn:#8A6000;--warnBg:rgba(138,96,0,0.07);--err:#C8282D;--btn:#0B0D10;--btnT:#FFFFFF;--tint:rgba(18,163,92,0.10);--scrim:rgba(11,13,16,0.35);--shC:0 1px 2px rgba(11,13,16,0.06),0 4px 12px rgba(11,13,16,0.05);--shS:0 -8px 32px rgba(11,13,16,0.16)}
+.mono{font-family:'Geist Mono',ui-monospace,monospace}
+.lbl{font-family:'Geist Mono',ui-monospace,monospace;font-size:12px;letter-spacing:1px;color:var(--tx2);font-weight:600}
+button{font:inherit;color:inherit;cursor:pointer}
+input{font:inherit}
+</style>
+</helmet>
+<div class="t {{mode}}" style="width: 393px; height: 852px; box-sizing: border-box; background: var(--bg); color: var(--tx); font-family: 'Geist', system-ui, sans-serif; display: flex; flex-direction: column; overflow: hidden; position: relative">
+
+<div style="display: flex; align-items: center; gap: 10px; padding: 8px 16px 0; height: 48px">
+<div style="width: 32px; height: 32px; border-radius: 16px; background: var(--s2); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700">AB</div>
+<div style="font-size: 15px; font-weight: 600">Andrew B.</div>
+<div style="flex: 1; text-align: right; font-size: 14px; color: var(--tx2)">Twin Creeks · Fri</div>
+</div>
+<div style="padding: 22px 20px 6px">
+<div class="lbl">BEFORE THE FIRST TEE</div>
+<div style="font-size: 30px; font-weight: 800; letter-spacing: -0.9px; line-height: 1.1; margin-top: 6px">Waiting for the first scores</div>
+<div style="font-size: 15px; color: var(--tx2); margin-top: 6px; line-height: 1.4">Points show up here as soon as anyone enters hole 1. Every team starts at 0.</div>
+</div>
+<div style="margin: 14px 16px 0; display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 16px; background: var(--s1); box-shadow: var(--shC)">
+<div style="flex: 1"><div style="font-size: 15px; font-weight: 600">7 of 8 joined</div><div style="font-size: 13px; color: var(--tx2); margin-top: 2px">Waiting on Tyler</div></div>
+<button style="height: 48px; padding: 0 16px; border-radius: 12px; border: 0; background: var(--s2); font-size: 15px; font-weight: 600">Send code</button>
+</div>
+<div class="lbl" style="margin: 22px 20px 4px">TEAMS</div>
+<div style="padding: 0 16px"><div style="display: flex; align-items: center; gap: 14px; padding: 14px 10px; margin: 0 -6px; background: var(--tint); border-radius: 14px; border-bottom: 1px solid var(--ln)">
+<span style="width: 10px; height: 10px; border-radius: 5px; background: var(--me); flex: none"></span>
+<div style="flex: 1; min-width: 0"><div style="font-size: 17px; font-weight: 700; display: flex; align-items: center; gap: 8px">Hogan’s Heroes <span class="lbl" style="color: var(--meT)">YOU</span></div><div style="font-size: 13px; color: var(--tx2); margin-top: 2px">Andrew + Sean · tees off 8:40</div></div>
+<div class="mono" style="font-size: 22px; font-weight: 700; color: var(--tx2); width: 48px; text-align: right">–</div></div><div style="display: flex; align-items: center; gap: 14px; padding: 14px 4px;  border-bottom: 1px solid var(--ln)">
+<span style="width: 10px; height: 10px; border-radius: 5px; background: var(--blue); flex: none"></span>
+<div style="flex: 1; min-width: 0"><div style="font-size: 17px; font-weight: 700; display: flex; align-items: center; gap: 8px">Shank Redemption</div><div style="font-size: 13px; color: var(--tx2); margin-top: 2px">Mike + Tyler · tees off 8:40</div></div>
+<div class="mono" style="font-size: 22px; font-weight: 700; color: var(--tx2); width: 48px; text-align: right">–</div></div><div style="display: flex; align-items: center; gap: 14px; padding: 14px 4px;  border-bottom: 1px solid var(--ln)">
+<span style="width: 10px; height: 10px; border-radius: 5px; background: var(--vio); flex: none"></span>
+<div style="flex: 1; min-width: 0"><div style="font-size: 17px; font-weight: 700; display: flex; align-items: center; gap: 8px">The Bogey Brigade 20</div><div style="font-size: 13px; color: var(--tx2); margin-top: 2px">Chris + Christopher · tees off 8:50</div></div>
+<div class="mono" style="font-size: 22px; font-weight: 700; color: var(--tx2); width: 48px; text-align: right">–</div></div><div style="display: flex; align-items: center; gap: 14px; padding: 14px 4px;  border-bottom: 1px solid var(--ln)">
+<span style="width: 10px; height: 10px; border-radius: 5px; background: var(--pink); flex: none"></span>
+<div style="flex: 1; min-width: 0"><div style="font-size: 17px; font-weight: 700; display: flex; align-items: center; gap: 8px">Fore Play</div><div style="font-size: 13px; color: var(--tx2); margin-top: 2px">Sam + Jake · tees off 8:50</div></div>
+<div class="mono" style="font-size: 22px; font-weight: 700; color: var(--tx2); width: 48px; text-align: right">–</div></div></div>
+<nav style="margin: auto 12px 10px; display: flex; gap: 4px; padding: 5px; background: var(--s1); border: 1px solid var(--ln); border-radius: 22px; box-shadow: var(--shC)"><a href="Main.dc.html" style="flex: 1; height: 50px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border-radius: 17px; color: var(--tx2); text-decoration: none; font-size: 13px; font-weight: 600"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4h11l-2 4 2 4H5"></path></svg>Enter</a><a href="A-Matches-v3a-expand.dc.html" style="flex: 1; height: 50px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border-radius: 17px; color: var(--tx2); text-decoration: none; font-size: 13px; font-weight: 600"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ><circle cx="8.5" cy="12" r="5"></circle><circle cx="15.5" cy="12" r="5"></circle></svg>Matches</a><a href="A-Board.dc.html" style="flex: 1; height: 50px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border-radius: 17px; background: var(--btn); color: var(--btnT); text-decoration: none; font-size: 13px; font-weight: 700"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h11M4 18h7"></path></svg>Board</a><a href="A-Card.dc.html" style="flex: 1; height: 50px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border-radius: 17px; color: var(--tx2); text-decoration: none; font-size: 13px; font-weight: 600"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M3 10h18M3 15h18M9 4v16M15 4v16"></path></svg>Card</a></nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"mode":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":393,"height":852}}'>
+class Component extends DCLogic {
+  renderVals() { return { mode: this.props.mode ?? 'dark' }; }
+}
+</script>
+</body>
+</html>

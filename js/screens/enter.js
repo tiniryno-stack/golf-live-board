@@ -10,11 +10,11 @@
 
 import { esc, icon, mark, scoreName, foldIn } from '../ui.js';
 import {
-  maxHoleScore, maxLabel, rotationFor, rotationIndexFor, foursomeFor, matchFor, componentNames,
+  maxHoleScore, maxLabel, rotationFor, rotationIndexFor, foursomeFor, matchFor, matchesFor, componentNames,
   fmtPts, fmtSigned, playOrder, posOf, holeAt, HOLES, sideOn,
 } from '../scoring.js';
 import { matchupAlert } from '../headlines.js';
-import { teamColor, isDefaultTeamName } from '../teams.js';
+import { teamColor, isDefaultTeamName, shortTeam } from '../teams.js';
 import { local } from '../db.js';
 
 /** "+2 thru 4" / "All square" from this team's side of its current matchup. */
@@ -42,7 +42,7 @@ export function matchStatusShort(snap, m, teamId) {
 /** Your side's color, and the other side's (2v2: always green vs blue). */
 function sideColor(app, teamId) {
   const snap = app.snapshot;
-  if (snap.settings.pairs) return teamId === app.myTeam(app.ui.hole) ? 'var(--good)' : 'var(--t-B)';
+  if (snap.settings.pairs) return teamId === app.myTeam(app.ui.hole) ? 'var(--cart-you)' : 'var(--t-B)';
   return teamColor(app.myTeam(), teamId);
 }
 
@@ -145,7 +145,7 @@ function cartCard(app, cart, hole, mine, locked) {
   const snap = app.snapshot;
   const team = cart.teamId ? snap.teamById.get(cart.teamId) : null;
   const label = cartLabel(app, cart);
-  const jersey = team ? sideColor(app, team.id) : 'var(--good)';
+  const jersey = team ? sideColor(app, team.id) : 'var(--cart-you)';
   const name = mine && team && !locked && !snap.settings.pairs
     ? `<button class="name name-btn" data-act="team-picker" aria-label="Name your cart"><i class="jd"></i><span class="ellipsis">${esc(label)}</span>${isDefaultTeamName(team) ? '<span class="pick">Name it</span>' : ''}</button>`
     : `<span class="name"><i class="jd"></i><span class="ellipsis">${esc(label)}</span></span>`;
@@ -195,17 +195,24 @@ function sourceLine(app, p, hole) {
 
 /** One-tap score pad: birdie … triple (eagle on a par 5) + the max, par outlined. */
 function padChips(app, p, hole) {
+  // Every number from birdie (eagle on a par 5) up to the cap, no gaps: at least double bogey,
+  // at most double par (or the round's max, if lower).
   const snap = app.snapshot;
   const par = snap.holes[hole - 1].par;
   const max = maxHoleScore(snap.course, snap.settings, hole, p.dots[hole - 1]);
   const names = { '-2': 'Eagle', '-1': 'Birdie', 0: 'Par', 1: 'Bogey', 2: 'Double', 3: 'Triple' };
   const from = par >= 5 ? par - 2 : par - 1;
+  const top = Math.min(max, Math.max(par + 2, Math.min(max, par * 2)));
   const vals = [];
-  for (let v = from; v <= Math.min(from + 4, max); v++) vals.push([v, names[v - par]]);
-  if (max > from + 4) vals.push([max, 'Max']);
+  for (let v = from; v <= top; v++) vals.push([v, v === max && v - par > 3 ? 'Max' : names[v - par] || `+${v - par}`]);
   const g = p.gross[hole - 1];
   return vals.map(([v, label]) => `<button class="pad-chip${v === par ? ' par' : ''}${v === g ? ' on' : ''}" data-act="pad-pick" data-pid="${esc(p.id)}" data-v="${v}" aria-label="${esc(p.name)}: ${v}, ${label}">
       ${mark(v, par, 30, { cls: 'pad-mk' })}<span>${label}</span></button>`).join('');
+}
+
+/** The open pad pushes the page up (the Enter page scrolls), never scrolls inside the group box. */
+function padIntoView() {
+  requestAnimationFrame(() => document.querySelector('.grow.open')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }));
 }
 
 function groupRow(app, p, hole, locked) {
@@ -224,7 +231,7 @@ function groupRow(app, p, hole, locked) {
       <span class="gname"><span class="ellipsis">${esc(p.name)}${strokeDots(p.dots[hole - 1])}</span><span class="gsub ellipsis${src.cls}">${esc(src.text)}</span></span>
       ${right}
     </button>
-    ${open ? `<div class="pad${foldIn(app.ui)}" style="--fold-h:160px">${padChips(app, p, hole)}</div>` : ''}
+    ${open ? `<div class="pad${foldIn(app.ui)}" style="--fold-h:124px">${padChips(app, p, hole)}</div>` : ''}
   </div>`;
 }
 
@@ -265,10 +272,10 @@ function individualView(app, h, parts) {
   const strip = app.isFinal()
     ? `<span class="teams">${icon('lock', 13)} Fixing a finalized round</span><button class="link-btn relock" data-act="final-relock">Done</button>`
     : `<span class="teams">${kind}</span>${pos ? `<span class="status">${esc(pos)}</span>` : ''}`;
-  return `<div class="enter nr solo-enter">
+  return `<div class="enter nr solo-enter${others.some((p) => app.ui.pad?.hole === h && app.ui.pad?.pid === p.id) ? ' pad-open' : ''}">
       <div class="hero">${parts.holeRow}<div class="matchup-line">${strip}</div></div>
       <div class="sheet">
-        <section class="cart mine focus you-card${locked ? ' locked' : ''}" style="--jersey:var(--good)"${tap}>
+        <section class="cart mine focus you-card${locked ? ' locked' : ''}" style="--jersey:var(--cart-you)"${tap}>
           ${locked ? `<div class="cart-head"><span class="name">Your score</span><span class="focus-chip lock-chip">${icon('lock', 12)} Tap to edit</span></div>` : ''}
           <div class="tiles">${youTile}</div>
         </section>
@@ -330,11 +337,19 @@ export default {
         return `${who} <span class="status">${fmtPts(s.points)}</span>`;
       }).join(' <span class="faint">·</span> ')}</span>`;
     } else if (snap.game && myTeam) {
-      const m = matchFor(snap, myTeam, h);
-      const opp = m ? snap.teamById.get(m.teams[0] === myTeam ? m.teams[1] : m.teams[0]) : null;
-      matchLine = m
-        ? `<span class="teams">Rot ${m.rotation} · vs <b style="color:${sideColor(app, opp.id)}">${esc(opp.name)}</b></span><span class="status">${esc(matchStatusShort(snap, m, myTeam))}</span>`
-        : '';
+      const ms = matchesFor(snap, myTeam, h);
+      const oppOf = (m) => snap.teamById.get(m.teams[0] === myTeam ? m.teams[1] : m.teams[0]);
+      if (ms.length > 1) {
+        // 3 carts: you play both other carts at once ("vs Shank UP 1 · vs Fore AS").
+        const lead = (m) => { const o = oppOf(m).id; const d = m.points[myTeam] - m.points[o]; return !m.played ? '–' : d > 0 ? `UP ${fmtPts(d)}` : d < 0 ? `DN ${fmtPts(-d)}` : 'AS'; };
+        matchLine = `<span class="teams">${ms.map((m) => `vs <b style="color:${sideColor(app, oppOf(m).id)}">${esc(shortTeam(oppOf(m).name))}</b> <span class="status">${esc(lead(m))}</span>`).join(' <span class="faint">·</span> ')}</span>`;
+      } else {
+        const m = ms[0] || null;
+        const opp = m ? oppOf(m) : null;
+        matchLine = m
+          ? `<span class="teams">Rot ${m.rotation} · vs <b style="color:${sideColor(app, opp.id)}">${esc(opp.name)}</b></span><span class="status">${esc(matchStatusShort(snap, m, myTeam))}</span>`
+          : '';
+      }
     } else if (rot) {
       matchLine = `<span class="teams">${esc(rot.label)}</span>`;
     } else {
@@ -377,18 +392,12 @@ export default {
             <span class="hole-meta">Par ${hole.par} · Hcp ${hole.si} · ${esc(maxLabel(snap.course, st, h))}</span>
           </button>
           <button class="arrow" data-act="hole-next" aria-label="Next hole" ${pos >= limitPos ? 'disabled' : ''}>${icon('fwd')}</button>
+          ${app.isOrganizer() ? `<button class="hole-more" data-act="fixhole-open" data-v="${h}" aria-label="Hole menu: fix hole ${h}">${icon('more', 20)}</button>` : ''}
         </div>`;
     if (individual(app)) return individualView(app, h, { holeRow, dots, footBtn });
     return `<div class="enter nr">
       <div class="hero">
-        <div class="hole-row">
-          <button class="arrow" data-act="hole-prev" aria-label="Previous hole" ${pos <= 1 ? 'disabled' : ''}>${icon('back')}</button>
-          <button class="hole-head" data-act="hole-grid" aria-label="Hole ${h}: all holes">
-            <span class="hole-title">Hole ${h}</span>
-            <span class="hole-meta">Par ${hole.par} · Hcp ${hole.si} · ${esc(maxLabel(snap.course, st, h))}</span>
-          </button>
-          <button class="arrow" data-act="hole-next" aria-label="Next hole" ${pos >= limitPos ? 'disabled' : ''}>${icon('fwd')}</button>
-        </div>
+        ${holeRow}
         ${matchLine ? `<div class="matchup-line">${matchLine}</div>` : ''}
       </div>
       <div class="sheet${focus === 'opp' ? ' even' : ''}">
@@ -481,6 +490,7 @@ export default {
       app.ui.pad = app.ui.pad?.pid === pid && app.ui.pad?.hole === h ? null : { pid, hole: h };
       app.ui.foldAt = Date.now();
       app.render();
+      padIntoView();
     },
     'pad-pick': (el, ev, app) => {
       // Car-ride mode: pick a score and the pad jumps to the next player still waiting.
@@ -492,6 +502,7 @@ export default {
       const next = ids.find((id) => id !== pid && snap.playerById.get(id).gross[h - 1] == null && app.canEdit(id, h));
       app.ui.pad = next ? { pid: next, hole: h } : null;
       app.render();
+      padIntoView();
     },
     'pin-open': (el, ev, app) => app.unlockFinal(),
     'final-relock': (el, ev, app) => {
@@ -545,7 +556,7 @@ function goHole(app, to, from) {
   app.ui.hole = to;
   app.render();
   app.toast({
-    title: `Hole ${from} saved`, action: 'Undo', ms: 3000,
+    title: `Hole ${from} saved`, action: 'Undo',
     onAction: () => {
       app.ui.hole = from;
       app.render();
