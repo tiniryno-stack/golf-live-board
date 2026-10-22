@@ -134,7 +134,9 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
   low net score, ties for low split it 1/k; level after 18 → **most outright wins** (`rankStandings`), still level = shared. Teams A–D are made in `soloView`, so Host can switch it on
   mid-round and it recounts from hole 1. Matches tab = **The race** (handoff `golf-race-tabbar/02`, 2–6 players): math + headline copy in pure
   `js/race.js` (lock line = 2nd + holes left, locked when the lead beats it, OUT, reach tails), tests in
-  `tests/race.test.mjs`; explainer shows for the first 6 holes.
+  `tests/race.test.mjs`; explainer shows for the first 6 holes. Bottom card (handoff `golf-race-bottom`):
+  **Points by hole** (`holeShares`) or **What this hole does** (`holeOutcomes`, shown per `showStakes`: hole 16+,
+  13+ within 1, or this hole could lock it); no tap action.
 - **Crews + people (Oct 21):** a crew = a friend group (`events.crew_id`; Andrew wants the word
   "crew", not "league"). A person = `personId`, with first + last name (+ nickname when that full
   name is taken; unique app-wide). Roster players carry `firstName`/`lastName`/`nickname`; `name` is

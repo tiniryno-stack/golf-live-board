@@ -99,3 +99,54 @@ test('Engine: split point ties at the end go to most outright wins (Board, recap
   const mid = compute(ev, scores.filter((x) => x.hole <= 5)).game.standings;
   assert.ok(mid.filter((x) => x.rank === 1).length >= 1);
 });
+
+// ── bottom card (handoff golf-race-bottom): the spec's thru 14 and thru 17 cases
+import { holeOutcomes, holeShares, showStakes } from '../js/race.js';
+const rep = (n, ...w) => [...Array(n)].map(() => hole(...w));
+// Thru 14: Mitchell 6, Andrew 5½, Justin 1½, Peter 1 (4 left).
+const THRU14 = [...rep(5, 'm'), ...rep(4, 'a'), ...rep(2, 'm', 'a'), hole('a', 'j'), hole('j'), hole('p')];
+// Thru 17: Mitchell 7½, Andrew 7, Justin 1½, Peter 1 (1 left).
+const THRU17 = [...rep(6, 'm'), ...rep(5, 'a'), ...rep(3, 'm', 'a'), hole('a', 'j'), hole('j'), hole('p')];
+
+test('What this hole does, thru 14 (hole 15): up 1½ / still up ½ / still up ½ · lock 8½ / down ½', () => {
+  const s = race(THRU14);
+  assert.deepEqual([s.points.m, s.points.a, s.points.j, s.points.p], [6, 5.5, 1.5, 1]);
+  const rows = holeOutcomes({ players: P, holes: THRU14, me: 'm' });
+  assert.deepEqual(rows.map((r) => [r.label, r.result]), [
+    ['You win it alone', 'UP 1½'],
+    ['You split it with Andrew', 'STILL UP ½'],
+    ['Justin or Peter win it', 'STILL UP ½ · LOCK 8½'],
+    ['Andrew wins it alone', 'DOWN ½'],
+  ]);
+  assert.deepEqual(rows.map((r) => r.good), [true, false, false, false], 'green only when it helps you');
+  assert.equal(showStakes({ players: P, holes: THRU14, me: 'm' }), true, 'hole 15, top two within 1');
+});
+
+test('What this hole does, thru 17 (hole 18): anything but Andrew alone → you win; Andrew alone → Andrew wins 8 to 7½', () => {
+  const s = race(THRU17);
+  assert.deepEqual([s.points.m, s.points.a], [7.5, 7]);
+  const rows = holeOutcomes({ players: P, holes: THRU17, me: 'm' });
+  assert.equal(rows[0].result, 'YOU WIN 8½ TO 7');
+  assert.match(rows[1].result, /^YOU WIN/);
+  assert.match(rows[2].result, /^YOU WIN/);
+  assert.equal(rows[3].label, 'Andrew wins it alone');
+  assert.equal(rows[3].result, 'ANDREW WINS 8 TO 7½');
+  assert.ok(rows.length <= 4);
+});
+
+test('What this hole does: a points tie at the end goes to most outright wins', () => {
+  // Thru 17, level: Mitchell 7 (3 alone), Andrew 7 (2 alone). Rival splits 18 with a third player → still level.
+  const level = [...rep(3, 'm'), ...rep(2, 'a'), ...rep(8, 'm', 'a'), ...rep(2, 'a', 'j'), hole('j'), hole('p')];
+  assert.equal(race(level).points.m, race(level).points.a);
+  const rows = holeOutcomes({ players: P, holes: level, me: 'm' });
+  const jp = rows.find((r) => /win it$|wins it$/.test(r.label) && !/You|Andrew/.test(r.label));
+  assert.equal(jp.result, 'YOU WIN ON OUTRIGHT WINS');
+});
+
+test('Points by hole: each played cell is that player’s share; the hole in progress stays empty', () => {
+  const sh = holeShares([hole('m'), hole('m', 'a'), hole('m', 'a', 'j', 'p'), { scores: { m: 4, a: 4, j: null, p: 5 } }], P.map((p) => p.id));
+  assert.deepEqual(sh.m.slice(0, 4), [1, 0.5, 0.25, null]);
+  assert.deepEqual(sh.j.slice(0, 4), [0, 0, 0.25, null]);
+  assert.equal(sh.m.length, 18);
+  assert.equal(showStakes({ players: P, holes: rep(7, 'm'), me: 'm' }), false, 'thru 7 with a big lead: points by hole');
+});

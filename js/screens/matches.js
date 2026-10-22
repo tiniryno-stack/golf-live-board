@@ -6,7 +6,7 @@
 // separate screen (people confuse it with their own score). Split point keeps its own view.
 
 import { esc, seg, seg2, icon, foldIn, mark } from '../ui.js';
-import { raceState } from '../race.js';
+import { raceState, holeShares, holeOutcomes, showStakes } from '../race.js';
 import { fmtPts, fmtSigned, rotationIndexFor, holeAt, HOLES, playOrder, sideOn } from '../scoring.js';
 import { teamColor, shortTeam } from '../teams.js';
 
@@ -260,9 +260,10 @@ function splitView(app) {
   const ids = snap.teams.map((t) => t.id);
   const name = (t) => snap.teamById.get(t)?.name || t;
   const me = app.myTeam();
+  const raceHoles = order.map((h) => ({ hole: h, scores: g.holes[h - 1].complete ? g.holes[h - 1].net : {} }));
   const r = raceState({
     players: ids.map((id) => ({ id, name: name(id) })),
-    holes: order.map((h) => ({ hole: h, scores: g.holes[h - 1].complete ? g.holes[h - 1].net : {} })),
+    holes: raceHoles,
     me, lastHole: order[HOLES - 1],
   });
   const pct = (v) => `${(Math.max(0, Math.min(HOLES, v)) / HOLES) * 100}%`;
@@ -287,19 +288,22 @@ function splitView(app) {
     ? `<div class="rc-lock" style="--at:${lockFrom / HOLES}"><span class="rc-lock-l mono">LOCK ${fmtPts(r.lock)}</span></div>` : '';
   const explain = r.done < 6 && !r.finished && r.chaser
     ? `<p class="rc-explain">The <b>lock line</b> is the most ${esc(chaser)} can still reach. Get past it and the match is yours. Dashes show how far each player can still climb.</p>` : '';
-  // Now: your group's hole, everyone's score so far (dashed circle = not in yet). Tap → Enter.
-  let now = '';
-  if (!r.finished && app.me) {
-    const h = app.nextHole();
-    const par = snap.holes[h - 1].par;
-    const cells = r.rows.map((row) => {
-      const p = snap.playerById.get(snap.teamById.get(row.id)?.playerIds?.[0]);
-      const v = p?.gross[h - 1];
-      return `<div class="nw-p"><div class="nw-n ellipsis${row.me ? ' me' : ''}">${esc(row.name)}</div>${v != null ? mark(v, par, 30) : '<span class="nw-empty"></span>'}</div>`;
-    }).join('');
-    now = `<button class="race-now" data-act="tab" data-v="enter" aria-label="Hole ${h}: go to Enter">
-      <span class="nw-head mono"><span>NOW · HOLE ${h} · PAR ${par}</span><b>1 PT UP FOR GRABS</b></span>
-      <span class="nw-grid" style="grid-template-columns:repeat(${r.rows.length},minmax(0,1fr))">${cells}</span></button>`;
+  // Bottom card (handoff golf-race-bottom): Points by hole, or What this hole does when it matters.
+  const args = { players: ids.map((id) => ({ id, name: name(id) })), holes: raceHoles, me, lastHole: order[HOLES - 1] };
+  let bottom;
+  if (showStakes(args)) {
+    const h = order[r.done];
+    const rows = holeOutcomes(args).map((o) => `<div class="hs-row"><span class="hs-l">${esc(o.label)}</span><span class="hs-r mono${o.good ? ' good' : ''}">${esc(o.result)}</span></div>`).join('');
+    bottom = `<div class="race-card race-bottom"><div class="rb-head mono"><span>WHAT HOLE ${h} DOES</span><span>PAR ${snap.holes[h - 1].par} · 1 PT</span></div>${rows}</div>`;
+  } else {
+    const shares = holeShares(raceHoles, ids);
+    const rows = r.rows.map((row) => `<div class="pb-row">
+      <span class="pb-n ellipsis${row.me ? ' me' : ''}">${esc(row.name)}</span>
+      <span class="pb-cells">${shares[row.id].map((v) => (v == null ? '<i class="pb-c open"></i>' : `<i class="pb-c"><b class="${row.me ? 'me' : ''}" style="height:${Math.round(v * 100)}%"></b></i>`)).join('')}</span>
+      <span class="pb-t mono${row.me ? ' me' : ''}">${fmtPts(row.points)}</span></div>`).join('');
+    bottom = `<div class="race-card race-bottom"><div class="rb-head mono"><span>POINTS BY HOLE</span><span>${r.done} OF ${HOLES} PLAYED</span></div>
+      ${rows}<div class="pb-axis mono"><span>1</span><span>9</span><span>18</span></div>
+      <p class="pb-legend">Full = won alone · Half = split 2 ways · Quarter = 4 ways</p></div>`;
   }
   return `<div class="plain race">
       <div class="race-top">
@@ -312,7 +316,7 @@ function splitView(app) {
         <div class="rc-axis mono"><span>0</span><span>9</span><span>18</span></div>
         ${explain}
       </div>
-      ${now}
+      ${bottom}
     </div>`;
 }
 

@@ -157,3 +157,88 @@ export function copy(s, name, lastHole = 18) {
   }
   return { headline: leadLine, subline: `${left}${outLine()}` };
 }
+
+// ───────────────────────────────────────────── bottom card (handoff golf-race-bottom)
+
+/** Each player's share of every hole in play order: 1 / ½ / ⅓ / ¼ / 0, or null while not complete. */
+export function holeShares(holes, ids, total = 18) {
+  const out = Object.fromEntries(ids.map((id) => [id, Array(total).fill(null)]));
+  holes.slice(0, total).forEach((h, i) => {
+    if (!ids.every((id) => h.scores[id] != null)) return;
+    const low = Math.min(...ids.map((id) => h.scores[id]));
+    const winners = ids.filter((id) => h.scores[id] === low);
+    for (const id of ids) out[id][i] = winners.includes(id) ? 1 / winners.length : 0;
+  });
+  return out;
+}
+
+/** A complete hole where `winners` share the low score. */
+const fakeHole = (ids, winners) => ({ scores: Object.fromEntries(ids.map((id) => [id, winners.includes(id) ? 3 : 4])) });
+
+/**
+ * What the hole being played does: up to 4 outcome rows, each worded from one side ("you", or the
+ * leader when you're OUT or just watching). Each row: { label, result, good, winners }.
+ */
+export function holeOutcomes({ players, holes, me = null, total = 18, lastHole = 18 }) {
+  const ids = players.map((p) => p.id);
+  const name = (id) => players.find((p) => p.id === id)?.name || id;
+  const complete = holes.filter((h) => ids.every((id) => h.scores[id] != null));
+  const now = raceState({ players, holes: complete, me, total, lastHole });
+  if (now.finished || ids.length < 2) return [];
+  const meOut = !me || !ids.includes(me) || now.rows.find((r) => r.id === me)?.out;
+  const side = meOut ? now.leader : me; // whose side the results are worded from
+  const isYou = side === me;
+  const rival = side === now.leader ? now.chaser : now.leader;
+  const SIDE = isYou ? '' : `${name(side).toUpperCase()} `;
+  const margin = (st) => st.points[side] - Math.max(...ids.filter((id) => id !== side).map((id) => st.points[id]));
+  const m0 = margin(now);
+
+  const result = (winners) => {
+    const st = raceState({ players, holes: [...complete, fakeHole(ids, winners)], me, total, lastHole });
+    const m = margin(st);
+    if (st.finished) {
+      const top = st.rows.filter((r) => r.rank === 1);
+      if (top.length > 1) return { text: 'SHARED WIN', good: false };
+      const w = st.leader;
+      const tie = st.chaser && eq(st.points[w], st.points[st.chaser]);
+      const who = w === me ? 'YOU WIN' : `${name(w).toUpperCase()} WINS`;
+      return { text: tie ? `${who} ON OUTRIGHT WINS` : `${who} ${fmtPts(st.points[w])} TO ${fmtPts(st.points[st.chaser])}`, good: w === side && isYou };
+    }
+    if (st.locked) return { text: st.leader === side ? (isYou ? 'LOCKED' : `${name(side).toUpperCase()} LOCKS IT`) : `${name(st.leader).toUpperCase()} LOCKS IT`, good: isYou && st.leader === side };
+    const text = eq(m, 0) ? 'ALL SQUARE' : m < 0 ? `${SIDE}DOWN ${fmtPts(-m)}` : m > m0 + EPS || m0 <= EPS ? `${SIDE}UP ${fmtPts(m)}` : `${SIDE}STILL UP ${fmtPts(m)}`;
+    return { text, good: isYou && m > m0 + EPS, lock: st.lock };
+  };
+
+  const you = (s) => (isYou ? `You ${s}` : `${name(side)} ${s.replace(/^win /, 'wins ')}`);
+  const rows = [];
+  rows.push({ label: you('win it alone'), winners: [side], ...result([side]) });
+  if (rival) rows.push({ label: isYou ? `You split it with ${name(rival)}` : `${name(side)} and ${name(rival)} split it`, winners: [side, rival], ...result([side, rival]) });
+  // Everyone else, each winning alone; outcomes that end the same way share one row.
+  const others = ids.filter((id) => id !== side && id !== rival);
+  const groups = [];
+  for (const id of others) {
+    const r = result([id]);
+    const key = r.text + (r.lock ?? '');
+    const g = groups.find((x) => x.key === key);
+    if (g) g.ids.push(id); else groups.push({ key, ids: [id], r });
+  }
+  for (const g of groups.slice(0, 1)) { // keep it to 4 rows: the first group (usually all of them)
+    const names = g.ids.map(name);
+    const lockTxt = g.r.lock != null && !eq(g.r.lock, now.lock) && !/LOCK|WIN/.test(g.r.text) ? ` · LOCK ${fmtPts(g.r.lock)}` : '';
+    rows.push({ label: names.length === 1 ? `${names[0]} wins it` : `${names.join(' or ')} win it`, winners: g.ids, ...g.r, text: g.r.text + lockTxt });
+  }
+  if (rival) rows.push({ label: `${name(rival)} wins it alone`, winners: [rival], ...result([rival]) });
+  return rows.map(({ label, text, good, winners }) => ({ label, result: text, good: !!good, winners }));
+}
+
+/** Show "What this hole does": hole 16 on, hole 13 on with the top two within 1, or this hole could lock it. */
+export function showStakes({ players, holes, me = null, total = 18, lastHole = 18 }) {
+  const ids = players.map((p) => p.id);
+  const complete = holes.filter((h) => ids.every((id) => h.scores[id] != null));
+  const st = raceState({ players, holes: complete, me, total, lastHole });
+  if (st.finished || !st.chaser) return false;
+  const pos = st.done + 1; // the hole being played, in play order
+  if (pos >= 16) return true;
+  if (pos >= 13 && st.lead <= 1 + EPS) return true;
+  return ids.some((id) => raceState({ players, holes: [...complete, fakeHole(ids, [id])], me, total, lastHole }).locked);
+}
