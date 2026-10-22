@@ -1289,10 +1289,10 @@ ok(JSON.stringify(spEv.settings.teeTimes) === '["08:40"]', `saved the tee time (
 await SP.page.tap('[data-act="tab"][data-v="matches"]');
 await SP.page.waitForTimeout(500);
 await clearOverlays(SP.page);
-const tots = await SP.page.$$eval('.sp-tot', (els) => els.map((e) => `${e.querySelector('.sp-name').textContent.replace(' (you)', '')} ${e.querySelector('.sp-pts').textContent}`));
-ok(JSON.stringify(tots) === JSON.stringify(['Josh 3½', 'Sean 2½', 'Andrew 1']), `recounted from hole 1: ${tots.join(', ')}`);
-const spRows = await SP.page.$$eval('.sp-table tbody tr', (trs) => trs.map((tr) => [...tr.querySelectorAll('td')].map((td) => td.querySelector('.pt')?.textContent || '').join('|')));
-ok(spRows.length === 7 && spRows[0] === '½||½' && spRows[1] === '1||' && spRows[6] === '⅓|⅓|⅓', `Matches: hole by hole, who took the point and how it split (${spRows.join(' / ')})`);
+const tots = await SP.page.$$eval('.rc-lane', (els) => els.map((e) => `${e.querySelector('.rc-name').textContent} ${e.querySelector('.rc-puck').textContent}`));
+ok(JSON.stringify(tots) === JSON.stringify(['Josh 3½', 'Sean 2½', 'Andrew 1']), `recounted from hole 1, the race in order: ${tots.join(', ')}`);
+const raceTop = await SP.page.evaluate(() => [document.querySelector('.race-title .ts-label')?.textContent, document.querySelector('.race-h')?.textContent, document.querySelector('.rc-lock-l')?.textContent]);
+ok(raceTop[0] === 'SPLIT POINT · THRU 7' && raceTop[1] === 'Josh leads by 1' && raceTop[2] === 'LOCK 13½', `The race: label, headline, lock line (${raceTop.join(' / ')})`);
 await SP.page.tap('[data-act="tab"][data-v="board"]');
 await SP.page.waitForTimeout(500);
 await clearOverlays(SP.page);

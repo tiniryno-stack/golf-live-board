@@ -131,9 +131,10 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
   matches per hole, so use `matchesFor()`; `matchFor()` returns the first).
 - **Small groups:** any roster that isn't 4 carts of 2 is a scorecard round (no teams).
   With 2–6 players, `settings.solo` = **split point** (`game.type 'splitPoint'`): 1 point a hole to the
-  low net score, ties for low split it 1/k. Teams A–D are made in `soloView`, so Host can switch it on
-  mid-round and it recounts from hole 1. Matches tab: totals + hole-by-hole table (kept simple; Andrew
-  may redesign it).
+  low net score, ties for low split it 1/k; level after 18 → **most outright wins** (`rankStandings`), still level = shared. Teams A–D are made in `soloView`, so Host can switch it on
+  mid-round and it recounts from hole 1. Matches tab = **The race** (handoff `golf-race-tabbar/02`, 2–6 players): math + headline copy in pure
+  `js/race.js` (lock line = 2nd + holes left, locked when the lead beats it, OUT, reach tails), tests in
+  `tests/race.test.mjs`; explainer shows for the first 6 holes.
 - **Crews + people (Oct 21):** a crew = a friend group (`events.crew_id`; Andrew wants the word
   "crew", not "league"). A person = `personId`, with first + last name (+ nickname when that full
   name is taken; unique app-wide). Roster players carry `firstName`/`lastName`/`nickname`; `name` is
@@ -211,7 +212,7 @@ sync, joining, the engine or the database, and once before anything merges to `m
 
 ```bash
 npm install
-npm test               # 77 unit tests: scoring + headlines + course data + names/crews + games (2v2, at the turn, 6-player match play, Partner “Rider” Cup for 6, tee times) + score marks + design tokens (drift, retired colors, type scale)
+npm test               # 84 unit tests (incl. race.test.mjs): scoring + headlines + course data + names/crews + games (2v2, at the turn, 6-player match play, Partner “Rider” Cup for 6, tee times) + score marks + design tokens (drift, retired colors, type scale)
 npm run test:fit       # 160 checks: every screen at SE / 13 mini / 15-16 / Pro Max, no scroll on Enter
 npm run test:smoke     # 256 checks: multi-phone flows against the mock (join, swap, offline, rejoin,
                        # reset/delete, back nine, Next waits for every score, grid/locks, recap,

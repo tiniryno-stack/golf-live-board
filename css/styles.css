@@ -1342,3 +1342,46 @@ details.fold summary::-webkit-details-marker { display: none; }
   min-height: 32px; padding: 0 var(--space-3); border-radius: var(--radius-pill); border: 1px solid var(--line); background: var(--surface-1);
   box-shadow: var(--shadow-float); font-size: 13px; line-height: 18px; white-space: nowrap; color: var(--text); }
 .netpill .np-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--warn); }
+
+/* ───────────────────────────────────────────── Matches · The race (handoff golf-race-tabbar/02) */
+.race { padding-top: 12px; }
+.race-top { display: flex; align-items: flex-end; gap: 8px; padding: 0 4px; }
+.race-title { flex: 1; min-width: 0; }
+.race-title .ts-label { font-size: 12px; letter-spacing: .08em; color: var(--text-muted); }
+.race-h { font-size: 32px; font-weight: 800; letter-spacing: -1px; line-height: 1.1; margin: 4px 0 0; }
+.race-sub { font-size: 13px; color: var(--text-muted); margin: 4px 0 0; }
+.race-rules { flex: none; min-height: var(--tap-min); padding: 0 12px; gap: 6px; font-size: 15px; color: var(--text-muted); }
+.race-card { margin-top: 12px; padding: 8px 14px 10px; border-radius: 18px; background: var(--surface-1); box-shadow: var(--shadow-card); }
+.rc-lanes { position: relative; padding-top: 22px; }
+.rc-lane { display: flex; align-items: center; gap: 10px; height: 54px; transition: opacity .3s; }
+.rc-lane.out { opacity: .4; }
+.rc-who { width: 76px; flex: none; min-width: 0; }
+.rc-name { font-size: 15px; font-weight: 700; color: var(--text); }
+.rc-name.me { color: var(--cart-you-text); }
+.rc-rank { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.rc-track { flex: 1; position: relative; height: 28px; margin-right: 18px; }
+.rc-rail { position: absolute; left: 0; right: -18px; top: 13px; height: 2px; background: var(--line); }
+.rc-fill { position: absolute; left: 0; top: 11px; height: 6px; border-radius: 3px; background: var(--text-muted); transition: width .5s; }
+.rc-fill.me { background: var(--cart-you); }
+.rc-tail { position: absolute; top: 12px; height: 4px; border-radius: 2px; opacity: .55; background: repeating-linear-gradient(90deg, var(--text-muted) 0 3px, transparent 3px 6px); }
+.rc-puck {
+  position: absolute; top: 0; transform: translateX(-50%); min-width: 36px; height: 28px; padding: 0 7px; border-radius: 14px;
+  display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; white-space: nowrap;
+  background: var(--text); color: var(--bg); box-shadow: 0 0 0 3px var(--surface-1); transition: left .5s;
+}
+.rc-puck.me { background: var(--cart-you); color: var(--on-button); }
+.rc-lane.out .rc-puck { background: var(--text-muted); }
+/* the lock line: one dashed vertical across every lane at the lock value (track = lane minus 86px name column, minus 18px end room) */
+.rc-lock { position: absolute; top: 0; bottom: -2px; left: calc(86px + (100% - 104px) * var(--at)); width: 0; border-left: 2px dashed var(--text); opacity: .8; transition: left .5s cubic-bezier(.2, .9, .3, 1); pointer-events: none; z-index: 1; }
+.rc-lock-l { position: absolute; top: 0; transform: translateX(-50%); font-size: 12px; font-weight: 700; letter-spacing: .06em; white-space: nowrap; color: var(--text); background: var(--surface-1); padding: 0 4px; }
+.rc-axis { display: flex; justify-content: space-between; margin: 4px 18px 0 86px; font-size: 12px; color: var(--text-muted); }
+.rc-explain { margin: 10px 0 0; padding: 10px 12px; border-radius: 12px; background: var(--surface-2); font-size: 13px; line-height: 1.4; }
+.race-now { display: block; width: 100%; text-align: left; margin-top: 12px; padding: 12px 14px; border-radius: 18px; background: var(--surface-1); box-shadow: var(--shadow-card); }
+.nw-head { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; letter-spacing: .06em; color: var(--text-muted); }
+.nw-head b { color: var(--text); }
+.nw-grid { display: grid; gap: 6px; margin-top: 10px; }
+.nw-p { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; }
+.nw-n { font-size: 13px; font-weight: 600; color: var(--text-muted); max-width: 100%; }
+.nw-n.me { color: var(--cart-you-text); }
+.nw-empty { width: 30px; height: 30px; border-radius: 50%; border: 1.5px dashed var(--line); }
+@media (prefers-reduced-motion: reduce) { .rc-lock, .rc-puck, .rc-fill { transition: none; } }
