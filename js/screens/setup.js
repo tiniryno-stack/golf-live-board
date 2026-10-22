@@ -16,6 +16,8 @@ import * as cd from '../coursedata.js';
 import { DEFAULT_SETTINGS, DEFAULT_ROTATION, GAMES, gameFix, autoGroups, cartRotation, threeCartRotation, cartIdsFor } from '../scoring.js';
 import * as db from '../db.js';
 import * as names from '../names.js';
+import { FLAGS } from '../flags.js';
+import { initials } from '../ui.js';
 
 const TEAM_IDS = ['A', 'B', 'C', 'D'];
 const DRAFT_KEY = 'glb.setupDraft';
@@ -97,6 +99,16 @@ async function loadPast(app, crewId) {
     const courses = new Map(); // course id → the copy from the group's latest round there (with any fixes)
     const plays = new Map(); // course id → rounds your group played there
     const lastHcp = {}; // person → strokes in the latest round they played (rounds come oldest first)
+    const freq = {}; // person → rounds in the crew's last 12 (Quick players order, feature 007)
+    const live = rounds.filter(({ event }) => String(event.settings?.practice) !== 'true');
+    for (const { event } of live.slice(-12)) for (const p of event.roster?.players || []) if (p.personId) freq[p.personId] = (freq[p.personId] || 0) + 1;
+    // Last groups: the crew's 4 most recent rounds, newest first ("All 8 from Friday", "Sat 2v2 · 4").
+    const groups = live.slice(-4).reverse().map(({ event }) => ({
+      day: event.played_on ? new Date(`${event.played_on}T12:00:00`).toLocaleDateString([], { weekday: 'long' }) : '',
+      course: event.course?.shortName || event.course?.name || '',
+      game: event.settings?.pairs ? '2v2' : (event.roster?.teams || []).length >= 3 ? 'Cart game' : event.settings?.solo ? 'Match' : '',
+      people: (event.roster?.players || []).filter((p) => p.personId).map((p) => ({ personId: p.personId, firstName: p.firstName || String(p.name || '').split(' ')[0], lastName: p.lastName || '', nickname: p.nickname || '' })),
+    })).filter((g) => g.people.length);
     for (const { event } of rounds) {
       for (const p of event.roster?.players || []) {
         if (p.personId) people.set(p.personId, p.name);
@@ -118,7 +130,13 @@ async function loadPast(app, crewId) {
         : [...people].map(([personId, name]) => withName({ personId, name, crewId }));
       app.setup.mine = yourCourses([...courses.values()].reverse().map((c) => ({ ...c, plays: plays.get(c.id) || 0 })));
       app.setup.lastHcp = lastHcp;
+      app.setup.freq = freq;
+      app.setup.groups = groups;
+      app.setup.pastPeople = [...people].map(([personId, name]) => ({ personId, name })); // incl. people off the crew list
+      app.setup.pastLoaded = true;
+      quickAddMe(app.setup);
       paintCourses(app);
+      if (app.setup.screen === 'players') app.render();
     }
   } catch { /* offline: typing names still works */ }
 }
@@ -495,8 +513,102 @@ function whichView(s) {
     ${bottom(s.which ? 'Next: players' : 'Pick one to continue', 'setup-which-done', { disabled: !s.which, arrow: true })}`;
 }
 
+// ───────────────────────────────────────────── ② Quick players (feature 007-quick-players)
+
+const meOf = (s) => (s.crewId ? db.crews.get(s.crewId)?.me || null : null);
+const fullOf = (p) => [p.firstName, p.lastName].filter(Boolean).join(' ') || p.name || '';
+const shortOf = (p) => (p.lastName ? `${p.firstName} ${p.lastName[0]}.` : p.firstName || p.name || '');
+
+/** You start ticked in a crew round (once per setup, never after you untick yourself). */
+function quickAddMe(s) {
+  const me = meOf(s);
+  if (!me || s.meAdded || s.from) return;
+  s.meAdded = true;
+  if (s.players.some((x) => x.personId === me)) return;
+  const p = s.past.find((x) => x.personId === me);
+  if (p) s.players.unshift(newPlayer({ personId: p.personId, firstName: p.firstName, lastName: p.lastName, nickname: p.nickname, strokes: lastHcpOf(s, p.personId) }));
+}
+
+/** Rows: you, then everyone picked who isn't a regular (guests), then regulars by how often they play. */
+function quickRows(s) {
+  const me = meOf(s);
+  const picked = new Set(s.players.map((p) => p.personId));
+  const freq = s.freq || {};
+  const crew = [...s.past].sort((a, b) => (b.personId === me) - (a.personId === me) || (freq[b.personId] || 0) - (freq[a.personId] || 0) || shortOf(a).localeCompare(shortOf(b)));
+  const inCrew = new Set(crew.map((p) => p.personId));
+  const guests = s.players.filter((p) => !inCrew.has(p.personId)).map((p) => ({ ...p, guest: true }));
+  return [...crew.filter((p) => p.personId === me), ...guests, ...crew.filter((p) => p.personId !== me)].map((p) => ({ ...p, on: picked.has(p.personId), me: p.personId === me }));
+}
+
+function pickRow(s, p) {
+  const hcp = FLAGS.crewHandicaps ? lastHcpOf(s, p.personId) : '';
+  const i = s.players.findIndex((x) => x.personId === p.personId);
+  return `<button class="pick-row${p.on ? ' on' : ''}" data-act="qp-toggle" data-v="${esc(p.personId)}" aria-pressed="${p.on}">
+      <span class="av${p.me ? ' me' : ''}">${esc(initials(fullOf(p)))}</span>
+      <span class="pr-main"><span class="pr-name ellipsis">${esc(shortOf(p))}</span>${p.me ? '<span class="pr-sub you">You</span>' : p.guest ? '<span class="pr-sub">Guest · joins the crew after the round</span>' : ''}</span>
+      ${FLAGS.crewHandicaps && hcp !== '' && i >= 0 ? `<span class="pr-hcp mono" data-act="setup-hcp" data-i="${i}">${esc(hcp)}</span>` : FLAGS.crewHandicaps && hcp !== '' ? `<span class="pr-hcp mono">${esc(hcp)}</span>` : ''}
+      <span class="pr-box">${p.on ? icon('check', 18) : ''}</span>
+    </button>`;
+}
+
+/** Search results (repainted in place while typing, so the field keeps focus). */
+function quickResults(s) {
+  const q = String(s.newName || '').trim().toLowerCase();
+  const rows = quickRows(s);
+  const hits = q ? rows.filter((p) => fullOf(p).toLowerCase().includes(q) || String(p.nickname || '').toLowerCase().includes(q)) : rows;
+  const inCrew = new Set(rows.map((p) => p.personId));
+  const before = q ? (s.pastPeople || []).filter((p) => !inCrew.has(p.personId) && String(p.name).toLowerCase().includes(q)) : [];
+  const picked = s.players.map(shortOf);
+  return `${hits.length ? `<div class="pick-list">${hits.map((p) => pickRow(s, p)).join('')}</div>` : ''}
+    ${before.length ? `<div class="ts-label qp-k">Played with the crew before</div><div class="pick-list">${before.map((p) => `<button class="pick-row" data-act="qp-before" data-v="${esc(p.personId)}"><span class="av">${esc(initials(p.name))}</span><span class="pr-main"><span class="pr-name ellipsis">${esc(p.name)}</span><span class="pr-sub">Not on the crew list</span></span><span class="pr-box"></span></button>`).join('')}</div>` : ''}
+    ${q ? `<div class="ts-label qp-k">Not in the crew</div>
+      <button class="qp-guest" data-act="setup-add"${s.nickAsk ? ' disabled' : ''}>${icon('plus', 18)}<span>Add “${esc(s.newName.trim())}” as a guest</span></button>` : ''}
+    <p class="meta qp-picked">${picked.length} picked${picked.length ? ` · ${esc(picked.join(', '))}` : ''}</p>`;
+}
+
+function quickPlayersView(s, c, line, tee) {
+  const crewName = (db.crews.get(s.crewId)?.name || 'Your crew').toUpperCase();
+  const rows = quickRows(s);
+  const searching = s.qpSearch;
+  const onlyYou = s.pastLoaded && rows.filter((p) => !p.me && !p.guest).length === 0;
+  const g = s.groups || [];
+  const chips = g.length ? `<div class="ts-label qp-k">Last group · ${esc(g[0].day.slice(0, 3))} at ${esc(g[0].course)}</div>
+    <div class="qp-chips">${g.map((x, i) => `<button class="group-chip${i === 0 ? ' primary' : ''}" data-act="qp-group" data-i="${i}">${i === 0 ? `${icon('plus', 18)} All ${x.people.length} from ${esc(x.day)}` : `${esc(x.day.slice(0, 3))}${x.game ? ` ${esc(x.game)}` : ''} · ${x.people.length}`}</button>`).join('')}</div>` : '';
+  const list = searching
+    ? `<div class="qp-searchbar"><label class="nr-search qp-search">${icon('search', 20)}<input id="new-player" type="search" maxlength="48" placeholder="Search the crew or type a name" value="${esc(s.newName || '')}" autocapitalize="words" autocomplete="off" data-input="qp-query" data-enter="setup-add"></label>
+        <button class="btn small" data-act="qp-search-done">Done</button></div>
+      <div id="qp-results">${quickResults(s)}</div>`
+    : `<div class="qp-head"><span class="ts-label">${esc(crewName)} · ${onlyYou ? 'just you so far' : `${s.players.length} picked`}</span>
+        <button class="link-btn qp-find" data-act="qp-search">${icon('search', 18)} Search</button></div>
+      <div class="pick-list">${rows.map((p) => pickRow(s, p)).join('')}</div>
+      ${onlyYou ? `<div class="crew-card crew-none qp-empty"><div class="cc-name">Your regulars show up here</div>
+          <p class="cc-meta">Invite the crew, or add people by name. People you add join the crew list after the round.</p>
+          <div class="cc-actions"><button class="btn cc-btn" data-act="crew-invite" data-v="${esc(s.crewId)}">${icon('share', 20)} Invite crew</button><button class="btn cc-btn" data-act="qp-search">Add by name</button></div></div>`
+        : `<div class="qp-foot">${rows.length > 8 ? `<span class="meta">+${rows.length - 8} more in the crew · scroll</span>` : '<span></span>'}<button class="link-btn" data-act="qp-search">${icon('plus', 16)} Guest</button></div>`}`;
+  return `${topBar(s)}${headline('Step 2 · Players', 'Who’s playing?')}
+    ${c ? `<div class="nr-course">
+      <button class="nc-main" data-act="setup-go" data-v="${c.variants?.length > 1 && !c.variant ? 'which' : 'check'}">
+        <b class="ellipsis">${esc(c.shortName || c.name || 'Your course')}${esc(tee)}</b>
+        <span class="nc-line ${line.cls}">${line.cls === '' && s.courseStatus === 'loading' ? '<span class="spinner tiny" aria-hidden="true"></span>' : ''}${esc(line.text)}</span>
+      </button>
+      <button class="btn small" data-act="setup-unpick">Change</button></div>` : ''}
+    ${searching ? '' : chips}
+    ${list}
+    ${s.nickAsk ? `<div class="card nick-ask">
+      <p class="meta" style="margin:0 0 8px">Someone named ${esc(s.nickAsk.first)} ${esc(s.nickAsk.last)} already plays in another crew. Someone new? Add a nickname so they’re their own player.</p>
+      <div class="join-row"><input class="input" id="new-nick" maxlength="24" placeholder="Nickname, e.g. Tini Ryno" autocapitalize="words" autocomplete="off" data-enter="setup-add">
+        <button class="btn primary" data-act="setup-add">Add</button></div>
+      <button class="link-btn" style="margin-top:8px" data-act="setup-nick-cancel">Cancel</button>
+    </div>` : ''}
+    ${bottom(`Next: pick a game · ${s.players.length}`, 'setup-go', { v: 'game', disabled: !s.players.length || !!s.nickAsk, arrow: false })}`;
+}
+
 /** ② Who's playing? */
 function playersView(s) {
+  if (s.crewId && db.crews.get(s.crewId)) {
+    const c0 = course(s);
+    return quickPlayersView(s, c0, c0 ? cardLine(s, c0) : null, s.tee ? ` · ${s.tee.name} tees` : '');
+  }
   const c = course(s);
   const line = c ? cardLine(s, c) : null;
   const used = new Set(s.players.map((p) => p.personId));
@@ -871,7 +983,9 @@ export default {
     if (!app.setup.mine.length) app.setup.mine = yourCourses([]);
     if (from) loadFrom(app, from);
     else {
-      const crew = db.recent.all().find((r) => r.crew_id)?.crew_id;
+      // The crew Home shows (feature 006), else the newest crew from your rounds.
+      const crew = app.setup.crewId || db.crews.current()?.id || db.recent.all().find((r) => r.crew_id)?.crew_id;
+      if (crew && !app.setup.crewId && !app.setup.players.length) app.setup.crewId = crew;
       loadPast(app, crew);
     }
   },
@@ -1268,6 +1382,63 @@ export default {
       persist(s);
       app.render();
       document.getElementById('content').scrollTop = 0;
+    },
+    // Quick players (feature 007)
+    'qp-toggle': (el, ev, app) => {
+      if (ev?.target?.closest?.('[data-act="setup-hcp"]')) return;
+      const s = app.setup;
+      const pid = el.dataset.v;
+      const i = s.players.findIndex((x) => x.personId === pid);
+      if (i >= 0) s.players.splice(i, 1);
+      else {
+        const p = s.past.find((x) => x.personId === pid);
+        if (!p) return;
+        s.players.push(newPlayer({ personId: p.personId, firstName: p.firstName, lastName: p.lastName, nickname: p.nickname, strokes: lastHcpOf(s, p.personId) }));
+      }
+      persist(s);
+      const box = document.getElementById('qp-results');
+      if (box) box.innerHTML = quickResults(s);
+      else app.render();
+    },
+    'qp-group': (el, ev, app) => {
+      const s = app.setup;
+      const g = s.groups?.[Number(el.dataset.i)];
+      if (!g) return;
+      for (const p of g.people) {
+        if (s.players.some((x) => x.personId === p.personId)) continue;
+        const known = s.past.find((x) => x.personId === p.personId) || p;
+        s.players.push(newPlayer({ personId: p.personId, firstName: known.firstName, lastName: known.lastName, nickname: known.nickname, strokes: lastHcpOf(s, p.personId) }));
+      }
+      persist(s);
+      app.render();
+    },
+    'qp-before': (el, ev, app) => {
+      const s = app.setup;
+      const p = (s.pastPeople || []).find((x) => x.personId === el.dataset.v);
+      if (!p || s.players.some((x) => x.personId === p.personId)) return;
+      const nm = names.splitName(p.name);
+      s.players.push(newPlayer({ personId: p.personId, firstName: nm.first, lastName: nm.last }));
+      persist(s);
+      const box = document.getElementById('qp-results');
+      if (box) box.innerHTML = quickResults(s);
+    },
+    'qp-search': (el, ev, app) => {
+      app.setup.qpSearch = true;
+      app.render({ force: true });
+      document.getElementById('new-player')?.focus();
+    },
+    'qp-search-done': (el, ev, app) => {
+      app.setup.qpSearch = false;
+      app.setup.newName = '';
+      app.setup.nickAsk = null;
+      app.render({ force: true });
+    },
+    'qp-query': (el, ev, app) => {
+      const s = app.setup;
+      s.newName = el.value;
+      if (s.nickAsk) { s.nickAsk = null; app.render({ force: true }); document.getElementById('new-player')?.focus(); return; }
+      const box = document.getElementById('qp-results');
+      if (box) box.innerHTML = quickResults(s);
     },
     'setup-remove': (el, ev, app) => {
       app.setup.players.splice(Number(el.dataset.i), 1);
