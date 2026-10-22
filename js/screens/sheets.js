@@ -120,6 +120,11 @@ function playersByCart(app) {
   const snap = app.snapshot;
   const groups = [];
   const teams = snap.roster.teams || [];
+  // Carts only in the cart game (Partner "Rider" Cup): solo match play and 2v2 make teams too,
+  // but there the sheet is one plain list of everyone.
+  const carts = teams.length && !snap.settings.solo && !snap.settings.pairs
+    && teams.some((t) => snap.players.filter((p) => p.teamId === t.id).length > 1);
+  if (!carts) return [{ label: '', players: snap.players, list: true }];
   if (teams.length) {
     for (const t of teams) {
       const ps = snap.players.filter((p) => p.teamId === t.id);
@@ -143,7 +148,7 @@ const BODIES = {
     if (!app.snapshot) return head('Who are you?');
     const groups = playersByCart(app)
       .map(
-        (g) => `<div class="who-group"><span class="micro">${g.teamId ? `<i class="jdot" style="--jersey:${teamColor(null, g.teamId)};margin-right:6px"></i>` : ''}${esc(g.label)}</span><div class="who-grid">${g.players
+        (g) => `<div class="who-group">${g.list ? '' : `<span class="micro">${g.teamId ? `<i class="jdot" style="--jersey:${teamColor(null, g.teamId)};margin-right:6px"></i>` : ''}${esc(g.label)}</span>`}<div class="who-grid${g.list ? ' one' : ''}">${g.players
           .map((p) => {
             const taken = app.claimed.has(p.id) && p.id !== app.me;
             return `<button class="who-btn${taken ? ' taken' : ''}" data-act="who-pick" data-v="${esc(p.id)}">

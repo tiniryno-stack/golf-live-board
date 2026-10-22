@@ -678,6 +678,7 @@ a { color: inherit; }
 .who-group { margin: 0 0 14px; }
 .who-group .micro { margin: 0 0 6px 2px; display: block; }
 .who-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.who-grid.one { grid-template-columns: 1fr; }
 .who-btn {
   min-height: 56px; border-radius: 16px; background: var(--surface-2); padding: 0 14px;
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
