@@ -1,5 +1,5 @@
 {
- "v": "20261022054840",
+ "v": "20261022075602",
  "files": [
   "css/styles.css",
   "css/tokens.css",
@@ -8,6 +8,7 @@
   "js/coursedata.js",
   "js/courses.js",
   "js/db.js",
+  "js/flags.js",
   "js/headlines.js",
   "js/names.js",
   "js/race.js",
@@ -15,6 +16,7 @@
   "js/screens/board.js",
   "js/screens/brief.js",
   "js/screens/card.js",
+  "js/screens/crew.js",
   "js/screens/enter.js",
   "js/screens/home.js",
   "js/screens/host.js",
@@ -24,6 +26,7 @@
   "js/screens/setup.js",
   "js/screens/sheets.js",
   "js/screens/toasts.js",
+  "js/seasons.js",
   "js/sim.js",
   "js/teams.js",
   "js/ui.js"
