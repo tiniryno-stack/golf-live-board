@@ -226,7 +226,9 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
 **How much to run (Andrew, Oct 22 — this overrides earlier guidance):** `npm test` (seconds) after every
 change — that's the only suite that runs by default. **Do not run `npm run test:smoke` (the 20-phone browser
 rehearsal, ~6 min) or `npm run test:fit` / screenshots unless Andrew explicitly asks for them in that session.**
-He tests on his phone and reports back. One unit test per feature, not three. Debug by reading the code, not
+He tests on his phone and reports back. **When a change touches score sync, joining, the offline queue, the
+engine or the database — the things the smoke suite exists for — say so and recommend a smoke run in one line
+("this touches score sync; worth a smoke run before pushing?"); Andrew decides.** One unit test per feature, not three. Debug by reading the code, not
 by re-running; deploy an Edge Function once at the end of a change, not iteratively (each deploy re-sends every
 file). Token cost matters more than coverage here.
 
