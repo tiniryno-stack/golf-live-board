@@ -53,6 +53,7 @@ after the first playtest; section 13 is the V2 backlog.
 - Follow docs/design/design-system/. No new colors, sizes or type styles; flag anything that needs a new token or pattern.
 - When a feature is done, set its SPEC.md status to "Status: built in <commit>".
 - Don't run the full test suite or take screenshots after small changes; run only the tests for what changed. I test on my phone.
+  (Oct 22: no smoke suite and no screenshots at all unless I ask — see Testing.)
 
 ## Home screen app (Oct 21)
 
@@ -222,10 +223,12 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
 
 ## Testing (all headless, no network needed)
 
-**How much to run (Andrew, Oct 21):** `npm test` (seconds) after every change. UI-only work: one
-`FIT_SIZE=393x852 npm run test:fit` (iPhone 16 size only) per batch; no screenshot reviews unless Andrew
-asks: he tries the app and reports back. `npm run test:smoke` only when a change touches score
-sync, joining, the engine or the database, and once before anything merges to `main`.
+**How much to run (Andrew, Oct 22 — this overrides earlier guidance):** `npm test` (seconds) after every
+change — that's the only suite that runs by default. **Do not run `npm run test:smoke` (the 20-phone browser
+rehearsal, ~6 min) or `npm run test:fit` / screenshots unless Andrew explicitly asks for them in that session.**
+He tests on his phone and reports back. One unit test per feature, not three. Debug by reading the code, not
+by re-running; deploy an Edge Function once at the end of a change, not iteratively (each deploy re-sends every
+file). Token cost matters more than coverage here.
 
 ```bash
 npm install
