@@ -49,7 +49,7 @@ test('green svg draws three bands, two gaps, the outline and the middle dot insi
 
 // ───────────────────────────────────────────── stage 3: building a course's geo (js/geobuild.js)
 import { pixelToLatLng, latLngToPixel } from '../js/geo.js';
-import { parseOverpass, matchOsm, numberHoles, fromTrace, finish, PAR_LENGTH } from '../js/geobuild.js';
+import { parseOverpass, matchOsm, numberHoles, fromTrace, finish, PAR_LENGTH, fingerprint, fitFingerprint } from '../js/geobuild.js';
 import { COURSES } from '../js/courses.js';
 
 const twinCard = COURSES[0].par.map((par, i) => ({ hole: i + 1, par }));
@@ -186,4 +186,33 @@ test('greens loaded from the table are found by the course key, after the built-
   assert.equal(geoFor(twin).name, 'Twin Creeks');
   setGeo('x', { holes: [] }); // nothing to show: ignored
   assert.equal(geoFor({ id: 'x' }), null);
+});
+
+// ───────────────────────────────────────────── stage 3b: the scorecard's per-tee yardages as the fingerprint
+test('fingerprint matching: traced tee boxes + greens, shuffled and noisy, come back numbered 18/18 from the card alone', () => {
+  const C = COURSES[0];
+  const card = C.par.map((par, i) => ({ hole: i + 1, par, yards: C.yards[i] }));
+  assert.deepEqual(fingerprint(card[0]), [555, 516, 463, 388]);
+  assert.equal(fitFingerprint([544, 505, 455, 380], fingerprint(card[0])), 0); // a few % short of the card is free (cards follow the dogleg)
+  assert.ok(fitFingerprint([180], fingerprint(card[0])) > 10); // one stray box fitting one card length is not a match
+  const real = geoFor(twin).holes;
+  const YD = 111320 / 0.9144;
+  // boxes along each real tee → green line at the card's distances (×0.985), ±12 yd along, ±15 yd sideways
+  let seed = 7;
+  const rnd = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280 - 0.5; };
+  const along = (g, t, d, jit) => {
+    const c = center(g), k = Math.cos((c[0] * Math.PI) / 180);
+    const dx = (t[1] - c[1]) * k * YD, dy = (t[0] - c[0]) * YD, L = Math.hypot(dx, dy), ux = dx / L, uy = dy / L;
+    return [c[0] + (uy * d + ux * jit) / YD, c[1] + (ux * d - uy * jit) / (YD * k)];
+  };
+  const tees = [];
+  real.forEach((h, i) => Object.values(C.yards[i]).forEach((y) => tees.push(along(h.green, h.tee, y * 0.985 + rnd() * 24, rnd() * 30))));
+  const shuf = (a) => a.map((v, i) => [Math.sin(i * 7.3), v]).sort((x, y) => x[0] - y[0]).map((x) => x[1]);
+  const greens = shuf(real.map((h) => ({ pts: h.green, center: center(h.green), source: 'ai', confidence: 0.7 })));
+  const out = numberHoles(card, new Map(), greens, shuf(tees), [33.1048, -96.7133]); // start = clubhouse
+  assert.equal(out.size, 18);
+  for (let h = 1; h <= 18; h++) {
+    assert.deepEqual(out.get(h).green, real[h - 1].green, `hole ${h}`);
+    assert.ok(out.get(h).fit <= 12 && out.get(h).confidence >= 0.6, `hole ${h} fit ${out.get(h).fit}`);
+  }
 });

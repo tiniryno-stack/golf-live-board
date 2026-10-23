@@ -234,7 +234,7 @@ file). Token cost matters more than coverage here.
 
 ```bash
 npm install
-npm test               # 108 unit tests (incl. race.test.mjs, seasons.test.mjs): scoring + headlines + course data + names/crews + games (2v2, at the turn, 6-player match play, Partner “Rider” Cup for 6, tee times) + score marks + design tokens (drift, retired colors, type scale)
+npm test               # 109 unit tests (incl. race.test.mjs, seasons.test.mjs): scoring + headlines + course data + names/crews + games (2v2, at the turn, 6-player match play, Partner “Rider” Cup for 6, tee times) + score marks + design tokens (drift, retired colors, type scale)
 npm run test:fit       # 160 checks: every screen at SE / 13 mini / 15-16 / Pro Max, no scroll on Enter
 npm run test:smoke     # 283 checks (incl. crews): multi-phone flows against the mock (join, swap, offline, rejoin,
                        # reset/delete, back nine, Next waits for every score, grid/locks, recap,
@@ -325,9 +325,10 @@ npm run test:smoke     # 283 checks (incl. crews): multi-phone flows against the
   `tests/fixtures/geo.json` (fake Mesquite Hollow 18 greens, partial Cedar Bend). **Open:** the function saw no
   `MAPBOX_TOKEN`/`ANTHROPIC_API_KEY` secrets and Overpass was down — real Bridlewood / Indian Creek builds not yet verified.
   To redeploy the function: `deploy_edge_function` with index.ts + geobuild.js + geo.js (the app's files) + the stub geodata.js.
-  **NEXT (Andrew, Oct 22 evening): stage 3b, NOTES.md §7b — use the scorecard's per-tee yardages (OpenGolfAPI
-  `holes_data[].yardages`, already saved as each hole's `yards`) to number AI-traced tee→green pairs and to verify the
-  trace, instead of par bands + routing hints. Not built yet; agreed as the next stage before stage 4.**
+  **Stage 3b built Oct 22 night (NOTES.md §7b):** the model only marks greens + tee boxes; code numbers them by matching
+  measured tee→green lengths to the card's per-tee yardages (`course.yards[i]`, now kept by `fromOpenGolf` and on the
+  Twin Creeks built-in; `geobuild.fingerprint`/`fitFingerprint`/`numberHoles`, fit → `confidence`, > 25 yd off → hole
+  left off). Function v5 deployed. Still unverified on a real course (secrets).
   Dev check page: `docs/design/yardages/geo-check.html` (also published as an artifact).
   **013 also removed the rotation strip from team Enter (live).**
 - Other open items (Oct 22): standings rework (ELO-style across games, needs design), `FLAGS.crewHandicaps`

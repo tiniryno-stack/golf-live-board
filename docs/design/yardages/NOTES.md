@@ -1,6 +1,6 @@
 # GPS yardages — architecture notes
 
-Status: **decided Oct 22, 2026; spike done the same day (Twin Creeks greens from OSM, `geo-check.html`); features 011 + 013 built, `FLAGS.gps` on; stage 3 (§7) built and deployed Oct 22 evening** (table live, function `course-geo` v3, app `loadGeo`). Next: confirm the Supabase secrets exist and build Bridlewood + Indian Creek for real, then stage 3b (§7b: match traced holes to the card's per-tee yardages), then stage 4 (§8).
+Status: **decided Oct 22, 2026; spike done the same day (Twin Creeks greens from OSM, `geo-check.html`); features 011 + 013 built, `FLAGS.gps` on; stage 3 (§7) built and deployed Oct 22 evening** (table live, function `course-geo` v3, app `loadGeo`). Next: confirm the Supabase secrets exist and build Bridlewood + Indian Creek for real, stage 3b (§7b) built the same night; then stage 4 (§8).
 
 Goal: on Enter, a green card above your score with front / middle / back yards from your phone to the green,
 the green outline with a flag, and `GPS · ±N YD` in the hole header (designer mockup
@@ -194,7 +194,16 @@ loads and the table's `updated_at` is newer.
 2. **Anthropic API key** (console.anthropic.com, billing on) → Supabase secret `ANTHROPIC_API_KEY`.
 3. Nothing else: Edge Functions get `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` automatically.
 
-## 7b. Stage 3b — the scorecard's yardages as the source of truth (Andrew, Oct 22 evening; NEXT, not built)
+## 7b. Stage 3b — the scorecard's yardages as the source of truth (Andrew, Oct 22 evening; BUILT Oct 22 night)
+
+**As built:** `fromOpenGolf` keeps per-hole `yards` by tee (`course.yards[i] = { black: 428, … }`; Twin Creeks' built-in
+card has them too); `loadGeo` sends them with the build request; `geobuild.fingerprint` / `fitFingerprint` /
+`numberHoles` do the matching (tee boxes grouped per green by proximity ≤ 120 yd + bearing ±8°, longest → shortest vs
+the card's lengths, 4 % slack for doglegs, 8 yd penalty per card tee with no box, fit > 25 yd → hole left off, 15–25 →
+kept with confidence < 0.5 = "check hole N"); the function's prompt asks the model for greens + tee boxes only. Unit
+test: Twin Creeks' 18 greens with synthetic boxes at the card's lengths (±12 yd, shuffled) → 18/18. Not yet run on a
+real course (secrets + Overpass, see §7). Known weak spot: a course whose card lists 4 tee sets but whose imagery shows
+only 2 boxes per hole — fits stay loose and confidence drops rather than mis-numbering.
 
 **The idea (Andrew):** every scorecard says how long each hole is from each tee set ("hole 1, par 4, 403 from the
 blues"). That's the ground truth we already trust for pars and handicaps. So instead of asking the model to guess

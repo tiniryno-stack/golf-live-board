@@ -1,16 +1,18 @@
 // course-geo — builds (once per course) the green outlines the GPS yardage card needs, and stores
 // them in public.course_geo. Spec: docs/design/yardages/NOTES.md §7.
 //
-//   POST { course_key, name, lat, lng, holes: [{ hole, par }] }  →  the course_geo row
+//   POST { course_key, name, lat, lng, holes: [{ hole, par, yards: { black: 428, blue: 403, … } }] }  →  the course_geo row
 //
 // 1. Return the row if it's ready (or partial, finished, and younger than 7 days). Otherwise mark it
 //    `building` (one build at a time per key; a `building` row older than 2 min is retried).
 // 2. OpenStreetMap via Overpass (golf=green / hole / tee around the course point). Flaky at peak →
 //    treated as "no OSM", never as an error.
 // 3. Match OSM hole lines to our scorecard (pars, +9 shift when the nines are swapped).
-// 4. Holes OSM lacks: Mapbox satellite (secret MAPBOX_TOKEN) + Claude vision (ANTHROPIC_API_KEY)
-//    trace every green and tee box and number the holes from our pars (a beam search over tee → green
-//    lengths fills gaps); then one zoomed-in image per traced hole refines its outline until the time
+// 4. Holes OSM lacks: Mapbox satellite (secret MAPBOX_TOKEN) + Claude vision (ANTHROPIC_API_KEY) mark
+//    every green and tee box — nothing else is asked of the model. Code numbers them (stage 3b): each
+//    hole's per-tee yardages from the scorecard are a fingerprint; a green whose tee boxes measure those
+//    lengths is that hole (geobuild.numberHoles, beam search from the clubhouse; par bands when the card
+//    has no yardages). Then one zoomed-in image per traced hole refines its outline until the time
 //    budget is up. What's left is saved `partial` with error 'pending…' and the next request (the
 //    round load) continues it. The symlinked geobuild.js / geo.js / geodata.js are the app's own files.
 // 5. Save the row (ready / partial / failed) and return it.
@@ -18,7 +20,7 @@
 // Deployed with verify_jwt = false (the app's publishable key isn't a JWT); gated by origin like
 // course-search. Writes with the service role (SUPABASE_SERVICE_ROLE_KEY, set automatically).
 // Data: greens © OpenStreetMap contributors (ODbL) · imagery © Mapbox.
-import { parseOverpass, matchOsm, numberHoles, fromTrace, finish, PAR_LENGTH } from './geobuild.js';
+import { parseOverpass, matchOsm, numberHoles, fromTrace, finish } from './geobuild.js';
 import { center, metersBetween, yards } from './geo.js';
 
 const ALLOWED = [/^https:\/\/tiniryno-stack\.github\.io$/, /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/];
@@ -37,7 +39,7 @@ const MAPBOX = Deno.env.get('MAPBOX_TOKEN') ?? '';
 const ANTHROPIC = Deno.env.get('ANTHROPIC_API_KEY') ?? '';
 
 type LL = [number, number];
-type CardHole = { hole: number; par: number };
+type CardHole = { hole: number; par: number; yards?: Record<string, number> | null };
 type Built = { hole: number; par: number | null; tee: LL; green: LL[]; source: string; confidence: number; refined?: boolean };
 type Green = { pts: LL[]; center: LL; source: string; confidence: number };
 type Row = {
@@ -130,15 +132,13 @@ async function trace(b64: string, prompt: string, maxTokens: number): Promise<Re
   try { return JSON.parse(m[0]); } catch { return null; }
 }
 
-const overviewPrompt = (w: number, h: number, card: CardHole[], missing: number[]) =>
-  `This is a ${w}×${h} pixel satellite image of a golf course (about 2 m per pixel). The scorecard, hole: par — ${card.map((c) => `${c.hole}: ${c.par}`).join(', ')}. Expected lengths: par 3 ≈ 120–220 yd (60–110 px), par 4 ≈ 300–450 yd (140–210 px), par 5 ≈ 450–600 yd (210–280 px).
-Return JSON:
-{"holes":[{"hole":1,"tee":[x,y],"green":{"points":[[x,y],…],"confidence":0..1}},…], "greens":[{"points":[[x,y],…],"confidence":0..1}], "tees":[[x,y],…], "clubhouse":[x,y]|null}
-- "holes": number the holes you can work out${missing.length < 18 ? ` (we only need ${missing.join(', ')})` : ''}: follow the routing — hole 1 starts near the clubhouse, each tee is close to the previous green, holes 9 and 18 finish near the clubhouse, par 3s are short. A hole's "tee" is a point on its tee box and "green" its putting green as a closed polygon of 8–20 pixel points around the edge (the smooth, uniformly mowed, roughly round or kidney-shaped surface at the end of the fairway; not the fringe, bunkers, tee boxes or the practice green). "confidence" = how sure you are of that hole's number and green.
-- "greens": any other putting greens you see that you could not number.
-- "tees": tee boxes you could not assign.
+const overviewPrompt = (w: number, h: number) =>
+  `This is a ${w}×${h} pixel satellite image of a golf course (about 2 m per pixel). Return JSON:
+{"greens":[{"points":[[x,y],…],"confidence":0..1}], "tees":[[x,y],…], "clubhouse":[x,y]|null}
+- "greens": every putting green as a closed polygon of 8–20 pixel points around its edge (the smooth, uniformly mowed, roughly round or kidney-shaped surface at the end of a fairway; not the fringe, bunkers, tee boxes or the practice green). "confidence" = how sure you are it is a green.
+- "tees": one point per tee box — every separate mowed rectangle, so a hole with four tee sets gives four points. Include all of them; we tell the holes apart from these.
 - "clubhouse": the clubhouse / parking / first-tee area, or null.
-Pixel coordinates, origin top-left, x right, y down. If the course does not fit in the image, do what you can. JSON only.`;
+Do not number or group anything. Pixel coordinates, origin top-left, x right, y down. JSON only.`;
 
 const detailPrompt = (w: number, h: number) =>
   `This is a ${w}×${h} pixel satellite image centered on one golf green (about 0.5 m per pixel). Return JSON:
@@ -168,7 +168,7 @@ Deno.serve(async (req: Request) => {
   const name = String(body.name || '').trim().slice(0, 80);
   const lat = Number(body.lat), lng = Number(body.lng);
   const card: CardHole[] = Array.isArray(body.holes)
-    ? body.holes.map((h) => ({ hole: Number(h?.hole), par: Number(h?.par) })).filter((h) => h.hole >= 1 && h.hole <= 18)
+    ? body.holes.map((h) => ({ hole: Number(h?.hole), par: Number(h?.par), yards: h?.yards && typeof h.yards === 'object' ? h.yards : null })).filter((h) => h.hole >= 1 && h.hole <= 18)
     : [];
   if (!key || !name) return reply({ error: 'need_key_and_name' }, 400, origin);
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return reply({ error: 'need_location' }, 400, origin);
@@ -219,31 +219,12 @@ Deno.serve(async (req: Request) => {
     if (missing().length && MAPBOX && ANTHROPIC && left() > 20000) {
       const img = OVERVIEW;
       const b64 = await satellite(lat, lng, img);
-      const tr = await trace(b64, overviewPrompt(img.w, img.h, card, missing()), 6000);
-      const frame = { ...img, lat, lng };
-      // numbered holes the model is sure of, when the tee → green length fits the par
-      const pool: Green[] = [];
-      let taken = 0;
-      for (const ah of (Array.isArray(tr?.holes) ? tr!.holes : []) as { hole?: number; tee?: number[]; green?: { points?: number[][]; confidence?: number } }[]) {
-        const n = Number(ah?.hole);
-        const g = fromTrace({ greens: ah?.green ? [ah.green] : [] }, frame).greens[0];
-        if (!g) continue;
-        const tee = fromTrace({ tees: ah?.tee ? [ah.tee] : [] }, frame).tees[0];
-        const par = card.find((c) => c.hole === n)?.par;
-        const [lo, hi] = PAR_LENGTH[par as 3 | 4 | 5] || [100, 650];
-        const len = tee ? yards(metersBetween(tee, g.center)) : null;
-        const known = [...holes.values()].some((h) => yards(metersBetween(center(h.green), g.center)) < 25);
-        if (known) continue;
-        if (n >= 1 && n <= 18 && !holes.has(n) && tee && len !== null && len >= lo - 40 && len <= hi + 60) {
-          holes.set(n, { hole: n, par: par ?? null, tee, green: g.pts, source: 'ai', confidence: g.confidence });
-          taken++;
-        } else pool.push(g);
-      }
-      const found = fromTrace(tr, frame);
-      notes.push(`ai numbered ${taken}, saw ${found.greens.length + pool.length} other greens, ${found.tees.length} tees`);
-      // greens already placed are not new
+      const tr = await trace(b64, overviewPrompt(img.w, img.h), 6000);
+      const found = fromTrace(tr, { ...img, lat, lng });
+      notes.push(`ai saw ${found.greens.length} greens, ${found.tees.length} tees`);
+      // greens OSM already placed are not new; the rest are numbered from the card's per-tee yardages (geobuild.numberHoles)
       const known = [...holes.values()].map((h) => center(h.green));
-      const fresh = [...pool, ...found.greens].filter((g) => !known.some((c) => yards(metersBetween(c, g.center)) < 25));
+      const fresh = found.greens.filter((g) => !known.some((c) => yards(metersBetween(c, g.center)) < 25));
       const start = found.clubhouse || [lat, lng];
       holes = numberHoles(card, holes, [...unnumbered, ...fresh], [...tees, ...found.tees], start);
       // zoom in on each AI-traced hole to trace its outline precisely, while time allows
@@ -256,7 +237,7 @@ Deno.serve(async (req: Request) => {
           const tr2 = await trace(d, detailPrompt(DETAIL.w, DETAIL.h), 1500);
           const g = tr2?.green as { points?: number[][]; confidence?: number } | undefined;
           const got = fromTrace({ greens: g ? [g] : [] }, { ...DETAIL, lat: c[0], lng: c[1] }).greens[0];
-          if (got && yards(metersBetween(got.center, c)) < 60) { h.green = got.pts; h.confidence = 0.5 + got.confidence / 2; }
+          if (got && yards(metersBetween(got.center, c)) < 60) { h.green = got.pts; h.confidence = Math.min(h.confidence, 0.5 + got.confidence / 2); }
           h.refined = true;
         } catch (e) { notes.push(`hole ${h.hole}: ${String(e).slice(0, 60)}`); }
       }

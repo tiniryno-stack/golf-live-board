@@ -35,7 +35,7 @@ function fromRow(row) {
 /** The body the function needs: our card's pars + the course point. Null when the course can't be built (no location). */
 export function buildBody(course) {
   const key = geoKey(course);
-  const pars = (course?.par || []).map((p, i) => ({ hole: i + 1, par: Number(p) }));
+  const pars = (course?.par || []).map((p, i) => ({ hole: i + 1, par: Number(p), ...(course.yards?.[i] ? { yards: course.yards[i] } : {}) }));
   if (!key || !Number.isFinite(course?.lat) || !Number.isFinite(course?.lng) || pars.length !== 18 || pars.some((h) => !(h.par >= 3 && h.par <= 6))) return null;
   return { course_key: key, name: course.name || course.shortName || key, lat: course.lat, lng: course.lng, holes: pars };
 }
