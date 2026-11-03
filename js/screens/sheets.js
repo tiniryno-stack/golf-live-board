@@ -11,6 +11,7 @@ import { crewSheets } from './crew.js';
 import { seasonSheets } from './season.js';
 import { geoFor } from '../geo.js';
 import { GEO_ATTRIBUTION } from '../geoload.js';
+import { ryderMatchSheet } from './ryder.js';
 
 let lastHtml = '';
 let closeTimer = null;
@@ -156,6 +157,7 @@ function playersByCart(app) {
 }
 
 const BODIES = {
+  'ryder-match': (app, p) => ryderMatchSheet(app, p), // read-only: no X (015 §1)
   who(app) {
     if (!app.snapshot) return head('Who are you?');
     const groups = playersByCart(app)

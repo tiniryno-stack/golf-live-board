@@ -1644,3 +1644,84 @@ details.fold summary::-webkit-details-marker { display: none; }
 .ry-tee-pair .ry-slot.you { color: var(--cart-you-text); }
 .ry-my { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; gap: var(--space-2); align-items: center; height: 40px; padding: 0 4px; font-size: 15px; }
 .ry-share { white-space: pre-wrap; font-family: var(--font-sans); font-size: 13px; line-height: 1.4; color: var(--text-muted); background: var(--surface-1); border-radius: var(--radius-lg); padding: var(--space-3) var(--space-4); margin: var(--space-3) 0 0; }
+
+/* Team Ryder Cup Board + match sheet (handoff 015 §1–§2). Green = your side's points only. */
+.ry-board { padding-top: var(--space-2); }
+.ry-cup { background: var(--surface-1); border-radius: var(--radius-2xl); box-shadow: var(--shadow-card); padding: var(--space-4); }
+.ry-cup-top { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: end; gap: var(--space-2); }
+.ry-cup-top > .lbl { padding-bottom: 12px; text-align: center; color: var(--text-muted); }
+.ry-cup-top > .lbl.you, .ry-board .lbl.on { color: var(--text); }
+.ry-cup-top > .lbl.you { color: var(--cart-you-text); }
+.ry-side { min-width: 0; } .ry-side.r { text-align: right; }
+.ry-sn { font-size: 15px; font-weight: 700; line-height: 20px; color: var(--text-muted); }
+.ry-sn.you, .ry-tot.you, .ry-num.you, .ry-board .you, .ry-matches .you { color: var(--cart-you-text); }
+.ry-tot, .ry-num { font-size: 64px; font-weight: 700; line-height: 1.1; letter-spacing: -0.03em; color: var(--text); }
+.ry-num.muted { color: var(--text-muted); }
+.ry-cupbar { display: flex; align-items: center; gap: 3px; margin-top: var(--space-3); }
+.ry-grp { flex: 1; display: flex; gap: 3px; }
+.ry-mid { width: 2px; height: 20px; background: var(--text); border-radius: 1px; flex: none; }
+.ry-seg { flex: 1; height: 12px; border-radius: 3px; background: var(--surface-2); position: relative; overflow: hidden; }
+.ry-seg b { position: absolute; top: 0; bottom: 0; }
+.ry-seg b.us { left: 0; background: var(--cart-you); }
+.ry-seg b.them { right: 0; background: var(--text-muted); }
+.ry-final { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-3); font-size: 15px; font-weight: 600; }
+.ry-final > span { flex: 1; min-width: 0; }
+.ry-rot { margin-top: var(--space-4); }
+.ry-rot.future .ry-rows { opacity: .7; }
+.ry-rot.done .ry-rows { opacity: .85; }
+.ry-strip-h { width: 100%; height: 40px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 0 var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md); background: transparent; color: var(--text-muted); }
+.ry-strip-h > .lbl { justify-self: start; }
+.ry-strip-h > :last-child { justify-self: end; }
+.ry-tally { font-size: 13px; font-weight: 700; color: var(--text-muted); }
+.ry-st { font-family: var(--font-mono); font-size: 12px; font-weight: 600; letter-spacing: .08em; color: var(--text-muted); }
+.ry-st.live { color: var(--cart-you-text); }
+.ry-chev { display: inline-flex; transform: rotate(90deg); transition: transform .2s; }
+.ry-chev.open { transform: rotate(-90deg); }
+.ry-rows { margin-top: var(--space-1); }
+.ry-row { width: 100%; min-height: 54px; display: grid; grid-template-columns: 1fr 0 1fr; align-items: stretch; margin-top: 2px; background: transparent; text-align: left; }
+.ry-cell { min-width: 0; display: flex; align-items: center; padding: 6px var(--space-3); }
+.ry-cell.r { justify-content: flex-end; text-align: right; }
+.ry-cell.hold { background: var(--surface-1); }
+.ry-cell.l.hold { border-radius: var(--radius-lg) 0 0 var(--radius-lg); padding-right: 76px; }
+.ry-cell.r.hold { border-radius: 0 var(--radius-lg) var(--radius-lg) 0; padding-left: 76px; }
+.ry-nm { display: flex; flex-direction: column; min-width: 0; font-size: 13px; line-height: 16px; font-weight: 600; color: var(--text); }
+.ry-nm.muted { color: var(--text-muted); } .ry-nm.you { color: var(--cart-you-text); }
+.ry-line { position: relative; }
+.ry-flag { position: absolute; top: 50%; width: 72px; height: 26px; margin-top: -13px; display: flex; align-items: center; justify-content: center; gap: 2px; font-family: var(--font-mono); font-size: 12px; font-weight: 700; white-space: nowrap; }
+.ry-flag.at-line { left: -36px; border-radius: var(--radius-sm); }
+.ry-flag.at-us { right: 0; border-radius: var(--radius-sm) 0 0 var(--radius-sm); }
+.ry-flag.at-them { left: 0; border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+.ry-flag.tee { border: 1px dashed var(--line); color: var(--text-muted); background: var(--bg); }
+.ry-flag.up, .ry-flag.tied { background: var(--text); color: var(--bg); }
+.ry-flag.won { background: var(--surface-3); color: var(--text); }
+.ry-flag.halved { background: var(--surface-2); color: var(--text-muted); }
+.ry-sheet { padding: 0 var(--space-1) var(--space-4); }
+.ry-sheet > .lbl { color: var(--text-muted); }
+.ry-ms-top { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); margin-top: var(--space-2); }
+.ry-ms-s.r { text-align: right; }
+.ry-ms-n { display: flex; align-items: center; gap: var(--space-2); }
+.ry-ms-s.r .ry-ms-n { flex-direction: row-reverse; }
+.ry-sdot { width: 10px; height: 10px; border-radius: 50%; background: var(--text); flex: none; }
+.ry-sdot.r { background: var(--text-muted); }
+.ry-sheet .ry-sn { color: var(--text); }
+.ry-mbar { margin-top: var(--space-3); }
+.ry-mtrack { position: relative; height: 12px; border-radius: 6px; background: var(--surface-2); overflow: hidden; }
+.ry-mtrack b { position: absolute; top: 0; bottom: 0; }
+.ry-mtrack b.us { left: 0; background: var(--cart-you); }
+.ry-mbar.plain .ry-mtrack b.us { background: var(--text); }
+.ry-mtrack b.them { right: 0; background: var(--text-muted); }
+.ry-mtrack .ry-mline { position: absolute; top: 0; bottom: 0; left: calc(6.5 / 12 * 100%); width: 2px; margin-left: -1px; background: var(--text); }
+.ry-mlbl { margin-top: 4px; padding-left: calc(6.5 / 12 * 100% - 40px); color: var(--text-muted); }
+.ry-bl { margin-top: var(--space-2); }
+.ry-strip { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: var(--space-1); margin-top: var(--space-4); }
+.ry-tile { height: 60px; border-radius: var(--radius-lg); background: var(--surface-1); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 15px; font-weight: 700; }
+.ry-tile.on { outline: 2px solid var(--text); outline-offset: -2px; }
+.ry-dots { display: flex; flex-direction: column; gap: 3px; }
+.ry-dot { width: 11px; height: 11px; flex: none; display: block; }
+.ry-hd { margin-top: var(--space-4); }
+.ry-hd-h { display: flex; align-items: baseline; gap: 4px; font-size: 17px; }
+.ry-hd-h .mono { margin-left: auto; }
+.ry-marks { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-2); margin-top: var(--space-3); }
+.ry-mk { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; }
+.ry-mk-n { font-size: 13px; color: var(--text-muted); max-width: 100%; } .ry-mk-n.you { color: var(--cart-you-text); }
+.ry-hl { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-2); font-size: 15px; }
