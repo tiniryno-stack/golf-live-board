@@ -126,3 +126,16 @@ test('§3 Board order: live rotations first (most recent first), then done, then
   const m = m1(state(sb2));
   assert.equal(ryderNeedLine(m, m.holes[0]), 'Sean made 4, Baker 5. A 4 halves low ball; 8 or better between you takes low total.');
 });
+
+test('projected gross: score so far + par and handicap strokes on the holes left', async () => {
+  const { projectedGross } = await import('../js/scoring.js');
+  const e2 = JSON.parse(JSON.stringify(ev));
+  e2.roster.players[0].strokes = 18; // one stroke a hole
+  const sb = scorebook();
+  for (let h = 1; h <= 6; h++) sb.post(h, { p1: par(h) + (h <= 3 ? 1 : 0) }); // +3 thru 6
+  const snap = compute(e2, sb.rows());
+  const p = snap.playerById.get('p1');
+  const parLeft = COURSE.par.slice(6).reduce((a, b) => a + b, 0);
+  assert.equal(projectedGross(snap, p), p.grossTotal + parLeft + 12);
+  assert.equal(projectedGross(snap, snap.playerById.get('p2')), null, 'no score yet');
+});

@@ -1251,3 +1251,12 @@ export function ryderMyMatch(state, myTeamId, rotation = null) {
   const cur = mine.find((m) => m.status === 'live') || mine.find((m) => m.status === 'notStarted') || mine[mine.length - 1];
   return cur || null;
 }
+
+/** Projected gross for 18: strokes so far + (par + handicap strokes) on every hole not played yet,
+ *  i.e. "you play your usual game from here". Scratch = par for the rest. null before the first score. */
+export function projectedGross(snap, p) {
+  if (!p || !p.thru) return null;
+  let t = p.grossTotal;
+  for (let i = 0; i < HOLES; i++) if (p.gross[i] == null) t += snap.course.par[i] + (p.dots[i] || 0);
+  return t;
+}

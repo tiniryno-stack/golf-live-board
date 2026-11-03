@@ -3,7 +3,7 @@
 // All numbers and copy come from scoring.ryderState (pure); this file only draws.
 
 import { esc, icon, seg, seg2, mark } from '../ui.js';
-import { fmtPts, fmtToPar, playerLeaderboard, ryderState, ryderMyMatch, ryderNeedLine, ryderHoleLine, teeTimeName } from '../scoring.js';
+import { fmtPts, fmtToPar, playerLeaderboard, projectedGross, ryderState, ryderMyMatch, ryderNeedLine, ryderHoleLine, teeTimeName } from '../scoring.js';
 
 export const ryState = (app) => ryderState(app.snapshot, app.myTeam());
 
@@ -131,8 +131,9 @@ export function ryderPlayers(app) {
       <span class="ellipsis${p.id === app.me ? ' you' : ''}">${esc(p.name)}</span>
       <span class="mono r">${p.thru || '–'}</span>
       <span class="mono r ry-pc">${p.thru ? `${fmtToPar(p.grossToPar)}<small>${p.grossTotal}</small>` : '–'}</span>
-      <span class="mono r b ry-pc">${p.thru ? `${fmtToPar(p.netToPar)}<small>${p.netTotal}</small>` : '–'}</span></button>`).join('');
-  return `<div class="ry-prow head lbl"><span></span><span>Player</span><span class="r">Thru</span><span class="r">Gross</span><span class="r">Net</span></div>${rows}`;
+      <span class="mono r">${projectedGross(snap, p) ?? '–'}</span>
+      <span class="mono r b">${p.thru ? fmtToPar(p.netToPar) : '–'}</span></button>`).join('');
+  return `<div class="ry-prow head lbl"><span></span><span>Player</span><span class="r">Thru</span><span class="r">Gross</span><span class="r">Proj</span><span class="r">Net</span></div>${rows}`;
 }
 
 // ───────────────────────────────────────────── match sheet (read-only, no X)
