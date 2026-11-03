@@ -1770,4 +1770,12 @@ details.fold summary::-webkit-details-marker { display: none; }
 .ry-pc { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.15; padding: 4px 0; }
 .ry-pc small { font-size: 12px; font-weight: 500; color: var(--text-muted); }
 
-.ry-prow { grid-template-columns: 22px minmax(0, 1fr) 36px 48px 44px 44px; }
+
+/* Cup card: the cup line gets its own row so the side names have the full width (they wrap, never cut off). */
+.ry-cup-k { text-align: center; color: var(--text-muted); margin-bottom: var(--space-2); }
+.ry-cup-k.you { color: var(--cart-you-text); }
+.ry-cup-top { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: end; gap: var(--space-4); }
+.ry-cup-top .ry-sn { overflow-wrap: anywhere; }
+/* Players table: roomier columns, no header letter-spacing, so THRU / GROSS / PROJ / NET never touch. */
+.ry-prow { grid-template-columns: 18px minmax(0, 1fr) 36px 60px 48px 44px; gap: 6px; }
+.ry-prow.head { letter-spacing: 0; }

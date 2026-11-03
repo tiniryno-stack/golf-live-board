@@ -112,10 +112,10 @@ export function ryderBoard(app, { segs = '', players = '' } = {}) {
     ? `<div class="ry-final">${icon('trophy', 20)}<span class="ellipsis">${esc(st.mvp.cart.names.join(' + '))} ${fmtPts(st.mvp.matchPts)}–${fmtPts(st.mvp.record.length - st.mvp.matchPts)} · MVP cart</span><button class="btn small" data-act="recap-open">Recap</button></div>`
     : '';
   const card = `<div class="ry-cup">
+      <div class="lbl ry-cup-k${st.final ? ' you' : ''}">${esc(st.cupLine)}</div>
       <div class="ry-cup-top">
-        <div class="ry-side"><div class="ry-sn you ellipsis">${esc(st.sides.us.name)}</div><div class="ry-tot you mono">${fmtPts(st.sides.us.total)}</div></div>
-        <span class="lbl${st.final ? ' you' : ''}">${esc(st.cupLine)}</span>
-        <div class="ry-side r"><div class="ry-sn ellipsis">${esc(st.sides.them.name)}</div><div class="ry-tot mono">${fmtPts(st.sides.them.total)}</div></div>
+        <div class="ry-side"><div class="ry-sn you">${esc(st.sides.us.name)}</div><div class="ry-tot you mono">${fmtPts(st.sides.us.total)}</div></div>
+        <div class="ry-side r"><div class="ry-sn">${esc(st.sides.them.name)}</div><div class="ry-tot mono">${fmtPts(st.sides.them.total)}</div></div>
       </div>
       ${cupBar(st)}${mvp}</div>`;
   const view = app.ui.boardView === 'players' ? 'players' : 'teams';
