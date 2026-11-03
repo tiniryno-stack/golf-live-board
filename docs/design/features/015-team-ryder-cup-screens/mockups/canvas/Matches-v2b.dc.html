@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Matches v2b · hole strip, tap a hole</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&amp;family=Geist+Mono:wght@500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+.t{--bg:#0A0B0D;--s1:#15171B;--s2:#1F2227;--s3:#2A2E35;--tx:#F4F5F7;--tx2:#A7ACB4;--ln:#2B2F36;--me:#3DDC84;--meT:#3DDC84;--dbl:#FF6B6B;--dblBg:rgba(255,107,107,0.16);--glass:rgba(24,26,31,0.72);--glassLn:rgba(255,255,255,0.09);--dock:inset 0 1px 0 rgba(255,255,255,.10),0 0 28px rgba(255,255,255,.06);--card:none}
+.t.light{--bg:#F2F3F5;--s1:#FFFFFF;--s2:#E8EAEE;--s3:#FFFFFF;--tx:#0B0D10;--tx2:#4F555E;--ln:#D5D9DF;--me:#12A35C;--meT:#0A7A43;--dbl:#B42318;--dblBg:rgba(180,35,24,0.10);--glass:rgba(255,255,255,0.74);--glassLn:rgba(11,13,16,0.08);--dock:0 8px 24px rgba(11,13,16,.12);--card:0 1px 2px rgba(11,13,16,.06),0 10px 28px rgba(11,13,16,.09)}
+.mono{font-family:'Geist Mono',ui-monospace,monospace}
+button{font:inherit;color:inherit;cursor:pointer}
+a{color:inherit}
+</style>
+</helmet>
+<div class="t {{mode}}" style="width: 393px; height: 852px; box-sizing: border-box; background: var(--bg); color: var(--tx); font-family: 'Geist', system-ui, sans-serif; position: relative; overflow: hidden; padding: 22px 20px 0">
+
+<div class="mono" style="font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: 1px; color: var(--meT)">HOLES 13–18 · LIVE</div>
+<div style="font-size: 32px; line-height: 36px; font-weight: 800; letter-spacing: -1px; margin-top: 4px">vs Joseph + Jay</div>
+<div style="font-size: 15px; line-height: 20px; color: var(--tx2); margin-top: 4px">3rd tee time · they’re on 16</div>
+
+<div style="margin: 18px -4px 0; background: var(--s1); border-radius: 24px; padding: 20px 12px 14px; box-shadow: var(--card)">
+<div style="display: flex; align-items: baseline; justify-content: center; gap: 12px">
+<span class="mono" style="font-size: 56px; line-height: 56px; font-weight: 700; letter-spacing: -2px; color: var(--meT)">UP 2</span>
+<span style="font-size: 15px; font-weight: 600; color: var(--tx2)">thru 4</span>
+</div>
+<div style="text-align: center; font-size: 14px; line-height: 18px; color: var(--tx2); margin-top: 6px">Win one more hole and it’s yours</div>
+
+<div style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; margin-top: 18px">
+<sc-for list="{{strip}}" as="h" hint-placeholder-count="6">
+<button onClick="{{h.pick}}" style="{{h.st}}">
+<span class="mono" style="font-size: 15px; font-weight: 700; line-height: 18px">{{h.n}}</span>
+<span style="display: flex; flex-direction: column; gap: 4px; margin-top: 8px; align-items: center">
+<span style="{{h.lb}}"></span>
+<span style="{{h.lt}}"></span>
+</span>
+<span class="mono" style="font-size: 11px; line-height: 14px; margin-top: 8px; color: var(--tx2)">{{h.run}}</span>
+</button>
+</sc-for>
+</div>
+<div style="display: flex; justify-content: space-between; padding: 8px 4px 0; font-size: 11px; color: var(--tx2)">
+<span>top dot = low ball · bottom = low total</span>
+<span style="display: flex; align-items: center; gap: 4px"><span style="width: 8px; height: 8px; border-radius: 4px; background: var(--me)"></span>you <span style="width: 8px; height: 8px; border-radius: 4px; background: var(--tx2); margin-left: 6px"></span>them</span>
+</div>
+</div>
+
+<div style="display: flex; align-items: baseline; justify-content: space-between; margin-top: 20px">
+<span style="font-size: 20px; line-height: 24px; font-weight: 800; letter-spacing: -0.4px">Hole {{sel.n}}</span>
+<span style="font-size: 13px; color: var(--tx2)">par {{sel.par}} · {{sel.note}}</span>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 12px">
+<sc-for list="{{sel.cells}}" as="c" hint-placeholder-count="4">
+<div style="text-align: center">
+<span class="mono" style="{{c.mark}}">{{c.v}}</span>
+<div style="{{c.nameSt}}">{{c.name}}</div>
+</div>
+</sc-for>
+</div>
+
+<div style="margin-top: 14px">
+<div style="display: flex; align-items: center; gap: 10px; min-height: 44px; border-top: 1px solid var(--ln)">
+<span style="{{sel.lbDot}}"></span><span style="flex: 1; font-size: 15px; font-weight: 600">Low ball</span><span style="font-size: 14px; color: var(--tx2)">{{sel.lbTx}}</span>
+</div>
+<div style="display: flex; align-items: center; gap: 10px; min-height: 44px; border-top: 1px solid var(--ln)">
+<span style="{{sel.ltDot}}"></span><span style="flex: 1; font-size: 15px; font-weight: 600">Low total</span><span style="font-size: 14px; color: var(--tx2)">{{sel.ltTx}}</span>
+</div>
+</div>
+
+<div style="display: flex; align-items: center; gap: 10px; min-height: 52px; margin-top: 10px; border-top: 1px solid var(--ln)">
+<span class="mono" style="font-size: 12px; font-weight: 600; letter-spacing: 1px; color: var(--tx2)">YOUR DAY</span>
+<span style="flex: 1; font-size: 14px; color: var(--tx2)">1–6 <span style="color: var(--meT); font-weight: 600">won</span> · 7–12 <span style="color: var(--meT); font-weight: 600">won</span></span>
+<span class="mono" style="font-size: 12px; font-weight: 600; letter-spacing: 1px; color: var(--meT)">+2</span>
+</div>
+
+<nav aria-label="Round" style="position: absolute; left: 16px; right: 16px; bottom: 20px; display: flex; padding: 6px; border-radius: 34px; background: var(--glass); -webkit-backdrop-filter: blur(22px) saturate(1.8); backdrop-filter: blur(22px) saturate(1.8); border: 1px solid var(--glassLn); box-shadow: var(--dock)">
+<a href="Matches-v2b.dc.html" aria-label="Enter" style="flex: 1; height: 56px; border-radius: 28px; display: flex; align-items: center; justify-content: center; color: var(--tx2)"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4h11l-2 4 2 4H5"></path></svg></a>
+<a href="Matches-v2b.dc.html" aria-label="Matches" aria-current="page" style="flex: 1; height: 56px; border-radius: 28px; display: flex; align-items: center; justify-content: center; background: var(--s3); color: var(--tx)"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8.5" cy="12" r="5"></circle><circle cx="15.5" cy="12" r="5"></circle></svg></a>
+<a href="Main.dc.html" aria-label="Board" style="flex: 1; height: 56px; border-radius: 28px; display: flex; align-items: center; justify-content: center; color: var(--tx2)"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h11M4 18h7"></path></svg></a>
+<a href="Main.dc.html" aria-label="Card" style="flex: 1; height: 56px; border-radius: 28px; display: flex; align-items: center; justify-content: center; color: var(--tx2)"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M3 10h18M3 15h18M9 4v16M15 4v16"></path></svg></a>
+</nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"mode":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":393,"height":852}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { sel: 3 }; }
+  mark(v, par) {
+    var base = 'width: 48px; height: 48px; display: inline-flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 700; box-sizing: border-box; ';
+    if (v == null) return base + 'border: 2px dashed var(--ln); border-radius: 50%; color: var(--tx2)';
+    var d = v - par;
+    if (d <= -2) return base + 'border: 7px double var(--tx); border-radius: 50%';
+    if (d === -1) return base + 'border: 2px solid var(--tx); border-radius: 50%';
+    if (d === 0) return base;
+    if (d === 1) return base + 'border: 2px solid var(--tx2); border-radius: 8px';
+    return base + 'border: 7px double var(--dbl); border-radius: 8px; background: var(--dblBg); color: var(--dbl)';
+  }
+  dot(k, s) {
+    var d = 'width: ' + s + 'px; height: ' + s + 'px; border-radius: 50%; flex: none; box-sizing: border-box; ';
+    if (k === 'a') return d + 'background: var(--me)';
+    if (k === 'j') return d + 'background: var(--tx2)';
+    if (k === 'p') return d + 'background: linear-gradient(90deg, var(--me) 50%, var(--tx2) 50%)';
+    if (k === 'live') return d + 'border: 2px dashed var(--tx2)';
+    return d + 'border: 2px solid var(--ln)';
+  }
+  renderVals() {
+    var self = this, s = this.state;
+    var D = [
+      { n: 13, par: 5, a: [4, 5], j: [5, 5], lb: 'a', lt: 'a', run: 'UP 2', lbTx: 'Andrew 4 beats 5', ltTx: 'You 9, them 10' },
+      { n: 14, par: 4, a: [5, 5], j: [4, 5], lb: 'j', lt: 'j', run: 'AS', lbTx: 'Joseph 4 beats 5', ltTx: 'You 10, them 9' },
+      { n: 15, par: 3, a: [3, 4], j: [3, 5], lb: 'p', lt: 'a', run: 'UP 1', lbTx: '3 and 3 · halved', ltTx: 'You 7, them 8' },
+      { n: 16, par: 4, a: [4, 5], j: [4, 6], lb: 'p', lt: 'a', run: 'UP 2', lbTx: '4 and 4 · halved', ltTx: 'You 9, them 10' },
+      { n: 17, par: 4, a: [4, null], j: [null, null], lb: 'live', lt: 'live', run: '', lbTx: 'Waiting on 3 scores', ltTx: 'Waiting on 3 scores' },
+      { n: 18, par: 5, a: [null, null], j: [null, null], lb: 0, lt: 0, run: '', lbTx: 'Not played', ltTx: 'Not played' }
+    ];
+    var h = D[s.sel], names = ['Andrew', 'Alex', 'Joseph', 'Jay'], vals = h.a.concat(h.j);
+    return {
+      mode: this.props.mode ?? 'dark',
+      strip: D.map(function (x, i) {
+        var on = i === s.sel, played = x.lb && x.lb !== 'live';
+        return {
+          n: x.n, run: x.run, lb: self.dot(x.lb, 12), lt: self.dot(x.lt, 12),
+          st: 'height: 84px; border: 0; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0; ' + (on ? 'background: var(--s3); color: var(--tx)' : 'background: transparent; color: ' + (played ? 'var(--tx)' : 'var(--tx2)')),
+          pick: function () { self.setState({ sel: i }); }
+        };
+      }),
+      sel: {
+        n: h.n, par: h.par, note: h.run ? 'both carts in' : h.lb === 'live' ? 'playing now' : 'not yet',
+        cells: vals.map(function (v, i) { return { v: v == null ? '' : v, mark: self.mark(v, h.par), name: names[i], nameSt: 'font-size: 13px; font-weight: 600; margin-top: 6px; color: ' + (i < 2 ? 'var(--meT)' : 'var(--tx2)') }; }),
+        lbDot: self.dot(h.lb, 12), ltDot: self.dot(h.lt, 12), lbTx: h.lbTx, ltTx: h.ltTx
+      }
+    };
+  }
+}
+</script>
+</body>
+</html>

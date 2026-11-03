@@ -1,0 +1,363 @@
+{
+ "v": 3,
+ "attachments": {},
+ "boards": {
+  "Board-empty.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 393,
+   "h": 852,
+   "title": "Board · before the first tee time",
+   "radius": 40,
+   "is_interactive": true
+  },
+  "Board-final.dc.html": {
+   "x": 1892,
+   "y": 0,
+   "w": 393,
+   "h": 852,
+   "title": "Board · final",
+   "radius": 40,
+   "is_interactive": true
+  },
+  "Board-v2.dc.html": {
+   "x": 1419,
+   "y": 0,
+   "w": 393,
+   "h": 852,
+   "title": "Board · afternoon, 13–18 live",
+   "radius": 40,
+   "is_interactive": true
+  },
+  "Board-watch.dc.html": {
+   "x": 2365,
+   "y": 0,
+   "w": 393,
+   "h": 852,
+   "title": "Board · tap a match → sheet",
+   "radius": 40,
+   "is_interactive": true
+  },
+  "Cup-bar.dc.html": {
+   "x": 0,
+   "y": 3024,
+   "w": 880,
+   "h": 620,
+   "title": "Rule · the cup bar, one segment per match"
+  },
+  "Main.dc.html": {
+   "x": 0,
+   "y": 5608,
+   "w": 393,
+   "h": 852,
+   "title": "archive · Board v1 (folded rotations)",
+   "radius": 40
+  },
+  "Matches-holes.dc.html": {
+   "x": 2838,
+   "y": 5608,
+   "w": 393,
+   "h": 852,
+   "title": "archive · drawer first pass",
+   "radius": 40
+  },
+  "Matches-live.dc.html": {
+   "x": 473,
+   "y": 5608,
+   "w": 393,
+   "h": 852,
+   "title": "archive · Matches v1",
+   "radius": 40
+  },
+  "Matches-v2a.dc.html": {
+   "x": 946,
+   "y": 5608,
+   "w": 393,
+   "h": 852,
+   "title": "archive · Matches v2a (table)",
+   "radius": 40
+  },
+  "Matches-v2b.dc.html": {
+   "x": 1419,
+   "y": 5608,
+   "w": 393,
+   "h": 852,
+   "title": "archive · Matches v2b (strip only)",
+   "radius": 40
+  },
+  "Matches-v2c.dc.html": {
+   "x": 1892,
+   "y": 5608,
+   "w": 393,
+   "h": 852,
+   "title": "archive · Matches v2c (no picker)",
+   "radius": 40
+  },
+  "Matches-waiting.dc.html": {
+   "x": 2365,
+   "y": 5608,
+   "w": 393,
+   "h": 852,
+   "title": "archive · old waiting layout",
+   "radius": 40
+  },
+  "Setup-carts.dc.html": {
+   "x": 473,
+   "y": 4056,
+   "w": 393,
+   "h": 852,
+   "title": "④ Carts (tap two names)",
+   "radius": 40,
+   "is_interactive": true
+  },
+  "Setup-draft.dc.html": {
+   "x": 946,
+   "y": 4056,
+   "w": 393,
+   "h": 852,
+   "title": "⑤ Draft (tap a cart)",
+   "radius": 40,
+   "is_interactive": true
+  },
+  "Setup-live.dc.html": {
+   "x": 1892,
+   "y": 4056,
+   "w": 393,
+   "h": 852,
+   "title": "Round is live",
+   "radius": 40
+  },
+  "Setup-players.dc.html": {
+   "x": 0,
+   "y": 4056,
+   "w": 393,
+   "h": 852,
+   "title": "② Players",
+   "radius": 40
+  },
+  "Setup-tee.dc.html": {
+   "x": 1419,
+   "y": 4056,
+   "w": 393,
+   "h": 852,
+   "title": "⑥ Tee times (tap two to swap)",
+   "radius": 40,
+   "is_interactive": true
+  },
+  "Matches-fill-waiting.dc.html": {
+   "x": 0,
+   "y": 1252,
+   "w": 393,
+   "h": 852,
+   "title": "Matches · A, nothing counts yet",
+   "radius": 40,
+   "is_interactive": true
+  },
+  "Matches-fill-partial.dc.html": {
+   "x": 473,
+   "y": 1252,
+   "w": 393,
+   "h": 852,
+   "title": "Matches · B, live",
+   "radius": 40,
+   "is_interactive": true
+  },
+  "Matches-fill-chasing.dc.html": {
+   "x": 946,
+   "y": 1252,
+   "w": 393,
+   "h": 852,
+   "title": "Matches · C, they’re ahead of you",
+   "radius": 40,
+   "is_interactive": true
+  },
+  "Matches-fill-history.dc.html": {
+   "x": 1419,
+   "y": 1252,
+   "w": 393,
+   "h": 852,
+   "title": "Matches · D, holes 1–6 (picker)",
+   "radius": 40,
+   "is_interactive": true
+  },
+  "Dot-states.dc.html": {
+   "x": 2340,
+   "y": 6560,
+   "w": 880,
+   "h": 700,
+   "title": "archive · dot treatments (hatched chosen)"
+  },
+  "Board-prog-early.dc.html": {
+   "x": 473,
+   "y": 0,
+   "w": 393,
+   "h": 852,
+   "title": "Board · morning, 1–6 live",
+   "radius": 40,
+   "is_interactive": true
+  },
+  "Board-prog-mid.dc.html": {
+   "x": 946,
+   "y": 0,
+   "w": 393,
+   "h": 852,
+   "title": "Board · midday, two rotations live",
+   "radius": 40,
+   "is_interactive": true
+  },
+  "Board-rows.dc.html": {
+   "x": 0,
+   "y": 6560,
+   "w": 1300,
+   "h": 560,
+   "title": "archive · row treatments V1–V3 (V3 chosen)"
+  },
+  "Board-done.dc.html": {
+   "x": 1380,
+   "y": 6560,
+   "w": 880,
+   "h": 640,
+   "title": "archive · finished treatments (D chosen)"
+  },
+  "Board-crosstee.dc.html": {
+   "x": 0,
+   "y": 2504,
+   "w": 1300,
+   "h": 420,
+   "title": "Rule · one row over time, 1st v 4th tee time"
+  },
+  "Board-names.dc.html": {
+   "x": 1380,
+   "y": 2504,
+   "w": 393,
+   "h": 420,
+   "title": "Rule · stacked names, fixed flag"
+  },
+  "Board-light.dc.html": {
+   "x": 2838,
+   "y": 0,
+   "w": 393,
+   "h": 852,
+   "title": "Board · afternoon, light mode",
+   "is_interactive": true,
+   "radius": 40
+  }
+ },
+ "createdOnFiles": {
+  "at": "2026-11-03T15:30:00Z",
+  "v": 1
+ },
+ "designSystems": [
+  {
+   "artifact": "https://claude.ai/artifact/QwDPXUHrooVcCrx3t8ezxM",
+   "copiedAt": "2026-11-03T15:30:00Z",
+   "namespace": "golf-live-board",
+   "title": "Golf Live Board",
+   "version": "1792692742-482e"
+  }
+ ],
+ "launch": {
+  "view": "canvas"
+ },
+ "noteOrder": [
+  "t-board",
+  "t-matches",
+  "t-rules",
+  "t-setup",
+  "t-archive",
+  "a-board",
+  "a-matches",
+  "a-setup"
+ ],
+ "notes": {
+  "t-board": {
+   "x": 0,
+   "y": -260,
+   "text": "Board · are we winning?",
+   "kind": "title1",
+   "maxW": 3231
+  },
+  "t-matches": {
+   "x": 0,
+   "y": 992,
+   "text": "Matches · how's my match?",
+   "kind": "title1",
+   "maxW": 1812
+  },
+  "t-rules": {
+   "x": 0,
+   "y": 2244,
+   "text": "Rules, illustrated",
+   "kind": "title1",
+   "maxW": 1773
+  },
+  "t-setup": {
+   "x": 0,
+   "y": 3796,
+   "text": "Setup · getting 16 people into a game",
+   "kind": "title1",
+   "maxW": 2285
+  },
+  "t-archive": {
+   "x": 0,
+   "y": 5348,
+   "text": "Archive · explored, not chosen",
+   "kind": "title1",
+   "maxW": 3220
+  },
+  "a-board": {
+   "x": 3311,
+   "y": 0,
+   "w": 400,
+   "fill": "green",
+   "text": "BOARD · DECISIONS\n\nOne screen, five states (time tweak): empty, morning, midday, afternoon, final.\n\nRows: your side's cart stacked on the left, theirs on the right, first names only, no plus. 13px, never shrinks.\n\nFlag (72px, always): hangs off the center line on the side that holds the point.\n• not started: dashed, says when/where (8:40, on 12)\n• live: solid white with the margin (2 UP, ½ UP)\n• live tied: solid white on the line, hole points (3–3)\n• done: mid-grey + check, final hole points (7–5)\n• done tied: dimmer + check, on the line (6–6)\nShaded cell behind the name on the side with the point.\n\nRotations: header strip only (outlined, no fill). Live and done always open; future ones fold with a chevron. Two rotations can be LIVE at once.\n\nA hole counts once both carts played it; the flag only shows counted holes. Nothing hidden.\n\nTap a row → sheet (no X; swipe or tap away). Names once, over their numbers. Same bar/strip/detail as Matches, no green."
+  },
+  "a-matches": {
+   "x": 1892,
+   "y": 1252,
+   "w": 400,
+   "fill": "green",
+   "text": "MATCHES · DECISIONS\n\nOnly your match. Layout never changes; words, fill and dots do.\n\nTop: kicker (grey until something counts, green when live), opponent, where both groups are.\nPicker: 1–6 · 7–12 · 13–18 with result; tap for that match in the same layout (history).\nCard: THRU n · YOU'RE UP n, names over scores, smooth bar with 6½ CLINCHES, pts left line.\nStrip: six holes, two dots each (top low ball, bottom low total). Solid = counted (green you, grey them, half = halved) · hatched = one cart in · dashed = nobody.\nTap a hole → four net scores as score marks + low ball / low total lines.\n\nNo hidden scores. When they're ahead you see their numbers and what to beat (C)."
+  },
+  "a-setup": {
+   "x": 2365,
+   "y": 4056,
+   "w": 400,
+   "fill": "green",
+   "text": "SETUP · DECISIONS\n\n② Players (16 → Team Ryder Cup fits) → ③ Game (014) → ④ Carts: paired in list order, tap two names to swap, Shuffle → ⑤ Draft: captains' carts pre-placed, snake order J A A J J A, tap a cart to take it, Skip = split in cart order → ⑥ Tee times: one cart from each side per group, tap two Team Josh carts to swap; your three matches preview → Start. Round is live: code + share text with sides, tee times, rule.\n\nDraft happens on one phone with both captains watching. Two-phone draft = V2."
+  }
+ },
+ "order": [
+  "Board-empty.dc.html",
+  "Board-prog-early.dc.html",
+  "Board-prog-mid.dc.html",
+  "Board-v2.dc.html",
+  "Board-final.dc.html",
+  "Board-watch.dc.html",
+  "Board-light.dc.html",
+  "Matches-fill-waiting.dc.html",
+  "Matches-fill-partial.dc.html",
+  "Matches-fill-chasing.dc.html",
+  "Matches-fill-history.dc.html",
+  "Board-crosstee.dc.html",
+  "Board-names.dc.html",
+  "Cup-bar.dc.html",
+  "Setup-players.dc.html",
+  "Setup-carts.dc.html",
+  "Setup-draft.dc.html",
+  "Setup-tee.dc.html",
+  "Setup-live.dc.html",
+  "Main.dc.html",
+  "Matches-live.dc.html",
+  "Matches-v2a.dc.html",
+  "Matches-v2b.dc.html",
+  "Matches-v2c.dc.html",
+  "Matches-waiting.dc.html",
+  "Matches-holes.dc.html",
+  "Board-rows.dc.html",
+  "Board-done.dc.html",
+  "Dot-states.dc.html"
+ ],
+ "pages": [],
+ "title": "Team Ryder Cup · Handoff 015"
+}

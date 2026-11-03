@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Finished matches · D and E</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&amp;family=Geist+Mono:wght@500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+.t{--bg:#0A0B0D;--s1:#15171B;--s2:#1F2227;--s3:#2A2E35;--tx:#F4F5F7;--tx2:#A7ACB4;--ln:#2B2F36;--me:#3DDC84;--meT:#3DDC84}
+.t.light{--bg:#F2F3F5;--s1:#FFFFFF;--s2:#E8EAEE;--s3:#FFFFFF;--tx:#0B0D10;--tx2:#4F555E;--ln:#D5D9DF;--me:#12A35C;--meT:#0A7A43}
+.mono{font-family:'Geist Mono',ui-monospace,monospace}
+</style>
+</helmet>
+<div class="t {{mode}}" style="width: 880px; height: 640px; box-sizing: border-box; background: var(--bg); color: var(--tx); font-family: 'Geist', system-ui, sans-serif; padding: 32px 40px; display: flex; gap: 40px">
+<sc-for list="{{variants}}" as="v" hint-placeholder-count="3">
+<div style="width: 361px; flex: none">
+<div style="font-size: 17px; line-height: 22px; font-weight: 700">{{v.name}}</div>
+<div style="font-size: 13px; line-height: 18px; color: var(--tx2); margin-top: 2px; min-height: 36px">{{v.note}}</div>
+<sc-for list="{{v.groups}}" as="g" hint-placeholder-count="2">
+<div style="{{g.hdSt}}">
+<div class="mono" style="{{g.labelSt}}">{{g.label}}</div>
+<div style="text-align: center"><span class="mono" style="font-size: 13px; font-weight: 700"><span style="color: var(--meT)">{{g.a}}</span><span style="color: var(--tx2)"> – {{g.j}}</span></span></div>
+<div class="mono" style="{{g.rightSt}}">{{g.right}}</div>
+</div>
+<div style="margin-top: 4px">
+<sc-for list="{{g.rows}}" as="r" hint-placeholder-count="4">
+<div style="display: grid; grid-template-columns: 1fr 0px 1fr; align-items: stretch; min-height: 54px; padding: 0 4px; position: relative">
+<div style="{{r.aSt}}"><span style="{{r.nm}}">{{r.a}}</span><span style="{{r.inA}}"><svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>{{r.txt}}</span></div>
+<div style="{{r.slot}}"><span style="{{r.badge}}"><svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="{{r.check}}"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>{{r.txt}}</span></div>
+<div style="{{r.jSt}}"><span style="{{r.inJ}}"><svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>{{r.txt}}</span><span style="{{r.nm}}">{{r.j}}</span></div>
+</div>
+</sc-for>
+</div>
+</sc-for>
+</div>
+</sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"mode":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":880,"height":640}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var LIVE = [['Andrew + Alex', 'Josh + Brandon', '½ UP', 'a', true], ['Ant + Steve', 'Joseph + Jay', '4–4', 'c']];
+    var DONE = [['Andrew + Alex', 'Sean + Baker', '7–5', 'a', true], ['Ant + Steve', 'Josh + Brandon', '6½–5½', 'a'], ['Justin + Chuck', 'Joseph + Jay', '4–8', 'j'], ['Mitch + Peter', 'Elijah + Marcus', '6–6', 'c']];
+    var cell = 'display: flex; align-items: center; margin: 6px 0; font-size: 13px; line-height: 18px; font-weight: 600; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; ';
+    function row(d, done, mode) {
+      var lean = d[3], you = d[4], win = lean === 'a' || lean === 'j', tied = lean === 'c';
+      var badge = 'display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-width: 52px; height: 26px; padding: 0 8px; font-family: \'Geist Mono\', monospace; font-size: 12px; font-weight: 700; white-space: nowrap; box-sizing: border-box; position: relative; z-index: 2; flex: none; ';
+      // live: solid white, tied included
+      var fill = 'color: var(--bg); background: var(--tx)';
+      var check = 'display: none';
+      if (done) {
+        check = '';
+        if (mode === 'dimcheck') fill = tied ? 'color: var(--tx2); background: var(--s2)' : 'color: var(--tx); background: var(--s3)';
+        else fill = tied ? 'color: var(--tx2); background: var(--bg); border: 1.5px solid var(--ln)' : 'color: var(--tx); background: var(--bg); border: 1.5px solid var(--tx)';
+      }
+      badge += fill + (lean === 'a' ? '; border-radius: 8px 0 0 8px' : lean === 'j' ? '; border-radius: 0 8px 8px 0' : '; border-radius: 8px');
+      var shade = 'background: var(--s1); ';
+      var nameA = you ? 'var(--meT)' : (lean === 'j' && win ? 'var(--tx2)' : 'var(--tx)');
+      var nameJ = lean === 'a' && win ? 'var(--tx2)' : 'var(--tx)';
+      var inline = done && mode === 'inline';
+      var inSt = 'display: ' + (inline ? 'inline-flex' : 'none') + '; align-items: center; gap: 4px; flex: none; font-family: \'Geist Mono\', monospace; font-size: 12px; font-weight: 700; color: var(--tx2); padding: 0 2px';
+      if (inline) { if (tied) { badge = badge.replace(fill, 'color: var(--tx2); background: var(--bg)') + '; min-width: 0; padding: 0 6px'; } else { badge = 'display: none'; } }
+      var padA = lean === 'a' ? (inline ? '8px' : '60px') : '8px', padJ = lean === 'j' ? (inline ? '8px' : '60px') : '8px';
+      return {
+        a: d[0], j: d[1], txt: d[2], check: check,
+        nm: 'min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1',
+        inA: inSt + (lean === 'a' ? '' : '; display: none'), inJ: inSt + (lean === 'j' ? '' : '; display: none'),
+        aSt: cell + 'gap: 8px; padding: 0 ' + padA + ' 0 8px; border-radius: 12px 0 0 12px; ' + (lean === 'a' ? shade : '') + 'color: ' + nameA,
+        jSt: cell + 'gap: 8px; justify-content: flex-end; padding: 0 8px 0 ' + padJ + '; border-radius: 0 12px 12px 0; ' + (lean === 'j' ? shade : '') + 'color: ' + nameJ,
+        slot: 'display: flex; align-items: center; position: relative; z-index: 2; overflow: visible; justify-content: ' + (lean === 'a' ? 'flex-end' : lean === 'j' ? 'flex-start' : 'center'),
+        badge: badge
+      };
+    }
+    function groups(mode) {
+      var hd = function (live) { return 'display: grid; grid-template-columns: 1fr 72px 1fr; align-items: center; min-height: 36px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--ln); margin-top: ' + (live ? 16 : 20) + 'px'; };
+      return [
+        { label: 'HOLES 7–12', a: 0, j: 0, right: 'LIVE', hdSt: hd(true), labelSt: 'font-size: 12px; font-weight: 600; letter-spacing: 1px; color: var(--tx)', rightSt: 'font-size: 12px; font-weight: 600; letter-spacing: 1px; text-align: right; color: var(--meT)', rows: LIVE.map(function (d) { return row(d, false, mode); }) },
+        { label: 'HOLES 1–6', a: '2½', j: '1½', right: 'DONE', hdSt: hd(false), labelSt: 'font-size: 12px; font-weight: 600; letter-spacing: 1px; color: var(--tx2)', rightSt: 'font-size: 12px; font-weight: 600; letter-spacing: 1px; text-align: right; color: var(--tx2)', rows: DONE.map(function (d) { return row(d, true, mode); }) }
+      ];
+    }
+    return {
+      mode: this.props.mode ?? 'dark',
+      variants: [
+        { name: 'D · Dim flag + check', note: 'Finished flags fill with the mid surface and carry a check. Live flags solid white.', groups: groups('dimcheck') },
+        { name: 'F · Score in the banner', note: 'No pill once it’s done. The check and score sit inside the shaded banner at its inner end. A finished tie is plain text on the line. Only live rows have flags.', groups: groups('inline') }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

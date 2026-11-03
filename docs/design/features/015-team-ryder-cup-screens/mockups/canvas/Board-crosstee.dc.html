@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>One row, 1st tee time v 4th tee time</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&amp;family=Geist+Mono:wght@500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+.t{--bg:#0A0B0D;--s1:#15171B;--s2:#1F2227;--s3:#2A2E35;--tx:#F4F5F7;--tx2:#A7ACB4;--ln:#2B2F36;--me:#3DDC84;--meT:#3DDC84}
+.t.light{--bg:#F2F3F5;--s1:#FFFFFF;--s2:#E8EAEE;--s3:#FFFFFF;--tx:#0B0D10;--tx2:#4F555E;--ln:#D5D9DF;--me:#12A35C;--meT:#0A7A43}
+.mono{font-family:'Geist Mono',ui-monospace,monospace}
+</style>
+</helmet>
+<div class="t {{mode}}" style="width: 1300px; height: 420px; box-sizing: border-box; background: var(--bg); color: var(--tx); font-family: 'Geist', system-ui, sans-serif; padding: 32px 40px">
+<div style="font-size: 17px; line-height: 22px; font-weight: 700">Holes 7–12 · Mitch + Peter (4th tee time) v Sean + Baker (1st tee time, 30 min ahead)</div>
+<div style="font-size: 13px; line-height: 18px; color: var(--tx2); margin-top: 2px">The same Board row at four moments. A hole counts once both carts have played it, so the flag only ever shows counted holes. Nothing new is added.</div>
+<div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; margin-top: 22px">
+<sc-for list="{{moments}}" as="m" hint-placeholder-count="4">
+<div>
+<div class="mono" style="font-size: 12px; font-weight: 600; letter-spacing: 1px; color: var(--tx2)">{{m.time}}</div>
+<div style="font-size: 13px; line-height: 18px; margin-top: 4px; min-height: 54px">{{m.where}}</div>
+<div style="display: grid; grid-template-columns: 1fr 72px 1fr; align-items: center; min-height: 36px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--ln); margin-top: 10px">
+<div class="mono" style="font-size: 12px; font-weight: 600; letter-spacing: 1px; color: var(--tx)">HOLES 7–12</div>
+<div style="text-align: center"><span class="mono" style="font-size: 13px; font-weight: 700"><span style="color: var(--meT)">{{m.ta}}</span><span style="color: var(--tx2)"> – {{m.tj}}</span></span></div>
+<div class="mono" style="font-size: 12px; font-weight: 600; letter-spacing: 1px; text-align: right; color: var(--meT)">LIVE</div>
+</div>
+<div style="display: grid; grid-template-columns: 1fr 0px 1fr; align-items: stretch; min-height: 54px; padding: 0 4px; position: relative; margin-top: 4px">
+<div style="{{m.aSt}}"><span>Mitch</span><span>Peter</span></div>
+<div style="{{m.slot}}"><span style="{{m.badge}}"><svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="{{m.check}}"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>{{m.txt}}</span></div>
+<div style="{{m.jSt}}"><span>Sean</span><span>Baker</span></div>
+</div>
+<div style="font-size: 13px; line-height: 18px; color: var(--tx2); margin-top: 8px">{{m.note}}</div>
+</div>
+</sc-for>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"mode":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":1300,"height":420}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var cell = 'display: flex; flex-direction: column; justify-content: center; margin: 6px 0; font-size: 13px; line-height: 16px; font-weight: 600; min-width: 0; white-space: nowrap; overflow: hidden; ';
+    function row(txt, lean, done) {
+      var win = lean === 'a' || lean === 'j';
+      var badge = 'display: inline-flex; align-items: center; justify-content: center; gap: 4px; width: 72px; height: 26px; padding: 0 4px; font-family: \'Geist Mono\', monospace; font-size: 12px; font-weight: 700; white-space: nowrap; box-sizing: border-box; position: relative; z-index: 2; flex: none; ';
+      var fill = done ? 'color: var(--tx); background: var(--s3)' : 'color: var(--bg); background: var(--tx)';
+      if (lean === 'a') badge += fill + '; border-radius: 8px 0 0 8px';
+      else if (lean === 'j') badge += fill + '; border-radius: 0 8px 8px 0';
+      else badge += 'color: var(--tx2); background: var(--bg); border: 1px dashed var(--ln); border-radius: 8px';
+      return {
+        txt: txt, badge: badge, check: done ? '' : 'display: none',
+        slot: 'display: flex; align-items: center; position: relative; z-index: 2; overflow: visible; justify-content: ' + (lean === 'a' ? 'flex-end' : lean === 'j' ? 'flex-start' : 'center'),
+        aSt: cell + 'padding: 0 ' + (lean === 'a' ? '76px' : '8px') + ' 0 8px; border-radius: 12px 0 0 12px; ' + (lean === 'a' ? 'background: var(--s1); ' : '') + 'color: ' + (lean === 'j' && win ? 'var(--tx2)' : 'var(--tx)'),
+        jSt: cell + 'align-items: flex-end; padding: 0 8px 0 ' + (lean === 'j' ? '76px' : '8px') + '; border-radius: 0 12px 12px 0; ' + (lean === 'j' ? 'background: var(--s1); ' : '') + 'color: ' + (lean === 'a' && win ? 'var(--tx2)' : 'var(--tx)')
+      };
+    }
+    var M = [
+      Object.assign({ time: '10:05', where: 'Sean + Baker are on 9, with 7 and 8 in. Mitch + Peter are still on 6.', ta: '0', tj: '0', note: 'Not started. The dashed flag says where the trailing cart is.' }, row('on 6', 'n')),
+      Object.assign({ time: '10:40', where: 'Sean + Baker on 12. Mitch + Peter on 9, with 7 and 8 in.', ta: '0', tj: '0', note: 'Two holes count. Sean + Baker lead on those two, so the flag is on their side.' }, row('1 UP', 'j')),
+      Object.assign({ time: '11:10', where: 'Sean + Baker finished 12 and moved on to 13. Mitch + Peter on 11, with 7–10 in.', ta: '0', tj: '0', note: 'Still live: four of six holes count. The row doesn’t care that one cart is done.' }, row('2 UP', 'j')),
+      Object.assign({ time: '11:30', where: 'Mitch + Peter finish 12.', ta: '0', tj: '1', note: 'Done. Dim flag with a check, and the rotation tally ticks over.' }, row('7–5', 'j', true))
+    ];
+    return { mode: this.props.mode ?? 'dark', moments: M };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>“Theirs in” · four treatments</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&amp;family=Geist+Mono:wght@500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+.t{--bg:#0A0B0D;--s1:#15171B;--s2:#1F2227;--s3:#2A2E35;--tx:#F4F5F7;--tx2:#A7ACB4;--ln:#2B2F36;--me:#3DDC84;--meT:#3DDC84}
+.t.light{--bg:#F2F3F5;--s1:#FFFFFF;--s2:#E8EAEE;--s3:#FFFFFF;--tx:#0B0D10;--tx2:#4F555E;--ln:#D5D9DF;--me:#12A35C;--meT:#0A7A43}
+.mono{font-family:'Geist Mono',ui-monospace,monospace}
+</style>
+</helmet>
+<div class="t {{mode}}" style="width: 880px; height: 700px; box-sizing: border-box; background: var(--bg); color: var(--tx); font-family: 'Geist', system-ui, sans-serif; padding: 36px 48px; display: flex; flex-direction: column; gap: 18px">
+<div style="display: flex; justify-content: space-between; align-items: baseline">
+<div style="font-size: 24px; line-height: 30px; font-weight: 800; letter-spacing: -0.5px">How “theirs in” could look</div>
+<div style="font-size: 15px; color: var(--tx2)">Same strip in every row: 13 counted (them), 14–16 theirs in, 17–18 nobody. At real size, then zoomed.</div>
+</div>
+<sc-for list="{{rows}}" as="r" hint-placeholder-count="4">
+<div style="display: grid; grid-template-columns: 200px 300px 1fr; gap: 28px; align-items: center; padding-top: 18px; border-top: 1px solid var(--ln)">
+<div>
+<div style="font-size: 17px; line-height: 22px; font-weight: 600">{{r.name}}</div>
+<div style="font-size: 13px; line-height: 18px; color: var(--tx2); margin-top: 2px">{{r.note}}</div>
+</div>
+<div style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; padding: 6px; border-radius: 16px; background: var(--s1)">
+<sc-for list="{{r.strip}}" as="h" hint-placeholder-count="6">
+<div style="height: 60px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: {{h.c}}">
+<span class="mono" style="font-size: 15px; font-weight: 700; line-height: 18px">{{h.n}}</span>
+<span style="display: flex; gap: 4px; margin-top: 8px; align-items: center"><span style="{{h.d}}"></span><span style="{{h.d}}"></span></span>
+</div>
+</sc-for>
+</div>
+<div style="display: flex; gap: 22px; align-items: center">
+<span style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--tx2)"><span style="{{r.bigCounted}}"></span>counted</span>
+<span style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--tx2)"><span style="{{r.bigMine}}"></span>yours in</span>
+<span style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--tx)"><span style="{{r.bigTheirs}}"></span><b>theirs in</b></span>
+<span style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--tx2)"><span style="{{r.bigNone}}"></span>nobody</span>
+</div>
+</div>
+</sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"mode":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":880,"height":700}}'>
+class Component extends DCLogic {
+  renderVals() {
+    function base(s) { return 'width: ' + s + 'px; height: ' + s + 'px; border-radius: 50%; flex: none; box-sizing: border-box; '; }
+    var V = {
+      ring:   function (s) { return base(s) + 'border: 2px solid var(--tx2)'; },
+      hatch:  function (s) { return base(s) + 'background: repeating-linear-gradient(135deg, var(--tx2) 0 ' + (s > 14 ? 3 : 2) + 'px, transparent ' + (s > 14 ? 3 : 2) + 'px ' + (s > 14 ? 6 : 4) + 'px)'; },
+      half:   function (s) { return base(s) + 'background: linear-gradient(180deg, transparent 50%, var(--tx2) 50%); border: 1.5px solid var(--tx2)'; },
+      faded:  function (s) { return base(s) + 'background: var(--tx2); opacity: .35'; }
+    };
+    var rows = [
+      ['Outline (current)', 'Same shape as “yours in”, only the color differs. Needs the key.', 'ring'],
+      ['Hatched', 'The provisional stripe the Board already uses for “not counted yet”. Reads as pending.', 'hatch'],
+      ['Half filled', 'Literally half the info is in. Pairs with the ? marks.', 'half'],
+      ['Faded', 'A ghost of the counted dot. Quietest, easiest to miss in sun.', 'faded']
+    ];
+    function dot(k, v, s) {
+      if (k === 'j') return base(s) + 'background: var(--tx2)';
+      if (k === 'a') return base(s) + 'background: var(--me)';
+      if (k === 'mine') return base(s) + 'border: 2px solid var(--me)';
+      if (k === 'theirs') return V[v](s);
+      return base(s) + 'border: 2px dashed var(--tx2)';
+    }
+    return {
+      mode: this.props.mode ?? 'dark',
+      rows: rows.map(function (r) {
+        var ks = ['j', 'theirs', 'theirs', 'theirs', 'none', 'none'];
+        return {
+          name: r[0], note: r[1],
+          strip: ks.map(function (k, i) { return { n: 13 + i, d: dot(k, r[2], 11), c: k === 'none' ? 'var(--tx2)' : 'var(--tx)' }; }),
+          bigCounted: dot('j', r[2], 18), bigMine: dot('mine', r[2], 18), bigTheirs: dot('theirs', r[2], 18), bigNone: dot('none', r[2], 18)
+        };
+      })
+    };
+  }
+}
+</script>
+</body>
+</html>

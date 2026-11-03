@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Board rows · three treatments</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&amp;family=Geist+Mono:wght@500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+.t{--bg:#0A0B0D;--s1:#15171B;--s2:#1F2227;--s3:#2A2E35;--tx:#F4F5F7;--tx2:#A7ACB4;--ln:#2B2F36;--me:#3DDC84;--meT:#3DDC84}
+.t.light{--bg:#F2F3F5;--s1:#FFFFFF;--s2:#E8EAEE;--s3:#FFFFFF;--tx:#0B0D10;--tx2:#4F555E;--ln:#D5D9DF;--me:#12A35C;--meT:#0A7A43}
+.mono{font-family:'Geist Mono',ui-monospace,monospace}
+</style>
+</helmet>
+<div class="t {{mode}}" style="width: 1300px; height: 560px; box-sizing: border-box; background: var(--bg); color: var(--tx); font-family: 'Geist', system-ui, sans-serif; padding: 32px 40px; display: flex; gap: 40px">
+<sc-for list="{{variants}}" as="v" hint-placeholder-count="3">
+<div style="width: 361px; flex: none">
+<div style="font-size: 17px; line-height: 22px; font-weight: 700">{{v.name}}</div>
+<div style="font-size: 13px; line-height: 18px; color: var(--tx2); margin-top: 2px; min-height: 36px">{{v.note}}</div>
+
+<div style="margin-top: 16px; position: relative">
+<div style="{{v.hdSt}}">
+<div class="mono" style="font-size: 12px; font-weight: 600; letter-spacing: 1px; color: var(--meT)">TEAM ANDREW</div>
+<div></div>
+<div class="mono" style="font-size: 12px; font-weight: 600; letter-spacing: 1px; color: var(--tx2); text-align: right">TEAM JOSH</div>
+</div>
+<div style="{{v.hdSt}}">
+<div class="mono" style="font-size: 12px; font-weight: 600; letter-spacing: 1px">HOLES 1–6</div>
+<div style="text-align: center"><span class="mono" style="font-size: 13px; font-weight: 700"><span style="color: var(--meT)">0</span><span style="color: var(--tx2)"> – 0</span></span></div>
+<div class="mono" style="font-size: 12px; font-weight: 600; letter-spacing: 1px; text-align: right; color: var(--meT)">LIVE</div>
+</div>
+<div style="position: relative">
+<div style="position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; margin-left: -0.5px; background: var(--ln)"></div>
+<sc-for list="{{v.rows}}" as="r" hint-placeholder-count="4">
+<div style="{{r.rowSt}}">
+<div style="{{r.aSt}}"><span style="{{r.aName}}">{{r.a}}</span><span style="{{r.aScore}}">{{r.aTxt}}</span></div>
+<div style="{{r.mid}}"><span style="{{r.tL}}"></span><span style="{{r.chip}}">{{r.txt}}</span><span style="{{r.tR}}"></span></div>
+<div style="{{r.jSt}}"><span style="{{r.jScore}}">{{r.jTxt}}</span><span style="{{r.jName}}">{{r.j}}</span></div>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+</sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"mode":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":1300,"height":560}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var data = [['Andrew + Alex', 'Sean + Baker', '2 UP', 'a', true], ['Ant + Steve', 'Josh + Brandon', '2–2', 'c'], ['Justin + Chuck', 'Joseph + Jay', '1 UP', 'j'], ['Mitch + Peter', 'Elijah + Marcus', '9:10', 'n']];
+    var NONE = 'display: none';
+    var name = function (you, dim) { return 'white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; color: ' + (you ? 'var(--meT)' : dim ? 'var(--tx2)' : 'var(--tx)'); };
+    var cellBase = 'display: flex; align-items: center; margin: 6px 0; font-size: 13px; line-height: 18px; font-weight: 600; min-width: 0; ';
+
+    // V1 · pill, nudged toward the middle
+    function v1(d) {
+      var lean = d[3], you = d[4];
+      var chip = 'display: inline-flex; align-items: center; justify-content: center; width: 60px; height: 28px; border-radius: 14px; font-family: \'Geist Mono\', monospace; font-size: 12px; font-weight: 700; flex: none; position: relative; z-index: 2; box-sizing: border-box; ';
+      chip += lean === 'n' ? 'color: var(--tx2); background: var(--bg); border: 1px dashed var(--ln)' : lean === 'c' ? 'color: var(--tx); background: var(--bg); border: 1.5px solid var(--tx2)' : 'color: var(--bg); background: var(--tx)';
+      chip += lean === 'a' ? '; margin-left: -22px' : lean === 'j' ? '; margin-right: -22px' : '';
+      var tongue = 'display: block; width: 38px; height: calc(100% - 12px); margin: 6px 0; background: var(--s2); flex: none';
+      return {
+        a: d[0], j: d[1], txt: d[2], aTxt: '', jTxt: '',
+        rowSt: 'display: grid; grid-template-columns: 1fr 92px 1fr; align-items: stretch; min-height: 56px; padding: 0 4px; border-top: 1px solid var(--ln); position: relative',
+        aSt: cellBase + 'padding: 0 8px; margin-left: -4px; border-radius: 12px 0 0 12px; ' + (lean === 'a' ? 'background: var(--s2)' : ''),
+        jSt: cellBase + 'justify-content: flex-end; padding: 0 8px; margin-right: -4px; border-radius: 0 12px 12px 0; ' + (lean === 'j' ? 'background: var(--s2)' : ''),
+        aName: name(you, lean === 'j'), jName: name(false, lean === 'a'), aScore: NONE, jScore: NONE,
+        mid: 'display: flex; align-items: center; position: relative; z-index: 1; justify-content: ' + (lean === 'a' ? 'flex-start' : lean === 'j' ? 'flex-end' : 'center'),
+        tL: tongue + (lean === 'a' ? '' : '; display: none'), tR: tongue + (lean === 'j' ? '' : '; display: none'), chip: chip
+      };
+    }
+    // V2 · no pill: the score lives inside the shaded block
+    function v2(d) {
+      var lean = d[3], you = d[4];
+      var score = 'font-family: \'Geist Mono\', monospace; font-size: 13px; font-weight: 700; flex: none; padding: 0 10px; ';
+      return {
+        a: d[0], j: d[1], txt: lean === 'a' || lean === 'j' ? '' : d[2], aTxt: lean === 'a' ? d[2] : '', jTxt: lean === 'j' ? d[2] : '',
+        rowSt: 'display: grid; grid-template-columns: 1fr 56px 1fr; align-items: stretch; min-height: 56px; padding: 0 4px; border-top: 1px solid var(--ln); position: relative',
+        aSt: cellBase + 'justify-content: space-between; padding: 0 0 0 8px; margin-left: -4px; margin-right: ' + (lean === 'a' ? '-28px' : '0') + '; border-radius: 12px; position: relative; z-index: 1; ' + (lean === 'a' ? 'background: var(--s2)' : ''),
+        jSt: cellBase + 'justify-content: space-between; padding: 0 8px 0 0; margin-right: -4px; margin-left: ' + (lean === 'j' ? '-28px' : '0') + '; border-radius: 12px; position: relative; z-index: 1; ' + (lean === 'j' ? 'background: var(--s2)' : ''),
+        aName: name(you, lean === 'j'), jName: name(false, lean === 'a'),
+        aScore: score + (lean === 'a' ? '' : 'display: none'), jScore: score + (lean === 'j' ? '' : 'display: none'),
+        mid: 'display: flex; align-items: center; justify-content: center; position: relative; z-index: 1',
+        tL: NONE, tR: NONE,
+        chip: 'font-family: \'Geist Mono\', monospace; font-size: 12px; font-weight: 700; padding: 2px 6px; background: var(--bg); ' + (lean === 'c' ? 'color: var(--tx)' : lean === 'n' ? 'color: var(--tx2)' : 'display: none')
+      };
+    }
+    // V3 · flag on the center line: square tag hangs off the pole, shading behind it
+    function v3(d) {
+      var lean = d[3], you = d[4];
+      var flag = 'display: inline-flex; align-items: center; justify-content: center; min-width: 48px; height: 26px; padding: 0 8px; font-family: \'Geist Mono\', monospace; font-size: 12px; font-weight: 700; flex: none; position: relative; z-index: 2; box-sizing: border-box; ';
+      if (lean === 'a') flag += 'color: var(--bg); background: var(--tx); border-radius: 8px 0 0 8px';
+      else if (lean === 'j') flag += 'color: var(--bg); background: var(--tx); border-radius: 0 8px 8px 0';
+      else if (lean === 'c') flag += 'color: var(--tx); background: var(--bg); border: 1.5px solid var(--tx2); border-radius: 8px';
+      else flag += 'color: var(--tx2); background: var(--bg); border: 1px dashed var(--ln); border-radius: 8px';
+      return {
+        a: d[0], j: d[1], txt: d[2], aTxt: '', jTxt: '',
+        rowSt: 'display: grid; grid-template-columns: 1fr 0px 1fr; align-items: stretch; min-height: 56px; padding: 0 4px; border-top: 1px solid var(--ln); position: relative',
+        aSt: cellBase + 'padding: 0 8px; margin-left: -4px; border-radius: 12px 0 0 12px; ' + (lean === 'a' ? 'background: var(--s2)' : ''),
+        jSt: cellBase + 'justify-content: flex-end; padding: 0 8px; margin-right: -4px; border-radius: 0 12px 12px 0; ' + (lean === 'j' ? 'background: var(--s2)' : ''),
+        aName: name(you, lean === 'j'), jName: name(false, lean === 'a'), aScore: NONE, jScore: NONE,
+        mid: 'display: flex; align-items: center; position: relative; z-index: 2; overflow: visible; justify-content: ' + (lean === 'a' ? 'flex-end' : lean === 'j' ? 'flex-start' : 'center'),
+        tL: NONE, tR: NONE,
+        chip: flag + (lean === 'c' || lean === 'n' ? '; transform: translateX(-50%)' : '')
+      };
+    }
+    var hd = 'display: grid; grid-template-columns: 1fr 92px 1fr; align-items: center; min-height: 36px; padding: 0 4px';
+    return {
+      mode: this.props.mode ?? 'dark',
+      variants: [
+        { name: 'V1 · Pill, nudged', note: 'Same as now, pill sits 8px further toward the middle, tongue a touch longer.', hdSt: hd, rows: data.map(v1) },
+        { name: 'V2 · Score in the block', note: 'No pill. The shaded block carries the score at its inner end. Square and not-started sit on the line as plain text.', hdSt: hd.replace('92px', '56px'), rows: data.map(v2) },
+        { name: 'V3 · Flag on the line', note: 'A square-cornered tag hangs off the center line on the leader’s side, shading behind it. Names never move.', hdSt: hd.replace('92px', '0px'), rows: data.map(v3) }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

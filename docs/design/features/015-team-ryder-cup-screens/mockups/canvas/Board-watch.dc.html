@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Board · tap a match → sheet (no close button)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&amp;family=Geist+Mono:wght@500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+.t{--bg:#0A0B0D;--s1:#15171B;--s2:#1F2227;--s3:#2A2E35;--tx:#F4F5F7;--tx2:#A7ACB4;--ln:#2B2F36;--me:#3DDC84;--meT:#3DDC84;--dbl:#FF6B6B;--dblBg:rgba(255,107,107,0.16);--scrim:rgba(0,0,0,0.6);--sheet:0 -8px 32px rgba(0,0,0,.5);--card:none}
+.t.light{--bg:#F2F3F5;--s1:#FFFFFF;--s2:#E8EAEE;--s3:#FFFFFF;--tx:#0B0D10;--tx2:#4F555E;--ln:#D5D9DF;--me:#12A35C;--meT:#0A7A43;--dbl:#B42318;--dblBg:rgba(180,35,24,0.10);--scrim:rgba(11,13,16,0.35);--sheet:0 -8px 32px rgba(11,13,16,.16);--card:0 1px 2px rgba(11,13,16,.06),0 4px 12px rgba(11,13,16,.05)}
+.mono{font-family:'Geist Mono',ui-monospace,monospace}
+button{font:inherit;color:inherit;cursor:pointer}
+</style>
+</helmet>
+<div class="t {{mode}}" style="width: 393px; height: 852px; box-sizing: border-box; background: var(--bg); color: var(--tx); font-family: 'Geist', system-ui, sans-serif; position: relative; overflow: hidden">
+
+<div style="padding: 14px 16px 0; opacity: 0.5">
+<div style="display: flex; align-items: center; height: 48px; padding: 0 4px; font-size: 32px; line-height: 36px; font-weight: 800; letter-spacing: -1px">Board</div>
+<div style="margin-top: 12px; background: var(--s1); border-radius: 24px; padding: 16px 16px 14px">
+<div style="display: flex; justify-content: space-between; align-items: flex-end">
+<div><div style="font-size: 14px; font-weight: 600; color: var(--meT)">Team Andrew</div><div class="mono" style="font-size: 48px; line-height: 48px; font-weight: 700; letter-spacing: -1.5px; color: var(--meT)">5½</div></div>
+<div class="mono" style="font-size: 12px; font-weight: 600; letter-spacing: 1px; color: var(--tx2); padding-bottom: 14px">3 LEFT · 6½ WINS</div>
+<div style="text-align: right"><div style="font-size: 14px; font-weight: 600; color: var(--tx2)">Team Josh</div><div class="mono" style="font-size: 48px; line-height: 48px; font-weight: 700; letter-spacing: -1.5px">3½</div></div>
+</div>
+</div>
+<div style="display: grid; grid-template-columns: 1fr 104px 1fr; align-items: center; margin-top: 20px; padding: 0 4px">
+<div class="mono" style="font-size: 12px; font-weight: 600; letter-spacing: 1px; color: var(--meT)">TEAM ANDREW</div><div></div>
+<div class="mono" style="font-size: 12px; font-weight: 600; letter-spacing: 1px; color: var(--tx2); text-align: right">TEAM JOSH</div>
+</div>
+</div>
+
+<div style="position: absolute; inset: 0; background: var(--scrim)"></div>
+
+<div style="position: absolute; left: 0; right: 0; bottom: 0; background: var(--s1); border-radius: 28px 28px 0 0; box-shadow: var(--sheet); padding: 8px 20px 28px">
+<div style="width: 40px; height: 5px; border-radius: 3px; background: var(--ln); margin: 0 auto 12px"></div>
+<div class="mono" style="text-align: center; font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: 1px; color: var(--tx2)">HOLES 13–18 · FINAL</div>
+<div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: 10px">
+<div><div style="display: flex; align-items: center; gap: 6px; font-size: 14px; line-height: 18px; font-weight: 600"><span style="width: 8px; height: 8px; border-radius: 4px; background: var(--tx)"></span>Justin + Chuck</div><div class="mono" style="font-size: 44px; line-height: 44px; font-weight: 700; letter-spacing: -1.5px; margin-top: 4px; color: var(--tx2)">1½</div></div>
+<div style="text-align: right"><div style="display: flex; align-items: center; justify-content: flex-end; gap: 6px; font-size: 14px; line-height: 18px; font-weight: 600">Sean + Baker<span style="width: 8px; height: 8px; border-radius: 4px; background: var(--tx2)"></span></div><div class="mono" style="font-size: 44px; line-height: 44px; font-weight: 700; letter-spacing: -1.5px; margin-top: 4px">6½</div></div>
+</div>
+<div style="position: relative; height: 10px; border-radius: 5px; background: var(--s2); margin-top: 14px; display: flex">
+<div style="width: 12.5%; height: 100%; border-radius: 5px 0 0 5px; background: var(--tx)"></div>
+<div style="flex: 1"></div>
+<div style="width: 54.2%; height: 100%; border-radius: 0 5px 5px 0; background: var(--tx2)"></div>
+<div style="position: absolute; left: 54.2%; top: -5px; bottom: -5px; width: 2px; margin-left: -1px; border-radius: 1px; background: var(--tx)"></div>
+</div>
+<div style="margin-top: 10px; font-size: 13px; color: var(--tx2); text-align: center">Decided with 2 to play</div>
+
+<div style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; margin: 14px -4px 0">
+<sc-for list="{{strip}}" as="h" hint-placeholder-count="6">
+<button onClick="{{h.pick}}" style="{{h.st}}">
+<span class="mono" style="font-size: 15px; font-weight: 700; line-height: 18px">{{h.n}}</span>
+<span style="display: flex; gap: 4px; margin-top: 8px; align-items: center"><span style="{{h.lb}}"></span><span style="{{h.lt}}"></span></span>
+</button>
+</sc-for>
+</div>
+
+<div style="display: flex; align-items: baseline; justify-content: space-between; margin-top: 14px">
+<span style="font-size: 17px; line-height: 22px; font-weight: 700">Hole {{sel.n}} <span style="color: var(--tx2); font-weight: 500">· par {{sel.par}}</span></span>
+<span class="mono" style="font-size: 13px; font-weight: 600; color: var(--tx2)">{{sel.pts}}</span>
+</div>
+<div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 10px">
+<sc-for list="{{sel.cells}}" as="c" hint-placeholder-count="4">
+<div style="text-align: center"><span class="mono" style="{{c.mark}}">{{c.v}}</span><div style="{{c.nameSt}}">{{c.name}}</div></div>
+</sc-for>
+</div>
+<div style="display: flex; gap: 16px; margin-top: 10px; font-size: 13px; line-height: 18px; color: var(--tx2)">
+<span style="display: flex; align-items: center; gap: 6px"><span style="{{sel.lbDot}}"></span>Low ball · {{sel.lbTx}}</span>
+<span style="display: flex; align-items: center; gap: 6px"><span style="{{sel.ltDot}}"></span>Low total · {{sel.ltTx}}</span>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"mode":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":393,"height":852}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { sel: 3 }; }
+  mark(v, par) {
+    var base = 'width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; box-sizing: border-box; ';
+    if (v == null) return base + 'border: 2px dashed var(--ln); border-radius: 50%; color: var(--tx2)';
+    var d = v - par;
+    if (d <= -2) return base + 'border: 6px double var(--tx); border-radius: 50%';
+    if (d === -1) return base + 'border: 2px solid var(--tx); border-radius: 50%';
+    if (d === 0) return base;
+    if (d === 1) return base + 'border: 2px solid var(--tx2); border-radius: 6px';
+    return base + 'border: 6px double var(--dbl); border-radius: 6px; background: var(--dblBg); color: var(--dbl)';
+  }
+  dot(k, s) {
+    var d = 'width: ' + s + 'px; height: ' + s + 'px; border-radius: 50%; flex: none; box-sizing: border-box; ';
+    if (k === 'a') return d + 'background: var(--tx)';
+    if (k === 'j') return d + 'background: var(--tx2)';
+    if (k === 'p') return d + 'background: linear-gradient(90deg, var(--tx) 50%, var(--tx2) 50%)';
+    return d + 'border: 2px dashed var(--tx2)';
+  }
+  renderVals() {
+    var self = this, s = this.state;
+    var D = [
+      { n: 13, par: 5, a: [6, 7], j: [5, 6], lb: 'j', lt: 'j', pts: '0–2', lbTx: '5 v 6', ltTx: '11 v 13' },
+      { n: 14, par: 4, a: [5, 6], j: [4, 5], lb: 'j', lt: 'j', pts: '0–2', lbTx: '4 v 5', ltTx: '9 v 11' },
+      { n: 15, par: 3, a: [4, 4], j: [3, 4], lb: 'j', lt: 'j', pts: '0–2', lbTx: '3 v 4', ltTx: '7 v 8' },
+      { n: 16, par: 4, a: [4, 6], j: [5, 5], lb: 'a', lt: 'p', pts: '1½–½', lbTx: '4 v 5', ltTx: '10 v 10' },
+      { n: 17, par: 4, a: [null, null], j: [null, null], lb: 0, lt: 0, pts: 'not played', lbTx: '–', ltTx: '–' },
+      { n: 18, par: 5, a: [null, null], j: [null, null], lb: 0, lt: 0, pts: 'not played', lbTx: '–', ltTx: '–' }
+    ];
+    var h = D[s.sel], names = ['Justin', 'Chuck', 'Sean', 'Baker'], vals = h.a.concat(h.j);
+    return {
+      mode: this.props.mode ?? 'dark',
+      strip: D.map(function (x, i) {
+        var on = i === s.sel;
+        return { n: x.n, lb: self.dot(x.lb, 11), lt: self.dot(x.lt, 11),
+          st: 'height: 60px; border: 0; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0; ' + (on ? 'background: var(--s2); color: var(--tx)' : 'background: transparent; color: ' + (x.lb ? 'var(--tx)' : 'var(--tx2)')),
+          pick: function () { self.setState({ sel: i }); } };
+      }),
+      sel: { n: h.n, par: h.par, pts: h.pts,
+        cells: vals.map(function (v, i) { return { v: v == null ? '' : v, mark: self.mark(v, h.par), name: names[i], nameSt: 'font-size: 12px; font-weight: 600; margin-top: 4px; color: ' + (i < 2 ? 'var(--tx)' : 'var(--tx2)') }; }),
+        lbDot: self.dot(h.lb, 10), ltDot: self.dot(h.lt, 10), lbTx: h.lbTx, ltTx: h.ltTx }
+    };
+  }
+}
+</script>
+</body>
+</html>

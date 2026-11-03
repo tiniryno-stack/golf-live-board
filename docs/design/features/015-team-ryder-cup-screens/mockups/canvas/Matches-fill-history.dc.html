@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Matches v2c · fill-in states</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&amp;family=Geist+Mono:wght@500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+.t{--bg:#0A0B0D;--s1:#15171B;--s2:#1F2227;--s3:#2A2E35;--tx:#F4F5F7;--tx2:#A7ACB4;--ln:#2B2F36;--me:#3DDC84;--meT:#3DDC84;--dbl:#FF6B6B;--dblBg:rgba(255,107,107,0.16);--glass:rgba(24,26,31,0.72);--glassLn:rgba(255,255,255,0.09);--dock:inset 0 1px 0 rgba(255,255,255,.10),0 0 28px rgba(255,255,255,.06);--card:none}
+.t.light{--bg:#F2F3F5;--s1:#FFFFFF;--s2:#E8EAEE;--s3:#FFFFFF;--tx:#0B0D10;--tx2:#4F555E;--ln:#D5D9DF;--me:#12A35C;--meT:#0A7A43;--dbl:#B42318;--dblBg:rgba(180,35,24,0.10);--glass:rgba(255,255,255,0.74);--glassLn:rgba(11,13,16,0.08);--dock:0 8px 24px rgba(11,13,16,.12);--card:0 1px 2px rgba(11,13,16,.06),0 10px 28px rgba(11,13,16,.09)}
+.mono{font-family:'Geist Mono',ui-monospace,monospace}
+button{font:inherit;color:inherit;cursor:pointer}
+a{color:inherit}
+</style>
+</helmet>
+<div class="t {{mode}}" style="width: 393px; height: 852px; box-sizing: border-box; background: var(--bg); color: var(--tx); font-family: 'Geist', system-ui, sans-serif; position: relative; overflow: hidden; padding: 22px 20px 0">
+
+<div class="mono" style="{{kickSt}}">{{kick}}</div>
+<div style="font-size: 32px; line-height: 36px; font-weight: 800; letter-spacing: -1px; margin-top: 4px">vs {{opp}}</div>
+<div style="font-size: 15px; line-height: 20px; color: var(--tx2); margin-top: 4px">{{where}}</div>
+
+<div style="display: flex; gap: 4px; padding: 4px; margin: 14px -4px 0; border-radius: 16px; background: var(--s1)">
+<sc-for list="{{segs}}" as="g" hint-placeholder-count="3">
+<button onClick="{{g.pick}}" style="{{g.st}}"><span style="font-size: 14px; font-weight: 600">{{g.l}}</span><span class="mono" style="{{g.subSt}}">{{g.sub}}</span></button>
+</sc-for>
+</div>
+
+<div style="margin: 12px -4px 0; background: var(--s1); border-radius: 24px; padding: 18px 16px 16px; box-shadow: var(--card)">
+<div class="mono" style="{{cardKickSt}}">{{cardKick}}</div>
+<div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: 10px">
+<div><div style="font-size: 14px; font-weight: 600; color: var(--meT)">Andrew + Alex</div><div class="mono" style="font-size: 44px; line-height: 44px; font-weight: 700; letter-spacing: -1.5px; color: var(--meT); margin-top: 2px">{{aPts}}</div></div>
+<div style="text-align: right"><div style="font-size: 14px; font-weight: 600; color: var(--tx2)">{{opp}}</div><div class="mono" style="font-size: 44px; line-height: 44px; font-weight: 700; letter-spacing: -1.5px; margin-top: 2px">{{jPts}}</div></div>
+</div>
+<div style="position: relative; height: 12px; border-radius: 6px; background: var(--s2); margin-top: 16px; display: flex">
+<div style="{{aFill}}"></div>
+<div style="flex: 1"></div>
+<div style="{{jFill}}"></div>
+<div style="position: absolute; left: 54.2%; top: -6px; bottom: -6px; width: 2px; margin-left: -1px; border-radius: 1px; background: var(--tx)"></div>
+<div class="mono" style="position: absolute; left: 54.2%; top: 16px; transform: translateX(-50%); font-size: 11px; letter-spacing: .8px; font-weight: 600; color: var(--tx2); white-space: nowrap">6½ CLINCHES</div>
+</div>
+<div style="display: flex; justify-content: space-between; margin-top: 30px; font-size: 14px">
+<span style="font-weight: 600">{{lineL}}</span>
+<span style="color: var(--tx2)">{{lineR}}</span>
+</div>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; margin: 16px -4px 0">
+<sc-for list="{{strip}}" as="h" hint-placeholder-count="6">
+<button onClick="{{h.pick}}" style="{{h.st}}">
+<span class="mono" style="font-size: 15px; font-weight: 700; line-height: 18px">{{h.n}}</span>
+<span style="display: flex; gap: 4px; margin-top: 8px; align-items: center">
+<sc-if value="{{h.lbH}}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="11" height="11" viewBox="0 0 12 12" style="flex: none"><circle cx="6" cy="6" r="5.25" fill="none" stroke="var(--tx2)" stroke-width="1.5"></circle><g clip-path="circle(5.25px at 6px 6px)" stroke="var(--tx2)" stroke-width="1.6" stroke-linecap="square"><path d="M-1 5.5 L5.5 -1 M1.5 10.5 L10.5 1.5 M6.5 13 L13 6.5"></path></g></svg></sc-if><sc-if value="{{h.lbN}}" hint-placeholder-val="{{ true }}"><span style="{{h.lb}}"></span></sc-if>
+<sc-if value="{{h.ltH}}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="11" height="11" viewBox="0 0 12 12" style="flex: none"><circle cx="6" cy="6" r="5.25" fill="none" stroke="var(--tx2)" stroke-width="1.5"></circle><g clip-path="circle(5.25px at 6px 6px)" stroke="var(--tx2)" stroke-width="1.6" stroke-linecap="square"><path d="M-1 5.5 L5.5 -1 M1.5 10.5 L10.5 1.5 M6.5 13 L13 6.5"></path></g></svg></sc-if><sc-if value="{{h.ltN}}" hint-placeholder-val="{{ true }}"><span style="{{h.lt}}"></span></sc-if>
+</span>
+</button>
+</sc-for>
+</div>
+<div style="display: flex; justify-content: center; gap: 14px; margin-top: 8px; font-size: 11px; color: var(--tx2)">
+<span style="display: flex; align-items: center; gap: 4px"><span style="width: 9px; height: 9px; border-radius: 5px; background: var(--me)"></span>counted</span>
+<span style="display: flex; align-items: center; gap: 4px"><svg aria-hidden="true" width="9" height="9" viewBox="0 0 12 12" style="flex: none"><circle cx="6" cy="6" r="5.25" fill="none" stroke="var(--tx2)" stroke-width="1.5"></circle><g clip-path="circle(5.25px at 6px 6px)" stroke="var(--tx2)" stroke-width="1.6" stroke-linecap="square"><path d="M-1 5.5 L5.5 -1 M1.5 10.5 L10.5 1.5 M6.5 13 L13 6.5"></path></g></svg>one cart in</span>
+<span style="display: flex; align-items: center; gap: 4px"><span style="width: 9px; height: 9px; border-radius: 5px; box-sizing: border-box; border: 2px dashed var(--tx2)"></span>nobody yet</span>
+</div>
+
+<div style="display: flex; align-items: baseline; justify-content: space-between; margin-top: 14px">
+<span style="font-size: 17px; line-height: 22px; font-weight: 700">Hole {{sel.n}} <span style="color: var(--tx2); font-weight: 500">· par {{sel.par}}</span></span>
+<span class="mono" style="font-size: 13px; font-weight: 600; color: var(--tx2)">{{sel.pts}}</span>
+</div>
+<div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 10px">
+<sc-for list="{{sel.cells}}" as="c" hint-placeholder-count="4">
+<div style="text-align: center">
+<span class="mono" style="{{c.mark}}">{{c.v}}</span>
+<div style="{{c.nameSt}}">{{c.name}}</div>
+</div>
+</sc-for>
+</div>
+<div style="margin-top: 10px; font-size: 13px; line-height: 18px; color: var(--tx2)">{{sel.note}}</div>
+
+<nav aria-label="Round" style="position: absolute; left: 16px; right: 16px; bottom: 20px; display: flex; padding: 6px; border-radius: 34px; background: var(--glass); -webkit-backdrop-filter: blur(22px) saturate(1.8); backdrop-filter: blur(22px) saturate(1.8); border: 1px solid var(--glassLn); box-shadow: var(--dock)">
+<a href="Matches-v2c.dc.html" aria-label="Enter" style="flex: 1; height: 56px; border-radius: 28px; display: flex; align-items: center; justify-content: center; color: var(--tx2)"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4h11l-2 4 2 4H5"></path></svg></a>
+<a href="Matches-v2c.dc.html" aria-label="Matches" aria-current="page" style="flex: 1; height: 56px; border-radius: 28px; display: flex; align-items: center; justify-content: center; background: var(--s3); color: var(--tx)"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8.5" cy="12" r="5"></circle><circle cx="15.5" cy="12" r="5"></circle></svg></a>
+<a href="Board-v2.dc.html" aria-label="Board" style="flex: 1; height: 56px; border-radius: 28px; display: flex; align-items: center; justify-content: center; color: var(--tx2)"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h11M4 18h7"></path></svg></a>
+<a href="Main.dc.html" aria-label="Card" style="flex: 1; height: 56px; border-radius: 28px; display: flex; align-items: center; justify-content: center; color: var(--tx2)"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M3 10h18M3 15h18M9 4v16M15 4v16"></path></svg></a>
+</nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"mode":{"editor":"enum","options":["dark","light"],"default":"dark"},"state":{"editor":"enum","options":["waiting","partial","chasing","history"],"default":"history","section":"Match"},"$preview":{"width":393,"height":852}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { sel: null, rot: null }; }
+  mark(v, par, locked) {
+    var base = 'width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700; box-sizing: border-box; ';
+    if (locked) return base + 'border: 2px solid var(--tx2); border-radius: 50%; color: var(--tx2); font-size: 16px';
+    if (v == null) return base + 'border: 2px dashed var(--ln); border-radius: 50%; color: var(--tx2)';
+    var d = v - par;
+    if (d <= -2) return base + 'border: 7px double var(--tx); border-radius: 50%';
+    if (d === -1) return base + 'border: 2px solid var(--tx); border-radius: 50%';
+    if (d === 0) return base;
+    if (d === 1) return base + 'border: 2px solid var(--tx2); border-radius: 7px';
+    return base + 'border: 7px double var(--dbl); border-radius: 7px; background: var(--dblBg); color: var(--dbl)';
+  }
+  dot(k) {
+    var d = 'width: 11px; height: 11px; border-radius: 50%; flex: none; box-sizing: border-box; ';
+    if (k === 'a') return d + 'background: var(--me)';
+    if (k === 'j') return d + 'background: var(--tx2)';
+    if (k === 'p') return d + 'background: linear-gradient(90deg, var(--me) 50%, var(--tx2) 50%)';
+    if (k === 'mine') return d + 'border: 2px solid var(--me)';
+    if (k === 'theirs') return d + 'background: repeating-linear-gradient(135deg, var(--tx2) 0 2px, transparent 2px 4px)';
+    return d + 'border: 2px dashed var(--tx2)';
+  }
+  renderVals() {
+    var self = this, st = this.props.state ?? 'waiting';
+    var PAR = [5, 4, 3, 4, 4, 5];
+    var STATES = {
+      waiting: {
+        kick: 'HOLES 13–18 · WAITING ON THEM', live: false, where: '3rd tee time · they’re on 12, you’re on 16',
+        cardKick: 'NOTHING COUNTS YET', a: 0, j: 0, lineL: 'Your 13–15 are in', lineR: 'Each hole counts once both carts play it',
+        holes: [{ k: 'mine', a: [4, 5], j: [null, null] }, { k: 'mine', a: [5, 5], j: [null, null] }, { k: 'mine', a: [3, 4], j: [null, null] }, { k: 'none' }, { k: 'none' }, { k: 'none' }],
+        sel: 1, note: 'Your scores are in. Low ball and low total get decided when Joseph + Jay finish 14.'
+      },
+      partial: {
+        kick: 'HOLES 13–18 · LIVE', live: true, where: '3rd tee time · they’re on 15, you’re on 17',
+        cardKick: 'THRU 2 · YOU’RE UP 2', a: 3, j: 1, lineL: '8 pts left', lineR: '3½ more and it’s yours',
+        holes: [{ k: 'a', lb: 'a', lt: 'a', a: [4, 5], j: [5, 5], pts: '2–0' }, { k: 'p', lb: 'p', lt: 'a', a: [5, 5], j: [5, 6], pts: '1½–½' }, { k: 'mine', a: [3, 4], j: [null, null] }, { k: 'mine', a: [4, 5], j: [null, null] }, { k: 'none' }, { k: 'none' }],
+        sel: 2, note: 'Your 3 and 4 are in. Counts once Joseph + Jay finish 15.'
+      },
+      history: {
+        kick: 'HOLES 1–6 · FINAL', live: false, where: '1st tee time · in your group', opp: 'Sean + Baker', rotIdx: 0,
+        cardKick: 'FINAL · YOU WON 7–5', a: 7, j: 5, lineL: '+1 for Team Andrew', lineR: 'All 6 holes played',
+        holes: [{ k: 'a', lb: 'a', lt: 'a', a: [4, 5], j: [5, 5], pts: '2–0' }, { k: 'j', lb: 'j', lt: 'j', a: [6, 6], j: [5, 6], pts: '0–2' }, { k: 'p', lb: 'p', lt: 'a', a: [3, 4], j: [3, 5], pts: '1½–½' }, { k: 'a', lb: 'a', lt: 'a', a: [3, 5], j: [4, 5], pts: '2–0' }, { k: 'j', lb: 'p', lt: 'j', a: [4, 6], j: [4, 5], pts: '½–1½' }, { k: 'p', lb: 'p', lt: 'p', a: [5, 5], j: [5, 5], pts: '1–1' }],
+        sel: 3, note: 'Andrew’s birdie took low ball, and 8 beat 9 for low total.'
+      },
+      chasing: {
+        kick: 'HOLES 13–18 · LIVE', live: true, where: '1st tee time · they’re on 17, you’re on 14',
+        cardKick: 'THRU 1 · YOU’RE DOWN 2', a: 0, j: 2, lineL: '10 pts left', lineR: 'They’ve set the target on 14–16',
+        holes: [{ k: 'j', lb: 'j', lt: 'j', a: [5, 6], j: [4, 5], pts: '0–2' }, { k: 'theirs', a: [null, null], j: [4, 5] }, { k: 'theirs', a: [null, null], j: [3, 4] }, { k: 'theirs', a: [null, null], j: [5, 5] }, { k: 'none' }, { k: 'none' }],
+        sel: 1, note: 'Joseph made 4, Jay 5. A 4 halves low ball; 8 or better between you takes low total.'
+      }
+    };
+    var S = STATES[st];
+    var rot0 = this.state.rot == null ? (S.rotIdx == null ? 2 : S.rotIdx) : this.state.rot;
+    if (rot0 !== (S.rotIdx == null ? 2 : S.rotIdx)) { S = rot0 === 2 ? STATES[st === 'history' ? 'partial' : st] : (rot0 === 0 ? STATES.history : Object.assign({}, STATES.history, { kick: 'HOLES 7–12 · FINAL', where: '2nd tee time', opp: 'Josh + Brandon', cardKick: 'FINAL · YOU WON 7½–4½', a: 7.5, j: 4.5, note: 'Both in. 2–0 on this hole.' })); }
+    var rot = rot0;
+    var ALL = [{ l: '1–6', sub: 'won 7–5', done: true }, { l: '7–12', sub: 'won 7½–4½', done: true }, { l: '13–18', sub: st === 'waiting' ? 'waiting' : 'live', done: false }];
+    var sel = this.state.sel == null ? S.sel : this.state.sel;
+    var h = S.holes[sel], par = PAR[sel], names = ['Andrew', 'Alex', 'Joseph', 'Jay'];
+    var vals = (h.a || [null, null]).concat(h.j || [null, null]);
+    var pct = function (p) { return (p / 12 * 100) + '%'; };
+    return {
+      mode: this.props.mode ?? 'dark',
+      opp: S.opp || 'Joseph + Jay',
+      segs: ALL.map(function (g, i) {
+        var on = i === rot;
+        return { l: g.l, sub: g.sub,
+          st: 'flex: 1; height: 54px; border: 0; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; ' + (on ? 'background: var(--s3); color: var(--tx)' : 'background: transparent; color: var(--tx2)'),
+          subSt: 'font-size: 11px; ' + (!g.done && on ? 'color: var(--meT); font-weight: 600' : 'color: var(--tx2)'),
+          pick: function () { self.setState({ rot: i, sel: null }); } };
+      }),
+      kick: S.kick, kickSt: 'font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: 1px; color: ' + (S.live ? 'var(--meT)' : 'var(--tx2)'),
+      where: S.where,
+      cardKick: S.cardKick, cardKickSt: 'text-align: center; font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: 1px; color: ' + (S.live ? 'var(--meT)' : 'var(--tx2)'),
+      aPts: String(S.a).replace('.5', '½'), jPts: String(S.j).replace('.5', '½'),
+      aFill: 'width: ' + pct(S.a) + '; height: 100%; border-radius: 6px 0 0 6px; background: var(--me)',
+      jFill: 'width: ' + pct(S.j) + '; height: 100%; border-radius: 0 6px 6px 0; background: var(--tx2)',
+      lineL: S.lineL, lineR: S.lineR,
+      strip: S.holes.map(function (x, i) {
+        var on = i === sel, counted = x.k === 'a' || x.k === 'j' || x.k === 'p';
+        return {
+          n: 13 + i, lb: self.dot(counted ? x.lb : x.k), lt: self.dot(counted ? x.lt : x.k),
+          lbH: x.k === 'theirs' || x.k === 'mine', lbN: x.k !== 'theirs' && x.k !== 'mine', ltH: x.k === 'theirs' || x.k === 'mine', ltN: x.k !== 'theirs' && x.k !== 'mine',
+          st: 'height: 60px; border: 0; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0; ' + (on ? 'background: var(--s1); box-shadow: var(--card); color: var(--tx)' : 'background: transparent; color: ' + (x.k === 'none' ? 'var(--tx2)' : 'var(--tx)')),
+          pick: function () { self.setState({ sel: i }); }
+        };
+      }),
+      sel: {
+        n: 13 + sel, par: par, pts: h.pts || (h.k === 'none' ? 'not yet' : 'waiting'),
+        cells: vals.map(function (v, i) { var lk = h.locked && i >= 2; return { v: lk ? '?' : (v == null ? '' : v), mark: self.mark(lk ? null : v, par, lk), name: names[i], nameSt: 'font-size: 12px; font-weight: 600; margin-top: 4px; color: ' + (i < 2 ? 'var(--meT)' : 'var(--tx2)') }; }),
+        note: sel === S.sel ? S.note : (h.pts ? 'Both carts in. ' + h.pts + ' on this hole.' : h.k === 'none' ? 'Nobody has played it yet.' : h.k === 'mine' ? 'Your scores are in, waiting on them.' : 'Their scores are in, waiting on you.')
+      }
+    };
+  }
+}
+</script>
+</body>
+</html>

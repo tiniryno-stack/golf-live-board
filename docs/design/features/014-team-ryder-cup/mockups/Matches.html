@@ -1,0 +1,143 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=393">
+<title>014 Matches · Team Ryder Cup</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&amp;family=Geist+Mono:wght@400;500;600;700&amp;display=swap">
+<link rel="stylesheet" href="tokens.css"><link rel="stylesheet" href="kit.css">
+<style>
+.cells{display:flex;gap:3px;position:relative}
+.cells i{flex:1;border-radius:4px;background:var(--surface-2)}
+.cells .ln{position:absolute;left:50%;width:2px;margin-left:-1px;background:var(--text)}
+.tbl{margin:10px 24px 0}
+.tr{display:grid;grid-template-columns:44px minmax(0,1fr) minmax(0,1fr) 56px;gap:8px;align-items:center}
+.tr.hd{font-family:var(--font-mono);font-size:12px;letter-spacing:.8px;color:var(--text-muted);padding:10px 0 6px}
+.tr.r{height:42px;border-top:1px solid var(--line)}
+.cell{display:flex;align-items:center;gap:6px;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden}
+.cupline{display:flex;align-items:center;gap:10px;width:100%;margin-top:14px;padding:12px 4px 0;border-top:1px solid var(--line);text-align:left;min-height:48px}
+.minebar{width:calc(100% - 32px);margin:16px 16px 0;height:60px;border-radius:var(--radius-lg);border:1.5px solid var(--cart-you);background:var(--tint-you);display:flex;align-items:center;gap:10px;padding:0 14px;text-align:left}
+.alsobox{margin:10px 16px 0;border:1px solid var(--line);border-radius:20px;overflow:hidden}
+.alsobox .mrow{border-radius:0}
+.toast{bottom:112px}
+</style></head><body>
+<div class="screen" id="s"></div>
+<script src="kit.js"></script>
+<script>
+var M = K.matches('live'), T = K.tally(M);
+var rot = +(K.q.get('rot') || 2);
+var watching = K.q.get('view') === 'other' ? 'J1' : null; // which "also" match is open (by its J cart)
+var H = { // explicit hole data for the screens' featured matches
+  A1J3: [['a','a'],['j','p'],['a','j'],['p','a'],['live','live'],[0,0]],
+  A3J1: [['j','j'],['j','j'],['j','j'],['j','a'],[0,0],[0,0]]
+};
+function holes(m) { return H[m.a + m.j] || K.holesFor(m.ap || 0, m.jp || 0, m.n || 0, m.liveNow); }
+function ptsOf(c) { var a = 0, j = 0; c.forEach(function (k) { if (k === 'a') a++; else if (k === 'j') j++; else if (k === 'p') { a += .5; j += .5; } }); return [a, j]; }
+function cellTx(k, m) {
+  if (k === 'a' || k === 'j') { var cart = k === 'a' ? m.a : m.j, side = cart[0];
+    return '<span class="dot" style="width:10px;height:10px;border-radius:5px;background:' + K.sc(side) + '"></span><span style="color:' + K.st(side) + ';overflow:hidden;text-overflow:ellipsis">' + K.CARTS[cart].split(' + ')[0] + '</span>'; }
+  if (k === 'p') return '<span class="dot" style="width:10px;height:10px;border-radius:5px;box-sizing:border-box;border:2px solid var(--text-muted)"></span><span class="muted">Push</span>';
+  if (k === 'live') return '<span class="dot" style="width:10px;height:10px;border-radius:5px;box-sizing:border-box;border:2px dashed var(--text-muted)"></span><span class="muted">Live</span>';
+  return '<span class="dot" style="width:10px;height:10px;border-radius:5px;box-sizing:border-box;border:2px solid var(--line)"></span><span class="muted">–</span>';
+}
+function table(m, rowH) {
+  var hs = holes(m), base = m.rot * 6;
+  var h = '<div class="tr hd"><div>HOLE</div><div>LOW BALL</div><div>LOW TOTAL</div><div style="text-align:right">PTS</div></div>';
+  hs.forEach(function (c, i) {
+    var p = ptsOf(c), pts = c[0] === 'live' ? '<span class="muted">now</span>' : (c[0] === 0 ? '<span class="muted">–</span>' : K.fr(p[0]) + '–' + K.fr(p[1]));
+    h += '<div class="tr r" style="height:' + rowH + 'px"><div><span class="mono" style="font-size:16px;font-weight:700">' + (base + i + 1) + '</span><span class="muted" style="font-size:12px"> p' + K.PAR[base + i] + '</span></div>' +
+      '<div class="cell">' + cellTx(c[0], m) + '</div><div class="cell">' + cellTx(c[1], m) + '</div><div class="mono" style="text-align:right;font-size:15px;font-weight:700">' + pts + '</div></div>';
+  });
+  return h;
+}
+function cells(a, j, h, ca, cj) {
+  var out = '<div class="cells">';
+  for (var i = 0; i < 12; i++) {
+    var bg = i < Math.floor(a) ? ca : (i >= 12 - Math.floor(j) ? cj : null);
+    if (!bg && a % 1 && i === Math.floor(a)) bg = 'linear-gradient(90deg,' + ca + ' 50%,var(--surface-2) 50%)';
+    if (!bg && j % 1 && i === 11 - Math.floor(j)) bg = 'linear-gradient(90deg,var(--surface-2) 50%,' + cj + ' 50%)';
+    out += '<i style="height:' + h + 'px' + (bg ? ';background:' + bg : '') + '"></i>';
+  }
+  return out + '<div class="ln" style="top:-4px;bottom:-4px"></div></div>';
+}
+
+function header(m) {
+  var live = !m.res;
+  return '<div style="text-align:center;padding:20px 16px 0">' +
+    '<div class="t-label you">MATCH ' + (m.rot + 1) + ' OF 3 · ' + (live ? 'LIVE' : 'FINAL') + '</div>' +
+    '<div style="font-size:28px;line-height:32px;font-weight:800;letter-spacing:-.8px;margin-top:2px">vs <span class="away">' + K.CARTS[m.j] + '</span></div>' +
+    '<div class="t-small muted" style="margin-top:2px">' + K.ROT[m.rot] + ' · ' + (m.rot === 0 ? 'in your group' : 'they’re in the ' + K.TEE[+m.j.slice(1) - 1]) + '</div></div>';
+}
+function segs() {
+  var mine = M.filter(function (m) { return m.a === 'A1'; });
+  return '<div class="seg two" style="margin:14px 16px 0">' + mine.map(function (m) {
+    var r = m.rot, on = r === rot, sh = ['1–6', '7–12', '13–18'][r];
+    var res = m.res === 'A' ? 'W' : m.res === 'J' ? 'L' : m.res === 'H' ? '½' : 'LIVE';
+    return '<button class="' + (on ? 'on' : '') + '" onclick="pick(' + r + ')"><span style="display:flex;align-items:center;gap:6px;max-width:100%;padding:0 6px"><span class="dot" style="width:7px;height:7px;background:var(--cart-b)"></span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + K.CARTS[m.j] + '</span></span>' +
+      '<span class="mono" style="font-size:12px;' + (res === 'LIVE' ? 'color:var(--cart-you-text);font-weight:600' : '') + '">' + sh + ' · ' + res + '</span></button>';
+  }).join('') + '</div>';
+}
+function scoreCard(m) {
+  var hs = holes(m), a = 0, j = 0, thru = 0;
+  hs.forEach(function (c) { if (c[0] && c[0] !== 'live') { var p = ptsOf(c); a += p[0]; j += p[1]; thru++; } });
+  var kick, line;
+  if (m.res) { kick = m.res === 'A' ? 'FINAL · YOU WON ' + m.s : m.res === 'J' ? 'FINAL · THEY WON ' + m.s : 'FINAL · HALVED'; line = '<span style="font-weight:600">' + (m.res === 'A' ? '+1 to Team Andrew' : m.res === 'J' ? '+1 to Team Josh' : '½ to each side') + '</span><span class="muted">' + (m.early ? 'decided with ' + m.early + ' to play' : 'all 6 holes played') + '</span>'; }
+  else { var d = a - j; kick = 'THRU ' + thru + ' · ' + (d > 0 ? 'YOU’RE UP ' + K.fr(d) : d < 0 ? 'YOU’RE DOWN ' + K.fr(-d) : 'ALL SQUARE');
+    var left = 12 - a - j, need = 6.5 - a; line = '<span style="font-weight:600">' + K.fr(left) + ' pts left</span><span class="muted">' + K.fr(need) + ' more clinches it</span>'; }
+  var cup = !m.res ? '<button class="cupline" onclick="location.href=K.keep(\'Board.html\')"><span style="flex:1;min-width:0"><span class="t-label muted" style="display:block">THE CUP</span>' +
+      '<span class="t-body" style="display:block;font-weight:600;margin-top:2px"><span class="you">Team Andrew</span> <span class="mono">' + K.fr(T.A) + '–' + K.fr(T.J) + '</span> <span class="away">Team Josh</span></span>' +
+      '<span class="t-small muted" style="display:block">Win this one and Team Andrew clinch it</span></span>' + K.icon('right', 20, 'color:var(--text-muted);flex:none') + '</button>' : '';
+  return '<div class="hero" style="margin:14px 16px 0"><div class="t-label you" style="text-align:center;margin-bottom:10px">' + kick + '</div>' +
+    '<div style="display:flex;justify-content:space-between;align-items:flex-end;padding:0 4px">' +
+    '<div><div style="font-size:15px;font-weight:700" class="you">' + K.CARTS[m.a] + '</div><div class="muted" style="font-size:12px">you</div></div>' +
+    '<div style="text-align:right"><div style="font-size:15px;font-weight:700" class="away">' + K.CARTS[m.j] + '</div><div class="muted" style="font-size:12px">them</div></div></div>' +
+    '<div class="mono" style="text-align:center;font-size:64px;font-weight:700;letter-spacing:-3px;line-height:1;white-space:nowrap;margin-top:2px"><span class="you">' + K.fr(a) + '</span><span class="muted" style="font-size:36px;padding:0 8px">–</span><span class="away">' + K.fr(j) + '</span></div>' +
+    '<div style="margin:16px 4px 0">' + cells(a, j, 18, 'var(--cart-you)', 'var(--cart-b)') + '</div>' +
+    '<div class="t-body" style="margin:12px 4px 0;font-size:14px;display:flex;justify-content:space-between">' + line + '</div>' + cup + '</div>';
+}
+function crossHint(m) {
+  if (m.rot === 0) return '';
+  return '<div class="hint" style="margin:12px 24px 0">' + K.icon('bulb', 16) + '<span>' + K.CARTS[m.j] + ' play in the ' + K.TEE[+m.j.slice(1) - 1] + '. A hole counts once both carts have finished it.</span></div>';
+}
+function watchBox(m) {
+  var hs = holes(m), a = 0, j = 0, thru = 0;
+  hs.forEach(function (c) { if (c[0] && c[0] !== 'live') { var p = ptsOf(c); a += p[0]; j += p[1]; thru++; } });
+  var lineL = m.res ? '<span style="font-weight:600">Decided</span>' : '<span style="font-weight:600">' + K.fr(12 - a - j) + ' pts left</span>';
+  var lineR = m.res ? '<span class="muted">' + (m.prov ? '<span class="prov">prov</span> ' : '') + '+1 Team ' + (m.res === 'A' ? 'Andrew' : 'Josh') + '</span>' : '<span class="muted">thru ' + thru + '</span>';
+  return '<div style="padding:0 14px 14px">' +
+    '<div class="t-small muted" style="display:flex;justify-content:space-between;gap:8px;white-space:nowrap"><span style="overflow:hidden;text-overflow:ellipsis">' + K.TEE[+m.a.slice(1) - 1] + ' v ' + K.TEE[+m.j.slice(1) - 1] + '</span><span class="mono" style="font-size:12px">thru ' + thru + '</span></div>' +
+    '<div style="display:flex;justify-content:space-between;margin-top:12px;padding:0 4px;font-size:14px;font-weight:700"><span class="you">' + K.CARTS[m.a] + '</span><span class="away">' + K.CARTS[m.j] + '</span></div>' +
+    '<div class="mono" style="text-align:center;font-size:44px;font-weight:700;letter-spacing:-2px;line-height:1;white-space:nowrap;margin-top:2px"><span class="you">' + K.fr(a) + '</span><span class="muted" style="font-size:26px;padding:0 6px">–</span><span class="away">' + K.fr(j) + '</span></div>' +
+    '<div style="margin:12px 4px 0">' + cells(a, j, 12, 'var(--cart-you)', 'var(--cart-b)') + '</div>' +
+    '<div style="margin:8px 4px 0;font-size:13px;display:flex;justify-content:space-between;align-items:center">' + lineL + lineR + '</div>' +
+    '<div style="margin:14px -14px -14px;background:var(--surface-1);padding:0 14px 6px;border-top:1px solid var(--line)">' + table(m, 40) + '</div></div>';
+}
+function also(cur) {
+  var others = M.filter(function (m) { return m.rot === cur.rot && m.a !== 'A1'; });
+  var h = '';
+  var w = others.filter(function (m) { return m.j === watching; })[0];
+  if (w) h += '<div class="alsobox"><div class="mrow" role="button" onclick="watch(null)" style="border:0;min-height:52px;padding:6px 12px 6px 14px"><span class="t-label muted" style="flex:none">WATCHING</span><span class="names"></span>' + K.icon('chev', 18, 'transform:rotate(180deg)').replace('<svg', '<svg class="chev"') + '</div>' + watchBox(w) + '</div>';
+  var rest = others.filter(function (m) { return m !== w; });
+  h += '<div class="sec" style="padding-top:16px"><span class="t-label muted">ALSO · ' + K.ROT[cur.rot].toUpperCase() + '</span></div>';
+  h += '<div class="alsobox" style="margin-top:0">' + rest.map(function (m) {
+    var can = m.res || m.thru;
+    return K.matchRow(m, { pin: false, chev: can, attrs: can ? ' role="button" onclick="watch(\'' + m.j + '\')"' : '' });
+  }).join('') + '</div>';
+  if (!rest.length && !w) h += '<div class="t-body muted" style="margin:0 20px">No other matches this rotation.</div>';
+  return h;
+}
+function draw() {
+  var m = M.filter(function (x) { return x.a === 'A1' && x.rot === rot; })[0];
+  var h = '';
+  if (watching) {
+    var hs = holes(m), a = 0, j = 0, thru = 0;
+    hs.forEach(function (c) { if (c[0] && c[0] !== 'live') { var p = ptsOf(c); a += p[0]; j += p[1]; thru++; } });
+    h += '<button class="minebar" onclick="watch(null)"><span style="flex:1"><span class="t-label you" style="display:block">YOUR MATCH · THRU ' + thru + '</span>' +
+      '<span style="display:block;font-size:15px;font-weight:700;margin-top:2px"><span class="you">' + K.CARTS[m.a] + '</span> <span class="mono">' + K.fr(a) + '–' + K.fr(j) + '</span> <span class="away">' + K.CARTS[m.j] + '</span></span></span>' + K.icon('chev', 18, 'color:var(--cart-you-text)') + '</button>';
+  } else {
+    h += header(m) + segs() + scoreCard(m) + crossHint(m) + '<div class="tbl">' + table(m, 42) + '</div>';
+  }
+  h += also(m);
+  document.getElementById('s').innerHTML = '<div class="scroll">' + h + '</div>' + K.tabbar('Matches');
+}
+function pick(r) { rot = r; watching = null; draw(); }
+function watch(j) { watching = j; draw(); document.querySelector('.scroll').scrollTop = 0; }
+draw();
+if (K.q.get('scroll')) document.querySelector('.scroll').scrollTop = +K.q.get('scroll');
+</script></body></html>

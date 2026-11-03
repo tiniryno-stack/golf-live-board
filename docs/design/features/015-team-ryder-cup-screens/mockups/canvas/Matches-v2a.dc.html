@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Matches v2a · scorecard on the screen</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&amp;family=Geist+Mono:wght@500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+.t{--bg:#0A0B0D;--s1:#15171B;--s2:#1F2227;--s3:#2A2E35;--tx:#F4F5F7;--tx2:#A7ACB4;--ln:#2B2F36;--me:#3DDC84;--meT:#3DDC84;--dbl:#FF6B6B;--dblBg:rgba(255,107,107,0.16);--glass:rgba(24,26,31,0.72);--glassLn:rgba(255,255,255,0.09);--dock:inset 0 1px 0 rgba(255,255,255,.10),0 0 28px rgba(255,255,255,.06);--card:none}
+.t.light{--bg:#F2F3F5;--s1:#FFFFFF;--s2:#E8EAEE;--s3:#FFFFFF;--tx:#0B0D10;--tx2:#4F555E;--ln:#D5D9DF;--me:#12A35C;--meT:#0A7A43;--dbl:#B42318;--dblBg:rgba(180,35,24,0.10);--glass:rgba(255,255,255,0.74);--glassLn:rgba(11,13,16,0.08);--dock:0 8px 24px rgba(11,13,16,.12);--card:0 1px 2px rgba(11,13,16,.06),0 10px 28px rgba(11,13,16,.09)}
+.mono{font-family:'Geist Mono',ui-monospace,monospace}
+a{color:inherit}
+</style>
+</helmet>
+<div class="t {{mode}}" style="width: 393px; height: 852px; box-sizing: border-box; background: var(--bg); color: var(--tx); font-family: 'Geist', system-ui, sans-serif; position: relative; overflow: hidden; padding: 22px 20px 0">
+
+<div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 12px">
+<div style="min-width: 0">
+<div class="mono" style="font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: 1px; color: var(--meT)">HOLES 13–18 · LIVE</div>
+<div style="font-size: 28px; line-height: 32px; font-weight: 800; letter-spacing: -0.8px; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">vs Joseph + Jay</div>
+<div style="font-size: 14px; line-height: 18px; color: var(--tx2); margin-top: 2px">3rd tee time · they’re on 16</div>
+</div>
+<div style="text-align: right; flex: none">
+<div class="mono" style="font-size: 44px; line-height: 44px; font-weight: 700; letter-spacing: -1.5px; color: var(--meT)">UP 2</div>
+<div style="font-size: 13px; line-height: 18px; color: var(--tx2)">thru 4 · 2 to play</div>
+</div>
+</div>
+
+<div style="margin-top: 14px; font-size: 15px; line-height: 20px; font-weight: 600">Win one more hole and the match is yours.</div>
+
+<div class="mono" style="display: grid; grid-template-columns: 36px 66px 66px 1fr 48px; gap: 8px; align-items: end; padding: 18px 0 6px; font-size: 11px; letter-spacing: .8px; font-weight: 600; color: var(--tx2)">
+<div>HOLE</div>
+<div style="color: var(--meT)">ANDREW ALEX</div>
+<div>JOSEPH JAY</div>
+<div>LOW BALL · LOW TOTAL</div>
+<div style="text-align: right">MATCH</div>
+</div>
+
+<sc-for list="{{holes}}" as="h" hint-placeholder-count="6">
+<div style="{{h.rowSt}}">
+<div><div class="mono" style="font-size: 17px; font-weight: 700; line-height: 20px">{{h.n}}</div><div style="font-size: 12px; color: var(--tx2)">par {{h.par}}</div></div>
+<div style="display: flex; gap: 4px"><span class="mono" style="{{h.a1}}">{{h.a1v}}</span><span class="mono" style="{{h.a2}}">{{h.a2v}}</span></div>
+<div style="display: flex; gap: 4px"><span class="mono" style="{{h.j1}}">{{h.j1v}}</span><span class="mono" style="{{h.j2}}">{{h.j2v}}</span></div>
+<div style="display: flex; flex-direction: column; gap: 3px; min-width: 0">
+<div style="display: flex; align-items: center; gap: 6px; font-size: 13px; line-height: 16px; font-weight: 600"><span style="{{h.lbDot}}"></span><span style="{{h.lbTx}}">{{h.lb}}</span></div>
+<div style="display: flex; align-items: center; gap: 6px; font-size: 13px; line-height: 16px; font-weight: 600"><span style="{{h.ltDot}}"></span><span style="{{h.ltTx}}">{{h.lt}}</span></div>
+</div>
+<div style="text-align: right"><div class="mono" style="{{h.runSt}}">{{h.run}}</div><div class="mono" style="font-size: 11px; color: var(--tx2); white-space: nowrap">{{h.pts}}</div></div>
+</div>
+</sc-for>
+
+<div style="display: flex; align-items: center; gap: 10px; min-height: 52px; margin-top: 10px; border-top: 1px solid var(--ln)">
+<span class="mono" style="font-size: 12px; font-weight: 600; letter-spacing: 1px; color: var(--tx2)">YOUR DAY</span>
+<span style="flex: 1; font-size: 14px; color: var(--tx2)">1–6 <span style="color: var(--meT); font-weight: 600">won</span> · 7–12 <span style="color: var(--meT); font-weight: 600">won</span></span>
+<span class="mono" style="font-size: 12px; font-weight: 600; letter-spacing: 1px; color: var(--meT)">+2 TEAM ANDREW</span>
+</div>
+
+<nav aria-label="Round" style="position: absolute; left: 16px; right: 16px; bottom: 20px; display: flex; padding: 6px; border-radius: 34px; background: var(--glass); -webkit-backdrop-filter: blur(22px) saturate(1.8); backdrop-filter: blur(22px) saturate(1.8); border: 1px solid var(--glassLn); box-shadow: var(--dock)">
+<a href="Matches-v2a.dc.html" aria-label="Enter" style="flex: 1; height: 56px; border-radius: 28px; display: flex; align-items: center; justify-content: center; color: var(--tx2)"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4h11l-2 4 2 4H5"></path></svg></a>
+<a href="Matches-v2a.dc.html" aria-label="Matches" aria-current="page" style="flex: 1; height: 56px; border-radius: 28px; display: flex; align-items: center; justify-content: center; background: var(--s3); color: var(--tx)"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8.5" cy="12" r="5"></circle><circle cx="15.5" cy="12" r="5"></circle></svg></a>
+<a href="Main.dc.html" aria-label="Board" style="flex: 1; height: 56px; border-radius: 28px; display: flex; align-items: center; justify-content: center; color: var(--tx2)"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h11M4 18h7"></path></svg></a>
+<a href="Main.dc.html" aria-label="Card" style="flex: 1; height: 56px; border-radius: 28px; display: flex; align-items: center; justify-content: center; color: var(--tx2)"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M3 10h18M3 15h18M9 4v16M15 4v16"></path></svg></a>
+</nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"mode":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":393,"height":852}}'>
+class Component extends DCLogic {
+  mark(v, par) {
+    var base = 'width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; box-sizing: border-box; ';
+    if (v == null) return base + 'border: 2px dashed var(--ln); border-radius: 50%; color: var(--tx2)';
+    var d = v - par;
+    if (d <= -2) return base + 'border: 5px double var(--tx); border-radius: 50%';
+    if (d === -1) return base + 'border: 2px solid var(--tx); border-radius: 50%';
+    if (d === 0) return base;
+    if (d === 1) return base + 'border: 2px solid var(--tx2); border-radius: 5px';
+    return base + 'border: 5px double var(--dbl); border-radius: 5px; background: var(--dblBg); color: var(--dbl)';
+  }
+  pt(k) {
+    var d = 'width: 9px; height: 9px; border-radius: 5px; flex: none; box-sizing: border-box; ';
+    if (k === 'a') return [d + 'background: var(--me)', 'color: var(--meT)', 'You'];
+    if (k === 'j') return [d + 'background: var(--tx2)', 'color: var(--tx)', 'Them'];
+    if (k === 'p') return [d + 'background: linear-gradient(90deg, var(--me) 50%, var(--tx2) 50%)', 'color: var(--tx2)', 'Halved'];
+    if (k === 'live') return [d + 'border: 2px dashed var(--tx2)', 'color: var(--tx2)', 'Playing'];
+    return [d + 'border: 2px solid var(--ln)', 'color: var(--tx2)', '–'];
+  }
+  renderVals() {
+    var self = this;
+    var data = [
+      { n: 13, par: 5, a: [4, 5], j: [5, 5], lb: 'a', lt: 'a', run: 'UP 2', pts: '2–0' },
+      { n: 14, par: 4, a: [5, 5], j: [4, 5], lb: 'j', lt: 'j', run: 'AS', pts: '0–2' },
+      { n: 15, par: 3, a: [3, 4], j: [3, 5], lb: 'p', lt: 'a', run: 'UP 1', pts: '1½–½' },
+      { n: 16, par: 4, a: [4, 5], j: [4, 6], lb: 'p', lt: 'a', run: 'UP 2', pts: '1½–½' },
+      { n: 17, par: 4, a: [4, null], j: [null, null], lb: 'live', lt: 'live', run: '', pts: '' },
+      { n: 18, par: 5, a: [null, null], j: [null, null], lb: 0, lt: 0, run: '', pts: '' }
+    ];
+    return {
+      mode: this.props.mode ?? 'dark',
+      holes: data.map(function (h, i) {
+        var lb = self.pt(h.lb), lt = self.pt(h.lt), live = h.lb === 'live', none = !h.lb;
+        return {
+          n: h.n, par: h.par,
+          rowSt: 'display: grid; grid-template-columns: 36px 66px 66px 1fr 48px; gap: 8px; align-items: center; min-height: 58px; border-top: 1px solid var(--ln); ' + (none ? 'opacity: .5' : ''),
+          a1: self.mark(h.a[0], h.par), a1v: h.a[0] == null ? '' : h.a[0], a2: self.mark(h.a[1], h.par), a2v: h.a[1] == null ? '' : h.a[1],
+          j1: self.mark(h.j[0], h.par), j1v: h.j[0] == null ? '' : h.j[0], j2: self.mark(h.j[1], h.par), j2v: h.j[1] == null ? '' : h.j[1],
+          lbDot: lb[0], lbTx: lb[1], lb: lb[2], ltDot: lt[0], ltTx: lt[1], lt: lt[2],
+          run: h.run, pts: h.pts,
+          runSt: 'font-size: 15px; font-weight: 700; color: ' + (h.run.indexOf('UP') === 0 ? 'var(--meT)' : 'var(--tx)')
+        };
+      })
+    };
+  }
+}
+</script>
+</body>
+</html>

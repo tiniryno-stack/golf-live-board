@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Setup · Round is live</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&amp;family=Geist+Mono:wght@500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+.t{--bg:#0A0B0D;--s1:#15171B;--s2:#1F2227;--tx:#F4F5F7;--tx2:#A7ACB4;--ln:#2B2F36;--me:#3DDC84;--meT:#3DDC84;--warn:#F5C64A;--warnBg:rgba(245,198,74,0.12);--btn:#F4F5F7;--btnT:#0A0B0D;--card:none}
+.t.light{--bg:#F2F3F5;--s1:#FFFFFF;--s2:#E8EAEE;--tx:#0B0D10;--tx2:#4F555E;--ln:#D5D9DF;--me:#12A35C;--meT:#0A7A43;--warn:#8A6000;--warnBg:rgba(138,96,0,0.09);--btn:#0B0D10;--btnT:#FFFFFF;--card:0 1px 2px rgba(11,13,16,.06),0 4px 12px rgba(11,13,16,.05)}
+.mono{font-family:'Geist Mono',ui-monospace,monospace}
+button{font:inherit;color:inherit;cursor:pointer}
+a{color:inherit}
+</style>
+</helmet>
+<div class="t {{mode}}" style="width: 393px; height: 852px; box-sizing: border-box; background: var(--bg); color: var(--tx); font-family: 'Geist', system-ui, sans-serif; display: flex; flex-direction: column; overflow: hidden">
+
+<div style="flex: 1; overflow: hidden; padding: 22px 20px 0">
+<div class="mono" style="font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: 1px; color: var(--meT)">ROUND IS LIVE</div>
+<div style="font-size: 32px; line-height: 36px; font-weight: 800; letter-spacing: -1px; margin-top: 2px">Get everyone in</div>
+<div style="font-size: 15px; line-height: 20px; color: var(--tx2); margin-top: 4px">They join with the code, pick their name, and see their side.</div>
+
+<div style="margin-top: 18px; background: var(--s1); border-radius: 24px; padding: 22px 16px 18px; box-shadow: var(--card); text-align: center">
+<div class="mono" style="font-size: 12px; font-weight: 600; letter-spacing: 1px; color: var(--tx2)">JOIN CODE</div>
+<div class="mono" style="font-size: 64px; line-height: 64px; font-weight: 700; letter-spacing: 6px; margin-top: 8px">RYD16</div>
+<div style="font-size: 15px; color: var(--tx2); margin-top: 8px">golfliveboard.app/RYD16</div>
+</div>
+
+<div style="display: flex; gap: 8px; margin-top: 12px">
+<button style="flex: 1; height: 48px; border: 0; border-radius: 12px; background: var(--s2); font-size: 15px; font-weight: 600">Copy link</button>
+<button style="flex: 1; height: 48px; border: 0; border-radius: 12px; background: var(--s2); font-size: 15px; font-weight: 600">Copy the text</button>
+</div>
+
+<div class="mono" style="margin-top: 22px; font-size: 12px; font-weight: 600; letter-spacing: 1px; color: var(--tx2)">WHAT THE TEXT SAYS</div>
+<div style="margin-top: 8px; padding: 14px 16px; border-radius: 16px; border: 1px solid var(--ln); font-size: 14px; line-height: 20px">
+Team Ryder Cup · Sherrill Park · Sat 8:40<br>
+Join: golfliveboard.app/RYD16<br><br>
+<span style="color: var(--meT); font-weight: 600">Team Andrew</span> v <span style="font-weight: 600">Team Josh</span><br>
+8:40 Andrew + Alex v Sean + Baker<br>
+8:50 Ant + Steve v Josh + Brandon<br>
+9:00 Justin + Chuck v Joseph + Jay<br>
+9:10 Mitch + Peter v Elijah + Marcus<br><br>
+<span style="color: var(--tx2)">New opponent every 6 holes. 12 matches, 6½ wins the cup.</span>
+</div>
+
+<div style="margin-top: 14px; padding: 12px 14px; border-radius: 16px; border: 1.5px dashed var(--warn); background: var(--warnBg); display: flex; gap: 10px; align-items: center">
+<div style="flex: 1"><div style="font-size: 15px; font-weight: 600; color: var(--warn)">Organizer only</div><div style="font-size: 13px; line-height: 18px; color: var(--tx2)">PIN 4471 · screenshot this, keep it private</div></div>
+<span class="mono" style="font-size: 20px; font-weight: 700">4471</span>
+</div>
+</div>
+
+<div style="flex: none; padding: 12px 16px 28px; background: var(--bg)">
+<a href="Board-empty.dc.html" style="display: flex; align-items: center; justify-content: center; height: 60px; border-radius: 18px; background: var(--btn); color: var(--btnT); font-size: 17px; font-weight: 600; text-decoration: none">Text the group</a>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"mode":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":393,"height":852}}'>
+class Component extends DCLogic {
+  renderVals() { return { mode: this.props.mode ?? 'dark' }; }
+}
+</script>
+</body>
+</html>

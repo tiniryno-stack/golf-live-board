@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Matches · hole by hole sheet</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&amp;family=Geist+Mono:wght@500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+.t{--bg:#0A0B0D;--s1:#15171B;--s2:#1F2227;--s3:#2A2E35;--tx:#F4F5F7;--tx2:#A7ACB4;--ln:#2B2F36;--me:#3DDC84;--meT:#3DDC84;--dbl:#FF6B6B;--dblBg:rgba(255,107,107,0.16);--scrim:rgba(0,0,0,0.6);--sheet:0 -8px 32px rgba(0,0,0,.5)}
+.t.light{--bg:#F2F3F5;--s1:#FFFFFF;--s2:#E8EAEE;--s3:#FFFFFF;--tx:#0B0D10;--tx2:#4F555E;--ln:#D5D9DF;--me:#12A35C;--meT:#0A7A43;--dbl:#B42318;--dblBg:rgba(180,35,24,0.10);--scrim:rgba(11,13,16,0.35);--sheet:0 -8px 32px rgba(11,13,16,.16)}
+.mono{font-family:'Geist Mono',ui-monospace,monospace}
+button{font:inherit;color:inherit;cursor:pointer}
+</style>
+</helmet>
+<div class="t {{mode}}" style="width: 393px; height: 852px; box-sizing: border-box; background: var(--bg); color: var(--tx); font-family: 'Geist', system-ui, sans-serif; position: relative; overflow: hidden">
+
+<div style="padding: 22px 20px 0; opacity: 0.5">
+<div class="mono" style="font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: 1px; color: var(--meT)">HOLES 13–18 · LIVE</div>
+<div style="font-size: 32px; line-height: 36px; font-weight: 800; letter-spacing: -1px; margin-top: 4px">vs Joseph + Jay</div>
+<div style="font-size: 15px; line-height: 20px; color: var(--tx2); margin-top: 4px">They’re in the 3rd tee time</div>
+<div style="margin: 18px -4px 0; background: var(--s1); border-radius: 24px; padding: 22px 16px 18px; text-align: center">
+<div style="font-size: 15px; font-weight: 600; color: var(--meT)">Andrew + Alex</div>
+<div class="mono" style="font-size: 64px; line-height: 64px; font-weight: 700; letter-spacing: -2px; color: var(--meT); margin-top: 6px">UP 2</div>
+</div>
+</div>
+
+<div style="position: absolute; inset: 0; background: var(--scrim)"></div>
+
+<div style="position: absolute; left: 0; right: 0; bottom: 0; background: var(--s1); border-radius: 28px 28px 0 0; box-shadow: var(--sheet); padding: 8px 0 24px">
+<div style="width: 40px; height: 5px; border-radius: 3px; background: var(--ln); margin: 0 auto 10px"></div>
+<div style="display: flex; align-items: center; padding: 0 8px 0 20px">
+<div style="flex: 1">
+<div style="font-size: 20px; line-height: 24px; font-weight: 800; letter-spacing: -0.4px">Hole by hole</div>
+<div style="font-size: 13px; line-height: 18px; color: var(--tx2)">Net scores · low ball 1 pt · low total 1 pt</div>
+</div>
+<button aria-label="Close" style="width: 48px; height: 48px; border-radius: 24px; border: 0; background: var(--s2); display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+</div>
+
+<div class="mono" style="display: grid; grid-template-columns: 44px 1fr 1fr 64px; gap: 8px; padding: 16px 20px 6px; font-size: 12px; letter-spacing: 1px; font-weight: 600; color: var(--tx2)">
+<div>HOLE</div>
+<div style="color: var(--meT)">ANDREW · ALEX</div>
+<div>JOSEPH · JAY</div>
+<div style="text-align: right">MATCH</div>
+</div>
+
+<sc-for list="{{holes}}" as="h" hint-placeholder-count="6">
+<div style="display: grid; grid-template-columns: 44px 1fr 1fr 64px; gap: 8px; align-items: center; min-height: 64px; margin: 0 20px; border-top: 1px solid var(--ln)">
+<div><div class="mono" style="font-size: 17px; font-weight: 700; line-height: 20px">{{h.n}}</div><div style="font-size: 12px; color: var(--tx2)">par {{h.par}}</div></div>
+<div style="display: flex; align-items: center; gap: 6px">
+<span class="mono" style="{{h.a1}}">{{h.a1v}}</span><span class="mono" style="{{h.a2}}">{{h.a2v}}</span>
+<span style="{{h.aWin}}"></span>
+</div>
+<div style="display: flex; align-items: center; gap: 6px">
+<span class="mono" style="{{h.j1}}">{{h.j1v}}</span><span class="mono" style="{{h.j2}}">{{h.j2v}}</span>
+<span style="{{h.jWin}}"></span>
+</div>
+<div style="text-align: right">
+<div class="mono" style="{{h.runSt}}">{{h.run}}</div>
+<div style="font-size: 12px; color: var(--tx2); white-space: nowrap">{{h.pts}}</div>
+</div>
+</div>
+</sc-for>
+
+<div style="display: flex; gap: 16px; justify-content: center; margin-top: 14px; font-size: 13px; color: var(--tx2)">
+<span style="display: flex; align-items: center; gap: 6px"><span style="width: 8px; height: 8px; border-radius: 4px; background: var(--me)"></span>Took the hole</span>
+<span style="display: flex; align-items: center; gap: 6px"><span style="width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--tx); box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; font-size: 11px" class="mono">3</span>Birdie</span>
+<span style="display: flex; align-items: center; gap: 6px"><span style="width: 22px; height: 22px; border-radius: 4px; border: 2px solid var(--tx2); box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; font-size: 11px" class="mono">5</span>Bogey</span>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"mode":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":393,"height":852}}'>
+class Component extends DCLogic {
+  mark(v, par) {
+    var base = 'width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700; box-sizing: border-box; ';
+    if (v == null) return base + 'border: 2px dashed var(--ln); border-radius: 50%; color: var(--tx2)';
+    var d = v - par;
+    if (d <= -2) return base + 'border: 5px double var(--tx); border-radius: 50%';
+    if (d === -1) return base + 'border: 2px solid var(--tx); border-radius: 50%';
+    if (d === 0) return base;
+    if (d === 1) return base + 'border: 2px solid var(--tx2); border-radius: 5px';
+    return base + 'border: 5px double var(--dbl); border-radius: 5px; background: var(--dblBg); color: var(--dbl)';
+  }
+  renderVals() {
+    var self = this;
+    var dot = 'width: 8px; height: 8px; border-radius: 4px; margin-left: 2px; flex: none; ';
+    var data = [
+      { n: 13, par: 5, a: [4, 5], j: [5, 5], lb: 'a', lt: 'a', run: 'UP 2', pts: '2–0' },
+      { n: 14, par: 4, a: [5, 5], j: [4, 5], lb: 'j', lt: 'j', run: 'AS', pts: '0–2' },
+      { n: 15, par: 3, a: [3, 4], j: [3, 5], lb: 'p', lt: 'a', run: 'UP 1', pts: '1½–½' },
+      { n: 16, par: 4, a: [4, 5], j: [4, 6], lb: 'p', lt: 'a', run: 'UP 2', pts: '1½–½' },
+      { n: 17, par: 4, a: [4, null], j: [null, null], lb: 'live', lt: 'live', run: 'now', pts: 'playing' },
+      { n: 18, par: 5, a: [null, null], j: [null, null], lb: 0, lt: 0, run: '–', pts: '' }
+    ];
+    return {
+      mode: this.props.mode ?? 'dark',
+      holes: data.map(function (h) {
+        var aPts = (h.lb === 'a' ? 1 : h.lb === 'p' ? .5 : 0) + (h.lt === 'a' ? 1 : h.lt === 'p' ? .5 : 0);
+        var jPts = (h.lb === 'j' ? 1 : h.lb === 'p' ? .5 : 0) + (h.lt === 'j' ? 1 : h.lt === 'p' ? .5 : 0);
+        var live = h.lb === 'live' || !h.lb;
+        return {
+          n: h.n, par: h.par,
+          a1: self.mark(h.a[0], h.par), a1v: h.a[0] == null ? '' : h.a[0],
+          a2: self.mark(h.a[1], h.par), a2v: h.a[1] == null ? '' : h.a[1],
+          j1: self.mark(h.j[0], h.par), j1v: h.j[0] == null ? '' : h.j[0],
+          j2: self.mark(h.j[1], h.par), j2v: h.j[1] == null ? '' : h.j[1],
+          aWin: dot + (!live && aPts > jPts ? 'background: var(--me)' : 'display: none'),
+          jWin: dot + (!live && jPts > aPts ? 'background: var(--tx2)' : 'display: none'),
+          run: h.run, pts: h.pts,
+          runSt: 'font-size: 15px; font-weight: 700; ' + (h.run.indexOf('UP') === 0 ? 'color: var(--meT)' : live ? 'color: var(--tx2)' : 'color: var(--tx)')
+        };
+      })
+    };
+  }
+}
+</script>
+</body>
+</html>

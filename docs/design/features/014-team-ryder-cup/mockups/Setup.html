@@ -1,0 +1,145 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=393">
+<title>014 Setup · Team Ryder Cup</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&amp;family=Geist+Mono:wght@400;500;600;700&amp;display=swap">
+<link rel="stylesheet" href="tokens.css"><link rel="stylesheet" href="kit.css">
+<style>
+.head{padding:2px 20px 0}
+.gopt{display:flex;gap:12px;width:calc(100% - 32px);margin:8px 16px 0;padding:14px;border-radius:var(--radius-xl);background:var(--surface-1);text-align:left;box-shadow:var(--shadow-card);border:2px solid transparent}
+.gopt.on{background:var(--surface-2);border-color:var(--text)}
+.gopt.off{opacity:.55}
+.radio{width:22px;height:22px;border-radius:11px;border:2px solid var(--text-muted);flex:none;margin-top:1px;display:flex;align-items:center;justify-content:center}
+.gopt.on .radio{border-color:var(--text)}.gopt.on .radio::after{content:"";width:10px;height:10px;border-radius:5px;background:var(--text)}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 16px}
+.sidehd{display:flex;align-items:center;gap:6px;height:48px;padding:0 4px;font-size:17px;font-weight:700;text-align:left;width:100%}
+.cart{border-radius:var(--radius-lg);border:1.5px solid;padding:8px;margin-bottom:8px}
+.cart.y{background:var(--tint-you);border-color:var(--cart-you)}
+.cart.o{background:var(--tint-b);border-color:var(--cart-b)}
+.cart .tg{font-family:var(--font-mono);font-size:12px;line-height:16px;font-weight:600;letter-spacing:1px;padding:0 2px 6px}
+.cart.y .tg{color:var(--cart-you-text)}.cart.o .tg{color:var(--cart-b)}
+.pp{display:flex;gap:6px}
+.pp button{flex:1;min-width:0;height:48px;border-radius:var(--radius-md);background:var(--bg);font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 6px}
+html.light .pp button{background:var(--surface-1)}
+.pp button.sel{outline:2px solid var(--focus);outline-offset:2px}
+.linkrow{display:flex;align-items:center;gap:10px;width:calc(100% - 32px);margin:8px 16px 0;min-height:64px;padding:10px 12px 10px 14px;border-radius:var(--radius-xl);background:var(--surface-1);text-align:left;box-shadow:var(--shadow-card)}
+.tee{display:grid;grid-template-columns:62px minmax(0,1fr) 18px minmax(0,1fr);gap:6px;align-items:center;min-height:64px;padding:8px 12px;border-top:1px solid var(--line)}
+.tee:first-child{border-top:0}
+.tee .pchip{width:100%;justify-content:center;font-size:14px;padding:0 6px;overflow:hidden;text-overflow:ellipsis}
+.clock{display:inline-block;margin-top:2px;font-family:var(--font-mono);font-size:12px;padding:1px 6px;border-radius:6px;border:1px dashed var(--line);color:var(--text-muted)}
+.sched{display:grid;grid-template-columns:96px repeat(3,minmax(0,1fr));gap:0 6px;padding:4px 12px 8px}
+.sched > div{padding:8px 0;border-top:1px solid var(--line);font-size:13px;line-height:17px;font-weight:600}
+.sched .hd{font-family:var(--font-mono);font-size:12px;font-weight:600;color:var(--text-muted);letter-spacing:.6px;border-top:0}
+</style></head><body>
+<div class="screen" id="s"></div>
+<script src="kit.js"></script>
+<script>
+var step = K.q.get('step') || 'game';
+var game = 'ryder';
+var sides = { A: 'Team Andrew', J: 'Team Josh' };
+var roster = { // side -> carts -> [p1, p2]
+  A: [['Andrew', 'Alex'], ['Ant', 'Steve'], ['Justin', 'Chuck'], ['Mitch', 'Peter']],
+  J: [['Sean', 'Baker'], ['Josh', 'Brandon'], ['Joseph', 'Jay'], ['Elijah', 'Marcus']]
+};
+var tees = [0, 1, 2, 3]; // tee time i -> Team Josh cart index (Team Andrew cart i stays)
+var sel = null, sheet = false, toastMsg = '';
+function pair(s, i) { return roster[s][i].join(' + '); }
+
+function chrome(back, on, total) {
+  var bars = ''; for (var i = 0; i < total; i++) bars += '<i class="' + (i < on ? 'on' : '') + '"></i>';
+  return '<div class="stop"><a href="#" onclick="go(\'' + back[1] + '\');return false">' + K.icon('left', 22) + back[0] + '</a><div class="steps">' + bars + '</div><span style="width:72px"></span></div>';
+}
+function title(k, t, sub) { return '<div class="head"><div class="t-label muted">' + k + '</div><div class="t-title" style="margin-top:2px">' + t + '</div>' + (sub ? '<div class="t-body muted" style="margin-top:4px">' + sub + '</div>' : '') + '</div>'; }
+
+function gameStep() {
+  var G = [
+    ['scorecard', 'Scorecard only', 'ANY NUMBER', 'Everyone’s score on one live board.'],
+    ['match', 'Match play', '2–6 PLAYERS', 'Remove 10 players to play this.', 1],
+    ['2v2', '2v2', 'EXACTLY 4', 'Remove 12 players to play this.', 1],
+    ['carts', 'Partner “Rider” Cup', '6 OR 8 PLAYERS', 'Remove 8 players to play this.', 1],
+    ['ryder', 'Team Ryder Cup', 'EXACTLY 16', 'Two sides of 4 carts. Cart v cart, a new opponent every 6 holes. 12 matches, 6½ wins.']
+  ];
+  var h = chrome(['Players', 'game'], 3, 4) + title('STEP 3 · GAME · 16 PLAYERS', 'Pick a game', 'Games that don’t fit your player count are greyed out.') + '<div style="height:8px"></div>';
+  G.forEach(function (g) {
+    var on = game === g[0], off = g[4];
+    h += '<button class="gopt' + (on ? ' on' : '') + (off ? ' off' : '') + '"' + (off ? ' aria-disabled="true"' : ' onclick="game=\'' + g[0] + '\';draw()"') + '><span class="radio"></span><span style="flex:1;min-width:0">' +
+      '<span style="display:flex;justify-content:space-between;gap:8px"><span class="t-row">' + g[1] + '</span><span class="t-label muted" style="flex:none">' + g[2] + '</span></span>' +
+      '<span class="t-body muted" style="display:block;margin-top:2px">' + g[3] + '</span></span></button>';
+  });
+  h += '<div class="linkrow" style="min-height:56px"><span class="t-body" style="flex:1;font-weight:600">Max score per hole</span><span class="t-body muted">Double par</span>' + K.icon('right', 20, 'color:var(--text-muted)') + '</div>';
+  return '<div class="scroll" style="padding-bottom:16px">' + h + '</div>' +
+    '<div class="footer"><button class="btn-primary" onclick="go(\'sides\')">' + (game === 'ryder' ? 'Next: pick sides' : 'Start round · 16 players') + '</button></div>';
+}
+
+function sideCol(s) {
+  var y = s === 'A';
+  var h = '<div><button class="sidehd" onclick="sheet=\'' + s + '\';draw()" style="color:' + (y ? 'var(--cart-you-text)' : 'var(--cart-b)') + '"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + sides[s] + '</span>' +
+    '<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M4 20h4L19 9l-4-4L4 16v4z"/></svg></button>';
+  roster[s].forEach(function (c, i) {
+    h += '<div class="cart ' + (y ? 'y' : 'o') + '"><div class="tg">CART ' + (i + 1) + (y && i === 0 ? ' · YOU' : '') + '</div><div class="pp">' +
+      c.map(function (p, k) { var id = s + i + k; return '<button class="' + (sel === id ? 'sel' : '') + '" onclick="tapName(\'' + id + '\')">' + p + '</button>'; }).join('') + '</div></div>';
+  });
+  return h + '</div>';
+}
+function sidesStep() {
+  var h = chrome(['Game', 'game'], 4, 4) + title('STEP 4 · TEAM RYDER CUP', 'Pick sides') +
+    '<div style="display:flex;align-items:center;gap:8px;margin:6px 20px 4px"><div class="hint" style="flex:1">' + K.icon('bulb', 16) + '<span>' + (sel ? 'Now tap the name to swap with.' : 'Paired in list order. Tap two names to swap.') + '</span></div>' +
+    '<button class="btn-ghost" onclick="shuffle()" style="display:flex;align-items:center;gap:6px">' + K.icon('shuffle', 18) + 'Shuffle</button></div>' +
+    '<div class="cols">' + sideCol('A') + sideCol('J') + '</div>' +
+    '<button class="linkrow" onclick="go(\'tees\')"><span style="flex:1;min-width:0"><span class="t-row" style="display:block">Tee times &amp; matches</span>' +
+    '<span class="t-small muted" style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">1st: ' + pair('A', 0) + ' v ' + pair('J', tees[0]) + ' · 12 matches</span></span><span class="t-small muted">Optional</span>' + K.icon('right', 20, 'color:var(--text-muted);flex:none') + '</button>';
+  return '<div class="scroll" style="padding-bottom:16px">' + h + '</div><div class="footer"><button class="btn-primary">Start round · 16 players</button></div>';
+}
+
+function teesStep() {
+  var o = ['1st', '2nd', '3rd', '4th'], times = ['8:40', '8:50', '9:00', ''];
+  var h = chrome(['Sides', 'sides'], 4, 4) + title('OPTIONAL · DEFAULTS ARE SET', 'Tee times', 'Each tee time is one cart from each side.') +
+    '<div class="sec" style="padding-top:14px"><span class="t-label muted">GROUPS</span><button class="btn-ghost" style="height:32px;font-size:13px" onclick="toast(\'Tap a time to set it\')">Set times</button></div>' +
+    '<div class="card" style="margin:0 16px">';
+  for (var i = 0; i < 4; i++) {
+    var j = tees[i], id = 'T' + i;
+    h += '<div class="tee"><div><div class="t-body" style="font-weight:600">' + o[i] + '</div>' + (times[i] ? '<span class="clock" style="border-style:solid;color:var(--text)">' + times[i] + '</span>' : '<span class="clock">Add</span>') + '</div>' +
+      '<span class="pchip y">' + pair('A', i) + '</span><span class="t-small muted" style="text-align:center">v</span>' +
+      '<button class="pchip o' + (sel === id ? ' sel' : '') + '" onclick="tapTee(' + i + ')">' + pair('J', j) + '</button></div>';
+  }
+  h += '</div><div class="hint" style="margin:10px 20px 0">' + K.icon('bulb', 16) + '<span>' + (sel ? 'Now tap the Team Josh cart to swap with.' : 'Tap two Team Josh carts to swap their tee times. Nobody changes groups during the round unless the organizer sets a new lineup.') + '</span></div>';
+  // schedule
+  h += '<div class="sec"><span class="t-label muted">12 MATCHES · 1 POINT EACH</span><span class="t-label muted">6½ WINS</span></div><div class="card" style="margin:0 16px"><div class="sched"><div class="hd"></div><div class="hd">1–6</div><div class="hd">7–12</div><div class="hd">13–18</div>';
+  for (i = 0; i < 4; i++) {
+    h += '<div style="color:var(--cart-you-text)">' + pair('A', i) + (i === 0 ? ' <span class="t-label" style="font-size:12px">YOU</span>' : '') + '</div>';
+    for (var r = 0; r < 3; r++) { var t = (i + r) % 4; h += '<div style="color:var(--cart-b)">' + pair('J', tees[t]) + '</div>'; }
+  }
+  h += '</div></div><div class="t-small muted" style="margin:8px 20px 0">Holes 1–6 against the cart in your tee time. Holes 7–18 against a cart in another tee time, scored from the app.</div>';
+  h += '<div class="linkrow" style="min-height:56px;margin-top:14px"><span style="flex:1;min-width:0"><span class="t-body" style="display:block;font-weight:600">Rules</span><span class="t-small muted" style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Low ball + low total decide each match · ½ for a halved match</span></span>' + K.icon('right', 20, 'color:var(--text-muted);flex:none') + '</div>';
+  return '<div class="scroll" style="padding-bottom:16px">' + h + '</div><div class="footer"><button class="btn-primary">Start round · 16 players</button></div>';
+}
+
+function renameSheet() {
+  if (!sheet) return '';
+  return '<div class="scrim" onclick="sheet=false;draw()"></div><div class="sheet"><div class="grab"></div>' +
+    '<div style="display:flex;align-items:center;padding:0 8px 0 20px"><div style="flex:1"><div style="font-size:20px;font-weight:800;letter-spacing:-.4px">Name this side</div><div class="t-small muted">Shows on the Board and in headlines</div></div>' +
+    '<button class="iconbtn" style="background:var(--surface-2);box-shadow:none" aria-label="Close" onclick="sheet=false;draw()">' + K.icon('x', 20) + '</button></div>' +
+    '<div style="padding:16px 20px 0"><div class="t-small" style="font-weight:600;margin-bottom:6px">Side name</div>' +
+    '<div style="height:52px;border-radius:var(--radius-md);background:var(--surface-1);border:1.5px solid var(--text);outline:2px solid var(--focus);outline-offset:2px;display:flex;align-items:center;padding:0 14px" class="t-row">' + sides[sheet] + '<span style="width:2px;height:22px;background:var(--text);margin-left:2px"></span></div>' +
+    '<div class="t-small muted" style="margin-top:8px">Default is “Team” plus the first player’s name.</div></div>' +
+    '<div class="footer" style="background:transparent;padding-top:20px"><button class="btn-primary" onclick="sheet=false;draw()">Done</button></div></div>';
+}
+
+function draw() {
+  var h = step === 'game' ? gameStep() : step === 'sides' ? sidesStep() : teesStep();
+  document.getElementById('s').innerHTML = h + renameSheet() + '<div class="toast' + (toastMsg ? '' : ' hide') + '" style="bottom:110px">' + K.icon('check', 20) + toastMsg + '</div>';
+}
+function go(s) { step = s; sel = null; draw(); }
+function tapName(id) {
+  if (!sel) { sel = id; draw(); return; }
+  if (sel === id) { sel = null; draw(); return; }
+  var a = roster[sel[0]][+sel[1]], b = roster[id[0]][+id[1]], t = a[+sel[2]]; a[+sel[2]] = b[+id[2]]; b[+id[2]] = t;
+  sel = null; draw(); toast('Swapped');
+}
+function tapTee(i) {
+  if (sel === null) { sel = 'T' + i; draw(); return; }
+  var k = +sel.slice(1); sel = null; if (k !== i) { var t = tees[k]; tees[k] = tees[i]; tees[i] = t; toast('Swapped tee times'); } else draw();
+}
+function shuffle() { roster.J.push(roster.J.shift()); draw(); toast('Shuffled carts'); }
+var tt; function toast(m) { toastMsg = m; draw(); clearTimeout(tt); tt = setTimeout(function () { toastMsg = ''; draw(); }, 2000); }
+if (K.q.get('sheet')) sheet = 'A';
+draw();
+</script></body></html>

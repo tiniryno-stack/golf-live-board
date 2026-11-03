@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Board v2 · Ryder Cup scan</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&amp;family=Geist+Mono:wght@500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+.t{--bg:#0A0B0D;--s1:#15171B;--s2:#1F2227;--s3:#2A2E35;--tx:#F4F5F7;--tx2:#A7ACB4;--ln:#2B2F36;--me:#3DDC84;--meT:#3DDC84;--glass:rgba(24,26,31,0.72);--glassLn:rgba(255,255,255,0.09);--dock:inset 0 1px 0 rgba(255,255,255,.10),0 0 28px rgba(255,255,255,.06);--card:none}
+.t.light{--bg:#F2F3F5;--s1:#FFFFFF;--s2:#E8EAEE;--s3:#FFFFFF;--tx:#0B0D10;--tx2:#4F555E;--ln:#D5D9DF;--me:#12A35C;--meT:#0A7A43;--glass:rgba(255,255,255,0.74);--glassLn:rgba(11,13,16,0.08);--dock:0 8px 24px rgba(11,13,16,.12);--card:0 1px 2px rgba(11,13,16,.06),0 10px 28px rgba(11,13,16,.09)}
+.mono{font-family:'Geist Mono',ui-monospace,monospace}
+a{color:inherit}
+</style>
+</helmet>
+<div class="t {{mode}}" style="width: 393px; height: 852px; box-sizing: border-box; background: var(--bg); color: var(--tx); font-family: 'Geist', system-ui, sans-serif; position: relative; overflow: hidden">
+
+<nav aria-label="Round" style="position: absolute; left: 16px; right: 16px; bottom: 20px; z-index: 10; display: flex; padding: 6px; border-radius: 34px; background: var(--glass); -webkit-backdrop-filter: blur(22px) saturate(1.8); backdrop-filter: blur(22px) saturate(1.8); border: 1px solid var(--glassLn); box-shadow: var(--dock)">
+<a href="Matches-v2c.dc.html" aria-label="Enter" style="flex: 1; height: 56px; border-radius: 28px; display: flex; align-items: center; justify-content: center; color: var(--tx2)"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4h11l-2 4 2 4H5"></path></svg></a>
+<a href="Matches-v2c.dc.html" aria-label="Matches" style="flex: 1; height: 56px; border-radius: 28px; display: flex; align-items: center; justify-content: center; color: var(--tx2)"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8.5" cy="12" r="5"></circle><circle cx="15.5" cy="12" r="5"></circle></svg></a>
+<a href="Board-v2.dc.html" aria-label="Board" aria-current="page" style="flex: 1; height: 56px; border-radius: 28px; display: flex; align-items: center; justify-content: center; background: var(--s3); color: var(--tx)"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h11M4 18h7"></path></svg></a>
+<a href="Main.dc.html" aria-label="Card" style="flex: 1; height: 56px; border-radius: 28px; display: flex; align-items: center; justify-content: center; color: var(--tx2)"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M3 10h18M3 15h18M9 4v16M15 4v16"></path></svg></a>
+</nav>
+
+<div style="height: 852px; overflow-y: auto; box-sizing: border-box; padding: 14px 16px 120px">
+
+<div style="display: flex; align-items: center; height: 48px; padding: 0 4px; font-size: 32px; line-height: 36px; font-weight: 800; letter-spacing: -1px">Board</div>
+
+<div style="margin-top: 12px; background: var(--s1); border-radius: 24px; padding: 16px 16px 14px; box-shadow: var(--card)">
+<div style="display: flex; justify-content: space-between; align-items: flex-end">
+<div><div style="font-size: 14px; font-weight: 600; color: var(--meT)">Team Andrew</div><div class="mono" style="font-size: 48px; line-height: 48px; font-weight: 700; letter-spacing: -1.5px; color: var(--meT); margin-top: 2px">{{cupA}}</div></div>
+<div class="mono" style="{{cupLineSt}}">{{cupLine}}</div>
+<div style="text-align: right"><div style="font-size: 14px; font-weight: 600; color: var(--tx2)">Team Josh</div><div class="mono" style="font-size: 48px; line-height: 48px; font-weight: 700; letter-spacing: -1.5px; margin-top: 2px">{{cupJ}}</div></div>
+</div>
+<div style="position: relative; display: flex; gap: 12px; margin-top: 14px">
+<div style="flex: 1; display: flex; gap: 3px"><sc-for list="{{bar.left}}" as="s" hint-placeholder-count="6"><div style="{{s.st}}"></div></sc-for></div>
+<div style="flex: 1; display: flex; gap: 3px"><sc-for list="{{bar.right}}" as="s" hint-placeholder-count="6"><div style="{{s.st}}"></div></sc-for></div>
+<div style="position: absolute; left: 50%; top: -5px; bottom: -5px; width: 2px; margin-left: -1px; border-radius: 1px; background: var(--tx)"></div>
+</div>
+<sc-if value="{{isFinal}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; align-items: center; gap: 10px; margin-top: 16px">
+<svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--meT); flex: none"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4zM7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3"></path></svg>
+<div style="flex: 1; font-size: 15px; line-height: 20px; font-weight: 600"><span style="color: var(--meT)">Andrew + Alex</span> 3–0 · MVP cart</div>
+<a href="#recap" style="height: 40px; padding: 0 14px; border-radius: 12px; background: var(--s2); font-size: 14px; font-weight: 600; display: flex; align-items: center; text-decoration: none">Recap</a>
+</div>
+</sc-if>
+</div>
+
+
+<sc-for list="{{groups}}" as="g" hint-placeholder-count="3">
+<button onClick="{{g.toggle}}" style="{{g.hdSt}}">
+<div style="{{g.labelSt}}">{{g.label}}</div>
+<div style="text-align: center"><span class="mono" style="{{g.tallySt}}"><span style="color: var(--meT)">{{g.a}}</span><span style="color: var(--tx2)"> – {{g.j}}</span></span></div>
+<div style="display: flex; align-items: center; justify-content: flex-end; gap: 8px"><span class="mono" style="{{g.rightSt}}">{{g.right}}</span><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="{{g.chev}}"><path d="M6 9l6 6 6-6"></path></svg></div>
+</button>
+<div style="{{g.bodySt}}">
+<sc-for list="{{g.rows}}" as="r" hint-placeholder-count="4">
+<div style="display: grid; grid-template-columns: 1fr 0px 1fr; align-items: stretch; min-height: 54px; padding: 0 4px; position: relative">
+<div style="{{r.aSt}}"><span>{{r.a1}}</span><span>{{r.a2}}</span></div>
+<div style="{{r.slot}}"><span style="{{r.badge}}"><svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="{{r.check}}"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>{{r.txt}}</span></div>
+<div style="{{r.jSt}}"><span>{{r.j1}}</span><span>{{r.j2}}</span></div>
+</div>
+</sc-for>
+</div>
+</sc-for>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"mode":{"editor":"enum","options":["dark","light"],"default":"dark"},"time":{"editor":"enum","options":["empty","early","mid","late","final"],"default":"empty","section":"Round"},"$preview":{"width":393,"height":852}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { open: {} }; }
+  bar(a, j) {
+    var out = [], fa = Math.floor(a), fj = Math.floor(j);
+    for (var i = 0; i < 12; i++) {
+      var bg = 'var(--s2)';
+      if (i < fa) bg = 'var(--me)'; else if (a % 1 && i === fa) bg = 'linear-gradient(90deg, var(--me) 50%, var(--s2) 50%)';
+      if (i >= 12 - fj) bg = 'var(--tx2)'; else if (j % 1 && i === 11 - fj) bg = 'linear-gradient(90deg, var(--s2) 50%, var(--tx2) 50%)';
+      out.push({ st: 'flex: 1; height: 12px; border-radius: 3px; background: ' + bg });
+    }
+    return { left: out.slice(0, 6), right: out.slice(6) };
+  }
+  renderVals() {
+    var self = this, time = this.props.time ?? 'late';
+    var fr = function (n) { var w = Math.floor(n); return (w || n % 1 === 0 ? w : '') + (n % 1 ? '½' : ''); };
+    // lean: a | j | c (square) | n (not started)
+    function row(a, j, txt, lean, you, done) {
+      var win = lean === 'a' || lean === 'j', tied = lean === 'c';
+      var badge = 'display: inline-flex; align-items: center; justify-content: center; width: 72px; height: 26px; padding: 0 4px; font-family: \'Geist Mono\', monospace; font-size: 12px; font-weight: 700; white-space: nowrap; box-sizing: border-box; position: relative; z-index: 2; flex: none; ';
+      badge += 'gap: 4px; ';
+      var fill = done ? (tied ? 'color: var(--tx2); background: var(--s2)' : 'color: var(--tx); background: var(--s3)') : 'color: var(--bg); background: var(--tx)';
+      if (lean === 'a') badge += fill + '; border-radius: 8px 0 0 8px';
+      else if (lean === 'j') badge += fill + '; border-radius: 0 8px 8px 0';
+      else if (lean === 'c') badge += fill + '; border-radius: 8px';
+      else badge += 'color: var(--tx2); background: var(--bg); border: 1px dashed var(--ln); border-radius: 8px';
+      var slot = 'display: flex; align-items: center; position: relative; z-index: 2; overflow: visible; justify-content: ' + (lean === 'a' ? 'flex-end' : lean === 'j' ? 'flex-start' : 'center');
+      var cell = 'display: flex; flex-direction: column; justify-content: center; margin: 6px 0; font-size: 13px; line-height: 16px; font-weight: 600; min-width: 0; white-space: nowrap; overflow: hidden; ';
+      return {
+        a1: a.split(' + ')[0], a2: a.split(' + ')[1], j1: j.split(' + ')[0], j2: j.split(' + ')[1], txt: txt, slot: slot, badge: badge, check: done ? '' : 'display: none',
+        aSt: cell + 'padding: 0 ' + (lean === 'a' ? '76px' : '8px') + ' 0 8px; border-radius: 12px 0 0 12px; ' + (lean === 'a' ? 'background: var(--s1); ' : '') + 'color: ' + (you ? 'var(--meT)' : lean === 'j' && win ? 'var(--tx2)' : 'var(--tx)'),
+        jSt: cell + 'align-items: flex-end; padding: 0 8px 0 ' + (lean === 'j' ? '76px' : '8px') + '; border-radius: 0 12px 12px 0; ' + (lean === 'j' ? 'background: var(--s1); ' : '') + 'color: ' + (lean === 'a' && win ? 'var(--tx2)' : 'var(--tx)')
+      };
+    }
+    var R1 = [row('Andrew + Alex', 'Sean + Baker', '7–5', 'a', true, true), row('Ant + Steve', 'Josh + Brandon', '6½–5½', 'a', false, true), row('Justin + Chuck', 'Joseph + Jay', '4–8', 'j', false, true), row('Mitch + Peter', 'Elijah + Marcus', '7–5', 'a', false, true)];
+    var R2 = [row('Andrew + Alex', 'Josh + Brandon', '7½–4½', 'a', true, true), row('Ant + Steve', 'Joseph + Jay', '6–6', 'c', false, true), row('Justin + Chuck', 'Elijah + Marcus', '4–8', 'j', false, true), row('Mitch + Peter', 'Sean + Baker', '7–3', 'a', false, true)];
+    var R3 = [row('Andrew + Alex', 'Joseph + Jay', '2 UP', 'a', true), row('Justin + Chuck', 'Sean + Baker', '6½–1½', 'j', false, true), row('Ant + Steve', 'Elijah + Marcus', 'on 12', 'n'), row('Mitch + Peter', 'Josh + Brandon', 'on 12', 'n')];
+    var U2 = [row('Andrew + Alex', 'Josh + Brandon', '–', 'n', true), row('Ant + Steve', 'Joseph + Jay', '–', 'n'), row('Justin + Chuck', 'Elijah + Marcus', '–', 'n'), row('Mitch + Peter', 'Sean + Baker', '–', 'n')];
+    var U3 = [row('Andrew + Alex', 'Joseph + Jay', '–', 'n', true), row('Justin + Chuck', 'Sean + Baker', '–', 'n'), row('Ant + Steve', 'Elijah + Marcus', '–', 'n'), row('Mitch + Peter', 'Josh + Brandon', '–', 'n')];
+    var U1 = [row('Andrew + Alex', 'Sean + Baker', '8:40', 'n', true), row('Ant + Steve', 'Josh + Brandon', '8:50', 'n'), row('Justin + Chuck', 'Joseph + Jay', '9:00', 'n'), row('Mitch + Peter', 'Elijah + Marcus', '9:10', 'n')];
+    var R3F = [row('Andrew + Alex', 'Joseph + Jay', '7–5', 'a', true, true), row('Justin + Chuck', 'Sean + Baker', '6½–1½', 'j', false, true), row('Ant + Steve', 'Elijah + Marcus', '4½–7½', 'j', false, true), row('Mitch + Peter', 'Josh + Brandon', '6–6', 'c', false, true)];
+    var T = {
+      empty: { a: 0, j: 0, line: '12 MATCHES · 6½ WINS', g: [
+        { k: 'next', label: 'HOLES 1–6', rows: U1, openDefault: true }, { k: 'next', label: 'HOLES 7–12', rows: U2 }, { k: 'next', label: 'HOLES 13–18', rows: U3 }] },
+      final: { a: 7, j: 5, line: 'FINAL', final: true, g: [
+        { k: 'done', label: 'HOLES 13–18', a: 1.5, j: 2.5, rows: R3F },
+        { k: 'done', label: 'HOLES 7–12', a: 2.5, j: 1.5, rows: R2 }, { k: 'done', label: 'HOLES 1–6', a: 3, j: 1, rows: R1 }] },
+      early: { a: 0, j: 0, left: 12, g: [
+        { k: 'live', label: 'HOLES 1–6', a: 0, j: 0, rows: [row('Andrew + Alex', 'Sean + Baker', '2 UP', 'a', true), row('Ant + Steve', 'Josh + Brandon', '3–3', 'c'), row('Justin + Chuck', 'Joseph + Jay', '1½ UP', 'j'), row('Mitch + Peter', 'Elijah + Marcus', '9:10', 'n')] },
+        { k: 'next', label: 'HOLES 7–12', rows: U2 }, { k: 'next', label: 'HOLES 13–18', rows: U3 }] },
+      mid: { a: 2, j: 1, left: 9, g: [
+        { k: 'live', label: 'HOLES 7–12', a: 0, j: 0, rows: [row('Andrew + Alex', 'Josh + Brandon', '½ UP', 'a', true), row('Ant + Steve', 'Joseph + Jay', '4–4', 'c'), row('Justin + Chuck', 'Elijah + Marcus', '3 UP', 'j'), row('Mitch + Peter', 'Sean + Baker', 'on 6', 'n')] },
+        { k: 'live', label: 'HOLES 1–6', a: 2, j: 1, rows: [R1[0], R1[1], R1[2], row('Mitch + Peter', 'Elijah + Marcus', '2½ UP', 'a')] }, { k: 'next', label: 'HOLES 13–18', rows: U3 }] },
+      late: { a: 5.5, j: 3.5, left: 3, g: [
+        { k: 'live', label: 'HOLES 13–18', a: 0, j: 1, rows: R3 },
+        { k: 'done', label: 'HOLES 7–12', a: 2.5, j: 1.5, rows: R2 }, { k: 'done', label: 'HOLES 1–6', a: 3, j: 1, rows: R1 }] }
+    }[time];
+    return {
+      mode: this.props.mode ?? 'dark',
+      cupA: fr(T.a), cupJ: fr(T.j), cupLine: T.line || (T.left + ' LEFT · 6½ WINS'), isFinal: !!T.final,
+      cupLineSt: 'font-size: 12px; font-weight: 600; letter-spacing: 1px; padding-bottom: 14px; text-align: center; color: ' + (T.final ? 'var(--meT)' : 'var(--tx2)'),
+      bar: this.bar(T.a, T.j),
+      groups: T.g.map(function (g) {
+        var live = g.k === 'live', next = g.k === 'next', open = !next || (self.state.open[g.label] == null ? !!g.openDefault : !!self.state.open[g.label]);
+        return {
+          label: g.label, a: fr(g.a || 0), j: fr(g.j || 0), right: live ? 'LIVE' : next ? '' : 'DONE',
+          chev: 'color: var(--tx2); flex: none; transition: transform 300ms ease; transform: rotate(' + (open ? 180 : 0) + 'deg); ' + (next ? '' : 'display: none'),
+          toggle: function () { if (!next) return; var o = Object.assign({}, self.state.open); o[g.label] = !open; self.setState({ open: o }); },
+          hdSt: 'display: grid; grid-template-columns: 1fr 72px 1fr; align-items: center; width: 100%; min-height: 40px; padding: 0 14px; border: 1px solid var(--ln); border-radius: 10px; background: transparent; color: inherit; font: inherit; text-align: left; margin-top: ' + (live ? 14 : 20) + 'px; ' + (next ? 'cursor: pointer' : 'cursor: default'),
+          labelSt: 'font-family: \'Geist Mono\', monospace; font-weight: 600; letter-spacing: 1px; font-size: 12px; color: ' + (live ? 'var(--tx)' : 'var(--tx2)'),
+          tallySt: 'font-size: 13px; font-weight: 700; ' + (next ? 'display: none' : ''),
+          rightSt: 'font-size: 12px; font-weight: 600; letter-spacing: 1px; text-align: right; color: ' + (live ? 'var(--meT)' : 'var(--tx2)'),
+          bodySt: 'position: relative; margin-top: 4px; ' + (open ? '' : 'display: none') + (g.k === 'done' ? '; opacity: .85' : '') + (next ? '; opacity: .7' : ''),
+          rows: g.rows || []
+        };
+      })
+    };
+  }
+}
+</script>
+</body>
+</html>

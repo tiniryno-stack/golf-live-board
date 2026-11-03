@@ -1,0 +1,120 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=393">
+<title>014 Board · Team Ryder Cup</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&amp;family=Geist+Mono:wght@400;500;600;700&amp;display=swap">
+<link rel="stylesheet" href="tokens.css"><link rel="stylesheet" href="kit.css">
+<style>
+.cupnames{display:flex;justify-content:space-between;align-items:flex-end;margin-top:10px}
+.cupnum{display:flex;justify-content:space-between;align-items:flex-start;margin-top:6px}
+.cupnum .side{min-width:110px}
+.ticker{margin:12px 16px 0;border-radius:var(--radius-lg);padding:12px 14px;display:flex;gap:10px;align-items:flex-start;border:1px solid}
+.trophy{margin:12px 16px 0;border-radius:var(--radius-xl);padding:16px;background:var(--tint-you);border:1.5px solid var(--cart-you)}
+.list{margin:0 16px}
+.watchbox{border:1px solid var(--line);border-radius:var(--radius-lg);margin:2px 0}
+.watchbox .mrow{border-top:0}
+.wlabel{padding:10px 12px 0}
+.empty{margin:4px 16px 0;border:1.5px dashed var(--line);border-radius:var(--radius-xl);padding:16px;display:flex;gap:12px;align-items:center}
+.empty .ic{width:56px;height:56px;border-radius:28px;background:var(--surface-2);display:flex;align-items:center;justify-content:center;flex:none;color:var(--text-muted)}
+</style></head><body>
+<div class="screen" id="s"></div>
+<script src="kit.js"></script>
+<script>
+var state = K.q.get('state') || 'live';
+var open = K.q.get('open') || null; // index of an expanded match
+var view = 'cup';
+var M = K.matches(state), T = K.tally(M);
+
+function hero() {
+  var kick, sub = '', nums;
+  var Aw = T.A / 12 * 100, Jw = T.J / 12 * 100, Ap = T.Aprov / 12 * 100, Jp = T.Jprov / 12 * 100;
+  var bar = '<div style="position:relative;margin:24px 4px 0">' +
+    '<div class="t-label muted" style="position:absolute;left:50%;transform:translateX(-50%);top:-22px;white-space:nowrap">6½ WINS</div>' +
+    '<div class="race">' +
+      '<div class="fill l" style="width:' + (Aw - Ap) + '%;background:var(--cart-you)"></div>' +
+      (Ap ? '<div class="fill hatch" style="--c:var(--cart-you);width:' + Ap + '%"></div>' : '') +
+      '<div style="flex:1"></div>' +
+      (Jp ? '<div class="fill hatch" style="--c:var(--cart-b);width:' + Jp + '%"></div>' : '') +
+      '<div class="fill r" style="width:' + (Jw - Jp) + '%;background:var(--cart-b)"></div>' +
+      '<div class="mid"></div></div></div>';
+  if (state === 'empty') {
+    kick = '<span class="muted">THE CUP · WAITING FOR THE FIRST SCORES</span>';
+    nums = '<div style="text-align:center;margin:8px 0 14px" class="t-body muted">12 matches · 1 point each · 6½ wins</div>';
+    sub = '<div class="t-body muted" style="text-align:center;margin-top:12px">Past the middle wins the cup</div>';
+  } else {
+    var prov = function (n) { return n ? '<div style="margin-top:6px"><span class="prov">+' + K.fr(n) + ' prov</span></div>' : ''; };
+    nums = '<div class="cupnum"><div class="side"><div class="t-xl you">' + K.fr(T.A) + '</div>' + prov(T.Aprov) + '</div>' +
+      '<div class="mono muted" style="font-size:36px;line-height:64px">–</div>' +
+      '<div class="side" style="text-align:right"><div class="t-xl away">' + K.fr(T.J) + '</div>' + prov(T.Jprov) + '</div></div>';
+    if (state === 'live') {
+      kick = '<span class="muted">THE CUP · OFFICIAL THRU 12</span>';
+      sub = '<span style="font-weight:600">' + T.left + ' matches left</span><span class="muted">Team Andrew need 1 more</span>';
+    } else if (state === 'clinched') {
+      kick = '<span class="you">TEAM ANDREW CLINCH IT · 6½</span>';
+      sub = '<span style="font-weight:600">' + T.left + ' matches still playing</span><span class="muted">for the final score</span>';
+    } else {
+      kick = '<span class="you">FINAL · LOCKED</span>';
+      sub = '<span style="font-weight:600">12 of 12 matches</span><span class="muted">Team Andrew win by 2</span>';
+    }
+    sub = '<div class="t-body" style="display:flex;justify-content:space-between;margin:14px 4px 0">' + sub + '</div>';
+  }
+  return '<div style="margin:6px 16px 0" class="hero">' +
+    '<div class="t-label" style="text-align:center">' + kick + '</div>' +
+    '<div class="cupnames"><div class="t-row you">Team Andrew</div><div class="t-row away">Team Josh</div></div>' +
+    nums + bar + sub + '</div>';
+}
+
+function banner() {
+  if (state === 'empty') return '';
+  if (state === 'final') return '<div class="trophy"><div style="display:flex;gap:12px;align-items:center">' +
+    '<div class="you">' + K.icon('trophy', 28) + '</div><div style="flex:1"><div class="t-label you">THE CUP</div>' +
+    '<div class="t-row" style="margin-top:2px">Team Andrew win 7–5</div><div class="t-small muted">Andrew + Alex went 3–0. MVP cart.</div></div></div>' +
+    '<button class="btn-sec" style="width:100%;margin-top:12px">Round recap</button></div>';
+  var J = state === 'live';
+  var col = J ? 'var(--cart-b)' : 'var(--cart-you)', tint = J ? 'var(--tint-b)' : 'var(--tint-you)';
+  var txt = J ? 'Sean + Baker beat Justin + Chuck <span class="mono" style="white-space:nowrap">7–1</span> to keep Team Josh alive.' : 'Team Andrew clinch it with 2 matches to play. Andrew + Alex won <span class="mono" style="white-space:nowrap">7–5</span>.';
+  return '<div class="ticker" style="background:' + tint + ';border-color:' + col + '"><span style="color:' + col + ';flex:none;margin-top:1px">' + K.icon('spark', 18) + '</span>' +
+    '<div class="t-body" style="flex:1">' + txt + '</div><div class="mono t-small muted">' + (J ? '2:14' : '2:41') + '</div></div>';
+}
+
+function toggles() {
+  return '<div style="display:flex;gap:8px;margin:14px 16px 0">' +
+    '<div class="seg" style="flex:1"><button class="' + (view === 'cup' ? 'on' : '') + '" onclick="setView(\'cup\')">Cup</button><button class="' + (view === 'players' ? 'on' : '') + '" onclick="setView(\'players\')">Players</button></div>' +
+    '<div class="seg" style="flex:1"><button>Gross</button><button class="on">Net</button></div></div>';
+}
+
+function list() {
+  if (view === 'players') return '<div class="sec"><span class="t-label muted">PLAYERS · NET</span></div><div class="t-body muted" style="margin:0 20px">Same as today’s Players view: every player ranked by net score. Unchanged by this mode.</div>';
+  var order = (state === 'live' || state === 'clinched') ? [2, 1, 0] : [0, 1, 2];
+  var h = '';
+  if (state === 'empty') h += '<div class="empty" style="margin-top:14px"><div class="ic">' + K.icon('rings', 24) + '</div><div><div class="t-row">Waiting for the first scores</div><div class="t-body muted">Here are the 12 matches. Each one is worth 1 point to its side.</div></div></div>';
+  order.forEach(function (r) {
+    var rm = M.filter(function (m) { return m.rot === r; }).sort(function (x, y) { return (y.a === 'A1') - (x.a === 'A1'); });
+    var t = T.rot[r], live = rm.some(function (m) { return m.thru && !m.res; });
+    var right = state === 'empty' ? '' : '<span class="t-label"><span class="you">' + K.fr(t.A) + '</span><span class="muted"> – </span><span class="away">' + K.fr(t.J) + '</span></span>';
+    h += '<div class="sec"><span class="t-label muted">' + K.ROT[r].toUpperCase() + (live ? ' · LIVE' : '') + '</span>' + right + '</div><div class="list">';
+    rm.forEach(function (m) {
+      var idx = M.indexOf(m);
+      if (m.a === 'A1') { h += '<a href="' + K.keep('Matches.html') + '" style="text-decoration:none;color:inherit;display:block">' + K.matchRow(m) + '</a>'; return; }
+      var can = state !== 'empty' && (m.res || m.thru);
+      var isOpen = String(open) === String(idx);
+      if (!can) { h += K.matchRow(m); return; }
+      if (isOpen) {
+        h += '<div class="watchbox"><div class="wlabel t-label muted">WATCHING</div>' + K.matchRow(m, { chev: 1, open: 1, attrs: ' role="button" onclick="tog(' + idx + ')"' }) + K.holeGrid(m) + '</div>';
+      } else h += K.matchRow(m, { chev: 1, attrs: ' role="button" onclick="tog(' + idx + ')"' });
+    });
+    h += '</div>';
+  });
+  h += '<div class="t-small muted" style="margin:14px 20px 0;display:flex;align-items:center;gap:8px"><span class="prov">prov</span>Decided early. Official once both groups finish its 6 holes.</div>';
+  return h;
+}
+
+function draw() {
+  var sc = document.querySelector('.scroll'), y = sc ? sc.scrollTop : 0;
+  document.getElementById('s').innerHTML = K.top('<button class="iconbtn" aria-label="Share leaderboard">' + K.icon('share', 20) + '</button>') +
+    '<div class="scroll">' + hero() + banner() + toggles() + list() + '</div>' + K.tabbar('Board');
+  document.querySelector('.scroll').scrollTop = y;
+}
+function tog(i) { open = String(open) === String(i) ? null : i; draw(); }
+function setView(v) { view = v; draw(); }
+draw();
+if (K.q.get('scroll')) document.querySelector('.scroll').scrollTop = +K.q.get('scroll');
+</script></body></html>
