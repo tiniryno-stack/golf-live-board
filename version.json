@@ -1,5 +1,5 @@
 {
- "v": "20261103064244",
+ "v": "20261103191602",
  "files": [
   "css/styles.css",
   "css/tokens.css",
@@ -28,6 +28,7 @@
   "js/screens/host.js",
   "js/screens/matches.js",
   "js/screens/recap.js",
+  "js/screens/ryder.js",
   "js/screens/season.js",
   "js/screens/setup.js",
   "js/screens/sheets.js",
