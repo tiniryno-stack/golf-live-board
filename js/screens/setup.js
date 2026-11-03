@@ -178,6 +178,7 @@ async function loadFrom(app, code) {
       strokes: p.strokes ?? '', teamId: ryder ? null : p.teamId || null, groupId: p.groupId || 'g1',
     })).map(withName);
     s.teams = TEAM_IDS.map((id) => ({ id, name: (ev.roster.teams || []).find((t) => t.id === id)?.name || '' }));
+    if (ryder) Object.assign(s, { rySkip: true, ryPicks: [], ryTee: null }); // run it back: same sides, same tee times
     s.sideNames = ryder ? ['1', '2'].map((id) => (ev.roster.sides || []).find((x) => x.id === id)?.name || '') : ['', ''];
     const { rotation, lineups, ryder: _r, ...settings } = ev.settings || {};
     s.settings = { ...s.settings, ...settings };
@@ -459,12 +460,14 @@ function courseOf(s, c) {
 
 /** Team Ryder Cup: players in order = side 1 then side 2, pairs = carts, cart k of each side = tee time k. */
 function buildRyder(s, c, shown) {
-  const players = s.players.map((p, i) => ({
+  const d = rySides(s), tee = ryTee(s);
+  const order = [...d.A, ...tee].flatMap((k) => [2 * k, 2 * k + 1]);
+  const players = order.map((i) => s.players[i]).map((p) => ({
     id: `p${i + 1}`, personId: p.personId || db.uuid(), name: shown[i],
     firstName: p.firstName, lastName: p.lastName || '', ...(p.nickname ? { nickname: p.nickname } : {}),
     strokes: p.strokes === '' || p.strokes == null || Number.isNaN(Number(p.strokes)) ? null : Math.max(0, Math.round(Number(p.strokes))),
   }));
-  const { roster, settings } = ryderSetup(players, s.sideNames || ['', '']);
+  const { roster, settings } = ryderSetup(players.map((p, i) => ({ ...p, id: `p${i + 1}`, name: shown[order[i]] })), ['', '']);
   return {
     name: s.name.trim() || `${c.shortName || cd.shortCourseName(c.name)} · ${prettyDate(todayISO())}`,
     course: courseOf(s, c),
@@ -501,12 +504,12 @@ export function handicapSheet(app, { i }) {
 // ───────────────────────────────────────────── screens (designspec §6)
 
 /** Back target for each screen. */
-const BACK = { which: 'course', players: 'course', check: 'players', game: 'players', teams: 'game', matchups: 'teams' };
-const BACK_LABEL = { course: 'Course', players: 'Players', game: 'Game', teams: s => (s.game === 'carts' ? 'Carts' : s.game === 'ryder' ? 'Sides' : 'Partners') };
+const BACK = { which: 'course', players: 'course', check: 'players', game: 'players', teams: 'game', matchups: 'teams', draft: 'teams', tee: 'draft' };
+const BACK_LABEL = { course: 'Course', players: 'Players', game: 'Game', teams: s => (s.game === 'carts' ? 'Carts' : s.game === 'ryder' ? 'Carts' : 'Partners'), draft: 'Draft' };
 
 /** Progress bars: how far along the flow this screen is (2–4 bars depending on the game). */
 function progress(s) {
-  const flow = ['course', 'players', 'game', ...(s.game === '2v2' || s.game === 'ryder' ? ['teams'] : s.game === 'carts' ? ['teams', 'matchups'] : [])];
+  const flow = ['course', 'players', 'game', ...(s.game === 'ryder' ? ['teams', 'draft', 'tee'] : s.game === '2v2' ? ['teams'] : s.game === 'carts' ? ['teams', 'matchups'] : [])];
   const at = Math.max(0, flow.indexOf(s.screen === 'which' ? 'course' : s.screen === 'check' ? 'players' : s.screen));
   return `<div class="nr-bars">${flow.map((_, i) => `<i class="${i <= at ? 'on' : ''}"></i>`).join('')}</div>`;
 }
@@ -639,7 +642,7 @@ function quickPlayersView(s, c, line, tee) {
           <p class="cc-meta">Invite the crew, or add people by name. People you add join the crew list after the round.</p>
           <div class="cc-actions"><button class="btn cc-btn" data-act="crew-invite" data-v="${esc(s.crewId)}">${icon('share', 20)} Invite crew</button><button class="btn cc-btn" data-act="qp-search">Add by name</button></div></div>`
         : `<div class="qp-foot">${rows.length > 8 ? `<span class="meta">+${rows.length - 8} more in the crew · scroll</span>` : '<span></span>'}<button class="link-btn" data-act="qp-search">${icon('plus', 16)} Guest</button></div>`}`;
-  return `${topBar(s)}${headline('Step 2 · Players', 'Who’s playing?')}
+  return `${topBar(s)}${headline('Step 2 · Players', 'Who’s playing?', s.players.length === 16 && gameOf(s) === 'ryder' ? '16 in. That’s a Team Ryder Cup.' : '')}
     ${c ? `<div class="nr-course">
       <button class="nc-main" data-act="setup-go" data-v="${c.variants?.length > 1 && !c.variant ? 'which' : 'check'}">
         <b class="ellipsis">${esc(c.shortName || c.name || 'Your course')}${esc(tee)}</b>
@@ -668,7 +671,7 @@ function playersView(s) {
   const used = new Set(s.players.map((p) => p.personId));
   const recent = s.past.filter((p) => !used.has(p.personId)).slice(0, 8);
   const tee = s.tee ? ` · ${s.tee.name} tees` : '';
-  return `${topBar(s)}${headline('Step 2 · Players', 'Who’s playing?')}
+  return `${topBar(s)}${headline('Step 2 · Players', 'Who’s playing?', s.players.length === 16 && gameOf(s) === 'ryder' ? '16 in. That’s a Team Ryder Cup.' : '')}
     ${c ? `<div class="nr-course">
       <button class="nc-main" data-act="setup-go" data-v="${c.variants?.length > 1 && !c.variant ? 'which' : 'check'}">
         <b class="ellipsis">${esc(c.shortName || c.name || 'Your course')}${esc(tee)}</b>
@@ -721,7 +724,7 @@ function gameView(s) {
     ${pick === 'match' ? '<p class="meta nr-hint">Match play: everyone plays their own ball. Each hole is worth 1 point; low net score takes it, a tie for low splits it.</p>' : ''}
     <div class="nr-foot">
       ${next ? '' : '<p class="meta" style="text-align:center;margin:0 0 8px">2v2, Partner “Rider” Cup and Team Ryder Cup go to one more screen to set teams.</p>'}
-      <button class="btn primary nr-cta" data-act="${next ? 'setup-go' : 'setup-save'}" ${next ? 'data-v="teams"' : ''} ${s.saving ? 'aria-busy="true"' : ''}>${s.saving ? 'Starting…' : next ? `Next: ${pick === '2v2' ? 'pick partners' : pick === 'ryder' ? 'sides & carts' : 'carts'}` : `Start round · ${n} player${n === 1 ? '' : 's'}`}${next ? icon('fwd', 18) : ''}</button>
+      <button class="btn primary nr-cta" data-act="${next ? 'setup-go' : 'setup-save'}" ${next ? 'data-v="teams"' : ''} ${s.saving ? 'aria-busy="true"' : ''}>${s.saving ? 'Starting…' : next ? `Next: ${pick === '2v2' ? 'pick partners' : pick === 'ryder' ? 'carts' : 'carts'}` : `Start round · ${n} player${n === 1 ? '' : 's'}`}${next ? icon('fwd', 18) : ''}</button>
     </div>`;
 }
 
@@ -784,32 +787,94 @@ function pairsView(s) {
 
 const CART_TINT = { A: 'var(--cart-you)', B: 'var(--t-B)', C: 'var(--t-C)', D: 'var(--t-D)' };
 
-/** ④ Team Ryder Cup: two named sides, carts of 2, one cart from each side per tee time. One screen. */
-function sidesView(s) {
-  if (gameFix('ryder', s.players.length)) return gameView(s); // the count changed since: pick again
-  const c = course(s);
-  const n = s.players.length;
-  const half = n / 2, carts = half / 2;
-  const first = (p) => p.firstName || p.name;
-  const nameOf = (k) => (s.sideNames?.[k] || '').trim() || `Team ${first(s.players[k * half])}`;
-  const rows = Array.from({ length: carts }, (_, k) => `<div class="ryder-tee"><span class="lbl">${esc(teeTimeName({ teeTimes: s.settings.teeTimes }, k))}</span></div>
-    <div class="ryder-row">${[0, 1].map((side) => {
-      const i = side * half + k * 2;
-      return `<div class="cart-card" style="--jersey:${sideColor(String(side + 1))}">
-        <div class="cc-k mono">${esc(nameOf(side).toUpperCase())}</div>
-        ${[i, i + 1].map((j) => swapBtn(s, j, s.players[j].strokes !== '' && s.players[j].strokes != null ? `<span class="mono soft">${esc(s.players[j].strokes)}</span>` : '')).join('')}
-      </div>`;
-    }).join('')}</div>`).join('');
-  return `${topBar(s)}${headline('Step 4 · Team Ryder Cup', `${n} players · ${carts} carts a side`)}
-    <div class="nr-course small"><div class="ellipsis" style="flex:1"><b>Team Ryder Cup</b> <span class="soft">· ${n} players${c ? ` · ${esc(c.shortName || c.name)}` : ''}</span></div><button class="btn small" data-act="setup-go" data-v="game">Change</button></div>
-    <div class="ryder-names">${[0, 1].map((k) => `<label class="field" style="margin:0"><span class="label" style="color:${sideColor(String(k + 1))}">Side ${k + 1}</span>
-      <input class="input" maxlength="20" value="${esc(s.sideNames?.[k] || '')}" placeholder="${esc(nameOf(k))}" autocapitalize="words" aria-label="Side ${k + 1} name" data-input="setup-sidename" data-i="${k}"></label>`).join('')}</div>
-    <p class="meta nr-hint">${s.swapSel != null ? 'Now tap who to swap with.' : 'Tap two names to swap: across sides, carts or tee times. Each tee time is one cart from each side.'}</p>
+// ───────────────────────────────────────────── Team Ryder Cup setup (handoff 015 §4, RULES §7)
+// ④ Carts (s.players in order, pairs = carts) → ⑤ Draft (s.ryPicks: cart indexes in pick order, or
+// s.rySkip) → ⑥ Tee times (s.ryTee: their side's cart index per tee time). buildRyder reorders the
+// players into side 1 carts by tee time, then side 2 the same way, which is what ryderSetup reads.
+export const RY_SNAKE = ['J', 'A', 'A', 'J', 'J', 'A'];
+const ryCartName = (s, k) => [s.players[2 * k], s.players[2 * k + 1]].map((p) => p?.firstName || p?.name || '').join(' + ');
+/** The two sides as cart indexes: captains' carts (1 and 2) first, then picks; skip = carts 1–4 v 5–8. */
+export function rySides(s) {
+  if (s.rySkip) return { A: [0, 1, 2, 3], J: [4, 5, 6, 7], done: true };
+  const A = [0], J = [1];
+  const picks = (s.ryPicks || []).filter((k, i, all) => k >= 2 && k <= 7 && all.indexOf(k) === i);
+  picks.forEach((k, i) => (RY_SNAKE[i] === 'A' ? A : J).push(k));
+  return { A, J, done: picks.length === 6, turn: RY_SNAKE[picks.length] || null, picks };
+}
+/** Their side's cart per tee time (a permutation of side J), default in pick order. */
+export function ryTee(s) {
+  const { J } = rySides(s);
+  const t = s.ryTee || [];
+  return t.length === J.length && J.every((k) => t.includes(k)) ? t : [...J];
+}
+const ryCaptain = (s, side) => s.players[2 * rySides(s)[side][0]];
+const ryTeamName = (s, side) => `Team ${ryCaptain(s, side)?.firstName || ryCaptain(s, side)?.name || ''}`;
+
+/** ④ Who rides together? */
+function ryCartsView(s) {
+  if (gameFix('ryder', s.players.length)) return gameView(s);
+  const rows = Array.from({ length: 8 }, (_, k) => `<div class="ry-cart"><span class="lbl">Cart ${k + 1}</span>
+      <div class="ry-cart-pair">${swapBtn(s, 2 * k)}${swapBtn(s, 2 * k + 1)}</div></div>`).join('');
+  return `${topBar(s)}${headline('Step 4 · Carts', 'Who rides together?')}
+    <div class="nr-line"><span class="meta">${s.swapSel != null ? 'Now tap who to swap with.' : 'Tap two names to swap.'}</span><button class="btn small" data-act="setup-shuffle">Shuffle</button></div>
     ${rows}
-    <div class="nr-two"><button class="btn ghost" data-act="setup-shuffle">Shuffle</button><button class="btn ghost" data-act="setup-go" data-v="players">Edit players</button></div>
-    <div class="nr-tip">${icon('bulb', 16)}<span>Holes 1–6: your cart plays the other cart in your foursome. Then a new opponent every 6 holes, compared hole by hole. Each match is 1 point to the side; ${carts * 3 / 2 + 0.5} wins the cup.</span></div>
+    ${bottom('Next: pick sides', 'setup-go', { v: 'draft', arrow: true })}`;
+}
+
+/** ⑤ Draft: one phone, both captains looking. Snake J, A, A, J, J, A. */
+function ryDraftView(s) {
+  if (gameFix('ryder', s.players.length)) return gameView(s);
+  const d = rySides(s);
+  const capA = ryCaptain(s, 'A'), capJ = ryCaptain(s, 'J');
+  const fn = (p) => p?.firstName || p?.name || '';
+  const title = d.done ? 'Sides are set' : `${esc(fn(d.turn === 'A' ? capA : capJ))} picks`;
+  const pool = s.rySkip ? [] : [2, 3, 4, 5, 6, 7].filter((k) => !d.picks.includes(k));
+  const col = (side) => `<div class="ry-col"><div class="ry-col-h${side === 'A' ? ' you' : ''}"><span class="ellipsis">${esc(ryTeamName(s, side))}</span>${!d.done && d.turn === side ? '<span class="ry-tag mono">PICKING</span>' : ''}</div>
+      ${d[side].map((k, i) => `<div class="ry-slot${i === 0 ? ' cap' : ''}${i === 0 && side === 'A' ? ' you' : ''}"><span class="ellipsis">${esc(ryCartName(s, k))}</span></div>`).join('')}</div>`;
+  return `${topBar(s)}${headline('Step 5 · Draft', title, d.done ? 'Two sides of 4 carts. Tee times next.' : 'Tap a cart to take it.')}
+    <div class="nr-line"><span class="meta">${d.done ? '' : `Snake order: ${RY_SNAKE.map((x) => esc(fn(x === 'A' ? capA : capJ))).join(', ')}`}</span><button class="btn small" data-act="setup-ry-reset">Start over</button></div>
+    ${pool.length ? `<div class="lbl ry-pool-k">Still on the board</div><div class="ry-pool">${pool.map((k) => `<button class="ry-pick" data-act="setup-ry-pick" data-i="${k}"><span class="ellipsis">${esc(ryCartName(s, k))}</span></button>`).join('')}</div>` : ''}
+    <div class="ry-cols">${col('A')}${col('J')}</div>
+    ${d.done ? bottom('Next: tee times', 'setup-go', { v: 'tee', arrow: true })
+      : `<div class="nr-foot"><button class="btn nr-cta" data-act="setup-ry-skip">Skip the draft · split in cart order</button></div>`}`;
+}
+
+/** ⑥ Who tees off together? Your side's carts fixed, theirs tap-to-swap; then your three matches. */
+function ryTeeView(s) {
+  if (gameFix('ryder', s.players.length)) return gameView(s);
+  const d = rySides(s);
+  if (!d.done) return ryDraftView(s);
+  const tee = ryTee(s);
+  const times = s.settings.teeTimes || [];
+  const rows = d.A.map((a, k) => `<div class="ry-tee">
+      <div class="ry-tee-k"><span class="lbl">${['1st', '2nd', '3rd', '4th'][k]}</span>
+        <input class="ry-time mono${times[k] ? ' set' : ''}" type="time" value="${esc(times[k] || '')}" aria-label="${['1st', '2nd', '3rd', '4th'][k]} tee time" data-input="setup-ry-time" data-i="${k}">${times[k] ? '' : '<span class="ry-time-ph">Add time</span>'}</div>
+      <div class="ry-tee-pair"><div class="ry-slot you"><span class="ellipsis">${esc(ryCartName(s, a))}</span></div><span class="meta">v</span>
+        <button class="ry-pick${s.rySel === k ? ' sel' : ''}" data-act="setup-ry-tee" data-i="${k}" aria-pressed="${s.rySel === k}"><span class="ellipsis">${esc(ryCartName(s, tee[k]))}</span></button></div></div>`).join('');
+  const ord = ['same tee time', '2nd', '3rd', '4th'];
+  const mine = [0, 1, 2].map((r) => `<div class="ry-my"><span class="mono">${['1–6', '7–12', '13–18'][r]}</span><span class="ellipsis">${esc(ryCartName(s, tee[r % 4]))}</span><span class="meta">${r === 0 ? ord[0] : ord[r]}</span></div>`).join('');
+  return `${topBar(s)}${headline('Step 6 · Tee times', 'Who tees off together?', `Tap two ${esc(ryTeamName(s, 'J'))} carts to swap.`)}
+    ${rows}
+    <div class="lbl ry-pool-k">Your three matches · ${esc(ryCartName(s, d.A[0]))}</div>
+    ${mine}
     ${rulesBlock(s)}
-    ${bottom(s.saving ? 'Starting…' : `Start round · ${n} players`, 'setup-save', { busy: s.saving })}`;
+    ${bottom(s.saving ? 'Starting…' : 'Start round · 16 players', 'setup-save', { busy: s.saving })}`;
+}
+
+/** The share text for a Team Ryder Cup round (RULES §7). */
+export function ryderShareText(round, link) {
+  const r = round.roster, st = round.settings;
+  const sideName = (id) => r.sides.find((x) => x.id === id)?.name || '';
+  const cartName = (tid) => r.teams.find((t) => t.id === tid)?.name || tid;
+  const t0 = (st.teeTimes || [])[0];
+  const lines = [
+    `${round.course.shortName || round.course.name}${t0 ? ` · first tee ${teeTimeName(st, 0).replace(' tee time', '')}` : ''}`,
+    `Join: ${link}`, '',
+    `${sideName('1')} v ${sideName('2')}`,
+    ...r.sides[0].teamIds.map((tid, k) => `${teeTimeName(st, k)}: ${cartName(tid)} v ${cartName(r.sides[1].teamIds[k])}`), '',
+    'New opponent every 6 holes. 12 matches, 6½ wins the cup.',
+  ];
+  return lines.join('\n');
 }
 
 /** ④ Partner “Rider” Cup: 8 players in 4 carts, or 6 in 3. */
@@ -1004,24 +1069,27 @@ function savedView(s) {
   const v = s.saved;
   const c = course(s);
   const n = s.players.length;
+  const ry = gameOf(s) === 'ryder';
   return `<div class="live-top"><div class="live-check">${icon('check', 28)}</div>
       <h1 class="nr-title">Round is live</h1>
       <div class="nr-sub">${esc([c?.shortName || c?.name, prettyDate(todayISO()), s.tee ? `${s.tee.name} tees` : '', `${n} player${n === 1 ? '' : 's'}`].filter(Boolean).join(' · '))}</div></div>
     <div class="saved-box">
       <div class="lbl">Join code</div><div class="big-code mono">${esc(v.code)}</div>
       <div class="mono meta live-link">${esc(roundLink(v.code).replace(/^https?:\/\//, ''))}</div>
-      <div class="nr-two"><button class="btn primary" data-act="setup-copy" data-v="share">${icon('share', 18)} Text the group</button><button class="btn" data-act="setup-copy" data-v="link">Copy link</button></div>
+      ${ry ? `<div class="nr-two"><button class="btn" data-act="setup-copy" data-v="link">Copy link</button><button class="btn" data-act="setup-copy" data-v="text">Copy the text</button></div>`
+        : `<div class="nr-two"><button class="btn primary" data-act="setup-copy" data-v="share">${icon('share', 18)} Text the group</button><button class="btn" data-act="setup-copy" data-v="link">Copy link</button></div>`}
     </div>
+    ${ry ? `<pre class="ry-share">${esc(ryderShareText(buildRound(s), roundLink(v.code)))}</pre>` : ''}
     <div class="saved-box secret">
       <div class="sec-k">${icon('lock', 16)} Organizer only · screenshot this, keep it private</div>
       <div class="sec-grid"><span class="soft">Admin PIN</span><span class="mono sec-pin">${esc(v.admin_pin)}</span>
         <span class="soft">Host link</span><span class="sec-link"><span class="mono ellipsis">${esc(roundLink(v.code, '/host').replace(/^https?:\/\//, ''))}</span><button class="btn small" data-act="setup-copy" data-v="host">Copy</button></span></div>
       <div class="meta">Lets you fix scores and the scorecard from any phone if this one dies.</div>
     </div>
-    ${bottom('Open the round', 'setup-open')}`;
+    ${ry ? `<div class="nr-foot"><button class="btn primary nr-cta" data-act="setup-copy" data-v="share">${icon('share', 18)} Text the group</button><button class="link-btn" style="margin-top:8px" data-act="setup-open">Open the round</button></div>` : bottom('Open the round', 'setup-open')}`;
 }
 
-const VIEWS = { course: courseView, which: whichView, players: playersView, check: checkView, game: gameView, teams: (s) => (s.game === 'carts' ? cartsView(s) : s.game === 'ryder' ? sidesView(s) : pairsView(s)), matchups: matchupsView };
+const VIEWS = { course: courseView, which: whichView, players: playersView, check: checkView, game: gameView, teams: (s) => (s.game === 'carts' ? cartsView(s) : s.game === 'ryder' ? ryCartsView(s) : pairsView(s)), matchups: matchupsView, draft: ryDraftView, tee: ryTeeView };
 
 
 // ───────────────────────────────────────────── course search actions
@@ -1414,6 +1482,49 @@ export default {
       app.closeSheet();
       app.render();
     },
+    'setup-ry-pick': (el, ev, app) => {
+      const s = app.setup;
+      const d = rySides(s);
+      if (d.done) return;
+      s.ryPicks = [...d.picks, Number(el.dataset.i)];
+      s.ryTee = null;
+      persist(s);
+      app.render();
+    },
+    'setup-ry-reset': (el, ev, app) => {
+      Object.assign(app.setup, { ryPicks: [], rySkip: false, ryTee: null, rySel: null });
+      persist(app.setup);
+      app.render();
+    },
+    'setup-ry-skip': (el, ev, app) => {
+      const s = app.setup;
+      Object.assign(s, { ryPicks: [], rySkip: true, ryTee: null, rySel: null, screen: 'tee' });
+      persist(s);
+      app.render();
+    },
+    'setup-ry-tee': (el, ev, app) => {
+      const s = app.setup;
+      const k = Number(el.dataset.i);
+      if (s.rySel == null) s.rySel = k;
+      else if (s.rySel === k) s.rySel = null;
+      else {
+        const t = [...ryTee(s)];
+        [t[k], t[s.rySel]] = [t[s.rySel], t[k]];
+        s.ryTee = t;
+        s.rySel = null;
+        persist(s);
+      }
+      app.render();
+    },
+    'setup-ry-time': (el, ev, app) => {
+      const s = app.setup;
+      const t = [...(s.settings.teeTimes || [])];
+      while (t.length < 4) t.push('');
+      t[Number(el.dataset.i)] = /^\d{1,2}:\d{2}$/.test(el.value) ? el.value : '';
+      s.settings.teeTimes = t;
+      persist(s);
+      app.render();
+    },
     'setup-sidename': (el, ev, app) => {
       const s = app.setup;
       s.sideNames = Array.isArray(s.sideNames) ? [...s.sideNames] : ['', ''];
@@ -1508,9 +1619,15 @@ export default {
     'setup-copy': async (el, ev, app) => {
       const v = app.setup.saved;
       const link = el.dataset.v === 'host' ? roundLink(v.code, '/host') : roundLink(v.code);
+      const ry = gameOf(app.setup) === 'ryder' ? ryderShareText(buildRound(app.setup), link) : null;
+      if (el.dataset.v === 'text' && ry) {
+        const ok = await copyText(ry);
+        app.toast({ title: ok ? 'Copied' : 'Couldn’t copy' });
+        return;
+      }
       if (el.dataset.v === 'share' && navigator.share) {
         try {
-          await navigator.share({ title: 'Golf Live Board', text: `Join code ${v.code}`, url: link });
+          await navigator.share(ry ? { title: 'Team Ryder Cup', text: ry } : { title: 'Golf Live Board', text: `Join code ${v.code}`, url: link });
           return;
         } catch { /* fall through to copy */ }
       }

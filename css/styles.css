@@ -1615,3 +1615,32 @@ details.fold summary::-webkit-details-marker { display: none; }
 /* compact: the pads never go under 80px; if it still doesn't fit, Enter scrolls */
 .enter.gps-card.compact .tile .step { width: max(80px, min(88px, 100cqh)); height: max(80px, min(88px, 100cqh)); }
 .enter.gps-card.compact .sheet { overflow-y: auto; }
+
+/* Team Ryder Cup setup (handoff 015 §4) */
+.ry-cart { margin-top: var(--space-3); }
+.ry-cart .lbl { display: block; margin: 0 4px 4px; }
+.ry-cart-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
+.ry-cart-pair .swap-name { margin-top: 0; height: 48px; font-size: 15px; background: var(--surface-1); }
+.ry-pool-k { display: block; margin: var(--space-5) 4px var(--space-2); }
+.ry-pool { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
+.ry-pick { height: 48px; min-width: 0; padding: 0 12px; border-radius: var(--radius-lg); background: var(--surface-1); font-size: 15px; font-weight: 600; display: flex; align-items: center; justify-content: center; }
+.ry-pick.sel { outline: 2px solid var(--text); outline-offset: -2px; }
+.ry-cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); margin-top: var(--space-5); }
+.ry-col { min-width: 0; }
+.ry-col-h { display: flex; align-items: center; gap: var(--space-2); height: 32px; font-size: 15px; font-weight: 700; color: var(--text-muted); min-width: 0; }
+.ry-col-h.you { color: var(--cart-you-text); }
+.ry-tag { flex: none; font-size: 12px; font-weight: 600; letter-spacing: .08em; padding: 0 6px; border-radius: var(--radius-sm); border: 1px solid currentColor; }
+.ry-slot { height: 48px; min-width: 0; display: flex; align-items: center; padding: 0 12px; margin-top: 6px; border-radius: var(--radius-lg); border: 1px solid var(--line); font-size: 15px; font-weight: 600; }
+.ry-slot.cap { background: var(--surface-1); border-color: transparent; }
+.ry-slot.cap.you { background: var(--tint-you); }
+.ry-tee { margin-top: var(--space-4); }
+.ry-tee-k { display: flex; align-items: center; gap: var(--space-2); margin: 0 4px 6px; position: relative; }
+.ry-time { height: 28px; width: 92px; padding: 0 8px; border-radius: var(--radius-pill); border: 1px dashed var(--line); background: transparent; color: var(--text); font-size: 13px; }
+.ry-time:not(.set) { color: transparent; }
+.ry-time.set { border-style: solid; }
+.ry-time-ph { position: absolute; left: 44px; pointer-events: none; font-size: 13px; color: var(--text-muted); padding-left: 10px; }
+.ry-tee-pair { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: var(--space-2); }
+.ry-tee-pair .ry-slot { margin-top: 0; }
+.ry-tee-pair .ry-slot.you { color: var(--cart-you-text); }
+.ry-my { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; gap: var(--space-2); align-items: center; height: 40px; padding: 0 4px; font-size: 15px; }
+.ry-share { white-space: pre-wrap; font-family: var(--font-sans); font-size: 13px; line-height: 1.4; color: var(--text-muted); background: var(--surface-1); border-radius: var(--radius-lg); padding: var(--space-3) var(--space-4); margin: var(--space-3) 0 0; }
