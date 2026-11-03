@@ -150,6 +150,11 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
   DB Nov 3** by Andrew in the SQL Editor and verified). Each match = 1 side
   point (`game.sides[]`, `toWin` = matches/2 + ½, 6–6 = shared). Headlines rank sides. `sim.html` → **Team Ryder Cup · 16 phones**.
   Colors: your cart green, side 1 blue, side 2 orange. `ryderSetup()` in scoring.js builds the roster from players in order.
+- **Team Ryder Cup v2 (handoff 015, branch `design/015-team-ryder-cup`):** 16 players only. `scoring.ryderState(snap, myTeam)`
+  (pure, `tests/ryder015.test.mjs`) = every match / rotation / side from the viewer's side: a hole counts only with all four
+  scores, hole points freeze at the 6½ clinch, nothing provisional, two rotations can be live. Screens in `js/screens/ryder.js`
+  (Board cup card + flags, read-only `ryder-match` sheet, Matches). Setup: Carts → Draft (snake J,A,A,J,J,A) → Tee times.
+  Host → New lineup removed from the UI (engine still reads old `settings.lineups`).
 - **2v2 headlines (fixed Nov 3):** board-level headlines (lead change, comeback, final) rank `game.people`, not the
   six pairings; `h.unit` = 'people' | 'sides' marks it, `headlineColor(mine, h, me)`.
 - **Small groups:** any roster that isn't 4 carts of 2 is a scorecard round (no teams).

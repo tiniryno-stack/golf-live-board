@@ -1,6 +1,6 @@
 # 015 · Team Ryder Cup: Board, Matches, Setup (v2)
 
-Status: designed, not built
+Status: built in aec2c19
 
 This replaces the screens in **014** (never edit 014; this folder supersedes its §0–§4 and §6–§7). 014's §5 (Enter header), §8 (Today's game, headlines) and §10 (sample data) still stand. The game logic is in `RULES.md` in this folder; build from that, not from screenshots.
 
