@@ -70,6 +70,7 @@
     <h1>Test with 8 phones</h1>
     <div class="row" id="start">
       <button class="primary" id="make">Make a practice round</button>
+      <button id="make-ryder"><span class="long">Team Ryder Cup · 16 phones</span><span class="short">Ryder Cup · 16</span></button>
       <span class="status">or open a round:</span>
       <input type="text" id="code" maxlength="8" placeholder="CODE" aria-label="Round code">
       <button id="open">Open</button>
@@ -80,7 +81,7 @@
     <div class="row" id="controls" hidden>
       <button class="primary" id="play-all">Play a hole</button>
       <button id="play-mine"><span class="long">Phone 1’s group only</span><span class="short">P1’s group</span></button>
-      <button id="play-other"><span class="long">Other group only</span><span class="short">Other group</span></button>
+      <button id="play-other"><span class="long">Other groups only</span><span class="short">Other groups</span></button>
       <button id="more-btn" aria-expanded="false">More</button>
     </div>
     <div class="row more">
@@ -89,7 +90,7 @@
       <button id="reset">Reset scores</button>
       <button class="danger" id="delete">Delete round</button>
     </div>
-    <p class="hint" id="hint">Each phone below is its own device, signed in as a different player. Phone 1 is the organizer. Tap scores on any phone, or let “Play a hole” enter a score on every phone. “Other group only” puts one foursome ahead so you can see provisional points.</p>
+    <p class="hint" id="hint">Each phone below is its own device, signed in as a different player. Phone 1 is the organizer. Tap scores on any phone, or let “Play a hole” enter a score on every phone. “Other groups only” puts the other foursomes ahead so you can see provisional points. “Team Ryder Cup · 16 phones” makes the 8v8 round (4 tee times, Team Andrew vs Team Josh) with 16 phones; on a phone, the 1–16 buttons switch between them.</p>
   </header>
   <main class="grid" id="grid"></main>
 </body>

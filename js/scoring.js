@@ -137,6 +137,12 @@ function ryderPairsAt(roster, settings, pos) {
   return a.slice(0, n).map((x, k) => [x, b[(k + i) % n]]);
 }
 
+/** The matchups on a real hole (Host's lineup editor prefills with these). */
+export function ryderMatchupsAt(roster, settings, hole) {
+  const st = normalizeSettings(settings);
+  return ryderPairsAt(roster, st, posOf(st, hole));
+}
+
 const sameSet = (x, y) => JSON.stringify([...x].map((p) => p.join('v')).sort()) === JSON.stringify([...y].map((p) => p.join('v')).sort());
 
 /** The engine's view of a Team Ryder Cup: a rotation per run of holes with the same matches. */

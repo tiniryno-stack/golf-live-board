@@ -5,7 +5,7 @@
 // Always the dark Sundown look, so a saved image reads the same in anyone's camera roll.
 // Jerseys follow the app: your cart green, everyone else their away color.
 
-import { fmtPts, fmtSigned, fmtToPar, HOLES, recordLabel } from '../scoring.js';
+import { fmtPts, fmtSigned, fmtToPar, HOLES, recordLabel, sideOf, matchSidePoints } from '../scoring.js';
 import { prettyDate } from '../ui.js';
 
 const W = 1080;
@@ -138,7 +138,8 @@ function ctxInfo(app) {
   const date = prettyDate(ev.played_on);
   const tee = ev.course?.tee?.name ? `${ev.course.tee.name} tees` : '';
   const mine = app.myTeam();
-  const jersey = (t) => (t && t === mine ? C.good : C[t] || C.soft);
+  const SIDE = { 1: C.B, 2: C.A }; // Team Ryder Cup: side 1 blue, side 2 orange (teams.js)
+  const jersey = (t) => (t && t === mine ? C.good : SIDE[sideOf(t)] || SIDE[t] || C[t] || C.soft);
   const tname = (t) => snap.teamById.get(t)?.name || t;
   const pnames = (t) => (snap.teamById.get(t)?.playerIds || []).map((id) => snap.playerById.get(id)?.name).join(' + ');
   return { snap, ev, course, date, tee, mine, jersey, tname, pnames };
@@ -148,11 +149,56 @@ const ordinal = (n) => `${n}${['th', 'st', 'nd', 'rd'][(n % 100 >= 11 && n % 100
 
 // ───────────────────────────────────────────── 1. final leaderboard
 
+/** Team Ryder Cup: the side score big, the 12 match results underneath. */
+function cupBoard(app) {
+  const I = ctxInfo(app);
+  const { snap } = I;
+  const g = snap.game;
+  const [a, b] = ['1', '2'].map((id) => g.sides.find((s) => s.sideId === id));
+  const w = a.points > b.points ? a : b.points > a.points ? b : null;
+  const H = 230 + 260 + 40 + 70 + g.matches.length * 50 + 140;
+  const { cv, ctx } = canvasOf(H);
+  header(ctx, `Final · ${[I.course, I.date].filter(Boolean).join(' · ')}`, I.ev.name || 'Team Ryder Cup');
+  let y = 228;
+  const win = w ? I.jersey(w.sideId) : C.ink;
+  fillRect(ctx, PAD, y, W - PAD * 2, 250, 28, C.card);
+  ctx.strokeStyle = win;
+  ctx.lineWidth = 3;
+  rrect(ctx, PAD + 1.5, y + 1.5, W - PAD * 2 - 3, 247, 27);
+  ctx.stroke();
+  text(ctx, w ? 'WIN THE CUP' : 'SHARE THE CUP', PAD + 40, y + 52, { size: 24, weight: 800, color: win });
+  text(ctx, w ? w.name : `${a.name} & ${b.name}`, PAD + 40, y + 118, { size: 56, weight: 800, color: win, max: W - PAD * 2 - 80 });
+  // Side score: name + points each side of a dash.
+  const cy = y + 206;
+  text(ctx, a.name, PAD + 40, cy - 56, { size: 28, weight: 700, color: I.jersey(a.sideId), max: 380 });
+  text(ctx, fmtPts(a.points), PAD + 40, cy, { size: 72, weight: 700, color: I.jersey(a.sideId), mono: true });
+  text(ctx, '–', W / 2, cy, { size: 48, weight: 500, color: C.soft, align: 'center', mono: true });
+  text(ctx, b.name, W - PAD - 40, cy - 56, { size: 28, weight: 700, color: I.jersey(b.sideId), align: 'right', max: 380 });
+  text(ctx, fmtPts(b.points), W - PAD - 40, cy, { size: 72, weight: 700, color: I.jersey(b.sideId), align: 'right', mono: true });
+  y += 250 + 40;
+  text(ctx, `MATCHES · ${a.total} · ${fmtPts(a.toWin)} WINS`, PAD, y + 24, { size: 24, weight: 800, color: C.soft });
+  y += 70;
+  for (const m of g.matches) {
+    const [x, z] = m.teams;
+    const sp = matchSidePoints(m);
+    const winner = sp ? Object.keys(sp).find((k) => sp[k] === 1) : null;
+    text(ctx, m.label.replace('Holes ', ''), PAD, y, { size: 26, weight: 700, color: C.faint, mono: true });
+    let xx = PAD + 150;
+    xx += text(ctx, I.tname(x), xx, y, { size: 28, weight: winner === '1' ? 800 : 500, color: winner === '1' ? I.jersey(x) : C.ink, max: 260 }) + 16;
+    xx += text(ctx, `${fmtPts(m.points[x])}–${fmtPts(m.points[z])}`, xx, y, { size: 28, weight: 700, color: C.ink, mono: true }) + 16;
+    text(ctx, I.tname(z), xx, y, { size: 28, weight: winner === '2' ? 800 : 500, color: winner === '2' ? I.jersey(z) : C.ink, max: W - PAD - 200 - xx });
+    text(ctx, !sp ? '' : winner ? g.sides.find((s) => s.sideId === winner).name : '½ each', W - PAD, y, { size: 24, weight: 700, color: winner ? I.jersey(winner) : C.soft, align: 'right', max: 190 });
+    y += 50;
+  }
+  return finish(cv, y, app);
+}
+
 function leaderboard(app) {
   const I = ctxInfo(app);
   const { snap } = I;
   const g = snap.game;
   if (!g) return playersBoard(app);
+  if (g.sides) return cupBoard(app);
   const isPM = g.type === 'rotationPlusMinus';
   const st = g.standings;
   const val = (s) => (isPM ? fmtSigned(s.officialPm, 'E') : fmtPts(s.officialPoints));

@@ -25,6 +25,7 @@ function gameLabel(snap) {
   const st = snap.settings;
   if (st.pairs) return '2v2';
   if (snap.game?.type === 'splitPoint') return 'Match play';
+  if (snap.game?.sides) return 'Team Ryder Cup';
   if (snap.game) return 'Partner “Rider” Cup';
   return 'Stroke play';
 }
@@ -51,6 +52,17 @@ export function roundSummary(app) {
     const r = g.people.find((x) => x.playerId === me.id);
     if (r) { rank = r.rank; value = fmtPts(r.points); points = value; }
     line = rank ? `${ordinal(rank)}` : '';
+  } else if (g && g.sides) {
+    const s = g.sides.find((x) => x.teamIds.includes(app.myTeam())) || g.sides[0];
+    const o = g.sides.find((x) => x !== s);
+    rank = s.rank;
+    points = `${fmtPts(s.points)}–${fmtPts(o.points)}`;
+    value = points;
+    line = `${s.name} · ${s.points > o.points ? 'up' : s.points < o.points ? 'down' : 'all square'}${s.points !== o.points ? ` ${fmtPts(Math.abs(s.points - o.points))}` : ''}`;
+    if (out.done) {
+      out.result = { line: s.points > o.points ? 'Won the cup' : s.points < o.points ? 'Lost the cup' : 'Shared the cup', value };
+      return out;
+    }
   } else if (g) {
     const mine = app.myTeam();
     const st = g.liveStandings;

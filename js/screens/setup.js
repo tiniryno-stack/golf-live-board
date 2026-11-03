@@ -13,7 +13,8 @@
 import { esc, icon, seg, todayISO, prettyDate, copyText, roundLink, empty } from '../ui.js';
 import { COURSES } from '../courses.js';
 import * as cd from '../coursedata.js';
-import { DEFAULT_SETTINGS, DEFAULT_ROTATION, GAMES, gameFix, autoGroups, cartRotation, threeCartRotation, cartIdsFor } from '../scoring.js';
+import { DEFAULT_SETTINGS, DEFAULT_ROTATION, GAMES, gameFix, autoGroups, cartRotation, threeCartRotation, cartIdsFor, ryderSetup, teeTimeName } from '../scoring.js';
+import { sideColor } from '../teams.js';
 import * as db from '../db.js';
 import * as names from '../names.js';
 import { FLAGS } from '../flags.js';
@@ -61,7 +62,7 @@ function blank(from = null) {
     course: null, courseStatus: 'idle', mine: [], q: '', results: null, searching: false, searchError: '',
     near: null, nearStatus: 'idle', loc: null, which: null, whichName: '',
     players: [], teams: TEAM_IDS.map((id) => ({ id, name: '' })),
-    game: 'scorecard', pairSwitch: 'never', schedule: 'six', opps: null, custom: false, swapSel: null, rulesOpen: false,
+    game: 'scorecard', pairSwitch: 'never', schedule: 'six', opps: null, custom: false, swapSel: null, rulesOpen: false, sideNames: ['', ''],
     settings: { ...settings, rotationMode: 'fixed' }, // keep tee times by default (designspec §6 ④b)
     crewId: null, crewFromSource: false, past: [], newName: '', nickAsk: null, pairedFromLast: false,
     saving: false, saved: null,
@@ -169,16 +170,20 @@ async function loadFrom(app, code) {
       app.render();
       return;
     }
-    s.players = (ev.roster.players || []).map((p, i) => ({
+    const ryder = !!ev.settings?.ryder;
+    // Team Ryder Cup: players come back in side → cart order (the sides screen reads them that way).
+    const src = ryder ? [...(ev.roster.players || [])].sort((a, b) => String(a.teamId).localeCompare(String(b.teamId))) : ev.roster.players || [];
+    s.players = src.map((p, i) => ({
       key: `k${i}`, personId: p.personId || db.uuid(), name: p.name, firstName: p.firstName, lastName: p.lastName, nickname: p.nickname,
-      strokes: p.strokes ?? '', teamId: p.teamId || null, groupId: p.groupId || 'g1',
+      strokes: p.strokes ?? '', teamId: ryder ? null : p.teamId || null, groupId: p.groupId || 'g1',
     })).map(withName);
     s.teams = TEAM_IDS.map((id) => ({ id, name: (ev.roster.teams || []).find((t) => t.id === id)?.name || '' }));
-    const { rotation, ...settings } = ev.settings || {};
+    s.sideNames = ryder ? ['1', '2'].map((id) => (ev.roster.sides || []).find((x) => x.id === id)?.name || '') : ['', ''];
+    const { rotation, lineups, ryder: _r, ...settings } = ev.settings || {};
     s.settings = { ...s.settings, ...settings };
     // The same game as last time (the course isn't copied).
     const nCarts = (ev.roster.teams || []).length;
-    s.game = settings.pairs ? '2v2' : settings.solo ? 'match' : nCarts === 4 || nCarts === 3 ? 'carts' : 'scorecard';
+    s.game = ryder ? 'ryder' : settings.pairs ? '2v2' : settings.solo ? 'match' : nCarts === 4 || nCarts === 3 ? 'carts' : 'scorecard';
     s.pairSwitch = settings.pairSwitch || 'never';
     if (Array.isArray(rotation) && rotation.length === 2) s.schedule = 'turn';
     if (Array.isArray(rotation) && rotation.length) s.opps = rotation.map((r) => r.matches?.[0]?.[1]).filter(Boolean);
@@ -400,6 +405,7 @@ function buildRound(s) {
   const c = course(s);
   const game = gameOf(s);
   const shown = names.displayNames(s.players);
+  if (game === 'ryder') return buildRyder(s, c, shown);
   const three = game === 'carts' && s.players.length === 6; // 3 carts: everyone plays everyone, all 18
   const rotation = three ? threeCartRotation() : game === 'carts' ? cartRotation(s.schedule, s.opps) : clone(DEFAULT_ROTATION);
   const groupOfTeam = three ? { A: 'g1', B: 'g1', C: 'g2' } : {};
@@ -439,6 +445,36 @@ function buildRound(s) {
   };
 }
 
+/** The course part of a round, shared by every game. */
+function courseOf(s, c) {
+  const { variants, variant, ...cleanCourse } = c;
+  return {
+    id: cleanCourse.id, ...(c.ogaId ? { ogaId: c.ogaId } : {}), source: c.source === 'yours' ? c.lastSource || 'yours' : c.source || 'builtin',
+    name: c.name.trim(), shortName: c.shortName || cd.shortCourseName(c.name), location: c.location || '',
+    ...(c.lat != null && c.lng != null ? { lat: c.lat, lng: c.lng } : {}),
+    tee: s.tee, tees: (c.tees || []).map((t) => ({ name: t.name, yards: t.yards ?? null, rating: t.rating ?? null, slope: t.slope ?? null })),
+    par: c.par.map(Number), strokeIndex: c.strokeIndex.map(Number),
+  };
+}
+
+/** Team Ryder Cup: players in order = side 1 then side 2, pairs = carts, cart k of each side = tee time k. */
+function buildRyder(s, c, shown) {
+  const players = s.players.map((p, i) => ({
+    id: `p${i + 1}`, personId: p.personId || db.uuid(), name: shown[i],
+    firstName: p.firstName, lastName: p.lastName || '', ...(p.nickname ? { nickname: p.nickname } : {}),
+    strokes: p.strokes === '' || p.strokes == null || Number.isNaN(Number(p.strokes)) ? null : Math.max(0, Math.round(Number(p.strokes))),
+  }));
+  const { roster, settings } = ryderSetup(players, s.sideNames || ['', '']);
+  return {
+    name: s.name.trim() || `${c.shortName || cd.shortCourseName(c.name)} · ${prettyDate(todayISO())}`,
+    course: courseOf(s, c),
+    roster,
+    settings: { ...s.settings, ...settings },
+    playedOn: todayISO(),
+    crewId: s.crewId,
+  };
+}
+
 // ───────────────────────────────────────────── handicap sheet (designspec §6b)
 
 /** Bottom sheet for one player's handicap: big stepper, last round's number, full / no strokes. */
@@ -466,11 +502,11 @@ export function handicapSheet(app, { i }) {
 
 /** Back target for each screen. */
 const BACK = { which: 'course', players: 'course', check: 'players', game: 'players', teams: 'game', matchups: 'teams' };
-const BACK_LABEL = { course: 'Course', players: 'Players', game: 'Game', teams: s => (s.game === 'carts' ? 'Carts' : 'Partners') };
+const BACK_LABEL = { course: 'Course', players: 'Players', game: 'Game', teams: s => (s.game === 'carts' ? 'Carts' : s.game === 'ryder' ? 'Sides' : 'Partners') };
 
 /** Progress bars: how far along the flow this screen is (2–4 bars depending on the game). */
 function progress(s) {
-  const flow = ['course', 'players', 'game', ...(s.game === '2v2' ? ['teams'] : s.game === 'carts' ? ['teams', 'matchups'] : [])];
+  const flow = ['course', 'players', 'game', ...(s.game === '2v2' || s.game === 'ryder' ? ['teams'] : s.game === 'carts' ? ['teams', 'matchups'] : [])];
   const at = Math.max(0, flow.indexOf(s.screen === 'which' ? 'course' : s.screen === 'check' ? 'players' : s.screen));
   return `<div class="nr-bars">${flow.map((_, i) => `<i class="${i <= at ? 'on' : ''}"></i>`).join('')}</div>`;
 }
@@ -671,7 +707,7 @@ function playersView(s) {
 function gameView(s) {
   const n = s.players.length;
   const pick = gameOf(s);
-  const next = pick === '2v2' || pick === 'carts';
+  const next = pick === '2v2' || pick === 'carts' || pick === 'ryder';
   return `${topBar(s)}${headline(`Step 3 · Game · ${n} player${n === 1 ? '' : 's'}`, 'Pick a game', 'Games that don’t fit your player count are greyed out.')}
     <div class="game-list">${GAMES.map((g) => {
       const fix = gameFix(g.id, n);
@@ -684,8 +720,8 @@ function gameView(s) {
     }).join('')}</div>
     ${pick === 'match' ? '<p class="meta nr-hint">Match play: everyone plays their own ball. Each hole is worth 1 point; low net score takes it, a tie for low splits it.</p>' : ''}
     <div class="nr-foot">
-      ${next ? '' : '<p class="meta" style="text-align:center;margin:0 0 8px">2v2 and Partner “Rider” Cup go to one more screen to set teams.</p>'}
-      <button class="btn primary nr-cta" data-act="${next ? 'setup-go' : 'setup-save'}" ${next ? 'data-v="teams"' : ''} ${s.saving ? 'aria-busy="true"' : ''}>${s.saving ? 'Starting…' : next ? `Next: ${pick === '2v2' ? 'pick partners' : 'carts'}` : `Start round · ${n} player${n === 1 ? '' : 's'}`}${next ? icon('fwd', 18) : ''}</button>
+      ${next ? '' : '<p class="meta" style="text-align:center;margin:0 0 8px">2v2, Partner “Rider” Cup and Team Ryder Cup go to one more screen to set teams.</p>'}
+      <button class="btn primary nr-cta" data-act="${next ? 'setup-go' : 'setup-save'}" ${next ? 'data-v="teams"' : ''} ${s.saving ? 'aria-busy="true"' : ''}>${s.saving ? 'Starting…' : next ? `Next: ${pick === '2v2' ? 'pick partners' : pick === 'ryder' ? 'sides & carts' : 'carts'}` : `Start round · ${n} player${n === 1 ? '' : 's'}`}${next ? icon('fwd', 18) : ''}</button>
     </div>`;
 }
 
@@ -702,7 +738,7 @@ function rulesSummary(s) {
   parts.push({ bestBallAggregate: 'Low ball + total', bestBall: 'Best ball', aggregate: 'Aggregate' }[st.teamScore] || 'Low ball + total');
   parts.push({ doublePar: 'double par max', netDoubleBogey: 'net double bogey max', none: 'no max' }[st.maxHoleScore] || 'double par max');
   if (st.game !== 'rotationPlusMinus') parts.push(Number(st.halvedHolePoints) ? '½ ties' : 'no points for ties');
-  if (st.game !== 'rotationPlusMinus' && Number(st.matchBonus ?? 1)) parts.push(`+${st.matchBonus ?? 1} win`);
+  if (st.game !== 'rotationPlusMinus' && s.game !== 'ryder' && Number(st.matchBonus ?? 1)) parts.push(`+${st.matchBonus ?? 1} win`);
   return parts.join(' · ');
 }
 
@@ -716,7 +752,7 @@ function rulesBlock(s) {
       ${st.game !== 'none' ? `<div class="field"><span class="label">Team score</span>${seg('setup-set', [['bestBallAggregate', 'Low ball + total'], ['bestBall', 'Best ball'], ['aggregate', 'Aggregate']], st.teamScore, 'data-k="teamScore"')}</div>` : ''}
       <div class="field"><span class="label">Max hole score</span>${seg('setup-set', [['doublePar', 'Double par'], ['netDoubleBogey', 'Net dbl bogey'], ['none', 'None']], st.maxHoleScore, 'data-k="maxHoleScore"')}</div>
       ${!pm && st.game !== 'none' ? `<div class="field"><span class="label">Ties</span>${seg('setup-set', [['0.5', '½ each'], ['0', 'Nothing']], String(st.halvedHolePoints), 'data-k="halvedHolePoints"')}</div>
-      <div class="field"><span class="label">Matchup win bonus</span>${seg('setup-set', [['1', '+1 point'], ['0', 'None']], String(st.matchBonus ?? 1), 'data-k="matchBonus"')}</div>` : ''}
+      ${s.game === 'ryder' ? '' : `<div class="field"><span class="label">Matchup win bonus</span>${seg('setup-set', [['1', '+1 point'], ['0', 'None']], String(st.matchBonus ?? 1), 'data-k="matchBonus"')}</div>`}` : ''}
       ${pm ? `<div class="field"><span class="label">Max swing per rotation</span>${seg('setup-set', [['', 'Uncapped'], ['3', '3'], ['5', '5']], st.plusMinusCap == null ? '' : String(st.plusMinusCap), 'data-k="plusMinusCap"')}</div>` : ''}
       <div class="chips"><button class="pill" data-act="setup-toggle" data-k="par3NoMax" aria-pressed="${!!st.par3NoMax}"><span class="dot"></span>No max on par 3s</button>
       <button class="pill" data-act="setup-lowman" aria-pressed="${st.handicapMode === 'offLow'}"><span class="dot"></span>Play off the low man</button></div>
@@ -747,6 +783,34 @@ function pairsView(s) {
 }
 
 const CART_TINT = { A: 'var(--cart-you)', B: 'var(--t-B)', C: 'var(--t-C)', D: 'var(--t-D)' };
+
+/** ④ Team Ryder Cup: two named sides, carts of 2, one cart from each side per tee time. One screen. */
+function sidesView(s) {
+  if (gameFix('ryder', s.players.length)) return gameView(s); // the count changed since: pick again
+  const c = course(s);
+  const n = s.players.length;
+  const half = n / 2, carts = half / 2;
+  const first = (p) => p.firstName || p.name;
+  const nameOf = (k) => (s.sideNames?.[k] || '').trim() || `Team ${first(s.players[k * half])}`;
+  const rows = Array.from({ length: carts }, (_, k) => `<div class="ryder-tee"><span class="lbl">${esc(teeTimeName({ teeTimes: s.settings.teeTimes }, k))}</span></div>
+    <div class="ryder-row">${[0, 1].map((side) => {
+      const i = side * half + k * 2;
+      return `<div class="cart-card" style="--jersey:${sideColor(String(side + 1))}">
+        <div class="cc-k mono">${esc(nameOf(side).toUpperCase())}</div>
+        ${[i, i + 1].map((j) => swapBtn(s, j, s.players[j].strokes !== '' && s.players[j].strokes != null ? `<span class="mono soft">${esc(s.players[j].strokes)}</span>` : '')).join('')}
+      </div>`;
+    }).join('')}</div>`).join('');
+  return `${topBar(s)}${headline('Step 4 · Team Ryder Cup', `${n} players · ${carts} carts a side`)}
+    <div class="nr-course small"><div class="ellipsis" style="flex:1"><b>Team Ryder Cup</b> <span class="soft">· ${n} players${c ? ` · ${esc(c.shortName || c.name)}` : ''}</span></div><button class="btn small" data-act="setup-go" data-v="game">Change</button></div>
+    <div class="ryder-names">${[0, 1].map((k) => `<label class="field" style="margin:0"><span class="label" style="color:${sideColor(String(k + 1))}">Side ${k + 1}</span>
+      <input class="input" maxlength="20" value="${esc(s.sideNames?.[k] || '')}" placeholder="${esc(nameOf(k))}" autocapitalize="words" aria-label="Side ${k + 1} name" data-input="setup-sidename" data-i="${k}"></label>`).join('')}</div>
+    <p class="meta nr-hint">${s.swapSel != null ? 'Now tap who to swap with.' : 'Tap two names to swap: across sides, carts or tee times. Each tee time is one cart from each side.'}</p>
+    ${rows}
+    <div class="nr-two"><button class="btn ghost" data-act="setup-shuffle">Shuffle</button><button class="btn ghost" data-act="setup-go" data-v="players">Edit players</button></div>
+    <div class="nr-tip">${icon('bulb', 16)}<span>Holes 1–6: your cart plays the other cart in your foursome. Then a new opponent every 6 holes, compared hole by hole. Each match is 1 point to the side; ${carts * 3 / 2 + 0.5} wins the cup.</span></div>
+    ${rulesBlock(s)}
+    ${bottom(s.saving ? 'Starting…' : `Start round · ${n} players`, 'setup-save', { busy: s.saving })}`;
+}
 
 /** ④ Partner “Rider” Cup: 8 players in 4 carts, or 6 in 3. */
 // ───────────────────────────────────────────── team names per crew (feature 009-team-names-per-crew)
@@ -957,7 +1021,7 @@ function savedView(s) {
     ${bottom('Open the round', 'setup-open')}`;
 }
 
-const VIEWS = { course: courseView, which: whichView, players: playersView, check: checkView, game: gameView, teams: (s) => (s.game === 'carts' ? cartsView(s) : pairsView(s)), matchups: matchupsView };
+const VIEWS = { course: courseView, which: whichView, players: playersView, check: checkView, game: gameView, teams: (s) => (s.game === 'carts' ? cartsView(s) : s.game === 'ryder' ? sidesView(s) : pairsView(s)), matchups: matchupsView };
 
 
 // ───────────────────────────────────────────── course search actions
@@ -1350,6 +1414,12 @@ export default {
       app.closeSheet();
       app.render();
     },
+    'setup-sidename': (el, ev, app) => {
+      const s = app.setup;
+      s.sideNames = Array.isArray(s.sideNames) ? [...s.sideNames] : ['', ''];
+      s.sideNames[Number(el.dataset.i)] = el.value.slice(0, 20);
+      persist(s);
+    },
     'setup-teamname': (el, ev, app) => {
       app.setup.teams.find((t) => t.id === el.dataset.v).name = el.value.slice(0, 20);
       persist(app.setup);
@@ -1458,7 +1528,7 @@ export default {
       if (to === 'game' && !s.players.length) return;
       if (to === 'teams') {
         const g = gameOf(s);
-        if (g !== s.game || (g !== '2v2' && g !== 'carts')) return;
+        if (g !== s.game || (g !== '2v2' && g !== 'carts' && g !== 'ryder')) return;
         if (g === 'carts') ensureCarts(s);
       }
       if (to === 'matchups') ensureCarts(s);
