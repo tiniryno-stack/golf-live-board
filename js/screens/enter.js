@@ -402,10 +402,12 @@ function ryderEnterView(app, h, { holeRow, gcard, carts, focus, locked, ahead, p
   const slim = shut ? `<button class="ry-slim" data-act="cart-focus" data-v="${flipped ? 'mine' : 'opp'}" aria-label="${flipped ? 'Back to your cart' : `Enter scores for ${esc(shut.players.map((p) => p.name).join(' and '))}`}">
       ${shut.players.map((p) => `<span class="ry-slim-p"><span class="ellipsis">${esc(p.name)}</span>${mark(p.gross[h - 1], par, 28, { ghost: par })}</span>`).join('')}
       ${flipped ? '<span class="ry-you lbl">YOU</span>' : '<span class="ry-chip">Edit</span>'}</button>` : '';
-  const segs = playOrder(st).map((n) => {
+  // A wider gap where each set of holes ends (every 6 here; at the turn when the game switches at 9).
+  const breaks = new Set(snap.game?.rotations?.length > 1 ? snap.game.rotations.slice(1).map((r) => r.from) : [10]);
+  const segs = playOrder(st).map((n, i) => {
     const ids = foursomeFor(snap.roster, st, app.me, n);
     const fin = ids.length && ids.every((id) => snap.playerById.get(id).gross[n - 1] != null);
-    return `<i class="${n === h ? 'here' : fin ? 'done' : ''}"></i>`;
+    return `<i class="${n === h ? 'here' : fin ? 'done' : ''}${breaks.has(i + 1) ? ' brk' : ''}"></i>`;
   }).join('');
   const blanks = blankPlayers(app, h);
   const foot = pos >= frontierPos(app) - 1 && !ahead
