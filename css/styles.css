@@ -1759,3 +1759,5 @@ details.fold summary::-webkit-details-marker { display: none; }
 .ry-prow .r { text-align: right; } .ry-prow .b { font-weight: 700; }
 .ry-prow .you { color: var(--cart-you-text); }
 .ry-prow:not(.head) .mono.r { font-size: 15px; } .ry-prow:not(.head) .mono.r.b { font-size: 17px; }
+
+.ry-board .board-segs { margin: var(--space-4) 0 var(--space-2); }

@@ -42,8 +42,8 @@ test('Team Ryder Cup: game list (16 only), carts per side, default sides and tee
   assert.equal(ev.roster.players.find((p) => p.name === 'Marcus').groupId, 'g4');
   assert.equal(sideOf('2C'), '2');
   assert.equal(teamColor('1A', '1A'), 'var(--cart-you)');
-  assert.equal(teamColor('1A', '1B'), 'var(--t-B)', 'own side blue');
-  assert.equal(teamColor('1A', '2D'), 'var(--t-A)', 'other side orange');
+  assert.equal(teamColor('1A', '1B'), 'var(--text-muted)', 'own side neutral (015)');
+  assert.equal(teamColor('1A', '2D'), 'var(--text-muted)', 'other side neutral (015)');
 });
 
 test('Team Ryder Cup: 12 matches, 1 point each to the side, 6½ wins; provisional until both foursomes finish', () => {
@@ -156,7 +156,7 @@ test('Team Ryder Cup headlines are about sides and matches, not carts', () => {
   assert.equal(lc[0].text, 'Team Justin take the lead 4–2', '8 players: side 2 starts at Justin');
   assert.equal(lc[0].hole, 18);
   assert.equal(lc[0].unit, 'sides');
-  assert.equal(headlineColor('1A', lc[0]), 'var(--t-A)', 'side 2 orange');
+  assert.equal(headlineColor('1A', lc[0]), 'var(--text-muted)', 'side 2 neutral (015)');
   const cl = hl.find((h) => h.type === 'cupClinched');
   assert.equal(cl, undefined, '4–2 at the very end = the final says it');
   const fin = hl.find((h) => h.type === 'roundFinal');

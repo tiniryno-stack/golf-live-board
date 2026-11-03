@@ -27,7 +27,8 @@ export const TEAM_NAME_PICKS = [
 const AWAY = { A: '--t-A', B: '--t-B', C: '--t-C', D: '--t-D', E: '--t-E', F: '--t-F' };
 
 /** Team Ryder Cup: side 1 wears blue, side 2 orange, the same on every phone (your own cart stays green). */
-const SIDE = { 1: 'var(--t-B)', 2: 'var(--t-A)' };
+// Team Ryder Cup (015): no side colors. Your cart is green (teamColor); every other cart and side is neutral.
+const SIDE = { 1: 'var(--text-muted)', 2: 'var(--text-muted)' };
 export const sideColor = (sideId) => SIDE[sideId] || 'var(--ink-soft)';
 
 /** CSS color for a cart as seen from this phone. */
