@@ -4,7 +4,7 @@
 //
 // All headlines come from the OFFICIAL standings (holes every foursome has finished).
 
-import { compute, fmtPts, fmtToPar, posOf, HOLES } from './scoring.js';
+import { compute, fmtPts, fmtToPar, posOf, HOLES, matchSidePoints } from './scoring.js';
 
 /** Thresholds — tune after Friday. */
 export const HEADLINE_CONFIG = {
@@ -14,8 +14,16 @@ export const HEADLINE_CONFIG = {
 
 /** Lower = more important. If several fire for one team on one hole, only the top one is a banner. */
 export const PRIORITY = {
-  roundFinal: 0, leadChange: 1, comeback: 2, matchupComeback: 3, matchupClinched: 4, streak: 5, matchupFinal: 6,
+  roundFinal: 0, cupClinched: 0.5, leadChange: 1, comeback: 2, matchupComeback: 3, matchupClinched: 4, streak: 5, matchupFinal: 6,
 };
+
+// Board-level headlines (lead change, comeback, round final) rank the UNIT the day is decided on:
+// carts in the Partner “Rider” Cup, people in 2v2 (each player's summed points — the pairings are
+// not a race, Nov 2 audit of round BSZTH), sides in the Team Ryder Cup (match points, not carts).
+// Match-level headlines (clinched, matchup final, matchup comeback) always name the carts/pairings.
+function unitOf(g) {
+  return g.sides ? 'sides' : g.people ? 'people' : 'teams';
+}
 
 const time = (r) => Date.parse(r.updated_at) || 0;
 
@@ -60,10 +68,31 @@ function step(snap, st, at) {
     st.lastOfficial = cur; // a score was cleared; holes get re-checked when the line moves again
   } else if (cur > 0) {
     // A correction inside the official range can still change who leads.
-    const lc = leadChange(snap, st, valuesAt(g, cur), cur, at);
+    const lc = leadChange(snap, st, valuesAt(snap, cur), cur, at);
     if (lc) produced.push(lc);
   }
   return produced;
+}
+
+/** Each unit's standing value through play-order position h: teams, or people / sides built from them. */
+function valuesAt(snap, h) {
+  const g = snap.game;
+  const teams = teamValuesAt(g, h);
+  const u = unitOf(g);
+  if (u === 'teams') return teams;
+  const v = {};
+  if (u === 'people') {
+    for (const r of g.people) v[r.playerId] = 0;
+    for (const t of g.teamIds) for (const pid of snap.teamById.get(t)?.playerIds || []) if (pid in v) v[pid] += teams[t];
+    return v;
+  }
+  for (const s of g.sides) v[s.sideId] = 0;
+  for (const m of g.matches) {
+    if (!m.final || m.to > h) continue;
+    const sp = matchSidePoints(m);
+    for (const k of Object.keys(sp)) v[k] = (v[k] || 0) + sp[k];
+  }
+  return v;
 }
 
 function cfgFor(g) {
@@ -71,7 +100,7 @@ function cfgFor(g) {
 }
 
 /** Each team's standing value through play-order position h (points, or capped Plus/Minus). */
-function valuesAt(g, h) {
+function teamValuesAt(g, h) {
   const v = {};
   for (const t of g.teamIds) v[t] = 0;
   if (g.type === 'splitPoint') {
@@ -97,19 +126,22 @@ function ranked(vals) {
   return Object.keys(vals).sort((a, b) => vals[b] - vals[a] || a.localeCompare(b));
 }
 
-const name = (snap, t) => snap.teamById.get(t)?.name || t;
+/** A unit's name: a side, a cart / pairing, or a player (2v2 board headlines). */
+const name = (snap, t) => snap.game?.sides?.find((s) => s.sideId === t)?.name || snap.teamById.get(t)?.name || snap.playerById.get(t)?.name || t;
 const fmtVal = (g, n) => (g.type === 'rotationPlusMinus' ? fmtToPar(n) : fmtPts(n));
 
-function mk(type, teams, hole, text, at, hero = teams[0]) {
-  return { id: `${type}:${teams.join('-')}:${hole}`, type, priority: PRIORITY[type], teams, hero: hero ?? null, hole, text, at, primary: false };
+function mk(type, teams, hole, text, at, hero = teams[0], unit = 'teams') {
+  return { id: `${type}:${teams.join('-')}:${hole}`, type, priority: PRIORITY[type], teams, hero: hero ?? null, hole, text, at, primary: false, ...(unit !== 'teams' ? { unit } : {}) };
 }
 
 function leadChange(snap, st, vals, h, at) {
+  const u = unitOf(snap.game);
   const order = ranked(vals);
   const leader = order.length > 1 && vals[order[0]] - vals[order[1]] > 1e-9 ? order[0] : null;
   let out = null;
   if (leader && st.lastLeader && leader !== st.lastLeader) {
-    out = mk('leadChange', [leader], h, `${name(snap, leader)} takes the lead`, at);
+    const score = u === 'sides' ? ` ${fmtPts(vals[order[0]])}–${fmtPts(vals[order[1]])}` : '';
+    out = mk('leadChange', [leader], h, `${name(snap, leader)} ${u === 'sides' ? 'take' : 'takes'} the lead${score}`, at, leader, u);
   }
   if (leader) st.lastLeader = leader;
   return out;
@@ -120,21 +152,35 @@ function atHole(snap, st, h, at) {
   const cfg = cfgFor(g);
   const isPM = g.type === 'rotationPlusMinus';
   const produced = [];
-  const vals = valuesAt(g, h);
+  const vals = valuesAt(snap, h);
+  const unitKind = unitOf(g);
 
   // Lead change
   const lc = leadChange(snap, st, vals, h, at);
   if (lc) produced.push(lc);
 
+  // Team Ryder Cup: a side reaches the points that win the cup (official matches only).
+  if (unitKind === 'sides' && !(h === HOLES && snap.roundComplete)) {
+    const toWin = g.sides[0].toWin;
+    for (const s of g.sides) {
+      if (vals[s.sideId] >= toWin - 1e-9 && !st.cupClinched) {
+        st.cupClinched = s.sideId;
+        const other = g.sides.find((o) => o !== s);
+        produced.push(mk('cupClinched', [s.sideId], h, `${s.name} clinch the cup — ${fmtPts(vals[s.sideId])}–${fmtPts(vals[other.sideId])} with ${s.total - g.matches.filter((m) => m.final && m.to <= h).length} matches left`, at, s.sideId, 'sides'));
+      }
+    }
+  }
+
   // Comeback: cut the gap to the team directly ahead by N+ within the window, gap now ≤ maxGap.
+  // (Not for sides: with two of them the lead change says it all.)
   const order = ranked(vals);
-  for (let i = 1; i < order.length; i++) {
+  for (let i = 1; i < order.length && unitKind !== 'sides'; i++) {
     const t = order[i], u = order[i - 1];
     const gapNow = vals[u] - vals[t];
     if (gapNow > cfg.comebackMaxGap) continue;
     let gapMax = -Infinity;
     for (let j = Math.max(0, h - cfg.comebackWindow); j < h; j++) {
-      const pv = valuesAt(g, j);
+      const pv = valuesAt(snap, j);
       gapMax = Math.max(gapMax, pv[u] - pv[t]);
     }
     if (gapMax - gapNow < cfg.comebackCut) continue;
@@ -147,7 +193,7 @@ function atHole(snap, st, h, at) {
       gapNow <= 0
         ? `${name(snap, t)} is coming back — erased a ${fmtPts(gapMax)}${isPM ? '-stroke' : '-point'} deficit`
         : `${name(snap, t)} is coming back — cut ${leadOrGap} from ${fmtPts(gapMax)} to ${fmtPts(gapNow)}${unit}`;
-    produced.push(mk('comeback', [t, u], h, text, at));
+    produced.push(mk('comeback', [t, u], h, text, at, t, unitKind));
   }
 
   // Matchup-level headlines for the matchups being played on this hole.
@@ -229,13 +275,27 @@ function atHole(snap, st, h, at) {
 
   // Round final
   if (h === HOLES && snap.roundComplete) {
-    const top = g.standings.filter((s) => s.rank === 1);
-    const v = (s) => (isPM ? fmtToPar(s.officialPm) : fmtPts(s.officialPoints));
-    const text =
-      top.length === 1
-        ? `Final: ${name(snap, top[0].teamId)} ${snap.settings.solo ? 'wins' : 'win'} the day ${isPM ? 'at' : 'with'} ${v(top[0])}`
-        : `Final: ${top.map((s) => name(snap, s.teamId)).join(' and ')} share the day ${isPM ? 'at' : 'with'} ${v(top[0])}`;
-    produced.push(mk('roundFinal', top.map((s) => s.teamId), h, text, at, top.length === 1 ? top[0].teamId : null));
+    if (unitKind === 'sides') {
+      const [a, b] = g.sides;
+      const text = a.points > b.points
+        ? `Final: ${a.name} win ${fmtPts(a.points)}–${fmtPts(b.points)}`
+        : `Final: ${a.name} and ${b.name} share the day ${fmtPts(a.points)}–${fmtPts(b.points)}`;
+      produced.push(mk('roundFinal', a.points > b.points ? [a.sideId] : [a.sideId, b.sideId], h, text, at, a.points > b.points ? a.sideId : null, 'sides'));
+    } else if (unitKind === 'people') {
+      const top = g.people.filter((r) => r.rank === 1);
+      const text = top.length === 1
+        ? `Final: ${name(snap, top[0].playerId)} wins the day with ${fmtPts(top[0].points)}`
+        : `Final: ${top.map((r) => name(snap, r.playerId)).join(' and ')} share the day at ${fmtPts(top[0].points)}`;
+      produced.push(mk('roundFinal', top.map((r) => r.playerId), h, text, at, top.length === 1 ? top[0].playerId : null, 'people'));
+    } else {
+      const top = g.standings.filter((s) => s.rank === 1);
+      const v = (s) => (isPM ? fmtToPar(s.officialPm) : fmtPts(s.officialPoints));
+      const text =
+        top.length === 1
+          ? `Final: ${name(snap, top[0].teamId)} ${snap.settings.solo ? 'wins' : 'win'} the day ${isPM ? 'at' : 'with'} ${v(top[0])}`
+          : `Final: ${top.map((s) => name(snap, s.teamId)).join(' and ')} share the day ${isPM ? 'at' : 'with'} ${v(top[0])}`;
+      produced.push(mk('roundFinal', top.map((s) => s.teamId), h, text, at, top.length === 1 ? top[0].teamId : null));
+    }
   }
   return produced;
 }

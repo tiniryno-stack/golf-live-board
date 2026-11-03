@@ -143,6 +143,15 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
   `rotationMode` fixed = keep tee times = new default; **6 = 3 carts**, `threeCartRotation()`: one
   18-hole rotation with A v B, A v C, B v C at once, groups A + B / C, always fixed; a cart has two
   matches per hole, so use `matchesFor()`; `matchFor()` returns the first).
+- **Team Ryder Cup (Nov 3, game id `ryder`, built for the Nov 9 birthday round; ARCHITECTURE.md 13a):** 8/12/16
+  players = 2–4 carts a side, `roster.sides`, cart ids `1A`…`2D` (side + letter), `settings.ryder`, `settings.lineups`
+  (Host → Rules → New lineup from hole N: carts ride together and play each other from then on; `sameFoursome` and
+  SQL `_same_foursome` read it — **migration `supabase/migrations/2026-11-03-team-ryder-cup.sql` still to apply**:
+  until then a lineup change is refused server-side for non-organizer phones, everything else works). Each match = 1 side
+  point (`game.sides[]`, `toWin` = matches/2 + ½, 6–6 = shared). Headlines rank sides. `sim.html` → **Team Ryder Cup · 16 phones**.
+  Colors: your cart green, side 1 blue, side 2 orange. `ryderSetup()` in scoring.js builds the roster from players in order.
+- **2v2 headlines (fixed Nov 3):** board-level headlines (lead change, comeback, final) rank `game.people`, not the
+  six pairings; `h.unit` = 'people' | 'sides' marks it, `headlineColor(mine, h, me)`.
 - **Small groups:** any roster that isn't 4 carts of 2 is a scorecard round (no teams).
   With 2–6 players, `settings.solo` = **split point** (`game.type 'splitPoint'`): 1 point a hole to the
   low net score, ties for low split it 1/k; level after 18 → **most outright wins** (`rankStandings`), still level = shared. Teams A–D are made in `soloView`, so Host can switch it on
@@ -234,7 +243,7 @@ file). Token cost matters more than coverage here.
 
 ```bash
 npm install
-npm test               # 109 unit tests (incl. race.test.mjs, seasons.test.mjs): scoring + headlines + course data + names/crews + games (2v2, at the turn, 6-player match play, Partner “Rider” Cup for 6, tee times) + score marks + design tokens (drift, retired colors, type scale)
+npm test               # 116 unit tests (incl. race.test.mjs, seasons.test.mjs, ryder.test.mjs): scoring + headlines + course data + names/crews + games (2v2, at the turn, 6-player match play, Partner “Rider” Cup for 6, Team Ryder Cup, tee times) + score marks + design tokens (drift, retired colors, type scale)
 npm run test:fit       # 160 checks: every screen at SE / 13 mini / 15-16 / Pro Max, no scroll on Enter
 npm run test:smoke     # 283 checks (incl. crews): multi-phone flows against the mock (join, swap, offline, rejoin,
                        # reset/delete, back nine, Next waits for every score, grid/locks, recap,
@@ -255,7 +264,7 @@ npm run test:smoke     # 283 checks (incl. crews): multi-phone flows against the
 ## Workflow
 
 - Small commits straight to `main`, push after each change (Pages redeploys in ~1 min). **Run `npm run stamp`
-  before every push to `main`** (commit `version.json`): index.html's loader fetches `version.json` uncached and
+  before every push to `main`** (on Windows: `node tools/stamp.mjs .`) (commit `version.json`): index.html's loader fetches `version.json` uncached and
   loads that version's JS/CSS via an import map + `?v=`, so phones (home screen apps too) get the update on
   the next open instead of running cached files. `npm run preview` stamps its own copy. End commit messages with the
   attribution lines your session provides.

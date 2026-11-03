@@ -87,7 +87,7 @@ export function renderBanners(app) {
     html += headline.list
       .map((h, i) => {
         const more = i === headline.list.length - 1 && headline.extra > 0 ? `<span class="more">+${headline.extra}</span>` : '';
-        return `<button class="banner headline-b" data-act="headline-dismiss" data-swipe="headline" style="--jersey:${headlineColor(mine, h)}">
+        return `<button class="banner headline-b" data-act="headline-dismiss" data-swipe="headline" style="--jersey:${headlineColor(mine, h, app.me)}">
       <span class="spark">${icon('spark', 18)}</span><span style="flex:1">${esc(h.text)}</span>${more}</button>`;
       })
       .join('');
@@ -140,7 +140,7 @@ export function showAway(list, app, markSeen) {
   overlay = { onDismiss: markSeen, app, away: true };
   root.innerHTML = `<div class="away" data-act="away-dismiss" role="dialog">
     <div class="kicker">While you were away</div>
-    <ol>${list.map((h) => `<li><i class="jdot" style="--jersey:${headlineColor(app.myTeam(), h)}"></i><span>${esc(h.text)}</span></li>`).join('')}</ol>
+    <ol>${list.map((h) => `<li><i class="jdot" style="--jersey:${headlineColor(app.myTeam(), h, app.me)}"></i><span>${esc(h.text)}</span></li>`).join('')}</ol>
     <div class="actions"><button data-act="away-all">See all</button><button data-act="away-dismiss">Got it</button></div>
   </div>`;
   root.classList.add('open');

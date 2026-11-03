@@ -15,7 +15,36 @@ export function briefPages(app) {
   const g = snap?.game;
   if (!g) return [];
   if (g.type === 'splitPoint') return [splitPage(snap)];
+  if (g.sides) return [ryderPage(app, snap, g)];
   return [scoringPage(snap, g, !!app.myTeam()), dayPage(app, snap, g)];
+}
+
+// Team Ryder Cup: one card — the sides, what a match is worth, your three matches, what wins the cup.
+function ryderPage(app, snap, g) {
+  const st = snap.settings;
+  const mine = app.myTeam();
+  const [a, b] = ['1', '2'].map((id) => g.sides.find((s) => s.sideId === id));
+  const mySide = mine ? g.sides.find((s) => s.teamIds.includes(mine)) : null;
+  const tname = (id) => esc(snap.teamById.get(id)?.name || id);
+  const players = (id) => esc((snap.teamById.get(id)?.playerIds || []).map((p) => snap.playerById.get(p)?.name).join(' + '));
+  const rows = g.rotations.map((r) => {
+    const label = holesLabel(st, r.from, r.to);
+    const ms = mine ? r.matches.filter((m) => m.teams.includes(mine)) : [];
+    if (!ms.length) return `<li><span class="rh">${esc(label)}</span><span class="rv">${r.matches.map((m) => `<b style="color:${teamColor(null, m.teams[0])}">${tname(m.teams[0])}</b> v <b style="color:${teamColor(null, m.teams[1])}">${tname(m.teams[1])}</b>`).join('<br>')}</span></li>`;
+    return ms.map((m) => {
+      const opp = m.teams[0] === mine ? m.teams[1] : m.teams[0];
+      const away = app.me && !foursomeTeams(snap.roster, st, app.me, m.firstHole).includes(opp);
+      return `<li><span class="rh">${esc(label)}</span><span class="rv">vs <b style="color:${teamColor(mine, opp)}">${tname(opp)}</b><small>${players(opp)}${away ? ' · other tee time, hole by hole' : ' · in your foursome'}</small></span></li>`;
+    }).join('');
+  }).join('');
+  const net = snap.hasStrokes ? '<p class="brief-note">Net scores: each dot by a name is a stroke off.</p>' : '';
+  const max = st.maxHoleScore === 'none' ? '' : `<li>Pick up at <b>${st.maxHoleScore === 'netDoubleBogey' ? 'net double bogey' : 'double par'}</b>${st.par3NoMax ? ' (not on par 3s)' : ''}.</li>`;
+  return `<div class="fc-title">Team Ryder Cup</div>
+    <div class="sub"><b style="color:${teamColor(null, '1')}">${esc(a.name)}</b> vs <b style="color:${teamColor(null, '2')}">${esc(b.name)}</b>${mySide ? ` · you’re ${esc(mySide.name)}` : ''}</div>
+    <div class="brief-big"><span class="n">1</span><span>point a match<small>${a.total} matches · <b>${fmtPts(a.toWin)}</b> wins the cup · halved = ½ each</small></span></div>
+    <dl class="brief-defs"><dt>A match</dt><dd>Your cart vs one of theirs, ${g.rotations[0].to - g.rotations[0].from + 1} holes. Low ball 1 + low total 1 each hole (push = ½ each). More points after the last hole wins it.</dd></dl>
+    <ol class="brief-rots${mine ? '' : ' all'}">${rows}</ol>
+    <ul class="brief-rules"><li>Matches against another tee time are compared <b>hole by hole</b>; they go official once both foursomes finish the hole.</li>${max}</ul>${net}`;
 }
 
 function rotationLength(st) {

@@ -1,17 +1,19 @@
-// sim.js — sim.html: 8 test phones in one browser. Each iframe loads the app with
+// sim.js — sim.html: 8 (or 16) test phones in one browser. Each iframe loads the app with
 // `?sim=N`, which gives it its own storage space (db.js), so it has its own device ID and
 // joins as its own player. "Make a practice round" creates a real round (new crew, so it
 // never touches your group's Season standings), signs phone N in as player N, and makes
 // phone 1 the organizer. "Play a hole" enters a realistic score on each phone, the way a
-// player would on their own phone, then taps Next hole.
+// player would on their own phone, then taps Next hole. "Team Ryder Cup · 16 phones" makes
+// the 8v8 round (4 tee times) with 16 phones.
 
 import { api, sb, uuid, fetchEvent, normCode } from './db.js';
 import { COURSES } from './courses.js';
-import { DEFAULT_SETTINGS, DEFAULT_ROTATION } from './scoring.js';
+import { DEFAULT_SETTINGS, DEFAULT_ROTATION, ryderSetup } from './scoring.js';
 import { TEAM_NAME_PICKS } from './teams.js';
 
-const PHONES = 8;
+let PHONES = 8; // one per player in the open round (8, or 16 for the Team Ryder Cup)
 const NAMES = ['Andrew', 'Sean', 'Mike', 'Tyler', 'Sam', 'Jake', 'Chris', 'Matt'];
+const RYDER = ['Andrew', 'Alex', 'Ant', 'Steve', 'Justin', 'Chuck', 'Mitch', 'Peter', 'Sean', 'Baker', 'Josh', 'Brandon', 'Joseph', 'Jay', 'Elijah', 'Marcus'];
 const CARTS = 'AABBCCDD';
 const LAST_KEY = 'glb.sim.last';
 const $ = (id) => document.getElementById(id);
@@ -49,24 +51,29 @@ function status(text, err = false) {
 
 // ───────────────────────────────────────────── make / open a round
 
-async function makeRound() {
+async function makeRound(kind = 'carts') {
   const c = COURSES[0];
   const tee = c.tees.find((t) => t.name === 'Blue') || c.tees[0];
   const when = new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  const ryder = kind === 'ryder'
+    ? ryderSetup(RYDER.map((name, k) => ({ id: `p${k + 1}`, personId: uuid(), name, firstName: name, lastName: 'Test', strokes: null })), ['Team Andrew', 'Team Josh'])
+    : null;
   const round = {
-    name: `Practice · ${when}`,
+    name: `${ryder ? 'Ryder practice' : 'Practice'} · ${when}`,
     course: {
       id: c.id, ogaId: c.ogaId, source: 'builtin', name: c.name, shortName: c.shortName, location: c.location,
       tee, tees: c.tees, par: [...c.par], strokeIndex: [...c.strokeIndex],
     },
-    roster: {
+    roster: ryder ? ryder.roster : {
       groups: [{ id: 'g1', name: 'Group 1' }, { id: 'g2', name: 'Group 2' }],
       teams: ['A', 'B', 'C', 'D'].map((id, k) => ({ id, name: TEAM_NAME_PICKS[k] })),
       players: NAMES.map((name, k) => ({
         id: `p${k + 1}`, personId: uuid(), name, teamId: CARTS[k], groupId: k < 4 ? 'g1' : 'g2', strokes: null,
       })),
     },
-    settings: { ...DEFAULT_SETTINGS, practice: true, rotation: JSON.parse(JSON.stringify(DEFAULT_ROTATION)) }, // practice: never added to crews / people
+    settings: ryder
+      ? { ...DEFAULT_SETTINGS, ...ryder.settings, practice: true, teeTimes: ['08:00', '08:10', '08:20', '08:30'] }
+      : { ...DEFAULT_SETTINGS, practice: true, rotation: JSON.parse(JSON.stringify(DEFAULT_ROTATION)) }, // practice: never added to crews / people
     playedOn: new Date().toISOString().slice(0, 10),
     crewId: null, // its own crew: practice never shows up in your group's Season standings
   };
@@ -96,6 +103,8 @@ async function openRound(code, pin) {
   const ev = await fetchEvent(code);
   if (!ev) throw new Error(`No round ${code}`);
   const players = ev.roster.players || [];
+  PHONES = Math.min(16, Math.max(8, players.length)); // one phone per player: 8, or 16 for the Team Ryder Cup
+  document.querySelector('h1').textContent = `Test with ${PHONES} phones`;
   const names = [];
   for (let i = 1; i <= PHONES; i++) {
     const pid = await signIn(i, code, players[i - 1]?.id || null);
@@ -202,14 +211,19 @@ async function playHole(which) {
       status(which === 'other' ? 'Phone 1’s group is the only one left to play.' : 'No phones in that group can play.');
       return;
     }
+    // 16 phones: let one tee time's scores land before the next, so the 4 groups don't all hit the server at once.
+    const chunk = playing.length > 8 ? 4 : playing.length;
     const holes = new Set();
-    for (const p of playing) {
-      const h = p.g.nextHole();
-      holes.add(h);
-      p.g.setScore(p.g.me, h, randomScore(p.g.snapshot.holes[h - 1].par));
+    for (let i = 0; i < playing.length; i += chunk) {
+      for (const p of playing.slice(i, i + chunk)) {
+        const h = p.g.nextHole();
+        holes.add(h);
+        p.g.setScore(p.g.me, h, randomScore(p.g.snapshot.holes[h - 1].par));
+      }
+      if (i + chunk < playing.length) await sleep(400);
     }
     status(`Entered hole ${[...holes].join(', ')} on ${playing.length} phone${playing.length > 1 ? 's' : ''}… syncing`);
-    await sleep(1800);
+    await sleep(playing.length > 8 ? 3000 : 1800);
     await Promise.all(apps.map((p) => p.g.refetch?.().catch(() => {})));
     await sleep(400);
     if ($('advance').checked) {
@@ -264,20 +278,26 @@ function showReopen() {
 async function run(fn) {
   if (busy) return;
   busy = true;
-  for (const id of ['make', 'open']) $(id).disabled = true;
+  for (const id of ['make', 'make-ryder', 'open']) $(id).disabled = true;
   try {
     await fn();
   } catch (e) {
     status(escapeHtml(e.message || 'No signal. Try again.'), true);
   } finally {
     busy = false;
-    for (const id of ['make', 'open']) $(id).disabled = false;
+    for (const id of ['make', 'make-ryder', 'open']) $(id).disabled = false;
   }
 }
 
 $('make').onclick = () => run(async () => {
   status('Making a practice round…');
-  const { code, pin } = await makeRound();
+  const { code, pin } = await makeRound('carts');
+  await openRound(code, pin);
+  remember();
+});
+$('make-ryder').onclick = () => run(async () => {
+  status('Making a Team Ryder Cup practice round (16 players)…');
+  const { code, pin } = await makeRound('ryder');
   await openRound(code, pin);
   remember();
 });

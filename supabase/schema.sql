@@ -135,15 +135,35 @@ $$;
 -- Is player B in player A's foursome on this hole? (section 7.1)
 -- Swap mode: your cart + the cart you're playing on that hole's rotation.
 -- Fixed mode (or no teams): same group all day.
+-- Team Ryder Cup (settings.ryder): tee times, until a Host lineup (settings.lineups =
+-- [{ fromHole, foursomes: [[cart, cart], …] }]) puts carts together from a hole on. Mirrors scoring.js sameFoursome.
 create or replace function public._same_foursome(p_roster jsonb, p_settings jsonb, p_a text, p_b text, p_hole int)
 returns boolean language plpgsql immutable set search_path = public as $$
 declare
   a jsonb; b jsonb; rot jsonb; m jsonb; v_pos int := public._play_pos(p_settings, p_hole);
+  lu jsonb; best jsonb := null; best_pos int := 0; lp int; f jsonb;
 begin
   if p_a = p_b then return true; end if;
   a := public._player(p_roster, p_a);
   b := public._player(p_roster, p_b);
   if a is null or b is null then return false; end if;
+  if coalesce(p_settings->>'ryder', 'false') = 'true' and a->>'teamId' is not null and b->>'teamId' is not null then
+    if a->>'teamId' = b->>'teamId' then return true; end if;
+    if jsonb_typeof(p_settings->'lineups') = 'array' then
+      for lu in select * from jsonb_array_elements(p_settings->'lineups') loop
+        if jsonb_typeof(lu->'foursomes') <> 'array' or jsonb_array_length(lu->'foursomes') = 0 then continue; end if;
+        lp := public._play_pos(p_settings, (lu->>'fromHole')::int);
+        if lp <= v_pos and lp >= best_pos then best := lu; best_pos := lp; end if;
+      end loop;
+    end if;
+    if best is not null then
+      for f in select * from jsonb_array_elements(best->'foursomes') loop
+        if f ? (a->>'teamId') and f ? (b->>'teamId') then return true; end if;
+      end loop;
+      return false;
+    end if;
+    return a->>'groupId' is not null and a->>'groupId' = b->>'groupId';
+  end if;
   if coalesce(p_settings->>'rotationMode', 'swap') = 'swap'
      and a->>'teamId' is not null and b->>'teamId' is not null
      and jsonb_typeof(p_settings->'rotation') = 'array' then
@@ -214,6 +234,8 @@ returns text language sql immutable set search_path = public as $$
     when 'startHole'        then 'First tee'
     when 'teeTimes'         then 'Tee times'
     when 'gps'              then 'GPS yardages'
+    when 'ryder'            then 'Team Ryder Cup'
+    when 'lineups'          then 'Lineup'
     else p_key end
 $$;
 

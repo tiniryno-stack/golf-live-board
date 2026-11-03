@@ -9,8 +9,8 @@
 // Players: one compact line each.
 
 import { esc, icon, seg, clock } from '../ui.js';
-import { fmtPts, fmtToPar, fmtSigned, playerLeaderboard, teamLeaderboard, holeAt, recordLabel, teeClock, teeTimeName, groupIndex } from '../scoring.js';
-import { teamColor, headlineColor } from '../teams.js';
+import { fmtPts, fmtToPar, fmtSigned, playerLeaderboard, teamLeaderboard, holeAt, recordLabel, teeClock, teeTimeName, groupIndex, sideOf, matchSidePoints } from '../scoring.js';
+import { teamColor, headlineColor, sideColor } from '../teams.js';
 import { latestMoment } from '../headlines.js';
 
 const ordinal = (n) => `${n}${['th', 'st', 'nd', 'rd'][(n % 100 >= 11 && n % 100 <= 13) || n % 10 > 3 ? 0 : n % 10]}`;
@@ -52,10 +52,46 @@ function peopleRows(app) {
   }).join('');
 }
 
+/** Team Ryder Cup: the two sides as rows (points of the matches), then every match in one list. */
+function sideRows(app) {
+  const snap = app.snapshot;
+  const g = snap.game;
+  const mine = sideOf(app.myTeam());
+  const rows = g.sides.map((s) => {
+    const isMe = s.sideId === mine;
+    const chip = s.provisionalPoints ? `<span class="prov" data-prov>+${fmtPts(s.provisionalPoints)} prov</span>` : '';
+    const bar = { points: s.points, officialPoints: s.officialPoints, provisionalPoints: s.provisionalPoints, available: s.total };
+    const carts = s.teamIds.map((t) => snap.teamById.get(t)?.name).filter(Boolean).join(' · ');
+    return `<div class="row team-row${isMe ? ' me' : ''}" style="--jersey:${sideColor(s.sideId)}">
+      <span class="rank">${s.shared ? `T${s.rank}` : s.rank}</span>
+      <div class="body"><div class="row-title ellipsis">${esc(s.name)}${isMe ? ' <span class="you-tag">YOUR SIDE</span>' : ''}</div>
+        <div class="detail ellipsis">${s.matchesWon}-${s.matchesLost}-${s.matchesHalved} · ${esc(carts)}</div>
+        ${teamBar(false, bar, s.total)}</div>
+      <div class="tval"><div class="n" style="color:${sideColor(s.sideId)}">${fmtPts(s.points)}</div>${chip}</div></div>`;
+  }).join('');
+  const myCart = app.myTeam();
+  const name = (t) => snap.teamById.get(t)?.name || t;
+  const matches = g.matches.map((m) => {
+    const [x, y] = m.teams;
+    const sp = matchSidePoints(m);
+    const winner = sp ? Object.keys(sp).find((k) => sp[k] === 1) : null;
+    const me = m.teams.includes(myCart);
+    const right = sp
+      ? `<span class="ry-side" style="color:${winner ? sideColor(winner) : 'var(--ink-soft)'}"><i class="jdot" style="--jersey:${winner ? sideColor(winner) : 'var(--ink-soft)'}"></i>${winner ? esc(g.sides.find((s) => s.sideId === winner)?.name || '') : '½ each'}</span>`
+      : `<span class="meta">${m.played ? `thru ${m.played}` : 'up next'}</span>`;
+    return `<button class="row bd-row ry-brow${me ? ' me' : ''}" data-act="board-match" data-v="${esc(m.id)}">
+      <span class="mono meta ry-h">${m.firstHole}–${m.lastHole}</span>
+      <span class="ry-names"><b style="color:${teamColor(myCart, x)}">${esc(name(x))}</b><b class="mono ry-score">${fmtPts(m.points[x])}–${fmtPts(m.points[y])}</b><b style="color:${teamColor(myCart, y)}">${esc(name(y))}</b></span>
+      ${right}</button>`;
+  }).join('');
+  return `${rows}<div class="ts-label wait-k" style="margin-top:18px">Matches</div>${matches}`;
+}
+
 function teamRowsGame(app) {
   const snap = app.snapshot;
   const g = snap.game;
   if (snap.settings.pairs && g.people) return peopleRows(app);
+  if (g.sides) return sideRows(app);
   const isPM = g.type === 'rotationPlusMinus';
   const mine = app.myTeam();
   const scale = isPM
@@ -120,6 +156,24 @@ function playerRows(app, mode) {
 function hero(app, mode) {
   const snap = app.snapshot;
   const g = snap.game;
+  if (g && g.sides) {
+    const [a, b] = ['1', '2'].map((id) => g.sides.find((s) => s.sideId === id));
+    const started = snap.anyPosted;
+    const mine = sideOf(app.myTeam());
+    const leader = a.points > b.points ? a : b.points > a.points ? b : null;
+    const you = snap.roundComplete
+      ? leader ? `${leader.name} win the cup${mine ? mine === leader.sideId ? ' · that’s you' : '' : ''}` : 'Shared · 6–6 is a tie'
+      : `${a.left} match${a.left === 1 ? '' : 'es'} left · ${fmtPts(a.toWin)} wins${leader && mine ? leader.sideId === mine ? ' · your side leads' : ` · ${fmtPts(leader.points - (mine === '1' ? a : b).points)} back` : ''}`;
+    return `<div class="hero board-hero ryder-hero">
+      <div class="lbl">Board · ${snap.roundComplete ? 'Final' : snap.officialThrough ? `Official thru ${snap.officialHole}` : 'Team Ryder Cup'}${started && !leader && !snap.roundComplete ? ' · all square' : ''}</div>
+      <div class="ry-top">
+        <div class="ry-s"><div class="ry-sn" style="color:${sideColor('1')}">${esc(a.name)}</div><div class="ry-sp">${fmtPts(a.points)}</div></div>
+        <div class="ry-dash">–</div>
+        <div class="ry-s r"><div class="ry-sn" style="color:${sideColor('2')}">${esc(b.name)}</div><div class="ry-sp">${fmtPts(b.points)}</div></div>
+      </div>
+      <div class="you">${esc(you)}</div>
+    </div>`;
+  }
   if (g && snap.settings.pairs && g.people) {
     const top = g.people.filter((r) => r.rank === 1);
     const started = g.people.some((r) => r.available > 0);
@@ -174,7 +228,13 @@ function finalCard(app) {
   const snap = app.snapshot;
   const g = snap.game;
   let who, sub, jersey = '';
-  if (g) {
+  if (g && g.sides) {
+    const [a, b] = ['1', '2'].map((id) => g.sides.find((s) => s.sideId === id));
+    const w = a.points > b.points ? a : b.points > a.points ? b : null;
+    who = w ? w.name : `${a.name} & ${b.name}`;
+    sub = `${w ? 'win the cup' : 'share the cup'} · ${fmtPts(a.points)}–${fmtPts(b.points)}`;
+    if (w) jersey = sideColor(w.sideId);
+  } else if (g) {
     const isPM = g.type === 'rotationPlusMinus';
     const top = g.standings.filter((s) => s.rank === 1);
     if (top.length === 1) jersey = teamColor(app.myTeam(), top[0].teamId); // the winner's colors (green if it's you)
@@ -269,10 +329,10 @@ export default {
     const two = pair && pair.until > Date.now() && moment.length > 1 && pair.id === moment[0].id;
     const recent = moment.slice(0, two ? 2 : 1);
     const headlines = recent.length
-      ? `<div class="headlines compact">${recent.map((h) => `<button class="headline" data-act="board-headlines" style="--jersey:${headlineColor(app.myTeam(), h)}"><span class="spark">${icon('spark', 18)}</span><span class="h-text">${esc(h.text)}</span><span class="meta mono">${clock(h.at)}</span></button>`).join('')}</div>`
+      ? `<div class="headlines compact">${recent.map((h) => `<button class="headline" data-act="board-headlines" style="--jersey:${headlineColor(app.myTeam(), h, app.me)}"><span class="spark">${icon('spark', 18)}</span><span class="h-text">${esc(h.text)}</span><span class="meta mono">${clock(h.at)}</span></button>`).join('')}</div>`
       : '';
     const segs = `<div class="segs board-segs">
-      ${hasTeams ? seg('board-view', snap.settings.pairs ? [['teams', 'Points'], ['players', 'Strokes']] : [['teams', 'Teams'], ['players', 'Players']], view) : ''}
+      ${hasTeams ? seg('board-view', snap.settings.pairs ? [['teams', 'Points'], ['players', 'Strokes']] : g?.sides ? [['teams', 'Cup'], ['players', 'Players']] : [['teams', 'Teams'], ['players', 'Players']], view) : ''}
       ${snap.hasStrokes ? seg('board-mode', [['gross', 'Gross'], ['net', 'Net']], mode) : ''}</div>`;
     const rows = view === 'teams' ? (g ? teamRowsGame(app) : teamRowsStroke(app, mode)) : playerRows(app, mode);
     let foot = '';
@@ -283,6 +343,8 @@ export default {
         ? 'Final'
         : g.type === 'splitPoint'
           ? '1 point a hole · a tie for low splits it'
+          : g.sides
+            ? `1 point a match, ½ each when halved${snap.officialThrough ? ` · official through hole ${snap.officialHole}` : ''}${prov.length ? ' · matches decided on holes only one foursome has played are provisional' : ''}`
           : snap.officialThrough
           ? `Official through hole ${snap.officialHole}${prov.length ? ` · ${prov.length > 1 ? 'holes' : 'hole'} ${prov.join(', ')} provisional (${isPMfoot ? 'lighter bar' : 'striped, past the line'})` : ''}`
           : `Points count now and go official once both foursomes finish hole ${holeAt(snap.settings, 1)}`;
@@ -295,7 +357,7 @@ export default {
       <div class="sheet">
         ${final}${headlines}${segs}
         <div class="list">${rows}</div>
-        ${g && view === 'teams' && g.type !== 'splitPoint' && !snap.roundComplete && g.provisionalHoles.length && g.type !== 'rotationPlusMinus'
+        ${g && view === 'teams' && g.type !== 'splitPoint' && !g.sides && !snap.roundComplete && g.provisionalHoles.length && g.type !== 'rotationPlusMinus'
           ? '<div class="board-legend"><span class="lg solid"></span>Official<span class="lg hatch"></span>Provisional: rotation still in play</div>' : ''}
         ${foot ? `<div class="board-foot">${esc(foot)}</div>` : ''}
       </div>`;
@@ -317,6 +379,10 @@ export default {
     },
     'board-player': (el, ev, app) => app.openSheet('player', { pid: el.dataset.v }),
     'board-team': (el, ev, app) => app.openSheet('team', { teamId: el.dataset.v }),
+    'board-match': (el, ev, app) => {
+      app.ui.ryderOpen = el.dataset.v;
+      app.go(app.tabHash('matches'));
+    },
     'recap-open': (el, ev, app) => app.openRecap(),
     'board-finalize': (el, ev, app) => app.confirmFinalize(true),
     'board-headlines': (el, ev, app) => app.openSheet('headlines', {}),

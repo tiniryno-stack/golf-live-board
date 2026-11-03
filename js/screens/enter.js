@@ -369,8 +369,18 @@ export default {
       matchLine = `<span class="teams">${snap.hasStrokes ? 'Stroke play · net' : 'Stroke play'}</span>`;
     }
     // Fixing a finalized round: say so, with Done to lock this phone again.
-    // 013: no rotation strip on team Enter (match status lives on Matches). Only the fixing line stays.
-    matchLine = app.isFinal() ? `<span class="teams">${icon('lock', 13)} Fixing a finalized round</span><button class="link-btn relock" data-act="final-relock">Done</button>` : '';
+    // 013: no rotation strip on team Enter (match status lives on Matches). Only the fixing line stays —
+    // except the Team Ryder Cup, where the header says your match and the cup score ("vs Josh + Brandon · UP 1 thru 3").
+    if (app.isFinal()) matchLine = `<span class="teams">${icon('lock', 13)} Fixing a finalized round</span><button class="link-btn relock" data-act="final-relock">Done</button>`;
+    else if (snap.game?.sides && myTeam) {
+      const m = matchFor(snap, myTeam, h);
+      const opp = m ? snap.teamById.get(m.teams[0] === myTeam ? m.teams[1] : m.teams[0]) : null;
+      const [a, b] = snap.game.sides.slice().sort((x, y) => x.sideId.localeCompare(y.sideId));
+      const cup = `<span class="faint">${esc(a.name.replace(/^Team /, ''))} ${fmtPts(a.points)}–${fmtPts(b.points)} ${esc(b.name.replace(/^Team /, ''))}</span>`;
+      matchLine = opp
+        ? `<span class="teams ellipsis">vs <b style="color:${sideColor(app, opp.id)}">${esc(opp.name)}</b></span><span class="status">${esc(matchStatusShort(snap, m, myTeam).replace(/^NOT STARTED$/, 'UP NEXT'))}</span>`
+        : `<span class="teams">${cup}</span>`;
+    } else matchLine = '';
     const gstate = cardState(app, h);
     const gcard = greenCard(gstate, app.ui.gpsSize || 'regular');
     // 013 (team): the course name replaces the max label while the card shows; the GPS badge only when

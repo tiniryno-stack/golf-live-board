@@ -61,6 +61,12 @@ export function rulesRows(app) {
     rows.push(['Format', 'Match play · everyone vs everyone', 'Everyone plays their own ball.']);
     rows.push(['Points', '1 a hole', `Low ${snap.hasStrokes ? 'net ' : ''}score takes it, ties split it (½, ⅓, ¼).`]);
     rows.push(['Lock line', '2nd place’s points + holes left', 'Lead by more than the holes left and it’s locked. Dashes on Matches show how far each player can still climb.']);
+  } else if (g.sides) {
+    const [a, b] = g.sides;
+    const myMatches = mine ? g.matches.filter((m) => m.teams.includes(mine)) : [];
+    rows.push(['Format', `Team Ryder Cup${snap.hasStrokes ? ' · net' : ''}`, `${a.name} vs ${b.name}: ${a.teamIds.length} carts a side, cart vs cart.`]);
+    rows.push(['Points', '1 a match', `${a.total} matches, ½ each when halved. ${fmtPts(a.toWin)} wins the cup. Inside a match: ${two ? '1 for low ball, 1 for low total' : st.teamScore === 'aggregate' ? '1 for the lower total' : '1 for the best ball'} each hole${Number(st.halvedHolePoints) ? ', a push ½ each' : ''}; more points after the last hole wins it.`]);
+    rows.push(['Opponents', 'New cart every 6 holes', `Holes 1–6 the cart in your foursome, then carts from other tee times, compared hole by hole.${myMatches.length ? ` You: ${myMatches.map((m) => `${m.firstHole}–${m.lastHole} vs ${shortTeam(name(m.teams.find((t) => t !== mine)))}`).join(', ')}.` : ''}${st.lineups?.length ? ` Lineup changed from hole ${st.lineups.map((l) => l.fromHole).join(', ')}.` : ''}`]);
   } else {
     const three = !st.pairs && snap.teams.length === 3;
     rows.push(['Format', `${st.pairs ? '2v2' : 'Partner “Rider” Cup'} · ${g.type === 'rotationPlusMinus' ? 'Plus/Minus' : 'Match play'}${snap.hasStrokes ? ' · net' : ''}`,
@@ -80,7 +86,8 @@ export function rulesRows(app) {
   rows.push(['Handicaps', `${allow === 100 ? 'Full' : `${allow}%`}, ${st.handicapMode === 'offLow' ? 'off the low player' : 'off zero'}`, snap.hasStrokes ? 'Strokes fall on the hardest holes first (stroke index).' : 'Nobody gets strokes in this round.']);
   rows.push(['Max score', ({ doublePar: 'Double par', netDoubleBogey: 'Net double bogey', none: 'None' })[st.maxHoleScore] || 'Double par',
     st.maxHoleScore === 'none' ? 'Play every hole out.' : `Pick up once you hit it; it counts as that score.${st.par3NoMax ? ' No max on par 3s.' : ''}`]);
-  if (g && g.type !== 'splitPoint') rows.push(['Winner', g.type === 'rotationPlusMinus' ? 'Best +/− after 18' : 'Most points after 18', 'Tie at the top: better matchup record, then who won between the two, then the stroke margin. Still tied = shared.']);
+  if (g && g.sides) rows.push(['Winner', `${fmtPts(g.sides[0].toWin)} match points`, `More than half of the ${g.sides[0].total} matches. Level at the end = the cup is shared.`]);
+  else if (g && g.type !== 'splitPoint') rows.push(['Winner', g.type === 'rotationPlusMinus' ? 'Best +/− after 18' : 'Most points after 18', 'Tie at the top: better matchup record, then who won between the two, then the stroke margin. Still tied = shared.']);
   else if (g) rows.push(['Winner', 'Most points after 18', 'Tie at the end: most outright wins (holes won alone). Still tied = shared.']);
   else rows.push(['Winner', `Lowest ${snap.hasStrokes ? 'net ' : ''}total`, 'A tie is shared.']);
   if (st.teeTimes?.some(Boolean)) rows.push(['Tee times', st.teeTimes.map((t, i) => teeTimeName(st, i)).join(' · '), '']);
@@ -485,7 +492,7 @@ const BODIES = {
     const list = app.headlines.slice().reverse();
     return `${head('Headlines')}
       ${list.length ? `<div class="headlines">${list
-        .map((h) => `<div class="headline" style="--jersey:${headlineColor(app.myTeam(), h)}"><span class="spark">${icon('spark', 16)}</span><span style="flex:1">${esc(h.text)}</span><span class="meta">${clock(h.at)}</span></div>`)
+        .map((h) => `<div class="headline" style="--jersey:${headlineColor(app.myTeam(), h, app.me)}"><span class="spark">${icon('spark', 16)}</span><span style="flex:1">${esc(h.text)}</span><span class="meta">${clock(h.at)}</span></div>`)
         .join('')}</div>` : '<p class="empty-state">No big moments yet. They show up once both foursomes have played a hole.</p>'}`;
   },
 

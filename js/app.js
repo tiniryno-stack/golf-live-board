@@ -849,10 +849,20 @@ function onRemoteEvent(row) {
   recompute({ headlines: 'now' });
   render();
   refetchAll();
+  const lineupsBefore = JSON.stringify(before.settings?.lineups || []);
+  const lineupsNow = JSON.stringify(row.settings?.lineups || before.settings?.lineups || []);
   if (finalChanged && !app.adminPin) {
     app.toast(row.finalized_at
       ? { title: 'The round is final', sub: 'Scores are locked. Nice playing.' }
       : { title: 'The organizer reopened the round', sub: 'Scores can be changed again.' });
+  } else if (lineupsNow !== lineupsBefore && !recentlySaved && !app.adminPin) {
+    // Team Ryder Cup: the organizer set a new lineup (carts physically swapped foursomes).
+    const ls = row.settings?.lineups || [];
+    const newest = ls.length ? ls[ls.length - 1] : null;
+    app.ui.hole = null; // your foursome may have changed: land on the hole you're on, with the new carts
+    app.toast(newest
+      ? { title: `Lineup changed from hole ${newest.fromHole}`, sub: 'Your foursome and opponent may be different now. Check Matches.', tab: 'matches', ms: 6000 }
+      : { title: 'Lineup back to tee times', sub: 'The organizer removed the lineup change.', ms: 5000 });
   } else if (settingsChanged && !recentlySaved && !app.adminPin) app.toast({ title: 'The organizer updated the round', sub: 'Scores and standings are recomputed.' });
   else if (renamed.length && !(renamed.length === 1 && renamed[0].id === app.myTeam() && app.justPicked)) {
     app.toast({ title: renamed.map((r) => `${r.from} is now ${r.to}`).join(' · ') });
