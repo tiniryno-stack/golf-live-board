@@ -775,7 +775,7 @@ a { color: inherit; }
   padding: calc(var(--sat) + 24px) 24px calc(var(--sab) + 24px);
   animation: rise .28s cubic-bezier(.2, .8, .2, 1);
 }
-.fullcard.sunny { background: var(--warn-bg); box-shadow: inset 0 0 0 1.5px var(--warn); color: var(--text); } /* what's at stake: amber callout, not a fill */
+.fullcard.sunny { background: linear-gradient(var(--warn-bg), var(--warn-bg)), var(--bg); box-shadow: inset 0 0 0 1.5px var(--warn); color: var(--text); } /* what's at stake: amber tint over a solid page (warn-bg alone is see-through: the app showed through it) */
 .fullcard .kicker { font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; opacity: .7; }
 .fullcard .fc-title { font-size: 32px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.08; }
 .fullcard .result { font-family: var(--mono); font-size: 17px; font-weight: 700; }

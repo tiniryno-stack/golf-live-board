@@ -11,7 +11,7 @@
 import { esc, icon, mark, scoreName, foldIn } from '../ui.js';
 import {
   maxHoleScore, maxLabel, rotationFor, rotationIndexFor, foursomeFor, matchFor, matchesFor, componentNames,
-  fmtPts, fmtSigned, ryderState, playOrder, posOf, holeAt, HOLES, sideOn,
+  fmtPts, fmtSigned, ryderState, teeTimeName, playOrder, posOf, holeAt, HOLES, sideOn,
 } from '../scoring.js';
 import { matchupAlert } from '../headlines.js';
 import { teamColor, isDefaultTeamName, shortTeam } from '../teams.js';
@@ -649,6 +649,23 @@ function nextHole(app) {
       const opp = next.teams[0] === myTeam ? next.teams[1] : next.teams[0];
       const players = snap.teamById.get(opp).playerIds.map((id) => snap.playerById.get(id).name).join(' + ');
       sub = `${next.label} vs ${name(opp)} · ${players}`;
+    }
+    if (st.ryder) {
+      // Team Ryder Cup: the finished match from the 015 engine (hole points frozen at a clinch), then who's next.
+      const rs = ryderState(snap, myTeam);
+      const pos2 = posOf(st, nh);
+      const prev = rs.matches.find((x) => x.us.id === myTeam && pos >= x.from && pos <= x.to);
+      const up = rs.matches.find((x) => x.us.id === myTeam && pos2 >= x.from && pos2 <= x.to);
+      app.showCard({
+        kicker: 'New opponent',
+        big: up ? up.label : 'Next match',
+        result: !prev ? '' : prev.status === 'done' ? `Last match: ${prev.result === 'won' ? 'you won' : prev.result === 'lost' ? 'they won' : 'halved'} ${prev.flag.text}` : `Last match: ${prev.kicker.toLowerCase()}`,
+        sub: up ? `vs ${up.them.names.join(' + ')} · ${teeTimeName(st, up.them.tee)}` : '',
+        sub2: 'Nobody moves. The app compares your scores hole by hole.',
+        button: `Continue to hole ${nh}`,
+        onContinue: () => goHole(app, nh, h),
+      });
+      return;
     }
     const swap = (st.rotationMode || 'swap') === 'swap';
     app.showCard({

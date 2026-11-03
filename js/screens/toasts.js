@@ -122,7 +122,7 @@ let overlay = null; // { onContinue, onDismiss }
 
 export function showCard(opts, app) {
   const root = $('overlay');
-  overlay = { onContinue: opts.onContinue, app };
+  overlay = { onContinue: opts.onContinue, app, at: Date.now() };
   root.innerHTML = `<div class="fullcard${opts.sunny ? ' sunny' : ''}" role="dialog" aria-modal="true">
     ${opts.kicker ? `<div class="kicker">${esc(opts.kicker)}</div>` : ''}
     <div class="fc-title">${esc(opts.big)}</div>
@@ -374,6 +374,8 @@ export const actions = {
   'join-approve': (el, ev, app) => app.answerJoin(el.dataset.v, true),
   'join-deny': (el, ev, app) => app.answerJoin(el.dataset.v, false),
   'card-continue': () => {
+    // A fast second tap on Next hole used to land on the card's button before it could be read.
+    if (overlay?.at && Date.now() - overlay.at < 700) return;
     const fn = overlay?.onContinue;
     closeOverlay();
     fn?.();
