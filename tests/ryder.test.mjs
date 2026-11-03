@@ -27,12 +27,9 @@ function postHole(sb, ev, h, wins = []) {
   sb.post(h, out);
 }
 
-test('Team Ryder Cup: game list, carts per side, default sides and tee times', () => {
-  assert.equal(gameFix('ryder', 8), null);
-  assert.equal(gameFix('ryder', 16), null);
-  assert.equal(gameFix('ryder', 12), null);
-  assert.equal(gameFix('ryder', 10), 'Add 2 more players (12) or remove 2 (8) to play this.');
-  assert.equal(gameFix('ryder', 7), 'Add 1 more player to play this.');
+test('Team Ryder Cup: game list (16 only), carts per side, default sides and tee times', () => {
+  assert.equal(gameFix('ryder', 16), null, '015 RULES §7: exactly 16');
+  assert.equal(gameFix('ryder', 12), 'Add 4 more players to play this.');
   assert.equal(GAMES.find((g) => g.id === 'ryder').name, 'Team Ryder Cup');
   assert.deepEqual(ryderCartIds(16), ['1A', '2A', '1B', '2B', '1C', '2C', '1D', '2D']);
   assert.deepEqual(ryderCartIds(8), ['1A', '2A', '1B', '2B']);

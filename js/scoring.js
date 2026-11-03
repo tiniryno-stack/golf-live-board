@@ -42,7 +42,7 @@ export const GAMES = [
     desc6: '3 carts of 2. Everyone plays everyone.',
   },
   {
-    id: 'ryder', name: 'Team Ryder Cup', count: '8, 12 OR 16', min: 8, max: 16, sizes: [8, 12, 16],
+    id: 'ryder', name: 'Team Ryder Cup', count: 'EXACTLY 16', min: 16, max: 16,
     desc: 'Two sides. Cart vs cart, 1 point a match.',
   },
 ];
@@ -1080,4 +1080,174 @@ export function seasonStandings(rounds) {
     players: [...people.values()].map(fin).sort(order),
     pairs: [...pairs.values()].map(fin).filter((p) => p.games > 0).sort(order),
   };
+}
+
+// ───────────────────────────────────────────── Team Ryder Cup v2 (handoff 015, RULES.md)
+// ryderState(snapshot, myTeamId) → everything the Board, Matches and the match sheet render, from
+// the viewer's side ('us' = the viewer's side; a watcher sees side 1 as 'us'). Pure.
+// A hole counts for a match only when all four scores are in. Nothing is provisional: a match's side
+// point counts the moment it's done (clinched at 6½, or all six holes in). Hole points freeze at the clinch.
+
+const RY_WIN = 6.5; // hole points that clinch a 12-point match
+const RY_CUP = 6.5; // side points that win the cup (12 matches)
+
+function ryderCartInfo(snap, tid) {
+  const ps = snap.players.filter((p) => p.teamId === tid);
+  const first = (p) => p.firstName || String(p.name || '').split(' ')[0];
+  const tee = groupIndex(ps[0]?.groupId);
+  // Where the cart is: the first hole in play order either player hasn't posted (null = finished).
+  let pos = null;
+  for (let q = 1; q <= HOLES; q++) {
+    const h = holeAt(snap.settings, q);
+    if (ps.some((p) => p.gross[h - 1] == null)) { pos = q; break; }
+  }
+  const started = ps.some((p) => p.thru > 0);
+  return { id: tid, side: sideOf(tid), names: ps.map(first), playerIds: ps.map((p) => p.id), tee, pos, hole: pos ? holeAt(snap.settings, pos) : null, started };
+}
+
+const cmpPt = (a, b) => (a < b ? 'us' : b < a ? 'them' : 'halved');
+
+/** One match, from our side. */
+function ryderMatch(snap, m, ourSide, carts) {
+  const [x, y] = m.teams;
+  const usId = sideOf(x) === ourSide ? x : y, themId = usId === x ? y : x;
+  const us = carts.get(usId), them = carts.get(themId);
+  const net = (pid, h) => snap.playerById.get(pid).net[h - 1];
+  const pts = { us: 0, them: 0 };
+  let thru = 0, clinchedAt = null;
+  const holes = [];
+  for (let pos = m.from; pos <= m.to; pos++) {
+    const h = holeAt(snap.settings, pos);
+    const u = us.playerIds.map((id) => net(id, h)), t = them.playerIds.map((id) => net(id, h));
+    const uIn = u.every((v) => v != null), tIn = t.every((v) => v != null);
+    const whoIsIn = uIn && tIn ? 'both' : uIn ? 'us' : tIn ? 'them' : 'none';
+    const hole = { hole: h, pos, par: snap.course.par[h - 1], whoIsIn, lowBall: 'pending', lowTotal: 'pending', net: { us: u, them: t }, points: null, counts: false };
+    if (whoIsIn === 'both') {
+      hole.lowBall = cmpPt(Math.min(...u), Math.min(...t));
+      hole.lowTotal = cmpPt(u[0] + u[1], t[0] + t[1]);
+      const p = { us: 0, them: 0 };
+      for (const r of [hole.lowBall, hole.lowTotal]) {
+        if (r === 'halved') { p.us += 0.5; p.them += 0.5; } else p[r] += 1;
+      }
+      hole.points = p;
+      if (clinchedAt == null) { // after a clinch the holes still get scores, but don't change the match
+        hole.counts = true;
+        pts.us += p.us; pts.them += p.them; thru++;
+        if (pts.us >= RY_WIN || pts.them >= RY_WIN) clinchedAt = pos;
+      }
+    }
+    holes.push(hole);
+  }
+  const total = m.to - m.from + 1;
+  const status = clinchedAt != null || thru === total ? 'done' : thru > 0 ? 'live' : 'notStarted';
+  const diff = pts.us - pts.them;
+  const leader = Math.abs(diff) < 1e-9 ? null : diff > 0 ? 'us' : 'them';
+  const result = status !== 'done' ? null : leader === 'us' ? 'won' : leader === 'them' ? 'lost' : 'halved';
+  const decidedEarly = clinchedAt != null ? total - thru : 0;
+  const sidePts = status !== 'done' ? null : result === 'halved' ? { us: 0.5, them: 0.5 } : { us: result === 'won' ? 1 : 0, them: result === 'lost' ? 1 : 0 };
+  const score = (a, b) => `${fmtPts(a)}–${fmtPts(b)}`;
+  const hi = Math.max(pts.us, pts.them), lo = Math.min(pts.us, pts.them);
+  // Where the other cart is: the trailing cart's current hole (drives `on 12` and the Matches subline).
+  const trailing = [us, them].filter((c) => c.pos != null).sort((a, b) => a.pos - b.pos)[0] || null;
+  let flag;
+  if (status === 'notStarted') {
+    const text = trailing && trailing.started ? `on ${trailing.hole}` : teeClock(snap.settings, us.tee) || ordinal(us.tee + 1);
+    flag = { look: 'tee', side: 'line', text };
+  } else if (status === 'live') {
+    flag = leader ? { look: 'up', side: leader, text: `${fmtPts(Math.abs(diff))} UP` } : { look: 'tied', side: 'line', text: score(pts.us, pts.them) };
+  } else {
+    flag = result === 'halved' ? { look: 'halved', side: 'line', text: score(hi, lo) } : { look: 'won', side: leader, text: score(hi, lo) };
+  }
+  const margin = fmtPts(Math.abs(diff));
+  const kicker = status === 'notStarted' ? 'NOTHING COUNTS YET'
+    : status === 'live' ? `THRU ${thru} · ${leader === 'us' ? `YOU'RE UP ${margin}` : leader === 'them' ? `YOU'RE DOWN ${margin}` : 'ALL SQUARE'}`
+    : `FINAL · ${result === 'won' ? `YOU WON ${score(hi, lo)}` : result === 'lost' ? `THEY WON ${score(hi, lo)}` : 'HALVED'}`;
+  const left = (total - thru) * 2;
+  const barLine = decidedEarly ? `Decided with ${decidedEarly} to play`
+    : status === 'done' ? null
+    : leader === 'us' ? `${fmtPts(RY_WIN - pts.us)} more and it's yours`
+    : `${fmtPts(left)} pts left`;
+  return {
+    id: m.id, rotation: m.rotation - 1, label: m.label, from: m.from, to: m.to,
+    us, them, status, thru, total, holePts: [pts.us, pts.them], leader, tied: status !== 'notStarted' && !leader,
+    margin: leader ? margin : null, result, decidedEarly, sidePts, flag, kicker, barLine, holes,
+    where: { us: us.hole, them: them.hole, trailing: trailing ? trailing.hole : null },
+  };
+}
+
+/** Text for a hole where only their two scores are in: what ties low ball and what takes low total. */
+export function ryderNeedLine(match, hole) {
+  if (hole.whoIsIn === 'us') return 'Your scores are in, waiting on them.';
+  if (hole.whoIsIn !== 'them') return null;
+  const [a, b] = hole.net.them, [na, nb] = match.them.names;
+  return `${na} made ${a}, ${nb} ${b}. A ${Math.min(a, b)} halves low ball; ${a + b - 1} or better between you takes low total.`;
+}
+
+/** "Low ball · you" / "· them" / "· halved" (null while pending). */
+export function ryderHoleLine(kind, r) {
+  if (r === 'pending') return null;
+  return `${kind === 'lowBall' ? 'Low ball' : 'Low total'} · ${r === 'us' ? 'you' : r}`;
+}
+
+export function ryderState(snap, myTeamId = null) {
+  const g = snap.game;
+  if (!g || !snap.settings.ryder) return null;
+  const ourSide = sideOf(myTeamId) || '1', theirSide = ourSide === '1' ? '2' : '1';
+  const carts = new Map((snap.roster.teams || []).map((t) => [t.id, ryderCartInfo(snap, t.id)]));
+  const matches = g.matches.map((m) => ryderMatch(snap, m, ourSide, carts));
+  const n = matches.length;
+  const sides = {};
+  for (const [k, id] of [['us', ourSide], ['them', theirSide]]) {
+    const s = (snap.roster.sides || []).find((x) => x.id === id);
+    sides[k] = { id, name: s?.name || `Team ${id}`, total: 0 };
+  }
+  for (const m of matches) if (m.sidePts) { sides.us.total += m.sidePts.us; sides.them.total += m.sidePts.them; }
+  const done = matches.filter((m) => m.status === 'done').length;
+  const left = n - done;
+  const toWin = n / 2 + 0.5;
+  for (const k of ['us', 'them']) {
+    sides[k].left = left;
+    sides[k].clinched = sides[k].total >= toWin - 1e-9;
+    sides[k].needs = Math.max(0, toWin - sides[k].total);
+  }
+  const ri = [...new Set(matches.map((m) => m.rotation))].sort((a, b) => a - b);
+  const rotations = ri.map((r) => {
+    const ms = matches.filter((m) => m.rotation === r);
+    const tally = { us: 0, them: 0 };
+    for (const m of ms) if (m.sidePts) { tally.us += m.sidePts.us; tally.them += m.sidePts.them; }
+    const anyScore = ms.some((m) => m.holes.some((h) => h.whoIsIn !== 'none'));
+    const status = ms.every((m) => m.status === 'done') ? 'done' : ms.some((m) => m.status === 'live') || anyScore ? 'live' : 'future';
+    return { index: r, label: ms[0].label, holes: ms[0].label.replace(/^Holes /, ''), status, tally, matches: ms };
+  });
+  const rank = { live: 0, done: 1, future: 2 };
+  const order = [...rotations].sort((a, b) => rank[a.status] - rank[b.status] || (a.status === 'live' ? b.index - a.index : a.index - b.index));
+  const final = left === 0 && n > 0;
+  const cupLine = final ? 'FINAL' : done === 0 ? `${n} MATCHES · ${fmtPts(toWin)} WINS` : `${left} LEFT · ${fmtPts(toWin)} WINS`;
+  const winner = !final ? null : sides.us.total > sides.them.total ? 'us' : sides.them.total > sides.us.total ? 'them' : 'shared';
+  // MVP cart (final): most match points, tiebreak most hole points.
+  let mvp = null;
+  if (final) {
+    const rows = [...carts.values()].map((c) => {
+      const mine = matches.filter((m) => m.us.id === c.id || m.them.id === c.id);
+      const k = (m) => (m.us.id === c.id ? 'us' : 'them');
+      return {
+        cart: c,
+        matchPts: mine.reduce((a, m) => a + m.sidePts[k(m)], 0),
+        holePts: mine.reduce((a, m) => a + m.holePts[k(m) === 'us' ? 0 : 1], 0),
+        record: mine.map((m) => m.sidePts[k(m)]),
+      };
+    });
+    rows.sort((a, b) => b.matchPts - a.matchPts || b.holePts - a.holePts || a.cart.id.localeCompare(b.cart.id));
+    mvp = rows[0];
+  }
+  return { ourSide, sides, matches, rotations, order, cupLine, final, winner, mvp, toWin, done, left };
+}
+
+/** The viewer's match in a rotation (index 0–2), or the one on their current hole. */
+export function ryderMyMatch(state, myTeamId, rotation = null) {
+  if (!state || !myTeamId) return null;
+  const mine = state.matches.filter((m) => m.us.id === myTeamId);
+  if (rotation != null) return mine.find((m) => m.rotation === rotation) || null;
+  const cur = mine.find((m) => m.status === 'live') || mine.find((m) => m.status === 'notStarted') || mine[mine.length - 1];
+  return cur || null;
 }
