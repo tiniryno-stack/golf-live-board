@@ -11,7 +11,7 @@
 import { esc, icon, mark, scoreName, foldIn } from '../ui.js';
 import {
   maxHoleScore, maxLabel, rotationFor, rotationIndexFor, foursomeFor, matchFor, matchesFor, componentNames,
-  fmtPts, fmtSigned, playOrder, posOf, holeAt, HOLES, sideOn,
+  fmtPts, fmtSigned, ryderState, playOrder, posOf, holeAt, HOLES, sideOn,
 } from '../scoring.js';
 import { matchupAlert } from '../headlines.js';
 import { teamColor, isDefaultTeamName, shortTeam } from '../teams.js';
@@ -373,13 +373,16 @@ export default {
     // except the Team Ryder Cup, where the header says your match and the cup score ("vs Josh + Brandon · UP 1 thru 3").
     if (app.isFinal()) matchLine = `<span class="teams">${icon('lock', 13)} Fixing a finalized round</span><button class="link-btn relock" data-act="final-relock">Done</button>`;
     else if (snap.game?.sides && myTeam) {
-      const m = matchFor(snap, myTeam, h);
-      const opp = m ? snap.teamById.get(m.teams[0] === myTeam ? m.teams[1] : m.teams[0]) : null;
-      const [a, b] = snap.game.sides.slice().sort((x, y) => x.sideId.localeCompare(y.sideId));
-      const cup = `<span class="faint">${esc(a.name.replace(/^Team /, ''))} ${fmtPts(a.points)}–${fmtPts(b.points)} ${esc(b.name.replace(/^Team /, ''))}</span>`;
-      matchLine = opp
-        ? `<span class="teams ellipsis">vs <b style="color:${sideColor(app, opp.id)}">${esc(opp.name)}</b></span><span class="status">${esc(matchStatusShort(snap, m, myTeam).replace(/^NOT STARTED$/, 'UP NEXT'))}</span>`
-        : `<span class="teams">${cup}</span>`;
+      // 014 §5 / 015: "● vs Joseph + Jay" left; "UP 2 · CUP 5½–3½" right (green only for UP; never red).
+      const rs = ryderState(snap, myTeam);
+      const pos = posOf(st, h);
+      const m = rs?.matches.find((x) => x.us.id === myTeam && pos >= x.from && pos <= x.to);
+      if (m) {
+        const lead = m.status === 'notStarted' ? ['UP NEXT', false]
+          : m.status === 'done' ? [m.result === 'won' ? `WON ${m.flag.text}` : m.result === 'lost' ? `LOST ${m.flag.text}` : 'HALVED', m.result === 'won']
+          : m.leader === 'us' ? [`UP ${m.margin}`, true] : m.leader === 'them' ? [`DOWN ${m.margin}`, false] : ['AS', false];
+        matchLine = `<span class="teams ellipsis"><i class="ry-hdot"></i>vs ${esc(m.them.names.join(' + '))}</span><span class="status mono"><span class="${lead[1] ? 'you' : 'faint'}">${esc(lead[0])}</span><span class="faint"> · CUP ${fmtPts(rs.sides.us.total)}–${fmtPts(rs.sides.them.total)}</span></span>`;
+      }
     } else matchLine = '';
     const gstate = cardState(app, h);
     const gcard = greenCard(gstate, app.ui.gpsSize || 'regular');

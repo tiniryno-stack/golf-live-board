@@ -97,11 +97,10 @@ function rules(app, d) {
     return `<div class="field"><span class="label">Game</span><p class="soft" style="margin:0">Team Ryder Cup · ${sides.map((s) => s.name).join(' vs ')} · ${(d.roster.teams || []).length / 2} carts a side, 1 point a match. Set when the round was made.</p></div>
       <div class="field"><span class="label">First tee</span>${seg('host-set', [['1', 'Hole 1'], ['10', 'Hole 10']], String(st.startHole || 1), 'data-k="startHole"')}</div>
       ${teeTimesField(d)}
-      <div class="field"><span class="label">Team score</span>${seg('host-set', [['bestBallAggregate', 'Low Ball/Total'], ['bestBall', 'Best ball'], ['aggregate', 'Aggregate']], st.teamScore, 'data-k="teamScore"')}</div>
       <div class="field"><span class="label">Max hole score</span>${seg('host-set', [['doublePar', 'Double par'], ['netDoubleBogey', 'Net dbl bogey'], ['none', 'None']], st.maxHoleScore, 'data-k="maxHoleScore"')}</div>
       <div class="chips" style="margin:0 0 16px"><button class="pill" data-act="host-toggle" data-k="par3NoMax" aria-pressed="${!!st.par3NoMax}"><span class="dot"></span>No max on par 3s</button></div>
       <div class="field"><span class="label">Halved points</span>${seg('host-set', [['0.5', '½ each'], ['0', 'Nothing']], String(st.halvedHolePoints), 'data-k="halvedHolePoints"')}</div>
-      ${lineupField(app, d)}
+      
       <details class="fold"${st.handicapMode !== 'full' ? ' open' : ''}><summary>Advanced handicaps</summary>
         <div class="chips" style="margin:4px 0 12px"><button class="pill" data-act="host-lowman" aria-pressed="${st.handicapMode === 'offLow'}"><span class="dot"></span>Play off the low man</button></div>
         <div class="field"><label for="h-allow">Allowance %</label><input class="input num" id="h-allow" inputmode="numeric" maxlength="3" value="${esc(st.allowancePct ?? 100)}" data-input="host-allow" style="width:96px"></div>
