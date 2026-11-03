@@ -1710,19 +1710,20 @@ details.fold summary::-webkit-details-marker { display: none; }
 .ry-mtrack b.us { left: 0; background: var(--cart-you); }
 .ry-mbar.plain .ry-mtrack b.us { background: var(--text); }
 .ry-mtrack b.them { right: 0; background: var(--text-muted); }
-.ry-mtrack .ry-mline { position: absolute; top: 0; bottom: 0; left: calc(6.5 / 12 * 100%); width: 2px; margin-left: -1px; background: var(--text); }
-.ry-mlbl { margin-top: 4px; padding-left: calc(6.5 / 12 * 100% - 40px); color: var(--text-muted); }
-.ry-bl { margin-top: var(--space-2); }
-.ry-strip { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: var(--space-1); margin-top: var(--space-4); }
+.ry-mtrack .ry-mline { position: absolute; top: 0; bottom: 0; left: 50%; width: 2px; margin-left: -1px; background: var(--text); }
+.ry-mlbl { margin-top: 4px; text-align: center; color: var(--text-muted); }
+.ry-bl { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-2); margin-top: var(--space-2); }
+.ry-bl .lbl { color: var(--text-muted); flex: none; }
+.ry-strip { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: var(--space-1); margin-top: var(--space-3); }
 .ry-tile { height: 60px; border-radius: var(--radius-lg); background: var(--surface-1); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 15px; font-weight: 700; }
 .ry-tile.on { outline: 2px solid var(--text); outline-offset: -2px; }
 .ry-dots { display: flex; flex-direction: column; gap: 3px; }
 .ry-dot { width: 11px; height: 11px; flex: none; display: block; }
-.ry-hd { margin-top: var(--space-4); }
+.ry-hd { margin-top: var(--space-3); }
 .ry-hd-h { display: flex; align-items: baseline; gap: 4px; font-size: 17px; }
 .ry-hd-h .mono { margin-left: auto; }
-.ry-marks { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-2); margin-top: var(--space-3); }
-.ry-mk { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; }
+.ry-marks { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-2); margin-top: var(--space-2); }
+.ry-mk { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; }
 .ry-mk-n { font-size: 13px; color: var(--text-muted); max-width: 100%; } .ry-mk-n.you { color: var(--cart-you-text); }
 .ry-hl { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-2); font-size: 15px; }
 
@@ -1730,7 +1731,7 @@ details.fold summary::-webkit-details-marker { display: none; }
 .ry-matches { padding-top: var(--space-2); }
 .ry-matches > .lbl { color: var(--text-muted); }
 .ry-vs { margin: 2px 0 2px; }
-.ry-picker { margin-top: var(--space-3); }
+.ry-picker { margin-top: var(--space-2); }
 .ry-card { margin-top: var(--space-3); padding: var(--space-4); border-radius: var(--radius-2xl); background: var(--surface-1); box-shadow: var(--shadow-card); }
 .ry-card > .lbl { color: var(--text-muted); }
 .ry-card > .lbl.you { color: var(--cart-you-text); }
@@ -1748,3 +1749,13 @@ details.fold summary::-webkit-details-marker { display: none; }
 .brief-side.you b, .brief-side.you .lbl { color: var(--cart-you-text); }
 .brief-side small { font-size: 13px; color: var(--text-muted); }
 .brief-k { display: block; margin: var(--space-4) 0 var(--space-1); color: var(--text-muted); }
+
+.ry-hls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
+
+/* Matches score card: title size (32 mono) so the whole screen fits; the cup card keeps number-xl. */
+.ry-card .ry-num { font-size: 32px; line-height: 1.15; }
+.ry-prow { width: 100%; display: grid; grid-template-columns: 24px minmax(0, 1fr) 44px 56px 56px; align-items: center; gap: var(--space-2); min-height: 44px; padding: 0 2px; border-bottom: 1px solid var(--line); font-size: 17px; font-weight: 600; text-align: left; }
+.ry-prow.head { min-height: 24px; color: var(--text-muted); }
+.ry-prow .r { text-align: right; } .ry-prow .b { font-weight: 700; }
+.ry-prow .you { color: var(--cart-you-text); }
+.ry-prow:not(.head) .mono.r { font-size: 15px; } .ry-prow:not(.head) .mono.r.b { font-size: 17px; }

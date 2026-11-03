@@ -3,7 +3,7 @@
 // All numbers and copy come from scoring.ryderState (pure); this file only draws.
 
 import { esc, icon, seg, seg2, mark } from '../ui.js';
-import { fmtPts, ryderState, ryderMyMatch, ryderNeedLine, ryderHoleLine, teeTimeName } from '../scoring.js';
+import { fmtPts, fmtToPar, playerLeaderboard, ryderState, ryderMyMatch, ryderNeedLine, ryderHoleLine, teeTimeName } from '../scoring.js';
 
 export const ryState = (app) => ryderState(app.snapshot, app.myTeam());
 
@@ -33,8 +33,7 @@ function cupBar(st) {
 /** One smooth bar of hole points with the 6½ line. */
 function matchBar(m, { green = true } = {}) {
   const [u, t] = m.holePts;
-  return `<div class="ry-mbar${green ? '' : ' plain'}"><div class="ry-mtrack"><b class="us" style="width:${(u / 12) * 100}%"></b><b class="them" style="width:${(t / 12) * 100}%"></b><i class="ry-mline"></i></div>
-    <div class="ry-mlbl lbl">6½ CLINCHES</div></div>`;
+  return `<div class="ry-mbar${green ? '' : ' plain'}"><div class="ry-mtrack"><b class="us" style="width:${(u / 12) * 100}%"></b><b class="them" style="width:${(t / 12) * 100}%"></b><i class="ry-mline"></i></div></div>`;
 }
 
 /** The dot: solid = counted, hatched = one cart in, dashed = nobody yet. Drawn SVG, no gradients. */
@@ -75,7 +74,7 @@ const grossOf = (app, pid, h) => app.snapshot.playerById.get(pid)?.gross[h - 1] 
 function marks(app, cart, h, par, { you = false } = {}) {
   return cart.playerIds.map((pid, i) => {
     const g = grossOf(app, pid, h);
-    return `<div class="ry-mk"><span class="ry-mk-n ellipsis${you ? ' you' : ''}">${esc(cart.names[i])}</span>${mark(g, par, 40, { ghost: g == null ? par : null })}</div>`;
+    return `<div class="ry-mk"><span class="ry-mk-n ellipsis${you ? ' you' : ''}">${esc(cart.names[i])}</span>${mark(g, par, 32, { ghost: g == null ? par : null })}</div>`;
   }).join('');
 }
 
@@ -124,6 +123,18 @@ export function ryderBoard(app, { segs = '', players = '' } = {}) {
       ${view === 'players' ? players : st.order.map((r) => rotation(app, r, isOpen(r), myCart)).join('')}</div>`;
 }
 
+/** Board → Players: just the players (no carts), net leaderboard, gross and net side by side. */
+export function ryderPlayers(app) {
+  const snap = app.snapshot;
+  const rows = playerLeaderboard(snap, 'net').map((p, i) => `<button class="ry-prow" data-act="board-player" data-v="${esc(p.id)}">
+      <span class="mono meta">${p.thru ? i + 1 : ''}</span>
+      <span class="ellipsis${p.id === app.me ? ' you' : ''}">${esc(p.name)}</span>
+      <span class="mono r">${p.thru || '–'}</span>
+      <span class="mono r">${p.thru ? fmtToPar(p.grossToPar) : '–'}</span>
+      <span class="mono r b">${p.thru ? fmtToPar(p.netToPar) : '–'}</span></button>`).join('');
+  return `<div class="ry-prow head lbl"><span></span><span>Player</span><span class="r">Thru</span><span class="r">Gross</span><span class="r">Net</span></div>${rows}`;
+}
+
 // ───────────────────────────────────────────── match sheet (read-only, no X)
 
 export function ryderMatchSheet(app, { id, hole }) {
@@ -135,18 +146,17 @@ export function ryderMatchSheet(app, { id, hole }) {
   const [u, t] = m.holePts;
   const side = (cart, n, loser, cls) => `<div class="ry-ms-s ${cls}"><div class="ry-sn ellipsis">${esc(cart.names.join(' + '))}</div>
       <div class="ry-ms-n"><span class="ry-num mono${loser ? ' muted' : ''}">${fmtPts(n)}</span><i class="ry-sdot ${cls}"></i></div></div>`;
-  const detail = h.points || h.whoIsIn === 'both'
-    ? ['lowBall', 'lowTotal'].map((k) => {
-      const us = k === 'lowBall' ? Math.min(...h.net.us) : h.net.us[0] + h.net.us[1];
-      const th = k === 'lowBall' ? Math.min(...h.net.them) : h.net.them[0] + h.net.them[1];
-      return `<div class="ry-hl">${dot('solid', h[k], { green: false })}<span>${k === 'lowBall' ? 'Low ball' : 'Low total'} · <span class="mono">${us} v ${th}</span></span></div>`;
-    }).join('')
-    : `<div class="ry-hl meta">${esc(h.whoIsIn === 'none' ? 'Nobody’s in yet.' : h.whoIsIn === 'us' ? `${m.us.names.join(' + ')} are in.` : `${m.them.names.join(' + ')} are in.`)}</div>`;
+  const val = (k, side) => {
+    const v = h.net[side];
+    if (v.some((x) => x == null)) return '–';
+    return k === 'lowBall' ? Math.min(...v) : v[0] + v[1];
+  };
+  const detail = `<div class="ry-hls">${['lowBall', 'lowTotal'].map((k) => `<div class="ry-hl">${dotFor(h, k, { green: false })}<span>${k === 'lowBall' ? 'Low ball' : 'Low total'} · <span class="mono">${val(k, 'us')} v ${val(k, 'them')}</span></span></div>`).join('')}</div>`;
   return `<div class="ry-sheet">
       <div class="lbl">HOLES ${esc(m.label.replace(/^Holes /, ''))} · ${status}</div>
       <div class="ry-ms-top">${side(m.us, u, m.result === 'lost', 'l')}${side(m.them, t, m.result === 'won', 'r')}</div>
       ${matchBar(m, { green: false })}
-      ${m.barLine ? `<div class="meta ry-bl">${esc(m.barLine)}</div>` : ''}
+      <div class="ry-bl"><span class="meta">${esc(m.barLine || '')}</span><span class="lbl">6½ CLINCHES</span></div>
       ${holeStrip(m, h.hole, 'ry-sheet-hole', { green: false })}
       <div class="ry-hd"><div class="ry-hd-h"><b>Hole ${h.hole}</b><span class="meta"> · par ${h.par}</span></div>
         <div class="ry-marks">${marks(app, m.us, h.hole, h.par)}${marks(app, m.them, h.hole, h.par)}</div>
@@ -181,9 +191,8 @@ export function ryderMatches(app) {
   const [u, t] = m.holePts;
   const ptsLine = h.points ? `<span class="mono meta">${fmtPts(h.points.us)}–${fmtPts(h.points.them)}</span>` : '';
   const need = ryderNeedLine(m, h);
-  const lines = h.points
-    ? ['lowBall', 'lowTotal'].map((k) => `<div class="ry-hl">${dot('solid', h[k])}<span>${esc(ryderHoleLine(k, h[k]))}</span></div>`).join('')
-    : need ? `<div class="ry-hl meta">${esc(need)}</div>` : '';
+  const lines = `<div class="ry-hls">${['lowBall', 'lowTotal'].map((k) => `<div class="ry-hl">${dotFor(h, k)}<span>${esc(ryderHoleLine(k, h[k]) || `${k === 'lowBall' ? 'Low ball' : 'Low total'} · –`)}</span></div>`).join('')}</div>
+        ${!h.points && need ? `<div class="ry-hl meta">${esc(need)}</div>` : ''}`;
   return `<div class="plain ry-matches">
       <div class="lbl">HOLES ${esc(m.label.replace(/^Holes /, ''))} · ${kick}</div>
       <h1 class="title ry-vs ellipsis">vs ${esc(m.them.names.join(' + '))}</h1>
@@ -196,7 +205,7 @@ export function ryderMatches(app) {
           <div class="ry-ms-s r"><div class="ry-sn ellipsis">${esc(m.them.names.join(' + '))}</div><div class="ry-num muted mono">${fmtPts(t)}</div></div>
         </div>
         ${matchBar(m)}
-        ${m.barLine ? `<div class="meta ry-bl">${esc(m.barLine)}</div>` : ''}
+        <div class="ry-bl"><span class="meta">${esc(m.barLine || '')}</span><span class="lbl">6½ CLINCHES</span></div>
       </div>
       ${holeStrip(m, h.hole, 'ry-hole')}
       <div class="ry-legend small">${dot('solid', 'us')} counted ${dot('hatched')} one cart in ${dot('dashed')} nobody yet</div>

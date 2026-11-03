@@ -12,7 +12,7 @@ import { esc, icon, seg, clock } from '../ui.js';
 import { fmtPts, fmtToPar, fmtSigned, playerLeaderboard, teamLeaderboard, holeAt, recordLabel, teeClock, teeTimeName, groupIndex, sideOf, matchSidePoints } from '../scoring.js';
 import { teamColor, headlineColor, sideColor } from '../teams.js';
 import { latestMoment } from '../headlines.js';
-import { ryderBoard, ryderActions } from './ryder.js';
+import { ryderBoard, ryderPlayers, ryderActions } from './ryder.js';
 
 const ordinal = (n) => `${n}${['th', 'st', 'nd', 'rd'][(n % 100 >= 11 && n % 100 <= 13) || n % 10 > 3 ? 0 : n % 10]}`;
 
@@ -320,10 +320,9 @@ export default {
     const g = snap.game;
     if (snap.game?.sides) {
       // Team Ryder Cup (015 §2): cup card, then rotations; Players stays the normal leaderboard.
-      const mode = snap.hasStrokes ? app.ui.boardMode : 'gross';
       const view = app.ui.boardView === 'players' ? 'players' : 'teams';
-      const segs = `<div class="segs board-segs">${seg('board-view', [['teams', 'Cup'], ['players', 'Players']], view)}${view === 'players' && snap.hasStrokes ? seg('board-mode', [['gross', 'Gross'], ['net', 'Net']], mode) : ''}</div>`;
-      return ryderBoard(app, { segs, players: view === 'players' ? `<div class="list">${playerRows(app, mode)}</div>` : '' });
+      const segs = `<div class="segs board-segs">${seg('board-view', [['teams', 'Cup'], ['players', 'Players']], view)}</div>`;
+      return ryderBoard(app, { segs, players: view === 'players' ? `<div class="list">${ryderPlayers(app)}</div>` : '' });
     }
     if (!snap.anyPosted && !app.isFinal()) return waitingView(app);
     const hasTeams = (snap.roster.teams || []).length > 0;
