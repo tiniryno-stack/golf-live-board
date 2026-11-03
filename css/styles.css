@@ -1761,3 +1761,8 @@ details.fold summary::-webkit-details-marker { display: none; }
 .ry-prow:not(.head) .mono.r { font-size: 15px; } .ry-prow:not(.head) .mono.r.b { font-size: 17px; }
 
 .ry-board .board-segs { margin: var(--space-4) 0 var(--space-2); }
+
+/* Scorecard: other groups use the same two-line head as your collapsed group (kicker · on N, then the names). */
+.watch-head .wk { display: block; }
+.watch-head .wt { display: block; font-size: 15px; font-weight: 600; margin-top: 2px; color: var(--text); }
+.watch-head { min-height: 56px; padding-top: 8px; padding-bottom: 8px; }
