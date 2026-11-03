@@ -123,15 +123,15 @@ export function ryderBoard(app, { segs = '', players = '' } = {}) {
       ${view === 'players' ? players : st.order.map((r) => rotation(app, r, isOpen(r), myCart)).join('')}</div>`;
 }
 
-/** Board → Players: just the players (no carts), net leaderboard, gross and net side by side. */
+/** Board → Players: just the players (no carts), net leaderboard; gross and net side by side, to par over the strokes so far. */
 export function ryderPlayers(app) {
   const snap = app.snapshot;
   const rows = playerLeaderboard(snap, 'net').map((p, i) => `<button class="ry-prow" data-act="board-player" data-v="${esc(p.id)}">
       <span class="mono meta">${p.thru ? i + 1 : ''}</span>
       <span class="ellipsis${p.id === app.me ? ' you' : ''}">${esc(p.name)}</span>
       <span class="mono r">${p.thru || '–'}</span>
-      <span class="mono r">${p.thru ? fmtToPar(p.grossToPar) : '–'}</span>
-      <span class="mono r b">${p.thru ? fmtToPar(p.netToPar) : '–'}</span></button>`).join('');
+      <span class="mono r ry-pc">${p.thru ? `${fmtToPar(p.grossToPar)}<small>${p.grossTotal}</small>` : '–'}</span>
+      <span class="mono r b ry-pc">${p.thru ? `${fmtToPar(p.netToPar)}<small>${p.netTotal}</small>` : '–'}</span></button>`).join('');
   return `<div class="ry-prow head lbl"><span></span><span>Player</span><span class="r">Thru</span><span class="r">Gross</span><span class="r">Net</span></div>${rows}`;
 }
 
