@@ -1783,3 +1783,51 @@ details.fold summary::-webkit-details-marker { display: none; }
 /* Enter, Team Ryder Cup: the other cart's slim row is just "Josh 4 · Brandon 5", each name with room to show. */
 .slim-scores.names-only { gap: var(--space-3); font-family: var(--font-sans); }
 .slim-scores.names-only .face { flex: 1 1 0; gap: 6px; font-size: 15px; font-weight: 600; }
+
+/* Team Ryder Cup Enter (handoff 016): one card, one-row ScorePad, flag button, plain Next hole. Never scrolls on an iPhone 16 home screen app. */
+.ry-enter { display: flex; flex-direction: column; padding: 0 var(--space-4); }
+.ry-enter > .hero { padding-left: 0; padding-right: 0; }
+.ry-ecard { margin-top: 10px; padding: 10px 12px 12px; border-radius: var(--radius-2xl); background: var(--surface-1); border: 1.5px solid var(--cart-you); box-shadow: var(--shadow-card); }
+.ry-ecard.theirs { border-color: var(--line); }
+.ry-ehead { min-height: 36px; display: flex; align-items: center; gap: var(--space-2); }
+.ry-ehead-l { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 6px; font-size: 15px; }
+.ry-ehead-l b { font-weight: 700; min-width: 0; }
+.ry-vs-k { color: var(--text-muted); font-weight: 600; flex: none; }
+.ry-ehead-l .ry-k { flex: none; color: var(--text-muted); }
+.ry-ehead-r { flex: none; display: flex; align-items: center; gap: var(--space-2); }
+.ry-thru { color: var(--text-muted); }
+.ry-eflag { width: 72px; height: 26px; border-radius: var(--radius-sm); font-family: var(--font-mono); font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; padding: 0; }
+.ry-eflag.up { background: var(--cart-you); color: var(--bg); }
+.ry-eflag.down { background: var(--surface-3); color: var(--text); }
+.ry-eflag.tied { background: var(--bg); color: var(--text); box-shadow: inset 0 0 0 1.5px var(--text-muted); }
+.ry-chip { height: 40px; padding: 0 14px; border-radius: var(--radius-md); background: var(--surface-2); font-size: 15px; font-weight: 600; display: inline-flex; align-items: center; flex: none; color: var(--text); }
+.ry-player { margin-top: var(--space-2); padding: 0 2px; }
+.ry-pl-top { height: 22px; display: flex; align-items: center; gap: 6px; }
+.ry-pl-n { font-size: 15px; font-weight: 700; min-width: 0; }
+.ry-stroke { width: 7px; height: 7px; border-radius: 50%; background: var(--text); flex: none; }
+.ry-pl-l { margin-left: auto; flex: none; color: var(--text-muted); }
+.ry-pl-l.under { color: var(--cart-you-text); }
+.ry-pl-l.dbl { color: var(--double); }
+.ry-src { font-size: 13px; color: var(--text-muted); }
+.ry-pads { display: grid; grid-template-columns: 34px repeat(4, minmax(0, 1fr)) 34px; gap: 4px; margin-top: 6px; }
+.ry-pad, .ry-pad-arrow { height: 52px; border-radius: var(--radius-lg); background: var(--bg); border: 1px solid var(--line); display: flex; align-items: center; justify-content: center; padding: 0; color: var(--text); }
+.ry-pad-arrow { color: var(--text-muted); }
+.ry-pad-arrow:disabled { opacity: .3; }
+.ry-pad.likely { border-color: var(--text-muted); }
+.ry-pad.on { background: var(--text); color: var(--bg); border-color: transparent; }
+.ry-pad.on .mk, .ry-pad.on .mk * { color: var(--bg); border-color: var(--bg); background: transparent; }
+.ry-pad:disabled:not(.on) { opacity: .5; }
+.ry-player.nudge .ry-pad { animation: nudge .45s ease-in-out 2; border-color: var(--text); }
+@media (prefers-reduced-motion: reduce) { .ry-player.nudge .ry-pad { animation: none; } }
+.ry-slim { margin-top: 12px; height: 52px; width: 100%; display: flex; align-items: center; gap: 14px; padding: 0 6px 0 14px; border-radius: var(--radius-lg); background: var(--surface-1); text-align: left; }
+.ry-slim-p { flex: 1 1 0; min-width: 0; display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 600; }
+.ry-slim .ry-chip { margin-left: auto; }
+.ry-you { color: var(--cart-you-text); padding: 0 10px; flex: none; }
+.ry-prog-row { display: flex; align-items: center; gap: var(--space-2); margin-top: 14px; }
+.ry-prog { flex: 1; display: flex; gap: 3px; }
+.ry-prog i { flex: 1; height: 6px; border-radius: 3px; background: var(--surface-2); display: block; }
+.ry-prog i.done { background: var(--text-muted); }
+.ry-prog i.here { background: var(--text); }
+.ry-foot { margin-top: 14px; }
+.ry-next { width: 100%; height: 58px; border-radius: var(--radius-xl); background: var(--surface-2); color: var(--text-muted); font-size: 17px; font-weight: 600; }
+.ry-next.ready { background: var(--text); color: var(--bg); }

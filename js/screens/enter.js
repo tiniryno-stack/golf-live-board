@@ -8,7 +8,7 @@
 // Holes two or more back open locked. Holes follow play order (start on 1 or 10).
 // Must fit an iPhone SE with no scrolling (rows and buttons shrink to the space).
 
-import { esc, icon, mark, scoreName, foldIn } from '../ui.js';
+import { esc, icon, mark, scoreName, foldIn, padWindow, padLabel } from '../ui.js';
 import {
   maxHoleScore, maxLabel, rotationFor, rotationIndexFor, foursomeFor, matchFor, matchesFor, componentNames,
   fmtPts, fmtSigned, ryderState, teeTimeName, playOrder, posOf, holeAt, HOLES, sideOn,
@@ -325,6 +325,101 @@ function finalView(app) {
     </div></div></div>`;
 }
 
+// ───────────────────────────────────────────── Team Ryder Cup Enter (handoff 016)
+// One job: what did we shoot on this hole. The only match info is the flag (counted holes only, from
+// the 015 engine); tapping it opens Matches. Scores go in on a one-row ScorePad: 4 pads + ‹ ›.
+
+/** The flag on your cart card: UP 2 / DOWN 1 (never red) / 3–3. */
+function ryderFlag(m) {
+  if (!m) return { text: '0–0', look: 'tied' };
+  const [u, t] = m.holePts;
+  if (m.leader === 'us') return { text: `UP ${m.margin}`, look: 'up' };
+  if (m.leader === 'them') return { text: `DOWN ${m.margin}`, look: 'down' };
+  return { text: `${fmtPts(u)}–${fmtPts(t)}`, look: 'tied' };
+}
+
+/** Where a score came from, for the other cart's rows (016 §3). */
+function rySource(app, p, h) {
+  const g = p.gross[h - 1];
+  if (g == null) return 'waiting · tap to enter';
+  const by = p.meta?.[h - 1]?.by;
+  if (by && by === p.name) return 'entered on their phone';
+  if (by && by === app.myName()) return `entered by you · ${p.name} can still edit`;
+  return by ? `entered by ${by}` : 'entered';
+}
+
+function padRow(app, p, h, editable) {
+  const snap = app.snapshot;
+  const par = snap.holes[h - 1].par;
+  const cap = maxHoleScore(snap.course, snap.settings, h, p.dots[h - 1]);
+  const g = p.gross[h - 1];
+  const key = `${p.id}:${h}`;
+  const w = padWindow(par, cap, app.ui.ryWin?.[key] ?? null);
+  const pads = w.pads.map((v) => {
+    const on = g === v;
+    const likely = g == null && v === par;
+    return `<button class="ry-pad${on ? ' on' : ''}${likely ? ' likely' : ''}"${editable ? ` data-act="ry-pick" data-pid="${esc(p.id)}" data-v="${v}"` : ' disabled'} aria-label="${esc(p.name)} ${v}" aria-pressed="${on}">${mark(v, par, 30)}</button>`;
+  }).join('');
+  const arrow = (dir, ok) => `<button class="ry-pad-arrow"${editable && ok ? ` data-act="ry-win" data-pid="${esc(p.id)}" data-d="${dir}" data-lo="${w.lo}"` : ' disabled'} aria-label="${dir < 0 ? 'Lower scores' : 'Higher scores'}">${icon(dir < 0 ? 'back' : 'fwd', 18)}</button>`;
+  return `<div class="ry-pads">${arrow(-1, w.canLower)}${pads}${arrow(1, w.canHigher)}</div>`;
+}
+
+function ryderPlayer(app, p, h, editable, theirs) {
+  const snap = app.snapshot;
+  const par = snap.holes[h - 1].par;
+  const cap = maxHoleScore(snap.course, snap.settings, h, p.dots[h - 1]);
+  const l = padLabel(p.gross[h - 1], par, cap);
+  const nudge = p.gross[h - 1] == null && app.ui.nudge?.hole === h && Date.now() < app.ui.nudge.until ? ' nudge' : '';
+  return `<div class="ry-player${nudge}">
+      <div class="ry-pl-top"><span class="ry-pl-n ellipsis">${esc(p.name)}</span>${p.dots[h - 1] ? '<i class="ry-stroke" aria-label="gets a stroke"></i>' : ''}<span class="ry-pl-l lbl ${l.tone}">${esc(l.text)}</span></div>
+      ${theirs ? `<div class="ry-src small">${esc(rySource(app, p, h))}</div>` : ''}
+      ${padRow(app, p, h, editable)}</div>`;
+}
+
+function ryderEnterView(app, h, { holeRow, gcard, carts, focus, locked, ahead, pos, lastHole, done, cur }) {
+  const snap = app.snapshot;
+  const st = snap.settings;
+  const myTeam = app.myTeam();
+  const rs = ryderState(snap, myTeam);
+  const m = rs?.matches.find((x) => x.us.id === myTeam && pos >= x.from && pos <= x.to) || null;
+  const flipped = focus === 'opp' && carts.length > 1;
+  const open = flipped ? carts[1] : carts[0];
+  const shut = flipped ? carts[0] : carts[1];
+  const par = snap.holes[h - 1].par;
+  const f = ryderFlag(m);
+  const lockTap = locked && !ahead ? ' data-act="hole-unlock" data-enter="hole-unlock" role="button" tabindex="0"' : '';
+  const right = ahead ? '<span class="focus-chip lock-chip">Up next</span>'
+    : locked ? `<span class="focus-chip lock-chip">${icon('lock', 12)} Tap to edit</span>`
+    : flipped ? '<button class="ry-chip" data-act="cart-focus" data-v="mine">Back</button>'
+    : `<span class="lbl ry-thru">THRU ${m ? m.thru : 0}</span><button class="ry-eflag ${f.look}" data-act="ry-flag" data-v="${m ? m.rotation : ''}" aria-label="Your match: ${esc(f.text)}. Open Matches">${esc(f.text)}</button>`;
+  const left = flipped
+    ? `<span class="lbl ry-k">ENTERING FOR THEM</span><b class="ellipsis">${esc(open.players.map((p) => p.name).join(' + '))}</b>`
+    : `<span class="ry-vs-k">vs</span><b class="ellipsis">${esc(m ? m.them.names.join(' + ') : '')}</b>`;
+  const card = `<section class="ry-ecard${flipped ? ' theirs' : ''}"${lockTap}>
+      <div class="ry-ehead"><span class="ry-ehead-l">${left}</span><span class="ry-ehead-r">${right}</span></div>
+      ${open.players.map((p) => ryderPlayer(app, p, h, !locked && app.canEdit(p.id, h), flipped)).join('')}
+    </section>`;
+  const slim = shut ? `<button class="ry-slim" data-act="cart-focus" data-v="${flipped ? 'mine' : 'opp'}" aria-label="${flipped ? 'Back to your cart' : `Enter scores for ${esc(shut.players.map((p) => p.name).join(' and '))}`}">
+      ${shut.players.map((p) => `<span class="ry-slim-p"><span class="ellipsis">${esc(p.name)}</span>${mark(p.gross[h - 1], par, 28, { ghost: par })}</span>`).join('')}
+      ${flipped ? '<span class="ry-you lbl">YOU</span>' : '<span class="ry-chip">Edit</span>'}</button>` : '';
+  const segs = playOrder(st).map((n) => {
+    const ids = foursomeFor(snap.roster, st, app.me, n);
+    const fin = ids.length && ids.every((id) => snap.playerById.get(id).gross[n - 1] != null);
+    return `<i class="${n === h ? 'here' : fin ? 'done' : ''}"></i>`;
+  }).join('');
+  const blanks = blankPlayers(app, h);
+  const foot = pos >= frontierPos(app) - 1 && !ahead
+    ? `<button class="ry-next${blanks.length ? '' : ' ready'}" data-act="next-hole">${h === lastHole ? 'Round done' : 'Next hole'}</button>`
+    : done ? '<button class="ry-next ready" data-act="tab" data-v="board">See the Board</button>'
+    : `<button class="ry-next ready" data-act="hole-current">Back to hole ${cur}</button>`;
+  return `<div class="enter nr ry-enter${gcard ? ` gps-card ${app.ui.gpsSize || 'regular'}` : ''}">
+      <div class="hero">${holeRow}${gcard}</div>
+      ${card}${slim}
+      <div class="ry-prog-row"><div class="ry-prog" aria-hidden="true">${segs}</div><span class="sync" data-sync>Synced</span></div>
+      <div class="ry-foot">${foot}</div>
+    </div>`;
+}
+
 export default {
   hero: true,
   noscroll: true,
@@ -432,6 +527,7 @@ export default {
           ${app.isOrganizer() ? `<button class="hole-more" data-act="fixhole-open" data-v="${h}" aria-label="Hole menu: fix hole ${h}">${icon('more', 20)}</button>` : ''}
         </div>`;
     if (individual(app)) return individualView(app, h, { holeRow, dots, footBtn, gcard, gstate });
+    if (st.ryder && app.myTeam() && carts.length) return ryderEnterView(app, h, { holeRow, gcard, carts, focus, locked, ahead, pos, lastHole, done, cur });
     return `<div class="enter nr${gcard ? ` gps-card ${app.ui.gpsSize || 'regular'}` : ''}">
       <div class="hero">
         ${holeRow}
@@ -456,6 +552,11 @@ export default {
       // 013: Regular when the score pads fit at full size, else Compact (measured, per screen height).
       const key = `${innerWidth}x${innerHeight}`;
       if (app.ui.gpsSizeKey !== key) { app.ui.gpsSizeKey = key; app.ui.gpsSize = 'regular'; }
+      const ry = root.querySelector('.ry-enter.gps-card');
+      if (ry && app.ui.gpsSize === 'regular') {
+        const c = document.getElementById('content');
+        if (c && c.scrollHeight > c.clientHeight + 1) { app.ui.gpsSize = 'compact'; requestAnimationFrame(() => app.render()); return; }
+      }
       const step = root.querySelector('.enter.gps-card .cart.focus .tile .step');
       if (step && app.ui.gpsSize === 'regular' && step.getBoundingClientRect().width < 87) { app.ui.gpsSize = 'compact'; requestAnimationFrame(() => app.render()); return; }
     } else if (gps.isOn()) gps.stop();
@@ -527,6 +628,30 @@ export default {
       }
     },
     'next-hole': (el, ev, app) => nextHole(app),
+    'ry-pick': (el, ev, app) => {
+      // 016: first tap enters the score, a tap on the chosen pad clears it.
+      const pid = el.dataset.pid;
+      const h = app.ui.hole;
+      const v = Number(el.dataset.v);
+      const g = app.snapshot.playerById.get(pid)?.gross[h - 1];
+      app.setScore(pid, h, g === v ? null : v);
+      // Entering for the other cart: picking their second score flips back home.
+      if (app.ui.enterFocus === h && g !== v) {
+        const carts = cartsFor(app, h);
+        const theirs = carts[1];
+        if (theirs && theirs.players.every((p) => (p.id === pid ? v : p.gross[h - 1]) != null)) app.ui.enterFocus = null;
+      }
+      app.render();
+    },
+    'ry-win': (el, ev, app) => {
+      const key = `${el.dataset.pid}:${app.ui.hole}`;
+      app.ui.ryWin = { ...(app.ui.ryWin || {}), [key]: Number(el.dataset.lo) + Number(el.dataset.d) };
+      app.render();
+    },
+    'ry-flag': (el, ev, app) => {
+      if (el.dataset.v !== '') app.ui.ryRot = Number(el.dataset.v);
+      app.go(app.tabHash('matches'));
+    },
     'cart-focus': (el, ev, app) => {
       // Remembered for this hole only: any other hole opens on your cart (70/30).
       app.ui.enterFocus = el.dataset.v === 'opp' ? app.ui.hole : null;

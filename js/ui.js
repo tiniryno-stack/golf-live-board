@@ -153,3 +153,20 @@ export function roundLink(code, suffix = '') {
   const base = `${location.origin}${location.pathname}`;
   return `${base}#/e/${code}${suffix}`;
 }
+
+// ───────────────────────────────────────────── ScorePad `row` variant (handoff 016 §5)
+
+/** The 4 scores a pad row shows: starts at `lo` (default par−1), kept inside 1 … cap. */
+export function padWindow(par, cap, lo = null, n = 4) {
+  const top = Math.max(1, cap - (n - 1));
+  const start = Math.max(1, Math.min(lo == null ? par - 1 : lo, top));
+  return { lo: start, pads: Array.from({ length: n }, (_, i) => start + i).filter((v) => v <= cap), canLower: start > 1, canHigher: start + n - 1 < cap };
+}
+
+/** The label next to a name on team Enter: TAP A SCORE → BIRDIE / PAR / DOUBLE …, " · MAX" at the cap. tone: under | even | dbl. */
+export function padLabel(v, par, cap) {
+  if (v == null) return { text: 'TAP A SCORE', tone: 'even' };
+  const d = v - par;
+  const name = v === 1 ? 'ACE' : d <= -3 ? 'ALBATROSS' : d === -2 ? 'EAGLE' : d === -1 ? 'BIRDIE' : d === 0 ? 'PAR' : d === 1 ? 'BOGEY' : d === 2 ? 'DOUBLE' : d === 3 ? 'TRIPLE' : `+${d}`;
+  return { text: `${name}${v === cap ? ' · MAX' : ''}`, tone: d < 0 ? 'under' : d >= 2 ? 'dbl' : 'even' };
+}
