@@ -168,7 +168,8 @@ function cartCard(app, cart, hole, mine, locked) {
   </section>`;
 }
 
-/** The other cart, collapsed to one slim row: name, their scores with marks, Edit / Back. */
+/** The other cart, collapsed to one slim row: name, their scores with marks, Edit / Back.
+ *  Team Ryder Cup: no cart name (the names already say who), each player gets half the row. */
 function slimCart(app, cart, hole, mine) {
   const snap = app.snapshot;
   const team = cart.teamId ? snap.teamById.get(cart.teamId) : null;
@@ -177,8 +178,8 @@ function slimCart(app, cart, hole, mine) {
   const par = snap.holes[hole - 1].par;
   const scores = cart.players.map((p) => `<span class="face" data-pid="${esc(p.id)}"><span class="ellipsis">${esc(p.name)}</span>${mark(p.gross[hole - 1], par, 28, { ghost: '–' })}</span>`).join('');
   return `<section class="cart ${mine ? 'mine' : 'opp'} dim" style="--jersey:${jersey}" data-act="cart-focus" data-enter="cart-focus" data-v="${mine ? 'mine' : 'opp'}" role="button" tabindex="0" aria-label="${mine ? 'Back to your cart' : `Enter scores for ${esc(label)}`}">
-    <i class="jd"></i><span class="name ellipsis">${esc(label)}</span>
-    <span class="slim-scores mono">${scores}</span>
+    <i class="jd"></i>${snap.settings.ryder ? '' : `<span class="name ellipsis">${esc(label)}</span>`}
+    <span class="slim-scores mono${snap.settings.ryder ? ' names-only' : ''}">${scores}</span>
     <span class="edit-btn">${mine ? 'Back' : 'Edit'}</span>
   </section>`;
 }

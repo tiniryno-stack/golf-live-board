@@ -1779,3 +1779,7 @@ details.fold summary::-webkit-details-marker { display: none; }
 /* Players table: roomier columns, no header letter-spacing, so THRU / GROSS / PROJ / NET never touch. */
 .ry-prow { grid-template-columns: 18px minmax(0, 1fr) 36px 60px 48px 44px; gap: 6px; }
 .ry-prow.head { letter-spacing: 0; }
+
+/* Enter, Team Ryder Cup: the other cart's slim row is just "Josh 4 · Brandon 5", each name with room to show. */
+.slim-scores.names-only { gap: var(--space-3); font-family: var(--font-sans); }
+.slim-scores.names-only .face { flex: 1 1 0; gap: 6px; font-size: 15px; font-weight: 600; }
