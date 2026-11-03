@@ -146,8 +146,8 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
 - **Team Ryder Cup (Nov 3, game id `ryder`, built for the Nov 9 birthday round; ARCHITECTURE.md 13a):** 8/12/16
   players = 2–4 carts a side, `roster.sides`, cart ids `1A`…`2D` (side + letter), `settings.ryder`, `settings.lineups`
   (Host → Rules → New lineup from hole N: carts ride together and play each other from then on; `sameFoursome` and
-  SQL `_same_foursome` read it — **migration `supabase/migrations/2026-11-03-team-ryder-cup.sql` still to apply**:
-  until then a lineup change is refused server-side for non-organizer phones, everything else works). Each match = 1 side
+  SQL `_same_foursome` read it — migration `supabase/migrations/2026-11-03-team-ryder-cup.sql` **applied to the live
+  DB Nov 3** by Andrew in the SQL Editor and verified). Each match = 1 side
   point (`game.sides[]`, `toWin` = matches/2 + ½, 6–6 = shared). Headlines rank sides. `sim.html` → **Team Ryder Cup · 16 phones**.
   Colors: your cart green, side 1 blue, side 2 orange. `ryderSetup()` in scoring.js builds the roster from players in order.
 - **2v2 headlines (fixed Nov 3):** board-level headlines (lead change, comeback, final) rank `game.people`, not the
