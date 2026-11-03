@@ -155,6 +155,10 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
   scores, hole points freeze at the 6½ clinch, nothing provisional, two rotations can be live. Screens in `js/screens/ryder.js`
   (Board cup card + flags, read-only `ryder-match` sheet, Matches). Setup: Carts → Draft (snake J,A,A,J,J,A) → Tee times.
   Host → New lineup removed from the UI (engine still reads old `settings.lineups`).
+- **Team Ryder Cup Enter (handoff 016):** `ryderEnterView` in `js/screens/enter.js` (only for `settings.ryder` with a cart):
+  flag = counted holes only (015 engine), a button to Matches (`ry-flag`); one-row ScorePad `ry-pads` (pure `ui.padWindow` /
+  `ui.padLabel`, `tests/enter016.test.mjs`), window in `app.ui.ryWin['pid:hole']`; other cart = `.ry-slim`, Edit flips with
+  `app.ui.enterFocus` (picking their 2nd score flips home). Other games keep the 013 Enter + ScoreStepper.
 - **2v2 headlines (fixed Nov 3):** board-level headlines (lead change, comeback, final) rank `game.people`, not the
   six pairings; `h.unit` = 'people' | 'sides' marks it, `headlineColor(mine, h, me)`.
 - **Small groups:** any roster that isn't 4 carts of 2 is a scorecard round (no teams).

@@ -1,6 +1,6 @@
 # 016 · Team Ryder Cup: Enter (pads, flag, no scrolling)
 
-Status: designed, not built
+Status: built in bc2077a
 
 This replaces the Enter screen for the Team Ryder Cup mode: **014 §5 and 015 §5's Enter bullet are superseded** by this folder. The game logic is unchanged — build from `015/RULES.md`. Everything here is layout and input.
 
