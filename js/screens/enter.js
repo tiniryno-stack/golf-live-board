@@ -378,7 +378,7 @@ export default {
       const [a, b] = snap.game.sides.slice().sort((x, y) => x.sideId.localeCompare(y.sideId));
       const cup = `<span class="faint">${esc(a.name.replace(/^Team /, ''))} ${fmtPts(a.points)}–${fmtPts(b.points)} ${esc(b.name.replace(/^Team /, ''))}</span>`;
       matchLine = opp
-        ? `<span class="teams ellipsis">vs <b style="color:${sideColor(app, opp.id)}">${esc(opp.name)}</b> <span class="faint">·</span> ${cup}</span><span class="status">${esc(matchStatusShort(snap, m, myTeam).replace(' · FINAL', ' · FINAL').replace(/^NOT STARTED$/, 'UP NEXT'))}</span>`
+        ? `<span class="teams ellipsis">vs <b style="color:${sideColor(app, opp.id)}">${esc(opp.name)}</b></span><span class="status">${esc(matchStatusShort(snap, m, myTeam).replace(/^NOT STARTED$/, 'UP NEXT'))}</span>`
         : `<span class="teams">${cup}</span>`;
     } else matchLine = '';
     const gstate = cardState(app, h);
