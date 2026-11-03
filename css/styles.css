@@ -1725,3 +1725,15 @@ details.fold summary::-webkit-details-marker { display: none; }
 .ry-mk { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; }
 .ry-mk-n { font-size: 13px; color: var(--text-muted); max-width: 100%; } .ry-mk-n.you { color: var(--cart-you-text); }
 .ry-hl { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-2); font-size: 15px; }
+
+/* Team Ryder Cup Matches (handoff 015 §3): same layout in every state. */
+.ry-matches { padding-top: var(--space-2); }
+.ry-matches > .lbl { color: var(--text-muted); }
+.ry-vs { margin: 2px 0 2px; }
+.ry-picker { margin-top: var(--space-3); }
+.ry-card { margin-top: var(--space-3); padding: var(--space-4); border-radius: var(--radius-2xl); background: var(--surface-1); box-shadow: var(--shadow-card); }
+.ry-card > .lbl { color: var(--text-muted); }
+.ry-card > .lbl.you { color: var(--cart-you-text); }
+.ry-legend { display: flex; align-items: center; gap: 6px; margin-top: var(--space-2); font-size: 13px; color: var(--text-muted); }
+.ry-legend .ry-dot + * { margin-left: 0; }
+.ry-legend .ry-dot:not(:first-child) { margin-left: var(--space-2); }

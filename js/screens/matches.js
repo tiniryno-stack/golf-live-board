@@ -6,6 +6,7 @@
 // separate screen (people confuse it with their own score). Split point keeps its own view.
 
 import { esc, seg, seg2, icon, foldIn, mark } from '../ui.js';
+import { ryderMatches, ryderActions } from './ryder.js';
 import { raceState, holeShares, holeOutcomes, showStakes } from '../race.js';
 import { fmtPts, fmtSigned, rotationIndexFor, holeAt, HOLES, playOrder, sideOn, sideOf, matchSidePoints } from '../scoring.js';
 import { teamColor, shortTeam, sideColor } from '../teams.js';
@@ -438,12 +439,13 @@ export default {
         <button class="btn primary block" data-act="tab" data-v="board">See the Board</button></div>`;
     }
     if (g.type === 'splitPoint') return splitView(app);
+    if (g.sides) return ryderMatches(app); // Team Ryder Cup (015 §3): my match, all four states
     if (!snap.anyPosted && !app.isFinal()) return waitingView(app);
-    if (g.sides) return ryderMatchesView(app);
     return teamGameView(app);
   },
 
   actions: {
+    ...ryderActions,
     'ryder-match': (el, ev, app) => {
       app.ui.ryderOpen = app.ui.ryderOpen === el.dataset.v ? null : el.dataset.v;
       app.ui.foldAt = Date.now();
