@@ -150,13 +150,20 @@ async function loadStamp() {
     ctx.drawImage(img, 0, 0);
     const d = ctx.getImageData(0, 0, cv.width, cv.height);
     const [r, g, b] = [0xa7, 0xac, 0xb4];
+    let right = 0;
     for (let i = 0; i < d.data.length; i += 4) {
       const px = d.data;
+      if (px[i + 3]) right = Math.max(right, (i / 4) % cv.width);
       if (px[i + 1] - px[i] > 40) continue; // the green ball
       px[i] = r; px[i + 1] = g; px[i + 2] = b;
     }
     ctx.putImageData(d, 0, 0);
-    stamp = cv;
+    // Trim the PNG's empty right edge so the wordmark ends on the right margin.
+    const out = document.createElement('canvas');
+    out.width = right + 2;
+    out.height = cv.height;
+    out.getContext('2d').drawImage(cv, 0, 0);
+    stamp = out;
   } catch { stamp = null; }
 }
 
