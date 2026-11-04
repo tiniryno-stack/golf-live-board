@@ -504,12 +504,14 @@ export function handicapSheet(app, { i }) {
 // ───────────────────────────────────────────── screens (designspec §6)
 
 /** Back target for each screen. */
-const BACK = { which: 'course', players: 'course', check: 'players', game: 'players', teams: 'game', matchups: 'teams', draft: 'teams', tee: 'draft' };
-const BACK_LABEL = { course: 'Course', players: 'Players', game: 'Game', teams: s => (s.game === 'carts' ? 'Carts' : s.game === 'ryder' ? 'Carts' : 'Partners'), draft: 'Draft' };
+const BACK = { which: 'course', players: 'course', check: 'players', game: 'players', teams: 'game', matchups: 'tee', draft: 'teams', tee: 'draft' };
+// Partner “Rider” Cup (018): Carts → Tee times (no draft); matchups is an optional screen off Tee times.
+const backOf = (s) => (s.game === 'carts' && s.screen === 'tee' ? 'teams' : BACK[s.screen]);
+const BACK_LABEL = { course: 'Course', players: 'Players', game: 'Game', teams: s => (s.game === 'carts' ? 'Carts' : s.game === 'ryder' ? 'Carts' : 'Partners'), draft: 'Draft', tee: 'Tee times' };
 
 /** Progress bars: how far along the flow this screen is (2–4 bars depending on the game). */
 function progress(s) {
-  const flow = ['course', 'players', 'game', ...(s.game === 'ryder' ? ['teams', 'draft', 'tee'] : s.game === '2v2' ? ['teams'] : s.game === 'carts' ? ['teams', 'matchups'] : [])];
+  const flow = ['course', 'players', 'game', ...(s.game === 'ryder' ? ['teams', 'draft', 'tee'] : s.game === '2v2' ? ['teams'] : s.game === 'carts' ? ['teams', 'tee'] : [])];
   const at = Math.max(0, flow.indexOf(s.screen === 'which' ? 'course' : s.screen === 'check' ? 'players' : s.screen));
   return `<div class="nr-bars">${flow.map((_, i) => `<i class="${i <= at ? 'on' : ''}"></i>`).join('')}</div>`;
 }
@@ -943,26 +945,52 @@ function tnList(s, id, list, custom, takenBy) {
 
 function cartsView(s) {
   applyUsual(s);
-  const c = course(s);
-  const n = s.players.length;
   const ids = cartIds(s);
   const idx = (id) => s.players.map((p, i) => [p, i]).filter(([p]) => p.teamId === id).map(([, i]) => i);
-  const sched = ids.length === 3 ? 'everyone plays everyone' : s.schedule === 'turn' ? '2 rotations' : '3 rotations';
-  return `${topBar(s)}${headline('Step 4 · Partner “Rider” Cup', `${n} players, ${ids.length} carts`)}
-    <div class="nr-course small"><div class="ellipsis" style="flex:1"><b>Partner “Rider” Cup</b> <span class="soft">· ${n} players${c ? ` · ${esc(c.shortName || c.name)}` : ''}</span></div><button class="btn small" data-act="setup-go" data-v="game">Change</button></div>
-    <p class="meta nr-hint">${s.pairedFromLast ? 'Paired like your last round · ' : ''}Tap two names to swap. Pairs that have played together before get their usual name back. Tap a name to change it.</p>
-    <div class="cart-grid">${ids.map((id) => {
-      const t = s.teams.find((x) => x.id === id);
-      return `<div class="cart-card" style="--jersey:${CART_TINT[id]}">
-        <div class="cc-k mono">CART ${id}</div>
-        <button class="tn-cart" data-act="tn-open" data-v="${id}" aria-label="Name cart ${id}: ${esc(t.name || 'not named')}">
-          <span class="tn-cart-main"><span class="tn-cart-name ellipsis${t.name ? '' : ' empty'}">${esc(t.name || 'Pick a name')}</span>${cartTag(s, id) ? `<span class="ts-label tn-cart-tag">${esc(cartTag(s, id))}</span>` : ''}</span>${icon('fwd', 16)}</button>
-        ${idx(id).map((i) => swapBtn(s, i, s.players[i].strokes !== '' && s.players[i].strokes != null ? `<span class="mono soft">${esc(s.players[i].strokes)}</span>` : '')).join('')}
-      </div>`;
-    }).join('')}</div>
-    <div class="nr-two"><button class="btn ghost" data-act="setup-shuffle">Shuffle carts</button><button class="btn ghost" data-act="setup-go" data-v="players">Edit players</button></div>
+  const rows = ids.map((id) => {
+    const t = s.teams.find((x) => x.id === id);
+    return `<div class="ry-cart rider-cart" style="--jersey:${CART_TINT[id]}">
+      <div class="rider-cart-k"><span class="lbl">Cart ${id}</span>
+        <button class="tn-cart rider-tn" data-act="tn-open" data-v="${id}" aria-label="Name cart ${id}: ${esc(t.name || 'not named')}"><span class="ellipsis${t.name ? '' : ' empty'}">${esc(t.name || 'Pick a name')}</span>${cartTag(s, id) ? `<span class="ts-label tn-cart-tag">${esc(cartTag(s, id))}</span>` : ''}${icon('fwd', 14)}</button></div>
+      <div class="ry-cart-pair">${idx(id).map((i) => swapBtn(s, i)).join('')}</div></div>`;
+  }).join('');
+  return `${topBar(s)}${headline('Step 4 · Carts', 'Who rides together?')}
+    <div class="nr-line"><span class="meta">${s.swapSel != null ? 'Now tap who to swap with.' : s.pairedFromLast ? 'Paired like your last round · tap two names to swap.' : 'Tap two names to swap.'}</span><button class="btn small" data-act="setup-shuffle">Shuffle</button></div>
+    ${rows}
+    ${bottom('Next: tee times', 'setup-go', { v: 'tee', arrow: true })}`;
+}
+
+/** Partner “Rider” Cup tee times: who tees off together = the first matchups. */
+function riderGroups(s) {
+  const ids = cartIds(s);
+  if (ids.length === 3) return [['A', 'B'], ['C']];
+  return cartRotation(s.schedule, s.opps)[0].matches.map((m) => [...m]);
+}
+
+/** ⑤ Who tees off together? Tap two carts to swap them; your three matches; matchups optional. */
+function riderTeeView(s) {
+  ensureCarts(s);
+  applyUsual(s);
+  const ids = cartIds(s);
+  const name = (id) => s.teams.find((x) => x.id === id)?.name || `Cart ${id}`;
+  const times = s.settings.teeTimes || [];
+  const ord = ['1st', '2nd', '3rd', '4th'];
+  const chip = (id) => `<button class="ry-pick rider-pick${s.rySel === id ? ' sel' : ''}" style="--jersey:${CART_TINT[id]}" data-act="setup-rider-swap" data-v="${id}" aria-pressed="${s.rySel === id}"><span class="ellipsis">${esc(name(id))}</span></button>`;
+  const rows = riderGroups(s).map((g, k) => `<div class="ry-tee">
+      <div class="ry-tee-k"><span class="lbl">${ord[k]}</span>
+        <input class="ry-time mono${times[k] ? ' set' : ''}" type="time" value="${esc(times[k] || '')}" aria-label="${ord[k]} tee time" data-input="setup-ry-time" data-i="${k}">${times[k] ? '' : '<span class="ry-time-ph">Add time</span>'}</div>
+      <div class="ry-tee-pair">${chip(g[0])}<span class="meta">${g[1] ? 'v' : ''}</span>${g[1] ? chip(g[1]) : '<span></span>'}</div></div>`).join('');
+  const rot = ids.length === 3 ? threeCartRotation() : cartRotation(s.schedule, s.opps);
+  const mine = rot.flatMap((r) => r.matches.filter((m) => m.includes('A')).map((m) => [r.holes, m[0] === 'A' ? m[1] : m[0]]));
+  const groupOf = (id) => riderGroups(s).findIndex((g) => g.includes(id));
+  const my = mine.map(([holes, o]) => `<div class="ry-my"><span class="mono">${holes[0]}–${holes[1]}</span><span class="ellipsis" style="color:${CART_TINT[o]}">${esc(name(o))}</span><span class="meta">${groupOf(o) === groupOf('A') ? 'same tee time' : ord[groupOf(o)]}</span></div>`).join('');
+  const sched = ids.length === 3 ? 'everyone plays everyone' : s.schedule === 'turn' ? 'switch at the turn' : 'switch every 6';
+  return `${topBar(s)}${headline('Step 5 · Tee times', 'Who tees off together?', s.rySel ? 'Now tap the cart to swap with.' : 'Tap two carts to swap them.')}
+    ${rows}
+    <div class="lbl ry-pool-k">Your matches · ${esc(name('A'))}</div>
+    ${my}
     <button class="nr-row" data-act="setup-go" data-v="matchups"><span style="flex:1;min-width:0"><b class="rt">Game &amp; matchups</b><span class="rs ellipsis">${esc(`${rulesSummary(s).split(' · ').slice(0, 2).join(' · ')} · ${sched}`)}</span></span><span class="meta">Optional</span>${icon('fwd', 18)}</button>
-    ${bottom(s.saving ? 'Starting…' : `Start round · ${n} players`, 'setup-save', { busy: s.saving })}`;
+    ${bottom(s.saving ? 'Starting…' : `Start round · ${s.players.length} players`, 'setup-save', { busy: s.saving })}`;
 }
 
 /** ④b with 3 carts: nothing to switch; every matchup runs all 18. Rules only. */
@@ -1089,7 +1117,7 @@ function savedView(s) {
     ${ry ? `<div class="nr-foot"><button class="btn primary nr-cta" data-act="setup-copy" data-v="share">${icon('share', 18)} Text the group</button><button class="link-btn" style="margin-top:8px" data-act="setup-open">Open the round</button></div>` : bottom('Open the round', 'setup-open')}`;
 }
 
-const VIEWS = { course: courseView, which: whichView, players: playersView, check: checkView, game: gameView, teams: (s) => (s.game === 'carts' ? cartsView(s) : s.game === 'ryder' ? ryCartsView(s) : pairsView(s)), matchups: matchupsView, draft: ryDraftView, tee: ryTeeView };
+const VIEWS = { course: courseView, which: whichView, players: playersView, check: checkView, game: gameView, teams: (s) => (s.game === 'carts' ? cartsView(s) : s.game === 'ryder' ? ryCartsView(s) : pairsView(s)), matchups: matchupsView, draft: ryDraftView, tee: (s) => (s.game === 'carts' ? riderTeeView(s) : ryTeeView(s)) };
 
 
 // ───────────────────────────────────────────── course search actions
@@ -1222,7 +1250,7 @@ export default {
 
   topBack(app) {
     const s = app.setup;
-    const back = s && !s.saved ? BACK[s.screen] : null;
+    const back = s && !s.saved ? backOf(s) : null;
     if (!back) return null;
     const label = typeof BACK_LABEL[back] === 'function' ? BACK_LABEL[back](s) : BACK_LABEL[back];
     return `<button class="back" data-act="setup-go" data-v="${back}">${icon('back', 22)}<span>${esc(label)}</span></button>`;
@@ -1491,6 +1519,21 @@ export default {
       persist(s);
       app.render();
     },
+    'setup-rider-swap': (el, ev, app) => {
+      const s = app.setup;
+      const id = el.dataset.v;
+      if (s.rySel == null) s.rySel = id;
+      else if (s.rySel === id) s.rySel = null;
+      else {
+        const a = s.rySel, b = id;
+        s.players.forEach((p) => { if (p.teamId === a) p.teamId = b; else if (p.teamId === b) p.teamId = a; });
+        const ta = s.teams.find((t) => t.id === a), tb = s.teams.find((t) => t.id === b);
+        if (ta && tb) { const keep = ['name', 'auto', 'autoKey']; for (const k of keep) [ta[k], tb[k]] = [tb[k], ta[k]]; }
+        s.rySel = null;
+        persist(s);
+      }
+      app.render();
+    },
     'setup-ry-reset': (el, ev, app) => {
       Object.assign(app.setup, { ryPicks: [], rySkip: false, ryTee: null, rySel: null });
       persist(app.setup);
@@ -1648,7 +1691,7 @@ export default {
         if (g !== s.game || (g !== '2v2' && g !== 'carts' && g !== 'ryder')) return;
         if (g === 'carts') ensureCarts(s);
       }
-      if (to === 'matchups') ensureCarts(s);
+      if (to === 'matchups' || to === 'tee') { if (gameOf(s) === 'carts') ensureCarts(s); }
       s.screen = to;
       s.swapSel = null;
       persist(s);

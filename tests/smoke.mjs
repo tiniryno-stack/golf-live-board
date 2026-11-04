@@ -47,10 +47,10 @@ function ok(cond, msg) {
 }
 
 async function phone(name) {
-  const ctx = await browser.newContext({ viewport: { width: 375, height: 548 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  const ctx = await browser.newContext({ viewport: { width: 393, height: 659 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true }); // iPhone 15/16 (Andrew: 15/16/17 only)
   await attach(ctx, be, srv.origin);
   await ctx.addInitScript(() => {
-    for (const k of ['tile5', 'prov2', 'oppcart3']) localStorage.setItem('glb.coach.' + k, 'true');
+    for (const k of ['tile5', 'prov2', 'oppcart3', 'pad1']) localStorage.setItem('glb.coach.' + k, 'true');
   });
   const page = await ctx.newPage();
   page.errors = [];
@@ -76,27 +76,67 @@ async function join(page, playerName) {
 }
 
 async function tapTiles(page) {
+  if (await page.$('.ry-enter')) {
+    // 016 / 018 Enter: one-row score pads; the outlined pad is par (the likely pick) while nothing is chosen.
+    const n = await page.$$eval('.ry-ecard .ry-pad.likely[data-act="ry-pick"]', (els) => els.length);
+    for (let i = 0; i < n; i++) {
+      const sel = '.ry-ecard .ry-pad.likely[data-act="ry-pick"]';
+      if (!(await page.$(sel))) break;
+      await page.locator(sel).first().tap(); // a locator re-finds the pad: the render loop redraws constantly
+      await page.waitForTimeout(60);
+    }
+    return;
+  }
   const pids = await page.$$eval('.cart.focus .tile .face[data-act="tile-tap"]', (els) => els.map((e) => e.dataset.pid));
   for (const pid of pids) await page.tap(`.tile .face[data-pid="${pid}"]`);
 }
+const NEXT = '.next-btn, .ry-next';
+// Small phones may scroll Enter (016 §0): bring the button clear of the tab bar first.
+async function tapNext(page) {
+  await page.$eval(NEXT, (e) => e.scrollIntoView({ block: 'center' }));
+  await page.tap(NEXT);
+}
+const THEIRS = '.cart.opp.dim, .ry-slim[data-v="opp"]';
 async function playHole(page) {
   await clearOverlays(page);
   await tapTiles(page); // your cart
-  if (await page.$('.cart.opp.dim')) {
-    await page.tap('.cart.opp.dim'); // open theirs (50/50)
+  if (await page.$(THEIRS)) {
+    await page.tap(THEIRS); // open theirs
     await tapTiles(page);
   }
   await page.waitForTimeout(100);
-  await page.tap('.next-btn');
+  await tapNext(page);
   await page.waitForTimeout(150);
   const card = await page.evaluate(() => document.getElementById('overlay').innerText);
   if (/LOCK IN|CLOSE IT OUT/i.test(card)) {
     alerts.push(card.replace(/\s+/g, ' ').trim());
+    await page.waitForTimeout(750); // a card ignores taps for its first 0.7 s
     await page.tap('[data-act="card-continue"]');
     await page.waitForTimeout(100);
   }
 }
 const alerts = [];
+// 016 / 018 Enter (Partner “Rider” Cup and Team Ryder Cup): one card + score pads, the other cart as a slim row.
+const enterCarts = (page) => page.evaluate(() => {
+  const g = window.__glb;
+  return [g.snapshot.teamById.get(g.myTeam())?.name, document.querySelector('.ry-ehead-l b')?.textContent];
+});
+/** Tap a player's score pad: the par pad on the first tap, then one higher / lower (like the old − / + steps). */
+async function stepScore(page, pid, d = 0) {
+  const info = await page.evaluate((pid) => {
+    const g = window.__glb, h = g.ui.hole, p = g.snapshot.playerById.get(pid);
+    return { g: p.gross[h - 1], par: g.snapshot.holes[h - 1].par };
+  }, pid);
+  const want = info.g == null ? info.par : info.g + d;
+  for (let i = 0; i < 12 && !(await page.$(`.ry-pad[data-act="ry-pick"][data-pid="${pid}"][data-v="${want}"]`)); i++) {
+    const lo = await page.$eval(`[data-act="ry-win"][data-pid="${pid}"]`, (e) => Number(e.dataset.lo)).catch(() => null);
+    if (lo == null) break;
+    await page.tap(`[data-act="ry-win"][data-pid="${pid}"][data-d="${want < lo ? -1 : 1}"]`);
+    await page.waitForTimeout(80);
+  }
+  await page.tap(`.ry-pad[data-act="ry-pick"][data-pid="${pid}"][data-v="${want}"]`);
+}
+const THEIRS_ROW = '.ry-slim[data-v="opp"]', MINE_ROW = '.ry-slim[data-v="mine"]';
 
 // 1. Join
 const A = await phone('Andrew');
@@ -106,20 +146,18 @@ await join(C.page, 'Sam');
 ok((await app(A.page, () => window.__glb.me)) === 'p1', 'Andrew’s phone claimed Andrew');
 ok((await app(C.page, () => window.__glb.me)) === 'p5', 'Sam’s phone claimed Sam');
 ok(be.tables.claims.length === 2, 'server holds two claims');
-const cartsA = await A.page.$$eval('.cart .name', (els) => els.map((e) => e.textContent));
-ok(cartsA.join() === 'Hogan’s Heroes,Shank Redemption', `hole 1 cards on Andrew’s phone: ${cartsA.join(' + ')}`);
+const cartsA = await enterCarts(A.page);
+ok(cartsA.join() === 'Hogan’s Heroes,Shank Redemption', `hole 1 on Andrew’s phone: ${cartsA[0]} vs ${cartsA[1]}`);
 const briefA = await briefText(A.page);
-ok(briefA.length === 2 && /Partner “Rider” Cup/.test(briefA[0]) && /2 points every hole/.test(briefA[0]) && /Push A tie: ½ point each/.test(briefA[0]),
+// 018: one page for Partner “Rider” Cup.
+ok(briefA.length === 1 && /Partner “Rider” Cup/.test(briefA[0]) && /2 points a hole/.test(briefA[0]) && /A tie is ½ each/.test(briefA[0]) && /\+1 for winning a match/.test(briefA[0]),
   `joining shows Today\u2019s game: how a hole is scored (${(briefA[0] || 'none').slice(0, 60)}\u2026)`);
-ok(/Holes 1–6 vs Shank Redemption/.test(briefA[1] || '') && /Holes 7–12 vs Fore Play/.test(briefA[1] || '') && /12 points per matchup, \+1 for winning it/.test(briefA[1] || ''),
-  'card 2: Andrew\u2019s three matchups and what\u2019s up for grabs');
-ok(await briefFits(A.page), 'both cards fit an iPhone SE without scrolling');
-await A.page.tap('[data-act="brief-next"]');
-await A.page.waitForTimeout(600);
-ok((await A.page.textContent('[data-act="brief-next"]')).includes('Let’s play'), 'Next swipes to card 2 \u2192 \u201cLet\u2019s play\u201d');
+ok(/1–6 vs Shank Redemption/.test(briefA[0] || '') && /7–12 vs Fore Play/.test(briefA[0] || ''), 'Andrew\u2019s three matches on the same page');
+ok(await briefFits(A.page), 'the card fits an iPhone 15/16 without scrolling');
+ok((await A.page.textContent('[data-act="brief-next"]')).includes('Let’s play'), 'one page: the button says \u201cLet\u2019s play\u201d');
 await A.page.tap('[data-act="brief-next"]');
 await A.page.waitForTimeout(200);
-ok(!(await A.page.$('.fullcard.brief')) && (await A.page.evaluate(() => window.__glb.route.tab)) === 'enter' && !!(await A.page.$('.cart.mine')), 'Let\u2019s play \u2192 Enter');
+ok(!(await A.page.$('.fullcard.brief')) && (await A.page.evaluate(() => window.__glb.route.tab)) === 'enter' && !!(await A.page.$('.ry-ecard')), 'Let\u2019s play \u2192 Enter');
 ok(await A.page.evaluate((c) => localStorage.getItem('glb.brief.' + c) === 'true', r.code), 'remembered on this phone');
 ok(!!(await C.page.$('.fullcard.brief')), 'Sam gets it too');
 await C.page.tap('[data-act="brief-done"]');
@@ -152,6 +190,7 @@ for (let h = 1; h <= 6; h++) {
       const card = await p.evaluate(() => document.getElementById('overlay').innerText);
       ok(/switch it up/i.test(card), `${p === A.page ? 'Andrew' : 'Sam'} gets Switch it up after 6`);
       if (p === A.page) ok(card.includes('vs Fore Play') && card.includes('Sam + Jake'), 'Andrew’s next matchup: Fore Play · Sam + Jake');
+      await p.waitForTimeout(750); // a card ignores taps for its first 0.7 s
       await p.tap('[data-act="card-continue"]');
     }
   }
@@ -161,12 +200,12 @@ await A.page.waitForTimeout(1000);
 const h6 = be.tables.scores.filter((s) => s.hole === 6 && s.strokes != null).length;
 ok(h6 === 8, `all 8 players posted hole 6 on the server (${h6})`);
 ok((await A.page.textContent('.hole-title')) === 'Hole 7', 'Andrew is on hole 7');
-const carts7 = await A.page.$$eval('.cart .name', (els) => els.map((e) => e.textContent));
-ok(carts7.join() === 'Hogan’s Heroes,Fore Play', `hole 7 cards on Andrew’s phone: ${carts7.join(' + ')}`);
-await A.page.tap('.face[data-pid="p5"]'); // greyed: this tap only opens Fore Play's side
+const carts7 = await enterCarts(A.page);
+ok(carts7.join() === 'Hogan’s Heroes,Fore Play', `hole 7 on Andrew’s phone: ${carts7[0]} vs ${carts7[1]}`);
+await A.page.tap(THEIRS_ROW); // the slim row: this tap only opens Fore Play's card
 await A.page.waitForTimeout(300);
-ok(!be.tables.scores.some((s) => s.player_id === 'p5' && s.hole === 7), 'a tap on the greyed cart doesn\u2019t enter a score');
-await A.page.tap('.face[data-pid="p5"]');
+ok(!be.tables.scores.some((s) => s.player_id === 'p5' && s.hole === 7), 'a tap on the slim row doesn\u2019t enter a score');
+await stepScore(A.page, 'p5');
 await A.page.waitForTimeout(900);
 const sam7 = be.tables.scores.find((s) => s.player_id === 'p5' && s.hole === 7);
 ok(sam7?.strokes === 3 && sam7.updated_by === 'Andrew', 'Andrew can now enter Sam’s hole 7: a tap = par 3 (stamped “Andrew”)');
@@ -202,7 +241,7 @@ await C.page.waitForTimeout(400);
 
 // 4. Offline queue
 be.offline = true;
-await C.page.tap('.face[data-pid="p6"]');
+await stepScore(C.page, 'p6');
 await C.page.waitForTimeout(1200);
 const chip = await C.page.textContent('[data-sync]');
 ok(/1 unsynced/.test(chip), `no signal: Jake’s 7 waits in the queue (chip: ${chip})`);
@@ -260,7 +299,7 @@ await C.page.goto(`${link}/enter`);
 await C.page.waitForTimeout(500);
 ok((await C.page.textContent('.hole-title')) === 'Hole 1', 'Sam\u2019s phone is back on hole 1');
 ok(!(await app(C.page, () => window.__glb.snapshot.anyPosted)), 'Sam\u2019s phone shows no scores');
-await C.page.tap('.face[data-pid="p5"]');
+await stepScore(C.page, 'p5');
 await C.page.waitForTimeout(900);
 ok(be.tables.scores.some((x) => x.player_id === 'p5' && x.hole === 1 && x.strokes === 5), 'play resumes after the reset');
 await A2.page.goto(`${link}/host`);
@@ -296,9 +335,9 @@ await P.page.tap('[data-act="team-pick"][data-v="Charmander"]');
 await P.page.waitForTimeout(500);
 ok(r2.event.roster.teams.find((t) => t.id === 'A').name === 'Charmander', 'Andrew\u2019s cart is now Charmander on the server');
 const briefP = await briefText(P.page);
-ok(/^Charmander/.test(briefP[1] || '') && /Holes 10–15 vs/.test(briefP[1] || '') && /Tee off on 10, finish on 9/.test(briefP[1] || ''),
-  `named the cart \u2192 Today\u2019s game with the new name and back-nine holes (${(briefP[1] || 'none').slice(0, 50)}\u2026)`);
-ok(await briefFits(P.page), 'still fits an SE with the extra “tee off on 10” line');
+ok(/YOUR MATCHES · CHARMANDER/.test(briefP[0] || '') && /10–15 vs/.test(briefP[0] || ''),
+  `named the cart \u2192 Today\u2019s game with the new name and back-nine holes (${(briefP[0] || 'none').slice(0, 50)}\u2026)`);
+ok(await briefFits(P.page), 'still fits starting on 10');
 await P.page.tap('[data-act="brief-done"]');
 await P.page.waitForTimeout(200);
 await refetch(Q.page);
@@ -312,8 +351,8 @@ const taken = be.rpc.pick_team_name({ p_code: r2.code, p_device_id: await app(Q.
 ok(taken.error === 'taken', 'the server refuses a name another cart has (any capitals)');
 ok((await P.page.textContent('.hole-title')) === 'Hole 10', 'starting on 10: Enter opens on Hole 10');
 await P.page.evaluate(() => localStorage.removeItem('glb.coach.oppcart3'));
-await P.page.tap('[data-act="tile-step"][data-pid="p1"][data-d="-1"]');
-await P.page.tap('[data-act="tile-step"][data-pid="p2"][data-d="1"]');
+await stepScore(P.page, 'p1', -1);
+await stepScore(P.page, 'p2', 1);
 await P.page.waitForTimeout(900);
 const tip = await P.page.evaluate(() => document.querySelector('.coach')?.textContent || '');
 ok(/enter scores for the other cart/i.test(tip), `your cart done: a tip points at their greyed cart (\u201c${tip.slice(0, 40)}\u2026\u201d)`);
@@ -321,13 +360,10 @@ if (tip) await P.page.tap('.coach');
 const par10 = r2.event.course.par[9];
 const s1 = be.tables.scores.find((x) => x.event_id === r2.id && x.player_id === 'p1' && x.hole === 10);
 const s2 = be.tables.scores.find((x) => x.event_id === r2.id && x.player_id === 'p2' && x.hole === 10);
-ok(s1?.strokes === par10, `first tap on an empty box is par, even on \u2212 (${s1?.strokes} on a par ${par10})`);
-ok(s2?.strokes === par10, `\u2026and on + (${s2?.strokes})`);
-const cartRatio = await P.page.evaluate(() => {
-  const [a, b] = [...document.querySelectorAll('.cart')].map((c) => c.getBoundingClientRect().height);
-  return a / (a + b);
-});
-ok(cartRatio > 0.75, `your cart is the big card (stacked rows), theirs one slim row (${Math.round(cartRatio * 100)}%)`);
+ok(s1?.strokes === par10, `the par pad scores par (${s1?.strokes} on a par ${par10})`);
+ok(s2?.strokes === par10, `\u2026for both players (${s2?.strokes})`);
+const slimH = await P.page.evaluate(() => document.querySelector('.ry-slim')?.getBoundingClientRect().height || 0);
+ok(!!(await P.page.$('.ry-ecard .ry-pad')) && slimH > 0 && slimH <= 60, `your cart is the big card (score pads), theirs one slim row (${Math.round(slimH)}px)`);
 await P.page.evaluate(() => { document.getElementById('toasts').innerHTML = ''; });
 const t0 = Date.now();
 const push = async (pid, by, i) => {
@@ -344,29 +380,25 @@ ok((await toastText(P.page)).includes('Chris 4'), 'toast for the other foursome\
 
 // 8. Their cart: one slim row until tapped (Edit), then theirs is the big card and yours the slim
 //    row; back by tapping yours (Back) or moving on
-const shares = (page) => page.evaluate(() => {
-  const [a, b] = [...document.querySelectorAll('.cart')].map((c) => c.getBoundingClientRect().height);
-  return a / (a + b);
-});
-ok(!!(await P.page.$('.cart.opp.dim')) && !(await P.page.$('.cart.opp .step')), 'their cart starts as one slim row, with no − / +');
-await P.page.tap('.cart.opp .face[data-pid="p4"]');
+ok(!!(await P.page.$(THEIRS_ROW)) && !(await P.page.$('.ry-slim .ry-pad')), 'their cart starts as one slim row, with no score pads');
+await P.page.tap(THEIRS_ROW);
 await P.page.waitForTimeout(400);
 ok(!be.tables.scores.some((x) => x.event_id === r2.id && x.player_id === 'p4' && x.hole === 10), 'tapping it doesn\u2019t score anyone');
-const even = await shares(P.page);
-ok(!!(await P.page.$('.cart.mine.dim')) && !!(await P.page.$('.cart.opp.focus')) && even > 0.75, `tapped: theirs open as the big card, yours the slim row (${Math.round(even * 100)}%)`);
-await P.page.tap('[data-act="tile-step"][data-pid="p4"][data-d="-1"]');
+ok(!!(await P.page.$(MINE_ROW)) && !!(await P.page.$('.ry-ecard.theirs')) && /ENTERING FOR THEM/.test(await P.page.textContent('.ry-ecard')), 'tapped: theirs open as the big card (ENTERING FOR THEM), yours the slim row');
+await stepScore(P.page, 'p4', -1);
 await P.page.waitForTimeout(900);
 const s4 = be.tables.scores.find((x) => x.event_id === r2.id && x.player_id === 'p4' && x.hole === 10);
 ok(s4?.strokes === par10, `entered their score while open (${s4?.strokes})`);
-await P.page.tap('.cart.mine.dim');
-await P.page.waitForTimeout(200);
-const back = await shares(P.page);
-ok(!!(await P.page.$('.cart.opp.dim')) && back > 0.75, `tap yours (Back): yours open again (${Math.round(back * 100)}%)`);
-await P.page.tap('.cart.opp.dim');
+// 016 §3: picking their second score flips the card home (Mike's 4 came from his phone).
+ok(!!(await P.page.$(THEIRS_ROW)) && !(await P.page.$('.ry-ecard.theirs')), 'their second score in: yours open again on its own');
+await P.page.tap(THEIRS_ROW);
 await P.page.waitForTimeout(150);
-await P.page.tap('.next-btn');
+await P.page.tap(MINE_ROW);
+await P.page.waitForTimeout(200);
+ok(!!(await P.page.$(THEIRS_ROW)) && !(await P.page.$('.ry-ecard.theirs')), 'or tap yours (YOU row): yours open again');
+await tapNext(P.page);
 await P.page.waitForTimeout(400);
-ok((await P.page.textContent('.hole-title')) === 'Hole 11' && !!(await P.page.$('.cart.opp.dim')), 'next hole opens on your cart again (theirs greyed)');
+ok((await P.page.textContent('.hole-title')) === 'Hole 11' && !!(await P.page.$(THEIRS_ROW)), 'next hole opens on your cart again (theirs the slim row)');
 
 // 9. Two carts sweep holes 10–12: both streak headlines land on the same score
 for (let i = be.tables.scores.length - 1; i >= 0; i--) if (be.tables.scores[i].event_id === r2.id) be.tables.scores.splice(i, 1);
@@ -426,10 +458,13 @@ ok(!(await O.page.$('[data-act="setup-game"][data-v="carts"][aria-disabled]')) &
 await O.page.tap('[data-act="setup-game"][data-v="carts"]');
 await O.page.tap('[data-act="setup-go"][data-v="teams"]');
 await O.page.waitForTimeout(200);
-ok((await O.page.$$('.cart-card')).length === 4 && (await O.page.$$('.cart-card .swap-name')).length === 8, 'Cart game setup: 4 carts of 2, pre-paired');
+ok((await O.page.$$('.rider-cart')).length === 4 && (await O.page.$$('.rider-cart .swap-name')).length === 8 && /Who rides together/.test(await O.page.textContent('#content')), 'Cart game setup (018): Who rides together? 4 carts of 2, pre-paired');
 await O.page.tap('[data-act="setup-swapsel"][data-i="1"]');
 await O.page.tap('[data-act="setup-swapsel"][data-i="2"]');
-ok((await O.page.textContent('.cart-card')).includes('Sean'), 'tap two names to swap: Sean is in cart A now');
+ok((await O.page.textContent('.rider-cart')).includes('Sean'), 'tap two names to swap: Sean is in cart A now');
+await O.page.tap('[data-act="setup-go"][data-v="tee"]');
+await O.page.waitForTimeout(200);
+ok(/Who tees off together/.test(await O.page.textContent('#content')) && (await O.page.$$('[data-act="setup-rider-swap"]')).length === 4 && !!(await O.page.$('[data-act="setup-go"][data-v="matchups"]')), 'then Tee times: 2 tee times of 2 carts, Game & matchups optional');
 await O.page.tap('[data-act="setup-save"]');
 await O.page.waitForTimeout(800);
 await O.page.tap('[data-act="setup-open"]');
@@ -443,7 +478,7 @@ await O.page.waitForTimeout(500);
 ok(!!(await O.page.$('.fullcard.brief')) && !(await O.page.$('.coach')), 'kept \u201cCart A\u201d \u2192 Today\u2019s game, still no tip on top');
 await O.page.tap('[data-act="brief-done"]');
 await O.page.waitForTimeout(500);
-ok(!!(await O.page.$('.cart.mine')) && /dashed number is par/.test((await O.page.textContent('.coach').catch(() => '')) || ''), 'then Enter, and the first tip shows there');
+ok(!!(await O.page.$('.ry-ecard')) && /outlined one is par/.test((await O.page.textContent('.coach').catch(() => '')) || ''), 'then Enter, and the first tip shows there');
 
 // 10a. Partner “Rider” Cup for 6: 3 carts, every cart plays both others all 18 (A + B tee off
 //      together, C is the second tee time). 7 players: the fix says add one or remove one.
@@ -494,7 +529,7 @@ ok(!(await R6.page.$('[data-act="setup-game"][data-v="carts"][aria-disabled]')) 
 await R6.page.tap('[data-act="setup-game"][data-v="carts"]');
 await R6.page.tap('[data-act="setup-go"][data-v="teams"]');
 await R6.page.waitForTimeout(200);
-ok((await R6.page.$$('.cart-card')).length === 3 && (await R6.page.$$('.cart-card .swap-name')).length === 6 && /6 players, 3 carts/.test(await R6.page.textContent('#content')),
+ok((await R6.page.$$('.rider-cart')).length === 3 && (await R6.page.$$('.rider-cart .swap-name')).length === 6 && /Who rides together/.test(await R6.page.textContent('#content')),
   'Partner “Rider” Cup setup with 6: 3 carts of 2');
 // Swipe right = back in Setup (design system → gestures).
 const swipeRight = (page) => page.evaluate(() => {
@@ -508,6 +543,9 @@ await R6.page.waitForTimeout(300);
 ok(await R6.page.evaluate(() => window.__glb.setup.screen) === 'game', 'swipe right in Setup goes back a step (carts → game)');
 await R6.page.tap('[data-act="setup-go"][data-v="teams"]');
 await R6.page.waitForTimeout(200);
+await R6.page.tap('[data-act="setup-go"][data-v="tee"]'); // 018: Carts → Tee times → (optional) Game & matchups
+await R6.page.waitForTimeout(200);
+ok((await R6.page.$$('.ry-tee')).length === 2 && (await R6.page.$$('[data-act="setup-rider-swap"]')).length === 3, 'Tee times with 6: A v B, then C');
 await R6.page.tap('[data-act="setup-go"][data-v="matchups"]');
 await R6.page.waitForTimeout(200);
 const mu6 = await R6.page.$$eval('.mu-row', (els) => els.map((e) => e.textContent.replace(/\s+/g, ' ').trim()));
@@ -538,14 +576,15 @@ ok(/Waiting for the first scores/.test(wait6) && /1 of 6 joined/.test(wait6) && 
   `Board before any scores: waiting, who's joined, 3 carts with their tee time (${wait6.slice(0, 90)}…)`);
 await R6.page.goto(`${srv.origin}/#/e/${r6.code}/matches`);
 await R6.page.waitForTimeout(900);
-ok(/Waiting for the first scores/.test(await R6.page.textContent('#content')) && (await R6.page.$$('.mu-item')).length === 2 && !(await R6.page.$('.ms-num')),
-  'Matches before any scores: your 2 matchups, not 0–0');
+ok(/NOTHING COUNTS YET/.test(await R6.page.textContent('#content')) && (await R6.page.$$('.ry-picker .seg2 button')).length === 2,
+  'Matches before any scores (018): your 2 matches, nothing counts yet');
 // First score in → the match view: a segment for each of your matchups, the third one under ALSO.
 be.tables.scores.push({ event_id: r6.id, player_id: 'p1', hole: 1, strokes: 4, updated_by: 'Tara', updated_at: new Date().toISOString() });
 await R6.page.evaluate(() => window.__glb.refetch());
 await R6.page.waitForTimeout(700);
-ok((await R6.page.$$('.seg2 button')).length === 2 && (await R6.page.$$('.watch-box')).length === 1 && /MATCH 1 OF 2/.test(await R6.page.textContent('.m-kicker')),
-  'Matches: a segment for each of your 2 matchups, the third (B v C) under ALSO');
+const seg6 = await R6.page.$$eval('.ry-picker .seg2 button', (els) => els.map((e) => e.innerText.replace(/\s+/g, ' ').trim()));
+ok(seg6.length === 2 && seg6.every((t) => /^vs /.test(t)) && !(await R6.page.$('.watch-box')),
+  `Matches (018): a segment for each of your 2 matches, named by opponent; other matches live on the Board (${seg6.join(' | ')})`);
 await R6.page.screenshot({ path: 'tests/screenshots/matches-3-carts.png' });
 await R6.page.tap('[data-act="round-menu"]');
 await R6.page.waitForTimeout(300);
@@ -671,7 +710,7 @@ const YF = await (async () => {
     localStorage.setItem('glb.me.' + code, '"p1"');
     localStorage.setItem('glb.who.' + code, 'true');
     localStorage.setItem('glb.brief.' + code, 'true');
-    for (const k of ['tile5', 'prov2', 'oppcart3']) localStorage.setItem('glb.coach.' + k, 'true');
+    for (const k of ['tile5', 'prov2', 'oppcart3', 'pad1']) localStorage.setItem('glb.coach.' + k, 'true');
   }, [yr.code, YDEV]);
   const page = await ctx.newPage();
   page.errors = [];
@@ -743,7 +782,7 @@ const MX = await (async () => {
     localStorage.setItem('glb.who.' + code, 'true');
     localStorage.setItem('glb.brief.' + code, 'true');
     localStorage.setItem('glb.seen.' + code, JSON.stringify({ last: Date.now(), ids: [] }));
-    for (const k of ['tile5', 'prov2', 'oppcart3']) localStorage.setItem('glb.coach.' + k, 'true');
+    for (const k of ['tile5', 'prov2', 'oppcart3', 'pad1']) localStorage.setItem('glb.coach.' + k, 'true');
   }, [mr.code, MDEV]);
   const page = await ctx.newPage();
   page.errors = [];
@@ -753,16 +792,17 @@ const MX = await (async () => {
 await MX.page.goto(`${srv.origin}/#/e/${mr.code}/matches`);
 await MX.page.waitForTimeout(900);
 await clearOverlays(MX.page);
-const segTxt = await MX.page.$$eval('[data-act="matches-rot"]', (els) => els.map((e) => e.innerText.replace(/\s+/g, ' ').trim()));
-ok(segTxt.length === 3 && /MATCH 2 OF 3/.test(await MX.page.textContent('.m-kicker')) && /7–12 · LIVE/.test(segTxt[1]), `a segment per match (${segTxt.join(' | ')})`);
-ok((await MX.page.$$('.mtable .mt-row:not(.mt-head)')).length === 6, 'Hole · Low Ball · Low Total · Pts: 6 rows');
-await MX.page.tap('[data-act="match-expand"]');
-await MX.page.waitForTimeout(400);
-ok(!!(await MX.page.$('.mine-bar')) && !(await MX.page.$('.m-hero')) && /WATCHING/.test(await MX.page.textContent('.watch-box')) && !!(await MX.page.$('.watch-box .mtable')), 'tap the other match: yours collapses to the green bar, theirs opens in place (WATCHING)');
-ok(/YOUR MATCH/.test(await MX.page.textContent('.mine-bar')) && (await MX.page.evaluate(() => window.__glb.route.tab)) === 'matches', 'still on Matches (no separate screen)');
-await MX.page.tap('.mine-bar');
-await MX.page.waitForTimeout(400);
-ok(!!(await MX.page.$('.m-hero')) && !(await MX.page.$('.mine-bar')) && /ALSO/.test(await MX.page.textContent('.watch-box')), 'tap the bar: back to your match');
+// 018: the 015 Matches (rotation picker, score card, hole strip); another match opens from the Board as a read-only sheet.
+const segTxt = await MX.page.$$eval('.ry-picker .seg2 button', (els) => els.map((e) => e.innerText.replace(/\s+/g, ' ').trim()));
+ok(segTxt.length === 3 && /7–12 · LIVE/.test(await MX.page.textContent('.ry-matches > .lbl')) && /live/.test(segTxt[1]), `a segment per match (${segTxt.join(' | ')})`);
+ok((await MX.page.$$('.ry-matches .ry-strip .ry-tile')).length === 6 && !!(await MX.page.$('.ry-card .ry-mbar')), 'score card with the match bar, then six hole tiles');
+ok(!(await MX.page.$('[data-act="match-expand"]')) && !(await MX.page.$('.watch-box')), 'no watching another match on Matches any more');
+await MX.page.goto(`${srv.origin}/#/e/${mr.code}/board`);
+await MX.page.waitForTimeout(700);
+await clearOverlays(MX.page);
+await MX.page.locator('.ry-row').first().tap();
+await MX.page.waitForTimeout(500);
+ok(/CLINCHES/.test(await MX.page.textContent('#sheet')) && !(await MX.page.$('#sheet [data-act="sheet-close"].icon-btn')), 'Board: tap a match row → the read-only match sheet (no X)');
 await MX.ctx.close();
 
 // 11d. 2v2 (exactly 4): pick partners + switch every 6 → one foursome, pairings rotate, the
@@ -770,7 +810,7 @@ await MX.ctx.close();
 const V = await (async () => {
   const ctx = await browser.newContext({ viewport: { width: 393, height: 852 }, isMobile: true, hasTouch: true });
   await attach(ctx, be, srv.origin);
-  await ctx.addInitScript(() => { for (const k of ['tile5', 'prov2', 'oppcart3']) localStorage.setItem('glb.coach.' + k, 'true'); });
+  await ctx.addInitScript(() => { for (const k of ['tile5', 'prov2', 'oppcart3', 'pad1']) localStorage.setItem('glb.coach.' + k, 'true'); });
   const page = await ctx.newPage();
   page.errors = [];
   page.on('pageerror', (e) => page.errors.push(`2v2 phone: ${e.message}`));
@@ -816,7 +856,7 @@ const F = await (async () => {
     localStorage.setItem('glb.me.' + code, '"p1"');
     localStorage.setItem('glb.who.' + code, 'true');
     localStorage.setItem('glb.brief.' + code, 'true');
-    for (const k of ['tile5', 'prov2', 'oppcart3']) localStorage.setItem('glb.coach.' + k, 'true');
+    for (const k of ['tile5', 'prov2', 'oppcart3', 'pad1']) localStorage.setItem('glb.coach.' + k, 'true');
   }, [r3.code, DEV3]);
   const page = await ctx.newPage();
   page.errors = [];
@@ -826,33 +866,34 @@ const F = await (async () => {
 await F.page.goto(`${srv.origin}/#/e/${r3.code}/enter`);
 await F.page.waitForTimeout(900);
 const par1 = r3.event.course.par[0];
-const ghosts = await F.page.$$eval('.tile .mk-ghost', (els) => els.map((e) => e.textContent.trim()));
-ok(ghosts.length === 2 && ghosts.every((g) => g === String(par1)), `blank rows show a dashed ghost of par (${ghosts.join(', ')})`);
-await F.page.tap('[data-act="tile-step"][data-pid="p1"][data-d="1"]'); // Andrew: first tap = par…
+// 018: score pads. A blank row outlines par as the likely pick; one tap enters a score.
+const likely = await F.page.$$eval('.ry-ecard .ry-pad.likely', (els) => els.map((e) => e.dataset.v));
+ok(likely.length === 2 && likely.every((v) => v === String(par1)), `blank rows outline par as the likely pick (${likely.join(', ')})`);
+await stepScore(F.page, 'p1'); // Andrew: par…
 await F.page.waitForTimeout(150);
-ok((await F.page.evaluate(() => window.__glb.scoreOf('p1', 1))) === par1, 'first tap on + is par, not bogey');
-await F.page.tap('[data-act="tile-step"][data-pid="p1"][data-d="1"]'); // …second tap = bogey
+ok((await F.page.evaluate(() => window.__glb.scoreOf('p1', 1))) === par1, 'the par pad is par');
+await stepScore(F.page, 'p1', 1); // …then the bogey pad
 await F.page.waitForTimeout(800);
-const nextText = async () => (await F.page.textContent('.next-btn')).replace(/\s+/g, ' ').trim();
-ok(/Next hole · 3 scores left/.test(await nextText()) && !!(await F.page.$('.next-btn.waiting')), `blanks left: the button waits and says how many (“${await nextText()}”)`);
+const nextText = async () => (await F.page.textContent('.ry-next')).replace(/\s+/g, ' ').trim();
+ok(/Next hole · 3 scores left/.test(await nextText()) && !!(await F.page.$('.ry-next:not(.ready)')), `blanks left: the button waits and says how many (“${await nextText()}”)`);
 be.tables.scores.push({ event_id: r3.id, player_id: 'p3', hole: 1, strokes: 7, updated_by: 'Mike', updated_at: new Date().toISOString() }); // Mike's 7 already on the server
-await F.page.tap('.next-btn');
+await tapNext(F.page);
 await F.page.waitForTimeout(250);
 const at = (pid) => be.tables.scores.find((x) => x.event_id === r3.id && x.player_id === pid && x.hole === 1)?.strokes;
 ok((await F.page.textContent('.hole-title')) === 'Hole 1' && at('p2') == null && at('p4') == null, 'Next with blanks: stays on hole 1 and saves nobody at par');
-ok(/Still need/.test(await toastText(F.page)) && (await F.page.$$('.cart.focus .tile.empty.nudge')).length > 0, `it points at the empty boxes (“${await toastText(F.page)}”)`);
+ok(/Still need/.test(await toastText(F.page)) && (await F.page.$$('.ry-player.nudge')).length > 0, `it points at the empty rows (“${await toastText(F.page)}”)`);
 await F.page.waitForTimeout(1200);
-ok((await F.page.evaluate(() => window.__glb.scoreOf('p3', 1))) === 7 && /Sean, Tyler left/.test(await nextText()), `and pulls the latest: Mike’s 7 from his phone shows up, “Sean, Tyler left” (${await nextText()})`);
-await F.page.tap('.cart.mine .face[data-pid="p2"]'); // Sean: par
+ok((await F.page.evaluate(() => window.__glb.scoreOf('p3', 1))) === 7 && /2 scores left/.test(await nextText()), `and pulls the latest: Mike’s 7 from his phone shows up (${await nextText()})`);
+await stepScore(F.page, 'p2'); // Sean: par
 await F.page.waitForTimeout(300);
 await F.page.evaluate(() => { document.getElementById('toasts').innerHTML = ''; });
-await F.page.tap('.next-btn');
+await tapNext(F.page);
 await F.page.waitForTimeout(400);
-ok(!!(await F.page.$('.sheet.even .cart.opp.focus')) && /Tyler/.test(await toastText(F.page)), `only their cart is missing one: Next opens their cart and names him (“${await toastText(F.page)}”)`);
-await F.page.tap('.cart.opp .face[data-pid="p4"]');
+ok(!!(await F.page.$('.ry-ecard.theirs')) && /Tyler/.test(await toastText(F.page)), `only their cart is missing one: Next opens their cart and names him (“${await toastText(F.page)}”)`);
+await stepScore(F.page, 'p4');
 await F.page.waitForTimeout(300);
-ok(/^Next hole →$/.test(await nextText()) && !(await F.page.$('.next-btn.waiting')), `all four in: “${await nextText()}”`);
-await F.page.tap('.next-btn');
+ok(/^Next hole$/.test(await nextText()) && !!(await F.page.$('.ry-next.ready')), `all four in: “${await nextText()}”`);
+await tapNext(F.page);
 await F.page.waitForTimeout(1200);
 ok(at('p1') === par1 + 1 && at('p2') === par1 && at('p3') === 7 && at('p4') === par1, `hole 1 saved as tapped (${at('p1')}, ${at('p2')}, ${at('p3')}, ${at('p4')})`);
 ok((await F.page.textContent('.hole-title')) === 'Hole 2', 'on to hole 2');
@@ -862,14 +903,14 @@ for (let i = 0; i < 2; i++) { await playHole(F.page); await F.page.waitForTimeou
 ok((await F.page.textContent('.hole-title')).startsWith('Hole 4'), 'played 2 and 3 → hole 4');
 await F.page.tap('[data-act="hole-prev"]');
 await F.page.waitForTimeout(200);
-ok(!(await F.page.$('.cart.locked')) && !!(await F.page.$('.cart.mine .step')) && /Next hole/.test(await F.page.textContent('.next-btn')), 'one hole back (3): still editable, Next hole');
+ok(!(await F.page.$('.ry-ecard.locked')) && !!(await F.page.$('.ry-ecard [data-act="ry-pick"]')) && /Next hole/.test(await F.page.textContent('.ry-next')), 'one hole back (3): still editable, Next hole');
 await F.page.tap('[data-act="hole-prev"]');
 await F.page.waitForTimeout(200);
-ok(!!(await F.page.$('.cart.mine.locked')) && !(await F.page.$('.cart.mine .step')) && /Back to hole 4/.test(await F.page.textContent('.next-btn')), 'two back (2): locked, no \u2212 / +, \u201cBack to hole 4\u201d');
-await F.page.tap('.cart.mine.locked .face[data-pid="p1"]');
+ok(!!(await F.page.$('.ry-ecard.locked')) && !(await F.page.$('.ry-ecard [data-act="ry-pick"]')) && /Back to hole 4/.test(await F.page.textContent('.ry-next')), 'two back (2): locked, no score pads, \u201cBack to hole 4\u201d');
+await F.page.tap('.ry-ecard.locked');
 await F.page.waitForTimeout(200);
-ok(!!(await F.page.$('.cart.mine .step')) && !(await F.page.$('.cart.mine.locked')), 'tap the box \u2192 unlocked for editing');
-await F.page.tap('[data-act="tile-step"][data-pid="p1"][data-d="-1"]');
+ok(!!(await F.page.$('.ry-ecard [data-act="ry-pick"]')) && !(await F.page.$('.ry-ecard.locked')), 'tap the card \u2192 unlocked for editing');
+await stepScore(F.page, 'p1', -1);
 await F.page.waitForTimeout(900);
 const par2 = r3.event.course.par[1];
 ok(be.tables.scores.find((x) => x.event_id === r3.id && x.player_id === 'p1' && x.hole === 2)?.strokes === par2 - 1, 'edit on the unlocked hole saves (birdie on 2)');
@@ -886,7 +927,7 @@ ok(grid.cells === 18 && grid.now === '4' && grid.ahead === true, `tap the hole n
 ok(/score b/.test(grid.h1 || '') && /Holes 1–6 · vs/.test(grid.label || ''), `grid shows your bogey on 1 and the matchup per row (${grid.label})`);
 await F.page.tap('#sheet .hg-cell[data-v="1"]');
 await F.page.waitForTimeout(300);
-ok((await F.page.textContent('.hole-title')).startsWith('Hole 1') && !!(await F.page.$('.cart.mine.locked')), 'tap hole 1 \u2192 Enter shows hole 1, locked');
+ok((await F.page.textContent('.hole-title')).startsWith('Hole 1') && !!(await F.page.$('.ry-ecard.locked')), 'tap hole 1 \u2192 Enter shows hole 1, locked');
 await F.page.tap('[data-act="hole-current"]');
 await F.page.waitForTimeout(200);
 ok((await F.page.textContent('.hole-title')).startsWith('Hole 4'), 'Back to hole 4');
@@ -904,7 +945,7 @@ const R = await (async () => {
     localStorage.setItem('glb.who.' + code, 'true');
     localStorage.setItem('glb.brief.' + code, 'true');
     localStorage.setItem('glb.seen.' + code, JSON.stringify({ last: Date.now(), ids: [] }));
-    for (const k of ['tile5', 'prov2', 'oppcart3']) localStorage.setItem('glb.coach.' + k, 'true');
+    for (const k of ['tile5', 'prov2', 'oppcart3', 'pad1']) localStorage.setItem('glb.coach.' + k, 'true');
   }, [r4.code, DEV4]);
   const page = await ctx.newPage();
   page.errors = [];
@@ -935,7 +976,7 @@ ok(/Round recap/.test(await R.page.textContent('#sheet')), 'the round menu has R
 
 // 11. Never a blank screen
 const S = await (async () => {
-  const ctx = await browser.newContext({ viewport: { width: 375, height: 548 }, isMobile: true, hasTouch: true });
+  const ctx = await browser.newContext({ viewport: { width: 393, height: 659 }, isMobile: true, hasTouch: true });
   await attach(ctx, be, srv.origin);
   await ctx.addInitScript(() => { window.__glbLoadTimeout = 2000; localStorage.setItem('glb.who.x', 'true'); });
   const page = await ctx.newPage();
@@ -964,7 +1005,7 @@ const r5 = seedRound(be, { holesPlayed: 18 });
 const DEV5 = '55555555-5555-4555-8555-555555555555';
 be.tables.claims.push({ event_id: r5.id, player_id: 'p1', device_id: DEV5 });
 async function presetPhone(label, code, { dev, me, pin } = {}) {
-  const ctx = await browser.newContext({ viewport: { width: 375, height: 667 }, isMobile: true, hasTouch: true });
+  const ctx = await browser.newContext({ viewport: { width: 393, height: 659 }, isMobile: true, hasTouch: true });
   await attach(ctx, be, srv.origin);
   await ctx.addInitScript(([c, d, m, p]) => {
     if (d) localStorage.setItem('glb.device', JSON.stringify(d));
@@ -973,7 +1014,7 @@ async function presetPhone(label, code, { dev, me, pin } = {}) {
     localStorage.setItem('glb.who.' + c, 'true');
     localStorage.setItem('glb.brief.' + c, 'true');
     localStorage.setItem('glb.seen.' + c, JSON.stringify({ last: Date.now(), ids: [] }));
-    for (const k of ['tile5', 'prov2', 'oppcart3']) localStorage.setItem('glb.coach.' + k, 'true');
+    for (const k of ['tile5', 'prov2', 'oppcart3', 'pad1']) localStorage.setItem('glb.coach.' + k, 'true');
   }, [code, dev || null, me || null, pin || null]);
   const page = await ctx.newPage();
   page.errors = [];
@@ -1013,7 +1054,7 @@ await Y.page.waitForTimeout(300);
 ok(!!(await Y.page.$('.final-lock')), 'Done \u2192 locked again');
 await X.page.tap('[data-act="tab"][data-v="enter"]');
 await X.page.waitForTimeout(400);
-ok(!!(await X.page.$('.final-lock')) && !(await X.page.$('.tile .step')) && !!(await X.page.$('[data-act="pin-open"]')), 'Enter: “Final”, no score boxes, “Fix a score (organizer PIN)”');
+ok(!!(await X.page.$('.final-lock')) && !(await X.page.$('.tile .step, .ry-pad')) && !!(await X.page.$('[data-act="pin-open"]')), 'Enter: “Final”, no score boxes, “Fix a score (organizer PIN)”');
 ok((await X.page.evaluate(() => window.__glb.setScore('p1', 18, 3))) === false && /round is final/i.test(await toastText(X.page)), 'any other way in (Card, grid) is refused on the phone too');
 await X.page.tap('[data-act="pin-open"]');
 await X.page.waitForTimeout(400);
@@ -1024,9 +1065,9 @@ ok(/didn’t work/.test(await toastText(X.page)) && !!(await X.page.$('#sheet .p
 await X.page.fill('#pin-unlock', r5.admin_pin);
 await X.page.tap('[data-act="pin-unlock"]');
 await X.page.waitForTimeout(600);
-ok(!(await X.page.$('.final-lock')) && !!(await X.page.$('.cart.mine .tile .step')) && /Fixing a finalized round/.test(await X.page.textContent('.matchup-line')), 'right PIN: the score boxes come back, marked \u201cFixing a finalized round\u201d');
+ok(!(await X.page.$('.final-lock')) && !!(await X.page.$('.ry-ecard [data-act="ry-pick"]')) && /Fixing a finalized round/.test(await X.page.textContent('.ry-fixing')), 'right PIN: the score pads come back, marked \u201cFixing a finalized round\u201d');
 const before18 = be.tables.scores.find((x) => x.event_id === r5.id && x.player_id === 'p1' && x.hole === 18).strokes;
-await X.page.tap('[data-act="tile-step"][data-pid="p1"][data-d="1"]');
+await stepScore(X.page, 'p1', 1);
 await X.page.waitForTimeout(900);
 const s18 = be.tables.scores.find((x) => x.event_id === r5.id && x.player_id === 'p1' && x.hole === 18);
 ok(s18.strokes === before18 + 1 && s18.updated_by === 'Organizer', `fixed a score with the PIN while final (${before18} → ${s18.strokes}, by ${s18.updated_by})`);
@@ -1059,7 +1100,7 @@ const G = await (async () => {
     geolocation: { latitude: 33.1084, longitude: -96.7181 }, permissions: ['geolocation'],
   });
   await attach(ctx, be, srv.origin);
-  await ctx.addInitScript(() => { for (const k of ['tile5', 'prov2', 'oppcart3']) localStorage.setItem('glb.coach.' + k, 'true'); });
+  await ctx.addInitScript(() => { for (const k of ['tile5', 'prov2', 'oppcart3', 'pad1']) localStorage.setItem('glb.coach.' + k, 'true'); });
   const page = await ctx.newPage();
   page.errors = [];
   page.on('pageerror', (e) => page.errors.push(`Course phone: ${e.message}`));
@@ -1092,6 +1133,7 @@ for (const n of ['Andy Hall', 'Jay Lin', 'Shawn Bell', 'Mitch Ford', 'Rob Kim', 
 await G.page.tap('[data-act="setup-go"][data-v="game"]');
 await G.page.tap('[data-act="setup-game"][data-v="carts"]');
 await G.page.tap('[data-act="setup-go"][data-v="teams"]');
+await G.page.tap('[data-act="setup-go"][data-v="tee"]'); // 018: Start is on Tee times
 await G.page.tap('[data-act="setup-save"]');
 await G.page.waitForTimeout(300);
 ok((await G.page.evaluate(() => window.__glb.setup.screen)) === 'check' && /Not ready yet/.test(await toastText(G.page)) && !!(await G.page.$('.sc-status.warn')) && await G.page.isDisabled('.nr-cta'),
@@ -1109,6 +1151,7 @@ await G.page.waitForTimeout(200);
 ok(/Card ready · par 72/.test(await G.page.textContent('.nr-course')), 'back on Players: ✓ Card ready');
 await G.page.tap('[data-act="setup-go"][data-v="game"]');
 await G.page.tap('[data-act="setup-go"][data-v="teams"]');
+await G.page.tap('[data-act="setup-go"][data-v="tee"]'); // 018: Start is on Tee times
 await G.page.tap('[data-act="setup-save"]');
 await G.page.waitForTimeout(900);
 const made = be.tables.events[be.tables.events.length - 1];
@@ -1507,7 +1550,7 @@ async function geoPhone(label, code, tee) {
     localStorage.setItem('glb.who.' + c, 'true');
     localStorage.setItem('glb.brief.' + c, 'true');
     localStorage.setItem('glb.seen.' + c, JSON.stringify({ last: Date.now(), ids: [] }));
-    for (const k of ['tile5', 'prov2', 'oppcart3']) localStorage.setItem('glb.coach.' + k, 'true');
+    for (const k of ['tile5', 'prov2', 'oppcart3', 'pad1']) localStorage.setItem('glb.coach.' + k, 'true');
   }, [code, dev]);
   const page = await ctx.newPage();
   page.errors = [];
@@ -1543,13 +1586,13 @@ ok(/OpenStreetMap contributors.*Mapbox/.test(await GM2.page.textContent('#sheet'
 // b) a partial row: card on its holes only
 const rC = seedRound(be, {});
 be.tables.events.find((e) => e.code === rC.code).course = geoCourse({ id: '22222222-3333-4444-8555-666666666666' }, geoFx.cedarBend);
-be.tables.course_geo.push({ ...geoFx.cedarBend });
+be.tables.course_geo.push({ ...geoFx.cedarBend, updated_at: new Date().toISOString() }); // a fresh partial row (partial rows older than 7 days get rebuilt)
 be.geo.calls.length = 0;
 const GC = await geoPhone('Geo Cedar', rC.code, geoFx.cedarBend.holes[0].tee);
 await GC.page.goto(`${srv.origin}/#/e/${rC.code}/enter`);
 await GC.page.waitForTimeout(1500);
 gi = await cardInfo(GC.page);
-ok(gi.card && be.geo.calls.length === 0, 'a partial row (front nine only): card on hole 1, no rebuild asked for');
+ok(gi.card && be.geo.calls.length === 0, `a partial row (front nine only): card on hole 1, no rebuild asked for (card ${gi.card}, hole ${gi.hole}, calls ${be.geo.calls.length})`);
 await GC.page.evaluate(() => { window.__glb.ui.hole = 10; window.__glb.render(); });
 await GC.page.waitForTimeout(300);
 gi = await cardInfo(GC.page);

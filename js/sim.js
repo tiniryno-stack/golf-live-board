@@ -94,7 +94,7 @@ async function signIn(i, code, pid) {
   if (mine) phoneSet(i, `glb.me.${code}`, mine);
   for (const k of ['who', 'brief']) phoneSet(i, `glb.${k}.${code}`, true);
   phoneSet(i, `glb.seen.${code}`, { last: Date.now(), ids: [] });
-  for (const k of ['tile5', 'oppcart3', 'prov2']) phoneSet(i, `glb.coach.${k}`, true);
+  for (const k of ['tile5', 'oppcart3', 'prov2', 'pad1']) phoneSet(i, `glb.coach.${k}`, true);
   return mine;
 }
 
@@ -244,7 +244,7 @@ function tapNext(f) {
   try {
     const doc = f.contentDocument;
     if (f.contentWindow.__glb?.route?.tab !== 'enter') return; // only phones sitting on Enter
-    const btn = doc.querySelector('.next-btn[data-act="next-hole"]:not(.waiting)');
+    const btn = doc.querySelector('.next-btn[data-act="next-hole"]:not(.waiting), .ry-next.ready[data-act="next-hole"]'); // 016/018 Enter: .ry-next
     btn?.click();
   } catch { /* phone still loading */ }
 }

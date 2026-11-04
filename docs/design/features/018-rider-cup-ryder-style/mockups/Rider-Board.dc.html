@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Partner Rider Cup · Board</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&amp;family=Geist+Mono:wght@500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+.t{--bg:#0A0B0D;--s1:#15171B;--s2:#1F2227;--s3:#2A2E35;--tx:#F4F5F7;--tx2:#A7ACB4;--ln:#2B2F36;--me:#3DDC84;--meT:#3DDC84;--tintMe:rgba(61,220,132,.10);--a:#FF9F43;--b:#5B9BFF;--c:#FF6FB5;--d:#B18CFF;--dbl:#FF6B6B;--glass:rgba(21,23,27,.92);--gl:rgba(255,255,255,.09);--dock:inset 0 1px 0 rgba(255,255,255,.10),0 0 28px rgba(255,255,255,.06);--card:none;--hl:#2A2E35}
+.t.light{--bg:#F2F3F5;--s1:#FFFFFF;--s2:#E8EAEE;--s3:#FFFFFF;--tx:#0B0D10;--tx2:#4F555E;--ln:#D5D9DF;--me:#12A35C;--meT:#0A7A43;--tintMe:rgba(18,163,92,.09);--a:#B35C00;--b:#1A5FD0;--c:#C02A70;--d:#6E3FD0;--dbl:#B42318;--glass:rgba(255,255,255,.94);--gl:rgba(11,13,16,.08);--dock:0 8px 24px rgba(11,13,16,.12);--card:0 1px 2px rgba(11,13,16,.06),0 4px 12px rgba(11,13,16,.05);--hl:#E8EAEE}
+.mono,.lbl{font-family:'Geist Mono',ui-monospace,monospace}
+.lbl{font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--tx2)}
+.tr{display:grid;grid-template-columns:20px minmax(0,1fr) 64px;align-items:center;gap:8px;min-height:50px;border-top:1px solid var(--ln)}
+.tr .n{font-size:15px;font-weight:700}.tr .pt{font-family:'Geist Mono',monospace;font-size:22px;font-weight:700;text-align:right}.tr .bar{height:5px;border-radius:3px;background:var(--s2);margin-top:5px;position:relative;overflow:hidden}.tr .bar b{position:absolute;left:0;top:0;bottom:0}.tr .bar i{position:absolute;top:0;bottom:0;background:repeating-linear-gradient(135deg,currentColor 0 3px,transparent 3px 6px);opacity:.7}
+.h{height:40px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 12px;border:1px solid var(--ln);border-radius:12px;margin-top:16px}.h>:last-child{justify-self:end}
+.row{min-height:54px;display:grid;grid-template-columns:1fr 0 1fr;margin-top:2px}.cell{display:flex;align-items:center;padding:6px 12px;min-width:0}.cell.r{justify-content:flex-end;text-align:right}
+.hold{background:var(--s1)}.cell.l.hold{border-radius:16px 0 0 16px}.cell.r.hold{border-radius:0 16px 16px 0}
+.nm{display:flex;flex-direction:column;font-size:13px;line-height:16px;font-weight:600}
+.line{position:relative}.f{position:absolute;top:50%;width:72px;height:26px;margin-top:-13px;display:flex;align-items:center;justify-content:center;font-family:'Geist Mono',monospace;font-size:12px;font-weight:700;white-space:nowrap;background:var(--tx);color:var(--bg)}
+.seg{flex:1;height:48px;border:0;border-radius:12px;background:transparent;font-size:17px;font-weight:600;color:var(--tx2)}.seg.on{background:var(--s3);color:var(--tx);box-shadow:var(--card)}
+.tab{flex:1;height:56px;border:0;background:transparent;display:flex;align-items:center;justify-content:center;color:var(--tx2);position:relative;z-index:1}.tab.on{color:var(--tx)}
+button{font:inherit;color:inherit;cursor:pointer}
+</style>
+</helmet>
+<div class="t {{mode}}" style="width: 393px; height: 852px; box-sizing: border-box; background: var(--bg); color: var(--tx); font-family: Geist, system-ui, sans-serif; position: relative; overflow: hidden">
+<div style="height: 59px"></div>
+<div style="display: flex; align-items: center; gap: 10px; padding: 0 16px; height: 56px">
+<span style="width: 36px; height: 36px; border-radius: 18px; background: var(--s2); display: inline-flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700">A</span>
+<b style="font-size: 17px; font-weight: 600">Andrew</b>
+<span style="flex: 1; text-align: right; font-size: 15px; color: var(--tx2)">Twin Creeks · Fri</span>
+<button aria-label="Share" style="width: 40px; height: 40px; border-radius: 20px; border: 0; background: var(--s2); display: inline-flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13M7 8l5-5 5 5M5 14v6h14v-6"></path></svg></button>
+<button aria-label="Round menu" style="width: 40px; height: 40px; border-radius: 20px; border: 0; background: var(--s2); font-size: 18px; letter-spacing: 1px">···</button>
+</div>
+<div style="padding: 8px 16px 0">
+<div style="padding: 16px; border-radius: 24px; background: var(--s1); box-shadow: var(--card)">
+<div class="lbl" style="display: flex; justify-content: space-between"><span>Official thru 9</span><span>Hole 10 provisional</span></div>
+<div class="tr" style="border: 0; margin-top: 6px"><span class="mono" style="color: var(--tx2); font-size: 13px">1</span><div><div class="n" style="color: var(--b)">Shank Redemption</div><div style="font-size: 13px; color: var(--tx2)">Mike + Tyler · 2–0–1</div><div class="bar"><b style="width: 78%; background: var(--b)"></b><i style="left: 78%; width: 6%; color: var(--b)"></i></div></div><span class="pt" style="color: var(--b)">14</span></div>
+<div class="tr"><span class="mono" style="color: var(--tx2); font-size: 13px">2</span><div><div class="n" style="color: var(--meT)">Hogan’s Heroes <span class="lbl" style="color: var(--meT); font-size: 11px; margin-left: 4px">you</span></div><div style="font-size: 13px; color: var(--tx2)">Andrew + Sean · 1–1–1</div><div class="bar"><b style="width: 50%; background: var(--me)"></b><i style="left: 50%; width: 8%; color: var(--me)"></i></div></div><span class="pt" style="color: var(--meT)">9½</span></div>
+<div class="tr"><span class="mono" style="color: var(--tx2); font-size: 13px">3</span><div><div class="n" style="color: var(--d)">Bogey Brigade</div><div style="font-size: 13px; color: var(--tx2)">Chris + Matt · 1–1–1</div><div class="bar"><b style="width: 50%; background: var(--d)"></b></div></div><span class="pt" style="color: var(--d)">9</span></div>
+<div class="tr"><span class="mono" style="color: var(--tx2); font-size: 13px">4</span><div><div class="n" style="color: var(--c)">Fore Play</div><div style="font-size: 13px; color: var(--tx2)">Sam + Jake · 0–2–1</div><div class="bar"><b style="width: 42%; background: var(--c)"></b><i style="left: 42%; width: 6%; color: var(--c)"></i></div></div><span class="pt" style="color: var(--c)">7½</span></div>
+</div>
+<div style="display: flex; gap: 4px; padding: 4px; margin-top: 16px; border-radius: 16px; background: var(--s1)"><button class="seg on" aria-pressed="true">Teams</button><button class="seg">Players</button></div>
+<div class="h"><span class="lbl">Holes 7–12</span><span class="mono" style="font-size: 13px; font-weight: 700; color: var(--tx2)">2 of 4 pts in</span><span class="lbl" style="color: var(--meT)">Live</span></div>
+<div class="row"><div class="cell l"><span class="nm" style="color: var(--meT)"><span>Andrew</span><span>Sean</span></span></div><div class="line"><span class="f" style="left: -36px; border-radius: 8px">2–2</span></div><div class="cell r"><span class="nm" style="color: var(--c)"><span>Sam</span><span>Jake</span></span></div></div>
+<div class="row"><div class="cell l hold"><span class="nm" style="color: var(--b)"><span>Mike</span><span>Tyler</span></span></div><div class="line"><span class="f" style="right: 0; border-radius: 8px 0 0 8px">1 UP</span></div><div class="cell r"><span class="nm" style="color: var(--d)"><span>Chris</span><span>Matt</span></span></div></div>
+<div class="h"><span class="lbl">Holes 1–6</span><span class="mono" style="font-size: 13px; font-weight: 700; color: var(--tx2)">done</span><span class="lbl">Done ⌄</span></div>
+<div class="h" style="margin-top: 8px"><span class="lbl">Holes 13–18</span><span class="mono" style="font-size: 13px; font-weight: 700; color: var(--tx2)">vs Bogey Brigade</span><span class="lbl">Up next ⌄</span></div>
+</div>
+<nav aria-label="Round" style="position: absolute; left: 16px; right: 16px; bottom: 24px; display: flex; padding: 6px; border-radius: 34px; background: var(--glass); border: 1px solid var(--gl); box-shadow: var(--dock)">
+<div style="position: absolute; top: 6px; left: 6px; width: calc((100% - 12px) / 4); height: 56px; border-radius: 28px; background: var(--hl); transform: translateX(200%)"></div>
+<button class="tab" aria-label="Enter"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4h11l-2 4 2 4H5"></path></svg></button>
+<button class="tab" aria-label="Matches"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8.5" cy="12" r="5"></circle><circle cx="15.5" cy="12" r="5"></circle></svg></button>
+<button class="tab on" aria-label="Board" aria-current="page"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h11M4 18h7"></path></svg></button>
+<button class="tab" aria-label="Card"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M3 10h18M3 15h18M9 4v16M15 4v16"></path></svg></button>
+</nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"mode":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":393,"height":852}}'>
+class Component extends DCLogic {
+renderVals() { return { mode: this.props.mode ?? 'dark' }; }
+}
+</script>
+</body>
+</html>

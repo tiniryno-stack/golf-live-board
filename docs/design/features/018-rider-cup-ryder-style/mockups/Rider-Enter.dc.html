@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Partner Rider Cup · Enter</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&amp;family=Geist+Mono:wght@500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+.t{--bg:#0A0B0D;--s1:#15171B;--s2:#1F2227;--s3:#2A2E35;--tx:#F4F5F7;--tx2:#A7ACB4;--ln:#2B2F36;--me:#3DDC84;--meT:#3DDC84;--tintMe:rgba(61,220,132,.10);--a:#FF9F43;--b:#5B9BFF;--c:#FF6FB5;--d:#B18CFF;--dbl:#FF6B6B;--dblBg:rgba(255,107,107,.16);--glass:rgba(21,23,27,.92);--gl:rgba(255,255,255,.09);--dock:inset 0 1px 0 rgba(255,255,255,.10),0 0 28px rgba(255,255,255,.06);--card:none;--hl:#2A2E35}
+.t.light{--bg:#F2F3F5;--s1:#FFFFFF;--s2:#E8EAEE;--s3:#FFFFFF;--tx:#0B0D10;--tx2:#4F555E;--ln:#D5D9DF;--me:#12A35C;--meT:#0A7A43;--tintMe:rgba(18,163,92,.09);--a:#B35C00;--b:#1A5FD0;--c:#C02A70;--d:#6E3FD0;--dbl:#B42318;--dblBg:rgba(180,35,24,.10);--glass:rgba(255,255,255,.94);--gl:rgba(11,13,16,.08);--dock:0 8px 24px rgba(11,13,16,.12);--card:0 1px 2px rgba(11,13,16,.06),0 4px 12px rgba(11,13,16,.05);--hl:#E8EAEE}
+.mono,.lbl,.mk{font-family:'Geist Mono',ui-monospace,monospace}
+.lbl{font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--tx2)}
+.mk{font-weight:700;display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;font-size:18px;box-sizing:border-box}
+.c{border-radius:50%;border:1.5px solid currentColor}.sq{border-radius:5px;border:1.5px solid var(--tx2)}.db{border-radius:5px;border:4px double var(--dbl);background:var(--dblBg);color:var(--dbl)}
+.pads{display:grid;grid-template-columns:34px repeat(4,minmax(0,1fr)) 34px;gap:4px;margin-top:6px}
+.pd{height:52px;border-radius:16px;background:var(--bg);border:1px solid var(--ln);display:flex;align-items:center;justify-content:center;padding:0;color:var(--tx);font:inherit}
+.pd.ar{color:var(--tx2)}.pd.lk{border-color:var(--tx2)}.pd.on{background:var(--tx);border-color:transparent;color:var(--bg)}.pd.on .sq{border-color:var(--bg)}
+.pl{display:flex;align-items:center;gap:6px;height:22px;padding:0 2px;margin-top:8px}.pl b{font-size:15px;font-weight:700}.pl .st{width:7px;height:7px;border-radius:50%;background:var(--tx)}.pl .r{margin-left:auto}
+.prog{flex:1;display:flex;gap:3px}.prog i{flex:1;height:6px;border-radius:3px;background:var(--s2);display:block}.prog i.d{background:var(--tx2)}.prog i.h{background:var(--tx)}.prog i.g{margin-left:8px}
+.tab{flex:1;height:56px;border:0;background:transparent;display:flex;align-items:center;justify-content:center;color:var(--tx2);position:relative;z-index:1}.tab.on{color:var(--tx)}
+button{font:inherit;color:inherit;cursor:pointer}
+</style>
+</helmet>
+<div class="t {{mode}}" style="width: 393px; height: 852px; box-sizing: border-box; background: var(--bg); color: var(--tx); font-family: Geist, system-ui, sans-serif; position: relative; overflow: hidden; display: flex; flex-direction: column">
+<div style="height: 59px; flex: none"></div>
+<div style="display: flex; align-items: center; padding: 4px 8px 0">
+<button aria-label="Previous hole" style="width: 52px; height: 52px; border: 0; background: transparent; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg></button>
+<div style="flex: 1; text-align: center">
+<div style="font-size: 36px; font-weight: 800; letter-spacing: -1.3px; line-height: 1">Hole 9</div>
+<div style="font-size: 14px; color: var(--tx2); margin-top: 4px">Par 4 · Hcp 13 · <span class="lbl" style="font-size: 11px">GPS · off</span></div>
+</div>
+<button aria-label="Next hole" style="width: 52px; height: 52px; border: 0; background: transparent; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"></path></svg></button>
+</div>
+<div style="margin: 10px 16px 0; height: 56px; border-radius: 24px; background: var(--s1); display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 6px 0 14px; font-size: 15px; color: var(--tx2)"><span>Turn on location for yardages</span><button style="height: 40px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--ln); background: var(--bg); color: var(--tx); font-size: 15px; font-weight: 600">Turn on</button></div>
+<div style="margin: 10px 16px 0; padding: 10px 12px 12px; border-radius: 24px; background: var(--s1); border: 1.5px solid var(--me); box-shadow: var(--card)">
+<div style="display: flex; align-items: center; gap: 8px; min-height: 36px">
+<div style="flex: 1; min-width: 0; font-size: 15px; display: flex; align-items: baseline; gap: 6px"><span style="color: var(--tx2); font-weight: 600">vs</span><b style="font-weight: 700; color: var(--b); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Shank Redemption</b></div>
+<span class="lbl">Thru 2</span>
+<button aria-label="Your match: all square, open Matches" style="width: 72px; height: 26px; border-radius: 8px; border: 0; background: var(--bg); box-shadow: inset 0 0 0 1.5px var(--tx2); color: var(--tx); font-family: 'Geist Mono', monospace; font-size: 12px; font-weight: 700">2–2</button>
+</div>
+<div class="pl"><b>Andrew</b><span class="lbl r">Tap a score</span></div>
+<div class="pads"><button class="pd ar" aria-label="Lower scores">‹</button><button class="pd"><span class="mk c">3</span></button><button class="pd lk"><span class="mk">4</span></button><button class="pd"><span class="mk sq">5</span></button><button class="pd"><span class="mk db">6</span></button><button class="pd ar" aria-label="Higher scores">›</button></div>
+<div class="pl"><b>Sean</b><span class="st"></span><span class="lbl r">Par</span></div>
+<div class="pads"><button class="pd ar" aria-label="Lower scores">‹</button><button class="pd"><span class="mk c">3</span></button><button class="pd on"><span class="mk">4</span></button><button class="pd"><span class="mk sq">5</span></button><button class="pd"><span class="mk db">6</span></button><button class="pd ar" aria-label="Higher scores">›</button></div>
+</div>
+<button style="margin: 12px 16px 0; height: 52px; display: flex; align-items: center; gap: 14px; padding: 0 6px 0 14px; border-radius: 16px; border: 1px solid var(--b); background: var(--s1); text-align: left; width: calc(100% - 32px)">
+<span style="flex: 1 1 0; min-width: 0; display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 600"><span style="color: var(--b)">Mike</span><span class="mk" style="width: 26px; height: 26px; font-size: 15px">4</span></span>
+<span style="flex: 1 1 0; min-width: 0; display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 600"><span style="color: var(--b)">Tyler</span><span class="mk sq" style="width: 26px; height: 26px; font-size: 15px">5</span></span>
+<span style="height: 40px; padding: 0 14px; border-radius: 12px; background: var(--s2); font-size: 15px; font-weight: 600; display: inline-flex; align-items: center">Edit</span>
+</button>
+<div style="display: flex; align-items: center; gap: 8px; margin: 14px 16px 0">
+<div class="prog"><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d g"></i><i class="d"></i><i class="h"></i><i></i><i></i><i></i><i class="g"></i><i></i><i></i><i></i><i></i><i></i></div>
+<span style="font-size: 13px; color: var(--tx2)">● Synced</span>
+</div>
+<button style="margin: 14px 16px 0; height: 58px; border-radius: 18px; border: 0; background: var(--s2); color: var(--tx2); font-size: 17px; font-weight: 600">Next hole · 1 score left</button>
+<nav aria-label="Round" style="position: absolute; left: 16px; right: 16px; bottom: 24px; display: flex; padding: 6px; border-radius: 34px; background: var(--glass); border: 1px solid var(--gl); box-shadow: var(--dock)">
+<div style="position: absolute; top: 6px; left: 6px; width: calc((100% - 12px) / 4); height: 56px; border-radius: 28px; background: var(--hl)"></div>
+<button class="tab on" aria-label="Enter" aria-current="page"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4h11l-2 4 2 4H5"></path></svg></button>
+<button class="tab" aria-label="Matches"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8.5" cy="12" r="5"></circle><circle cx="15.5" cy="12" r="5"></circle></svg></button>
+<button class="tab" aria-label="Board"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h11M4 18h7"></path></svg></button>
+<button class="tab" aria-label="Card"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M3 10h18M3 15h18M9 4v16M15 4v16"></path></svg></button>
+</nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"mode":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":393,"height":852}}'>
+class Component extends DCLogic {
+renderVals() { return { mode: this.props.mode ?? 'dark' }; }
+}
+</script>
+</body>
+</html>

@@ -1802,27 +1802,56 @@ details.fold summary::-webkit-details-marker { display: none; }
 .ry-pl-l { margin-left: auto; flex: none; color: var(--text-muted); }
 .ry-pl-l.under { color: var(--cart-you-text); }
 .ry-pl-l.dbl { color: var(--double); }
-.ry-src { font-size: 13px; color: var(--text-muted); }
+.ry-src { font-size: 13px; color: var(--text-muted); min-width: 0; flex: 0 1 auto; }
+.ry-pl-n { flex: none; }
 .ry-pads { display: grid; grid-template-columns: 34px repeat(4, minmax(0, 1fr)) 34px; gap: 4px; margin-top: 6px; }
 .ry-pad, .ry-pad-arrow { height: 52px; border-radius: var(--radius-lg); background: var(--bg); border: 1px solid var(--line); display: flex; align-items: center; justify-content: center; padding: 0; color: var(--text); }
 .ry-pad-arrow { color: var(--text-muted); }
-.ry-pad-arrow:disabled { opacity: .3; }
+.ry-pad-arrow.off { opacity: .3; }
 .ry-pad.likely { border-color: var(--text-muted); }
 .ry-pad.on { background: var(--text); color: var(--bg); border-color: transparent; }
 .ry-pad.on .mk, .ry-pad.on .mk * { color: var(--bg); border-color: var(--bg); background: transparent; }
-.ry-pad:disabled:not(.on) { opacity: .5; }
+.ry-pad.off:not(.on) { opacity: .5; }
 .ry-player.nudge .ry-pad { animation: nudge .45s ease-in-out 2; border-color: var(--text); }
 @media (prefers-reduced-motion: reduce) { .ry-player.nudge .ry-pad { animation: none; } }
-.ry-slim { margin-top: 12px; height: 52px; width: 100%; display: flex; align-items: center; gap: 14px; padding: 0 6px 0 14px; border-radius: var(--radius-lg); background: var(--surface-1); text-align: left; }
+.ry-slim { margin-top: var(--space-2); height: 52px; width: 100%; display: flex; align-items: center; gap: 14px; padding: 0 6px 0 14px; border-radius: var(--radius-lg); background: var(--surface-1); text-align: left; }
 .ry-slim-p { flex: 1 1 0; min-width: 0; display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 600; }
 .ry-slim .ry-chip { margin-left: auto; }
 .ry-you { color: var(--cart-you-text); padding: 0 10px; flex: none; }
-.ry-prog-row { display: flex; align-items: center; gap: var(--space-2); margin-top: 14px; }
+.ry-prog-row { display: flex; align-items: center; gap: var(--space-2); margin-top: 10px; }
 .ry-prog { flex: 1; display: flex; gap: 3px; }
 .ry-prog i { flex: 1; height: 6px; border-radius: 3px; background: var(--surface-2); display: block; }
 .ry-prog i.done { background: var(--text-muted); }
 .ry-prog i.here { background: var(--text); }
-.ry-foot { margin-top: 14px; }
+.ry-foot { margin-top: 12px; }
 .ry-next { width: 100%; height: 58px; border-radius: var(--radius-xl); background: var(--surface-2); color: var(--text-muted); font-size: 17px; font-weight: 600; }
 .ry-next.ready { background: var(--text); color: var(--bg); }
 .ry-prog i.brk { margin-left: 8px; }
+
+/* Partner “Rider” Cup on the Team Ryder Cup screens (handoff 018): same layout, cart colors kept. */
+.ry-slim.colored { box-shadow: inset 0 0 0 1px var(--slim); }
+.ry-slim.colored .ry-slim-p > .ellipsis { color: var(--slim); }
+.ry-slim + .ry-slim { margin-top: var(--space-2); }
+.ry-fixing { display: inline-flex; align-items: center; gap: 6px; flex: none; color: var(--text-muted); }
+.ry-fixing .relock { margin-left: 4px; }
+.ry-bonus { margin-top: 2px; }
+.rider-rank { padding: var(--space-3) var(--space-4) var(--space-2); }
+.ry-rank-k { display: flex; justify-content: space-between; gap: var(--space-2); }
+.ry-rank-k .lbl { color: var(--text-muted); }
+.rider-board .headlines { margin-top: var(--space-3); }
+.rider-cart { padding: var(--space-2) var(--space-3) var(--space-3); border-radius: var(--radius-xl); box-shadow: inset 0 0 0 1px var(--jersey); }
+.rider-cart-k { display: flex; align-items: center; gap: var(--space-2); margin-bottom: 6px; }
+.rider-cart-k .lbl { color: var(--jersey); margin: 0; }
+.rider-tn { display: inline-flex; align-items: center; gap: 4px; min-height: 32px; font-size: 15px; font-weight: 700; color: var(--text); background: transparent; padding: 0; min-width: 0; }
+.rider-tn .empty { color: var(--text-muted); font-weight: 500; }
+.rider-pick { box-shadow: inset 0 0 0 1px var(--jersey); color: var(--jersey); }
+.brief-sides.rider .brief-side b { font-size: 15px; }
+.brief-side.compact { padding: 10px var(--space-3); }
+/* 018 Today's game (one page): one line per match, no pager dots for a single page. */
+.brief-dots.none { display: none; }
+.brief-rots.one-line li { padding-top: 8px; padding-bottom: 8px; }
+.brief-rots.one-line .rv { display: flex; align-items: baseline; gap: 6px; min-width: 0; flex-wrap: wrap; }
+.brief-rots.one-line .rv small { display: inline; margin: 0; }
+.brief-rots.one-line .rv small::before { content: '· '; }
+/* Small phones (016 §0): the 016/018 Enter may scroll, so it grows instead of sitting at 100% (keeps Next clear of the tab bar). */
+.ry-enter { height: auto; min-height: 100%; }

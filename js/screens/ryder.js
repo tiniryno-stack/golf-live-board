@@ -1,16 +1,22 @@
 // ryder.js — Team Ryder Cup screens (handoff 015): Board (cup card, cup bar, rotations, flags),
 // the read-only match sheet, and Matches (rotation picker, score card, hole strip, hole detail).
 // All numbers and copy come from scoring.ryderState (pure); this file only draws.
+// 018: Partner “Rider” Cup uses the same screens through riderview.riderState (same shapes, plus
+// cart names and colors: names, bars and dots wear the cart colors; Team Ryder Cup stays grey).
 
 import { esc, icon, seg, seg2, mark } from '../ui.js';
-import { fmtPts, fmtToPar, playerLeaderboard, projectedGross, ryderState, ryderMyMatch, ryderNeedLine, ryderHoleLine, teeTimeName } from '../scoring.js';
+import { fmtPts, fmtToPar, playerLeaderboard, projectedGross, ryderState, ryderNeedLine, ryderHoleLine, teeTimeName } from '../scoring.js';
+import { riderState } from '../riderview.js';
 
-export const ryState = (app) => ryderState(app.snapshot, app.myTeam());
+export const ryState = (app) => ryderState(app.snapshot, app.myTeam()) || riderState(app.snapshot, app.myTeam());
+const tint = (cart) => (cart.color ? ` style="color:${cart.color}"` : '');
+const cartTitle = (cart) => (cart.color ? cart.name : cart.names.join(' + ')); // Rider: the cart's name; Ryder: the two first names
+const clinchLbl = (m) => `${fmtPts(m.clinchAt || 6.5)} CLINCHES`;
 
 // ───────────────────────────────────────────── shared pieces
 
 /** Two first names stacked (015 §1). */
-const names = (cart, cls = '') => `<span class="ry-nm ${cls}">${cart.names.map((n) => `<span class="ellipsis">${esc(n)}</span>`).join('')}</span>`;
+const names = (cart, cls = '') => `<span class="ry-nm ${cart.color ? '' : cls}"${tint(cart)}>${cart.names.map((n) => `<span class="ellipsis">${esc(n)}</span>`).join('')}</span>`;
 
 /** The flag: one 72 × 26 shape per match, hanging toward whoever holds the point. */
 function flag(m) {
@@ -32,13 +38,18 @@ function cupBar(st) {
 
 /** One smooth bar of hole points with the 6½ line. */
 function matchBar(m, { green = true } = {}) {
+  if (m.pm) return ''; // Plus/Minus: strokes, no points bar
   const [u, t] = m.holePts;
-  return `<div class="ry-mbar${green ? '' : ' plain'}"><div class="ry-mtrack"><b class="us" style="width:${(u / 12) * 100}%"></b><b class="them" style="width:${(t / 12) * 100}%"></b><i class="ry-mline"></i></div></div>`;
+  const max = m.maxPts || 12;
+  const uc = m.us.color ? `;background:${m.us.color}` : '', tc = m.them.color ? `;background:${m.them.color}` : '';
+  return `<div class="ry-mbar${green ? '' : ' plain'}"><div class="ry-mtrack"><b class="us" style="width:${Math.min(100, (u / max) * 100)}%${uc}"></b><b class="them" style="width:${Math.min(100, (t / max) * 100)}%${tc}"></b><i class="ry-mline"></i></div></div>`;
 }
+/** "4 pts left · 6½ CLINCHES", and the Rider win bonus as one line under it. */
+const barFoot = (m) => (m.pm ? '' : `<div class="ry-bl"><span class="meta">${esc(m.barLine || '')}</span><span class="lbl">${clinchLbl(m)}</span></div>${m.bonus ? `<div class="meta ry-bonus">${esc(m.bonus)}</div>` : ''}`);
 
 /** The dot: solid = counted, hatched = one cart in, dashed = nobody yet. Drawn SVG, no gradients. */
-export function dot(state, who, { green = true } = {}) {
-  const us = green ? 'var(--cart-you)' : 'var(--text)', them = 'var(--text-muted)';
+export function dot(state, who, { green = true, usColor = null, themColor = null } = {}) {
+  const us = usColor || (green ? 'var(--cart-you)' : 'var(--text)'), them = themColor || 'var(--text-muted)';
   const c = 5.5;
   if (state === 'solid') {
     if (who === 'halved') return `<svg class="ry-dot" viewBox="0 0 11 11" aria-hidden="true"><path d="M5.5 0A5.5 5.5 0 0 0 5.5 11Z" fill="${us}"/><path d="M5.5 0A5.5 5.5 0 0 1 5.5 11Z" fill="${them}"/></svg>`;
@@ -58,7 +69,9 @@ export function dot(state, who, { green = true } = {}) {
 const dotFor = (h, key, o) => (h.points ? dot('solid', h[key], o) : h.whoIsIn === 'us' || h.whoIsIn === 'them' ? dot('hatched', null, o) : dot('dashed', null, o));
 
 /** Six tiles: hole number + low ball dot over low total dot. */
+const colorsOf = (m, o = {}) => (m.us.color ? { ...o, usColor: m.us.color, themColor: m.them.color } : o); // Rider: cart colors everywhere, the sheet too
 function holeStrip(m, sel, act, o = {}) {
+  o = colorsOf(m, o);
   return `<div class="ry-strip">${m.holes.map((h) => `<button class="ry-tile${h.hole === sel ? ' on' : ''}" data-act="${act}" data-v="${h.hole}" data-m="${esc(m.id)}" aria-pressed="${h.hole === sel}">
       <span class="mono">${h.hole}</span><span class="ry-dots">${dotFor(h, 'lowBall', o)}${dotFor(h, 'lowTotal', o)}</span></button>`).join('')}</div>`;
 }
@@ -74,7 +87,7 @@ const grossOf = (app, pid, h) => app.snapshot.playerById.get(pid)?.gross[h - 1] 
 function marks(app, cart, h, par, { you = false } = {}) {
   return cart.playerIds.map((pid, i) => {
     const g = grossOf(app, pid, h);
-    return `<div class="ry-mk"><span class="ry-mk-n ellipsis${you ? ' you' : ''}">${esc(cart.names[i])}</span>${mark(g, par, 32, { ghost: g == null ? par : null })}</div>`;
+    return `<div class="ry-mk"><span class="ry-mk-n ellipsis${you && !cart.color ? ' you' : ''}"${tint(cart)}>${esc(cart.names[i])}</span>${mark(g, par, 32, { ghost: g == null ? par : null })}</div>`;
   }).join('');
 }
 
@@ -94,20 +107,25 @@ function row(app, m, myCart) {
 function rotation(app, r, open, myCart) {
   const tag = r.status === 'live' ? '<span class="ry-st live">LIVE</span>' : r.status === 'done' ? '<span class="ry-st">DONE</span>' : `<span class="ry-chev${open ? ' open' : ''}">${icon('fwd', 16)}</span>`;
   const head = `<span class="lbl${r.status === 'live' ? ' on' : ''}">HOLES ${esc(r.holes)}</span>
-      <span class="ry-tally mono"><b class="you">${fmtPts(r.tally.us)}</b> – ${fmtPts(r.tally.them)}</span>${tag}`;
+      ${r.tally ? `<span class="ry-tally mono"><b class="you">${fmtPts(r.tally.us)}</b> – ${fmtPts(r.tally.them)}</span>` : `<span class="ry-tally mono">${esc(r.center || '')}</span>`}${tag}`;
   return `<section class="ry-rot ${r.status}">
       ${r.status === 'future' ? `<button class="ry-strip-h" data-act="ry-fold" data-v="${r.index}" aria-expanded="${open}">${head}</button>` : `<div class="ry-strip-h">${head}</div>`}
       ${open ? `<div class="ry-rows">${r.matches.map((m) => row(app, m, myCart)).join('')}</div>` : ''}</section>`;
 }
 
-/** Board → Cup view for a Team Ryder Cup. */
-export function ryderBoard(app, { segs = '', players = '' } = {}) {
-  const st = ryState(app);
-  if (!st) return '';
+/** The rotation strips with their match rows (015 §2.3; Rider Board too, 018 §5). */
+export function rotationStrips(app, st) {
   const myCart = app.myTeam();
   const anyLiveOrDone = st.rotations.some((r) => r.status !== 'future');
   const opened = app.ui.ryFold || {};
   const isOpen = (r) => r.status !== 'future' || (opened[r.index] ?? (!anyLiveOrDone && r.index === 0));
+  return st.order.map((r) => rotation(app, r, isOpen(r), myCart)).join('');
+}
+
+/** Board → Cup view for a Team Ryder Cup. */
+export function ryderBoard(app, { segs = '', players = '' } = {}) {
+  const st = ryderState(app.snapshot, app.myTeam());
+  if (!st) return '';
   const mvp = st.final && st.mvp
     ? `<div class="ry-final">${icon('trophy', 20)}<span class="ellipsis">${esc(st.mvp.cart.names.join(' + '))} ${fmtPts(st.mvp.matchPts)}–${fmtPts(st.mvp.record.length - st.mvp.matchPts)} · MVP cart</span><button class="btn small" data-act="recap-open">Recap</button></div>`
     : '';
@@ -120,7 +138,7 @@ export function ryderBoard(app, { segs = '', players = '' } = {}) {
       ${cupBar(st)}${mvp}</div>`;
   const view = app.ui.boardView === 'players' ? 'players' : 'teams';
   return `<div class="plain ry-board">${card}${segs}
-      ${view === 'players' ? players : st.order.map((r) => rotation(app, r, isOpen(r), myCart)).join('')}</div>`;
+      ${view === 'players' ? players : rotationStrips(app, st)}</div>`;
 }
 
 /** Board → Players: just the players (no carts), net leaderboard; gross and net side by side, to par over the strokes so far. */
@@ -145,19 +163,19 @@ export function ryderMatchSheet(app, { id, hole }) {
   const h = m.holes.find((x) => x.hole === Number(hole)) || m.holes.find((x) => x.hole === defaultHole(m));
   const status = m.status === 'done' ? 'FINAL' : m.status === 'live' ? 'LIVE' : 'UP NEXT';
   const [u, t] = m.holePts;
-  const side = (cart, n, loser, cls) => `<div class="ry-ms-s ${cls}"><div class="ry-sn ellipsis">${esc(cart.names.join(' + '))}</div>
+  const side = (cart, n, loser, cls) => `<div class="ry-ms-s ${cls}"><div class="ry-sn ellipsis"${tint(cart)}>${esc(cartTitle(cart))}</div>
       <div class="ry-ms-n"><span class="ry-num mono${loser ? ' muted' : ''}">${fmtPts(n)}</span><i class="ry-sdot ${cls}"></i></div></div>`;
   const val = (k, side) => {
     const v = h.net[side];
     if (v.some((x) => x == null)) return '–';
     return k === 'lowBall' ? Math.min(...v) : v[0] + v[1];
   };
-  const detail = `<div class="ry-hls">${['lowBall', 'lowTotal'].map((k) => `<div class="ry-hl">${dotFor(h, k, { green: false })}<span>${k === 'lowBall' ? 'Low ball' : 'Low total'} · <span class="mono">${val(k, 'us')} v ${val(k, 'them')}</span></span></div>`).join('')}</div>`;
+  const detail = `<div class="ry-hls">${['lowBall', 'lowTotal'].map((k) => `<div class="ry-hl">${dotFor(h, k, colorsOf(m, { green: false }))}<span>${k === 'lowBall' ? 'Low ball' : 'Low total'} · <span class="mono">${val(k, 'us')} v ${val(k, 'them')}</span></span></div>`).join('')}</div>`;
   return `<div class="ry-sheet">
       <div class="lbl">HOLES ${esc(m.label.replace(/^Holes /, ''))} · ${status}</div>
       <div class="ry-ms-top">${side(m.us, u, m.result === 'lost', 'l')}${side(m.them, t, m.result === 'won', 'r')}</div>
       ${matchBar(m, { green: false })}
-      <div class="ry-bl"><span class="meta">${esc(m.barLine || '')}</span><span class="lbl">6½ CLINCHES</span></div>
+      ${barFoot(m)}
       ${holeStrip(m, h.hole, 'ry-sheet-hole', { green: false })}
       <div class="ry-hd"><div class="ry-hd-h"><b>Hole ${h.hole}</b><span class="meta"> · par ${h.par}</span></div>
         <div class="ry-marks">${marks(app, m.us, h.hole, h.par)}${marks(app, m.them, h.hole, h.par)}</div>
@@ -175,13 +193,15 @@ export function ryderMatches(app) {
     return `<div class="plain ry-matches"><div class="lbl">MATCHES</div><h1 class="title">You’re watching</h1>
       <p class="meta">Matches shows your own cart’s match. The Board has every match: tap one to see it.</p></div>`;
   }
-  const mine = [0, 1, 2].map((r) => ryderMyMatch(st, myCart, r)).filter(Boolean);
-  const pick = app.ui.ryRot != null ? Number(app.ui.ryRot) : (ryderMyMatch(st, myCart)?.rotation ?? 0);
-  const m = mine.find((x) => x.rotation === pick) || mine[0];
+  // Your matches in order (3 for most rounds; 2 at once for a 3-cart Rider round). Picked by match id.
+  const mine = st.matches.filter((x) => x.us.id === myCart);
+  const current = mine.find((x) => x.status === 'live') || mine.find((x) => x.status === 'notStarted') || mine[mine.length - 1];
+  const m = mine.find((x) => x.id === app.ui.ryMatch) || (app.ui.ryRot != null ? mine.find((x) => x.rotation === Number(app.ui.ryRot)) : null) || current;
   if (!m) return '';
+  const sameHoles = new Set(mine.map((x) => x.label)).size < mine.length; // 3 carts: both matches are holes 1–18
   const sub = (x) => (x.status === 'live' ? 'live' : x.status === 'notStarted' ? 'up next'
     : `${x.result === 'won' ? 'won' : x.result === 'lost' ? 'lost' : 'halved'} ${fmtPts(Math.max(...x.holePts))}–${fmtPts(Math.min(...x.holePts))}`);
-  const picker = seg2('ry-rot', mine.map((x) => [String(x.rotation), x.label.replace(/^Holes /, ''), sub(x), { live: x.status === 'live' }]), String(m.rotation));
+  const picker = seg2('ry-rot', mine.map((x) => [x.id, sameHoles ? `vs ${x.them.name}` : x.label.replace(/^Holes /, ''), sub(x), { live: x.status === 'live' }]), m.id);
   const waiting = m.status === 'notStarted' && m.holes.some((h) => h.whoIsIn === 'us');
   const kick = m.status === 'live' ? '<span class="you">LIVE</span>' : m.status === 'done' ? 'FINAL' : waiting ? 'WAITING ON THEM' : 'UP NEXT';
   const snap = app.snapshot;
@@ -192,24 +212,24 @@ export function ryderMatches(app) {
   const [u, t] = m.holePts;
   const ptsLine = h.points ? `<span class="mono meta">${fmtPts(h.points.us)}–${fmtPts(h.points.them)}</span>` : '';
   const need = ryderNeedLine(m, h);
-  const lines = `<div class="ry-hls">${['lowBall', 'lowTotal'].map((k) => `<div class="ry-hl">${dotFor(h, k)}<span>${esc(ryderHoleLine(k, h[k]) || `${k === 'lowBall' ? 'Low ball' : 'Low total'} · –`)}</span></div>`).join('')}</div>
+  const lines = `<div class="ry-hls">${['lowBall', 'lowTotal'].map((k) => `<div class="ry-hl">${dotFor(h, k, colorsOf(m))}<span>${esc(ryderHoleLine(k, h[k]) || `${k === 'lowBall' ? 'Low ball' : 'Low total'} · –`)}</span></div>`).join('')}</div>
         ${!h.points && need ? `<div class="ry-hl meta">${esc(need)}</div>` : ''}`;
   return `<div class="plain ry-matches">
       <div class="lbl">HOLES ${esc(m.label.replace(/^Holes /, ''))} · ${kick}</div>
-      <h1 class="title ry-vs ellipsis">vs ${esc(m.them.names.join(' + '))}</h1>
+      <h1 class="title ry-vs ellipsis">vs <span${tint(m.them)}>${esc(cartTitle(m.them))}</span></h1>
       <div class="meta">${esc(where)}</div>
       <div class="ry-picker">${picker}</div>
       <div class="ry-card">
         <div class="lbl${m.status === 'notStarted' ? '' : ' you'}">${esc(m.kicker)}</div>
         <div class="ry-ms-top">
-          <div class="ry-ms-s l"><div class="ry-sn you ellipsis">${esc(m.us.names.join(' + '))}</div><div class="ry-num you mono">${fmtPts(u)}</div></div>
-          <div class="ry-ms-s r"><div class="ry-sn ellipsis">${esc(m.them.names.join(' + '))}</div><div class="ry-num muted mono">${fmtPts(t)}</div></div>
+          <div class="ry-ms-s l"><div class="ry-sn you ellipsis">${esc(cartTitle(m.us))}</div><div class="ry-num you mono">${m.pm ? esc(m.flag.text) : fmtPts(u)}</div></div>
+          <div class="ry-ms-s r"><div class="ry-sn ellipsis"${tint(m.them)}>${esc(cartTitle(m.them))}</div><div class="ry-num${m.them.color ? '' : ' muted'} mono">${m.pm ? '' : fmtPts(t)}</div></div>
         </div>
         ${matchBar(m)}
-        <div class="ry-bl"><span class="meta">${esc(m.barLine || '')}</span><span class="lbl">6½ CLINCHES</span></div>
+        ${barFoot(m)}
       </div>
       ${holeStrip(m, h.hole, 'ry-hole')}
-      <div class="ry-legend small">${dot('solid', 'us')} counted ${dot('hatched')} one cart in ${dot('dashed')} nobody yet</div>
+      <div class="ry-legend small">${dot('solid', 'us', colorsOf(m))} counted ${dot('hatched')} one cart in ${dot('dashed')} nobody yet</div>
       <div class="ry-hd"><div class="ry-hd-h"><b>Hole ${h.hole}</b><span class="meta"> · par ${h.par}</span>${ptsLine}</div>
         <div class="ry-marks">${marks(app, m.us, h.hole, h.par, { you: true })}${marks(app, m.them, h.hole, h.par)}</div>
         ${lines}</div>
@@ -227,6 +247,6 @@ export const ryderActions = {
     app.ui.ryFold = { ...(app.ui.ryFold || {}), [r.index]: !now };
     app.render();
   },
-  'ry-rot': (el, ev, app) => { app.ui.ryRot = Number(el.dataset.v); app.render(); },
+  'ry-rot': (el, ev, app) => { app.ui.ryMatch = el.dataset.v; app.ui.ryRot = null; app.render(); },
   'ry-hole': (el, ev, app) => { app.ui.ryHole = { ...(app.ui.ryHole || {}), [el.dataset.m]: Number(el.dataset.v) }; app.render(); },
 };

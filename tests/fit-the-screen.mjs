@@ -14,11 +14,10 @@ import { mkdirSync } from 'node:fs';
 import { chromium } from 'playwright';
 import { createBackend, attach, serve, seedRound } from './mock-supabase.mjs';
 
+// Andrew, Nov 4: iPhone 15 / 16 / 17 only (CSS px with Safari's toolbars showing).
 const SIZES = [
-  ['iPhone SE', 375, 548],
-  ['iPhone 13 mini', 375, 629],
   ['iPhone 15/16', 393, 659],
-  ['iPhone Pro Max', 430, 739],
+  ['iPhone 17', 402, 681],
 ];
 // FIT_SIZE=393x852 runs one extra size only (used to compare against the design mockups).
 if (process.env.FIT_SIZE) {
@@ -97,7 +96,28 @@ async function check(page, size, screen, extra) {
         break;
       }
     }
-    if (extra === 'enter') {
+    if (extra === 'enter' && document.querySelector('.ry-enter')) {
+      // 016 / 018 Enter (Team Ryder Cup, Partner “Rider” Cup): one card, one-row score pads.
+      // Never scrolls from the iPhone 15/16 up; smaller phones may scroll after the green card goes Compact (016 §0).
+      if (vh >= 640 && content.scrollHeight > content.clientHeight + 1) problems.push(`Enter needs scrolling (${content.scrollHeight} > ${content.clientHeight})`);
+      const next = document.querySelector('.ry-next');
+      if (vh >= 640 && (!next || !onScreen(next) || !within(next, content))) problems.push('Next hole off screen');
+      // Smaller phones scroll: Next must still be reachable above the tab bar.
+      if (next && content.scrollHeight > content.clientHeight + 1) {
+        const tb = document.getElementById('tabbar').getBoundingClientRect();
+        const room = content.scrollHeight - content.clientHeight; // how far it can scroll
+        if (box(next).bottom - room > tb.top + 1) problems.push('Next hole can\'t scroll clear of the tab bar');
+      }
+      const rows = document.querySelectorAll('.ry-ecard .ry-player');
+      if (!rows.length) problems.push('no score rows rendered');
+      rows.forEach((r, i) => {
+        const name = r.querySelector('.ry-pl-n');
+        if (name.scrollWidth > name.clientWidth + 1) problems.push(`row ${i + 1}: “${name.textContent}” cut off`);
+        r.querySelectorAll('.ry-pad').forEach((pd) => { const b = box(pd); if (b.width < 47.5 || b.height < 47.5) problems.push(`row ${i + 1}: pad ${Math.round(b.width)}×${Math.round(b.height)} < 48`); });
+      });
+      document.querySelectorAll('.ry-slim').forEach((sl) => { if (box(sl).height > 60) problems.push(`the other cart should be one slim row (${Math.round(box(sl).height)}px)`); });
+      if (document.querySelector('.ry-slim .ry-pad')) problems.push('a slim row should not be editable');
+    } else if (extra === 'enter') {
       if (content.scrollHeight > content.clientHeight + 1) problems.push(`Enter needs scrolling (${content.scrollHeight} > ${content.clientHeight})`);
       const next = document.querySelector('.next-btn');
       if (!next || !onScreen(next) || !within(next, content)) problems.push('Next hole off screen');
@@ -127,14 +147,15 @@ async function check(page, size, screen, extra) {
       if (document.querySelector('.cart.opp.dim .step')) problems.push('their slim row should not be editable');
     }
     if (extra === 'board-players') {
-      const rows = [...document.querySelectorAll('.prow')];
+      const rows = [...document.querySelectorAll('.prow, .ry-prow:not(.head)')];
       const hidden = rows.filter((r) => !within(r, content)).length;
       if (rows.length < 8) problems.push(`only ${rows.length} player rows`);
       if (hidden) problems.push(`${hidden} of ${rows.length} player rows need scrolling`);
     }
     if (extra === 'board') {
-      const name = document.querySelector('.board-hero .leader-name');
-      const you = document.querySelector('.board-hero .you');
+      // 018: a Partner “Rider” Cup Board opens on the ranked carts card (leader = first row, yours = .me).
+      const name = document.querySelector('.board-hero .leader-name, .rider-rank .team-row .row-title');
+      const you = document.querySelector('.board-hero .you, .rider-rank .team-row.me');
       if (!name || !within(name, content)) problems.push('leader not visible before scrolling');
       if (!you || !within(you, content)) problems.push('your position not visible before scrolling');
     }
@@ -154,7 +175,7 @@ for (const size of SIZES) {
     localStorage.setItem('glb.device', JSON.stringify(dev));
     localStorage.setItem('glb.who.' + code, 'true');
     localStorage.setItem('glb.seen.' + code, JSON.stringify({ last: Date.now(), ids: [] }));
-    for (const k of ['tile5', 'prov2', 'oppcart3']) localStorage.setItem('glb.coach.' + k, 'true');
+    for (const k of ['tile5', 'prov2', 'oppcart3', 'pad1']) localStorage.setItem('glb.coach.' + k, 'true');
     localStorage.setItem('glb.me.' + code, '"p1"');
     localStorage.setItem('glb.admin.' + code, JSON.stringify(pin));
   }, [r.code, DEV, r.admin_pin]);
@@ -206,6 +227,8 @@ for (const size of SIZES) {
   await page.tap('[data-act="setup-game"][data-v="carts"]');
   await page.tap('[data-act="setup-go"][data-v="teams"]');
   await check(page, size, 'Setup 4 (carts)');
+  await page.tap('[data-act="setup-go"][data-v="tee"]');
+  await check(page, size, 'Setup 5 (tee times)');
   await page.tap('[data-act="setup-go"][data-v="matchups"]');
   await check(page, size, 'Setup 4b (matchups)');
   await page.tap('[data-act="setup-custom"]');
@@ -227,14 +250,15 @@ for (const size of SIZES) {
   await page.waitForTimeout(350);
   await page.evaluate(() => { window.__glb.ui.hole = 6; window.__glb.ui.unlocked = 6; window.__glb.render(); }); // a past hole, unlocked for editing
   await check(page, size, 'Enter (hole 6)', 'enter');
-  await page.tap('.cart.opp.dim');
+  // 018: Partner “Rider” Cup Enter = the 016 layout (slim row with Edit flips to their cart, YOU row flips back).
+  await page.tap('.ry-slim[data-v="opp"]');
   await check(page, size, 'Enter (their cart open)', 'enter');
-  await page.tap('.cart.mine.dim');
-  if (!(await page.$('.cart.opp.dim'))) { failures.push(`${size[0]} · tap back`); rows.push([`${size[0]} · Enter tap back to yours`, 'FAIL: theirs still open']); }
+  await page.tap('.ry-slim[data-v="mine"]');
+  if (!(await page.$('.ry-slim[data-v="opp"]'))) { failures.push(`${size[0]} · tap back`); rows.push([`${size[0]} · Enter tap back to yours`, 'FAIL: theirs still open']); }
   // A finished hole two back: locked view still fits
   await page.evaluate(() => { window.__glb.ui.hole = 1; window.__glb.render(); });
   await check(page, size, 'Enter (hole 1, locked)', 'enter');
-  if (!(await page.$('.cart.mine.locked'))) { failures.push(`${size[0]} · locked`); rows.push([`${size[0]} · hole 1 locked`, 'FAIL: not locked']); }
+  if (!(await page.$('.cart.mine.locked, .ry-ecard.locked'))) { failures.push(`${size[0]} · locked`); rows.push([`${size[0]} · hole 1 locked`, 'FAIL: not locked']); }
   // The hole grid
   await page.evaluate(() => window.__glb.openSheet('holes', {}));
   await page.waitForTimeout(450);
@@ -255,10 +279,10 @@ for (const size of SIZES) {
     await page.waitForTimeout(300);
   }
   await page.evaluate(() => { window.__glb.ui.hole = null; window.__glb.render(); });
-  // Today's game: both cards fit, swipe lands on page 2, Let's play closes it.
+  // Today's game (018: one page for Partner “Rider” Cup): the card fits, Let's play closes it.
   await page.evaluate(() => window.__glb.openBrief());
   await page.waitForTimeout(400);
-  for (const n of [1, 2]) {
+  for (const n of [1]) {
     const res = await page.evaluate((n) => {
       const vw = window.innerWidth, vh = window.innerHeight;
       const pg = document.querySelectorAll('.brief-page')[n - 1];
@@ -270,7 +294,7 @@ for (const size of SIZES) {
       if (pg.scrollHeight > pg.clientHeight + 1) problems.push(`card ${n} needs scrolling (${pg.scrollHeight} > ${pg.clientHeight})`);
       if (pg.scrollWidth > pg.clientWidth + 1) problems.push(`card ${n} scrolls sideways`);
       if (bb.bottom > vh || bb.top < 0) problems.push('button off screen');
-      const want = n === 2 ? 'Let’s play' : 'Next';
+      const want = n === document.querySelectorAll('.brief-page').length ? 'Let’s play' : 'Next';
       if (btn.textContent.trim() !== want) problems.push(`button says “${btn.textContent.trim()}”`);
       return { problems };
     }, n);
@@ -389,7 +413,7 @@ for (const size of SIZES) {
     await ctxG.addInitScript(([codes, dev, pin]) => {
       window.__GLB_FLAGS = { gps: true };
       localStorage.setItem('glb.device', JSON.stringify(dev));
-      for (const k of ['tile5', 'prov2', 'oppcart3']) localStorage.setItem('glb.coach.' + k, 'true');
+      for (const k of ['tile5', 'prov2', 'oppcart3', 'pad1']) localStorage.setItem('glb.coach.' + k, 'true');
       for (const code of codes) {
         localStorage.setItem('glb.who.' + code, 'true');
         localStorage.setItem('glb.brief.' + code, 'true');
@@ -407,13 +431,13 @@ for (const size of SIZES) {
       const info = await pg.evaluate(() => {
         const card = document.querySelector('.green-card');
         const nums = [...document.querySelectorAll('.green-nums .gn b')].map((b) => b.textContent);
-        return { card: !!card, nums, top: getComputedStyle(document.querySelector('.topbar')).display, size: document.querySelector('.enter')?.className.match(/\b(regular|compact)\b/)?.[1], step: Math.round(document.querySelector('.tile .step')?.getBoundingClientRect().width || 0), strip: !!document.querySelector('.enter:not(.solo-enter) .matchup-line') };
+        return { card: !!card, nums, top: getComputedStyle(document.querySelector('.topbar')).display, size: document.querySelector('.enter')?.className.match(/\b(regular|compact)\b/)?.[1], step: Math.round(document.querySelector('.tile .step, .ry-pad')?.getBoundingClientRect().width || 0), strip: !!document.querySelector('.enter:not(.solo-enter) .matchup-line'), ry: !!document.querySelector('.ry-pad') };
       });
       const problems = [];
       if (!info.card) problems.push('no green card');
       if (info.nums.some((n) => !/^\d+$/.test(n))) problems.push(`numbers not ready: ${info.nums.join(' / ')}`);
       if (info.top !== 'none') problems.push('name row still showing');
-      if (info.step && info.step < 80) problems.push(`pads shrank to ${info.step}px`);
+      if (info.step && info.step < (info.ry ? 48 : 80)) problems.push(`pads shrank to ${info.step}px`);
       if (info.strip) problems.push('rotation strip still on team Enter');
       if (problems.length) { failures.push(`${size[0]} · ${name}: ${problems.join('; ')}`); console.log(`${size[0]} · ${name.padEnd(28)} FAIL ${problems.join('; ')}`); }
       else console.log(`${size[0]} · ${name.padEnd(28)} ok   (${info.size}, pads ${info.step}px, ${info.nums.join('/')})`);

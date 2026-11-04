@@ -16,6 +16,7 @@ import {
 import { matchupAlert } from '../headlines.js';
 import { teamColor, isDefaultTeamName, shortTeam } from '../teams.js';
 import { local } from '../db.js';
+import { riderState, isRider } from '../riderview.js';
 import { cardOn, cardState, gpsBadge, greenCard } from './greencard.js';
 import { shortCourseName } from '../coursedata.js';
 import { gps } from '../gps.js';
@@ -358,9 +359,10 @@ function padRow(app, p, h, editable) {
   const pads = w.pads.map((v) => {
     const on = g === v;
     const likely = g == null && v === par;
-    return `<button class="ry-pad${on ? ' on' : ''}${likely ? ' likely' : ''}"${editable ? ` data-act="ry-pick" data-pid="${esc(p.id)}" data-v="${v}"` : ' disabled'} aria-label="${esc(p.name)} ${v}" aria-pressed="${on}">${mark(v, par, 30)}</button>`;
+    // Not editable (locked hole): no action and aria-disabled, not `disabled`, so a tap still reaches the card's unlock.
+    return `<button class="ry-pad${on ? ' on' : ''}${likely ? ' likely' : ''}${editable ? '' : ' off'}" data-pid="${esc(p.id)}" data-v="${v}"${editable ? ' data-act="ry-pick"' : ' aria-disabled="true"'} aria-label="${esc(p.name)} ${v}" aria-pressed="${on}">${mark(v, par, 30)}</button>`;
   }).join('');
-  const arrow = (dir, ok) => `<button class="ry-pad-arrow"${editable && ok ? ` data-act="ry-win" data-pid="${esc(p.id)}" data-d="${dir}" data-lo="${w.lo}"` : ' disabled'} aria-label="${dir < 0 ? 'Lower scores' : 'Higher scores'}">${icon(dir < 0 ? 'back' : 'fwd', 18)}</button>`;
+  const arrow = (dir, ok) => `<button class="ry-pad-arrow${editable && ok ? '' : ' off'}"${editable && ok ? ` data-act="ry-win" data-pid="${esc(p.id)}" data-d="${dir}" data-lo="${w.lo}"` : ' aria-disabled="true"'} aria-label="${dir < 0 ? 'Lower scores' : 'Higher scores'}">${icon(dir < 0 ? 'back' : 'fwd', 18)}</button>`;
   return `<div class="ry-pads">${arrow(-1, w.canLower)}${pads}${arrow(1, w.canHigher)}</div>`;
 }
 
@@ -371,8 +373,7 @@ function ryderPlayer(app, p, h, editable, theirs) {
   const l = padLabel(p.gross[h - 1], par, cap);
   const nudge = p.gross[h - 1] == null && app.ui.nudge?.hole === h && Date.now() < app.ui.nudge.until ? ' nudge' : '';
   return `<div class="ry-player${nudge}">
-      <div class="ry-pl-top"><span class="ry-pl-n ellipsis">${esc(p.name)}</span>${p.dots[h - 1] ? '<i class="ry-stroke" aria-label="gets a stroke"></i>' : ''}<span class="ry-pl-l lbl ${l.tone}">${esc(l.text)}</span></div>
-      ${theirs ? `<div class="ry-src small">${esc(rySource(app, p, h))}</div>` : ''}
+      <div class="ry-pl-top"><span class="ry-pl-n ellipsis">${esc(p.name)}</span>${p.dots[h - 1] ? '<i class="ry-stroke" aria-label="gets a stroke"></i>' : ''}${theirs ? `<span class="ry-src small ellipsis">${esc(rySource(app, p, h))}</span>` : ''}<span class="ry-pl-l lbl ${l.tone}">${esc(l.text)}</span></div>
       ${padRow(app, p, h, editable)}</div>`;
 }
 
@@ -380,28 +381,39 @@ function ryderEnterView(app, h, { holeRow, gcard, carts, focus, locked, ahead, p
   const snap = app.snapshot;
   const st = snap.settings;
   const myTeam = app.myTeam();
-  const rs = ryderState(snap, myTeam);
-  const m = rs?.matches.find((x) => x.us.id === myTeam && pos >= x.from && pos <= x.to) || null;
+  const rider = !st.ryder; // 018: Partner “Rider” Cup on the same screen, cart colors kept
+  const rs = rider ? riderState(snap, myTeam) : ryderState(snap, myTeam);
+  // 3 carts: two matches on every hole; the header shows the first (the other cart in your group when there is one).
+  const here = (rs?.matches || []).filter((x) => x.us.id === myTeam && pos >= x.from && pos <= x.to);
+  const m = here.find((x) => carts.some((c) => c.teamId === x.them.id)) || here[0] || null;
   const flipped = focus === 'opp' && carts.length > 1;
-  const open = flipped ? carts[1] : carts[0];
-  const shut = flipped ? carts[0] : carts[1];
+  const open = flipped ? carts.find((c) => c.teamId === app.ui.enterCart && c !== carts[0]) || carts[1] : carts[0];
+  const shuts = carts.filter((c) => c !== open);
+  const cartColor = (c) => (rider ? teamColor(myTeam, c.teamId) : null);
   const par = snap.holes[h - 1].par;
   const f = ryderFlag(m);
   const lockTap = locked && !ahead ? ' data-act="hole-unlock" data-enter="hole-unlock" role="button" tabindex="0"' : '';
   const right = ahead ? '<span class="focus-chip lock-chip">Up next</span>'
     : locked ? `<span class="focus-chip lock-chip">${icon('lock', 12)} Tap to edit</span>`
     : flipped ? '<button class="ry-chip" data-act="cart-focus" data-v="mine">Back</button>'
-    : `<span class="lbl ry-thru">THRU ${m ? m.thru : 0}</span><button class="ry-eflag ${f.look}" data-act="ry-flag" data-v="${m ? m.rotation : ''}" aria-label="Your match: ${esc(f.text)}. Open Matches">${esc(f.text)}</button>`;
+    : `<span class="lbl ry-thru">THRU ${m ? m.thru : 0}</span><button class="ry-eflag ${f.look}" data-act="ry-flag" data-v="${m ? esc(m.id) : ''}" aria-label="Your match: ${esc(f.text)}. Open Matches">${esc(f.text)}</button>`;
   const left = flipped
-    ? `<span class="lbl ry-k">ENTERING FOR THEM</span><b class="ellipsis">${esc(open.players.map((p) => p.name).join(' + '))}</b>`
-    : `<span class="ry-vs-k">vs</span><b class="ellipsis">${esc(m ? m.them.names.join(' + ') : '')}</b>`;
-  const card = `<section class="ry-ecard${flipped ? ' theirs' : ''}"${lockTap}>
+    ? `<span class="lbl ry-k">ENTERING FOR THEM</span><b class="ellipsis"${cartColor(open) ? ` style="color:${cartColor(open)}"` : ''}>${esc(open.players.map((p) => p.name).join(' + '))}</b>`
+    : rider
+      ? `<span class="ry-vs-k">vs</span><b class="ellipsis" style="color:${m ? m.them.color : 'inherit'}">${esc(m ? m.them.name : '')}</b>`
+      : `<span class="ry-vs-k">vs</span><b class="ellipsis">${esc(m ? m.them.names.join(' + ') : '')}</b>`;
+  const card = `<section class="ry-ecard${flipped ? ' theirs' : ''}${locked ? ' locked' : ''}"${lockTap}>
       <div class="ry-ehead"><span class="ry-ehead-l">${left}</span><span class="ry-ehead-r">${right}</span></div>
       ${open.players.map((p) => ryderPlayer(app, p, h, !locked && app.canEdit(p.id, h), flipped)).join('')}
     </section>`;
-  const slim = shut ? `<button class="ry-slim" data-act="cart-focus" data-v="${flipped ? 'mine' : 'opp'}" aria-label="${flipped ? 'Back to your cart' : `Enter scores for ${esc(shut.players.map((p) => p.name).join(' and '))}`}">
+  const slim = shuts.map((shut) => {
+    const mineRow = shut === carts[0];
+    const col = cartColor(shut);
+    const style = col && !mineRow ? ` style="--slim:${col}"` : '';
+    return `<button class="ry-slim${col && !mineRow ? ' colored' : ''}"${style} data-act="cart-focus" data-v="${mineRow ? 'mine' : 'opp'}" data-t="${esc(shut.teamId || '')}" aria-label="${mineRow ? 'Back to your cart' : `Enter scores for ${esc(shut.players.map((p) => p.name).join(' and '))}`}">
       ${shut.players.map((p) => `<span class="ry-slim-p"><span class="ellipsis">${esc(p.name)}</span>${mark(p.gross[h - 1], par, 28, { ghost: par })}</span>`).join('')}
-      ${flipped ? '<span class="ry-you lbl">YOU</span>' : '<span class="ry-chip">Edit</span>'}</button>` : '';
+      ${mineRow ? '<span class="ry-you lbl">YOU</span>' : '<span class="ry-chip">Edit</span>'}</button>`;
+  }).join('');
   // A wider gap where each set of holes ends (every 6 here; at the turn when the game switches at 9).
   const breaks = new Set(snap.game?.rotations?.length > 1 ? snap.game.rotations.slice(1).map((r) => r.from) : [10]);
   const segs = playOrder(st).map((n, i) => {
@@ -411,13 +423,15 @@ function ryderEnterView(app, h, { holeRow, gcard, carts, focus, locked, ahead, p
   }).join('');
   const blanks = blankPlayers(app, h);
   const foot = pos >= frontierPos(app) - 1 && !ahead
-    ? `<button class="ry-next${blanks.length ? '' : ' ready'}" data-act="next-hole">${h === lastHole ? 'Round done' : 'Next hole'}</button>`
+    ? `<button class="ry-next${blanks.length ? '' : ' ready'}" data-act="next-hole">${h === lastHole ? 'Round done' : 'Next hole'}${rider && blanks.length ? ` · ${blanks.length} score${blanks.length === 1 ? '' : 's'} left` : ''}</button>`
     : done ? '<button class="ry-next ready" data-act="tab" data-v="board">See the Board</button>'
     : `<button class="ry-next ready" data-act="hole-current">Back to hole ${cur}</button>`;
   return `<div class="enter nr ry-enter${gcard ? ` gps-card ${app.ui.gpsSize || 'regular'}` : ''}">
       <div class="hero">${holeRow}${gcard}</div>
       ${card}${slim}
-      <div class="ry-prog-row"><div class="ry-prog" aria-hidden="true">${segs}</div><span class="sync" data-sync>Synced</span></div>
+      <div class="ry-prog-row"><div class="ry-prog" aria-hidden="true">${segs}</div>${app.isFinal()
+        ? `<span class="ry-fixing small">${icon('lock', 13)} Fixing a finalized round<button class="link-btn relock" data-act="final-relock">Done</button></span>`
+        : '<span class="sync" data-sync>Synced</span>'}</div>
       <div class="ry-foot">${foot}</div>
     </div>`;
 }
@@ -426,7 +440,7 @@ export default {
   hero: true,
   noscroll: true,
   /** 011/013: the name row goes while the green card shows (the hole header is the top of the screen). */
-  hideTop(app) { return !!app.myPlayer() && !app.isFinal() && !!cardState(app, currentHole(app)); },
+  hideTop(app) { return !!app.myPlayer() && (!app.isFinal() || app.finalUnlocked()) && !!cardState(app, currentHole(app)); },
 
   render(app) {
     const snap = app.snapshot;
@@ -529,7 +543,7 @@ export default {
           ${app.isOrganizer() ? `<button class="hole-more" data-act="fixhole-open" data-v="${h}" aria-label="Hole menu: fix hole ${h}">${icon('more', 20)}</button>` : ''}
         </div>`;
     if (individual(app)) return individualView(app, h, { holeRow, dots, footBtn, gcard, gstate });
-    if (st.ryder && app.myTeam() && carts.length) return ryderEnterView(app, h, { holeRow, gcard, carts, focus, locked, ahead, pos, lastHole, done, cur });
+    if ((st.ryder || isRider(snap)) && app.myTeam() && carts.length) return ryderEnterView(app, h, { holeRow, gcard, carts, focus, locked, ahead, pos, lastHole, done, cur });
     return `<div class="enter nr${gcard ? ` gps-card ${app.ui.gpsSize || 'regular'}` : ''}">
       <div class="hero">
         ${holeRow}
@@ -562,7 +576,21 @@ export default {
       const step = root.querySelector('.enter.gps-card .cart.focus .tile .step');
       if (step && app.ui.gpsSize === 'regular' && step.getBoundingClientRect().width < 87) { app.ui.gpsSize = 'compact'; requestAnimationFrame(() => app.render()); return; }
     } else if (gps.isOn()) gps.stop();
+    const ryCard = root.querySelector('.ry-enter.gps-card');
+    if (ryCard && (app.ui.gpsSize || 'regular') === 'regular') {
+      const c = document.getElementById('content');
+      if (c && c.scrollHeight > c.clientHeight + 1) { app.ui.gpsSize = 'compact'; requestAnimationFrame(() => app.render()); return; }
+    }
     if (document.querySelector('.coach')) return; // one tip at a time
+    const ryMine = root.querySelector('.ry-enter .ry-ecard:not(.theirs)'), ryTheirs = root.querySelector('.ry-enter .ry-slim[data-v="opp"]');
+    if (ryMine && ryTheirs) {
+      if (!ryMine.querySelector('.ry-pad.likely') && ryTheirs.querySelector('.mk-ghost')) app.coach('oppcart3', ryTheirs, 'You can enter scores for the other cart in your group too. Tap their row to open it, then tap your row to come back.');
+    }
+    const firstPad = root.querySelector('.ry-enter .ry-ecard .ry-pad.likely');
+    if (ryMine) {
+      if (firstPad) app.coach('pad1', firstPad, 'Tap the score you made. The outlined one is par; ‹ › show lower or higher scores.');
+      return;
+    }
     const first = root.querySelector('.cart.focus .tile.empty .face');
     const mine = root.querySelector('.cart.mine.focus');
     const theirs = root.querySelector('.cart.opp.dim');
@@ -640,7 +668,7 @@ export default {
       // Entering for the other cart: picking their second score flips back home.
       if (app.ui.enterFocus === h && g !== v) {
         const carts = cartsFor(app, h);
-        const theirs = carts[1];
+        const theirs = carts.find((c) => c.teamId === app.ui.enterCart && c !== carts[0]) || carts[1];
         if (theirs && theirs.players.every((p) => (p.id === pid ? v : p.gross[h - 1]) != null)) app.ui.enterFocus = null;
       }
       app.render();
@@ -651,12 +679,13 @@ export default {
       app.render();
     },
     'ry-flag': (el, ev, app) => {
-      if (el.dataset.v !== '') app.ui.ryRot = Number(el.dataset.v);
+      if (el.dataset.v !== '') { app.ui.ryMatch = el.dataset.v; app.ui.ryRot = null; }
       app.go(app.tabHash('matches'));
     },
     'cart-focus': (el, ev, app) => {
       // Remembered for this hole only: any other hole opens on your cart (70/30).
       app.ui.enterFocus = el.dataset.v === 'opp' ? app.ui.hole : null;
+      app.ui.enterCart = el.dataset.v === 'opp' ? el.dataset.t || null : null;
       app.render();
     },
     'team-picker': (el, ev, app) => app.openTeamPicker(),

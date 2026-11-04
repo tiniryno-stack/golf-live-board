@@ -12,7 +12,8 @@ import { esc, icon, seg, clock } from '../ui.js';
 import { fmtPts, fmtToPar, fmtSigned, playerLeaderboard, teamLeaderboard, holeAt, recordLabel, teeClock, teeTimeName, groupIndex, sideOf, matchSidePoints } from '../scoring.js';
 import { teamColor, headlineColor, sideColor } from '../teams.js';
 import { latestMoment } from '../headlines.js';
-import { ryderBoard, ryderPlayers, ryderActions } from './ryder.js';
+import { ryderBoard, ryderPlayers, ryderActions, rotationStrips } from './ryder.js';
+import { riderState, isRider } from '../riderview.js';
 
 const ordinal = (n) => `${n}${['th', 'st', 'nd', 'rd'][(n % 100 >= 11 && n % 100 <= 13) || n % 10 > 3 ? 0 : n % 10]}`;
 
@@ -360,6 +361,19 @@ export default {
     const final = snap.roundComplete
       ? finalCard(app)
       : app.isFinal() ? `<div class="final-note locked">${icon('lock', 14)} The organizer finalized the round · scores locked</div>` : '';
+    if (isRider(snap)) {
+      // 018 §5: the ranked carts in one card (official solid / provisional hatched bars kept), headlines,
+      // Teams / Players, then the 015 rotation strips with match rows (tap → the read-only match sheet).
+      const prov = g.provisionalHoles;
+      const head = `<div class="ry-rank-k"><span class="lbl">${snap.roundComplete ? 'FINAL' : snap.officialThrough ? `OFFICIAL THRU ${snap.officialHole}` : 'NOTHING OFFICIAL YET'}</span>${!snap.roundComplete && prov.length ? `<span class="lbl">${prov.length > 1 ? 'HOLES' : 'HOLE'} ${prov.join(', ')} PROVISIONAL</span>` : ''}</div>`;
+      const v = app.ui.boardView === 'players' ? 'players' : 'teams';
+      const rsegs = `<div class="segs board-segs">${seg('board-view', [['teams', 'Teams'], ['players', 'Players']], v)}</div>`;
+      return `<div class="plain ry-board rider-board">
+          ${v === 'teams' ? `<div class="ry-cup rider-rank board-hero">${head}<div class="list">${teamRowsGame(app)}</div></div>` : ''}
+          ${final}${headlines}${rsegs}
+          ${v === 'players' ? `<div class="list">${ryderPlayers(app)}</div>` : rotationStrips(app, riderState(snap, app.myTeam()))}
+        </div>`;
+    }
     return `${hero(app, mode)}
       <div class="sheet">
         ${final}${headlines}${segs}

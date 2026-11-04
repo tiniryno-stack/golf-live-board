@@ -7,6 +7,7 @@
 
 import { esc, seg, seg2, icon, foldIn, mark } from '../ui.js';
 import { ryderMatches, ryderActions } from './ryder.js';
+import { isRider } from '../riderview.js';
 import { raceState, holeShares, holeOutcomes, showStakes } from '../race.js';
 import { fmtPts, fmtSigned, rotationIndexFor, holeAt, HOLES, playOrder, sideOn, sideOf, matchSidePoints } from '../scoring.js';
 import { teamColor, shortTeam, sideColor } from '../teams.js';
@@ -439,7 +440,7 @@ export default {
         <button class="btn primary block" data-act="tab" data-v="board">See the Board</button></div>`;
     }
     if (g.type === 'splitPoint') return splitView(app);
-    if (g.sides) return ryderMatches(app); // Team Ryder Cup (015 §3): my match, all four states
+    if (g.sides || isRider(snap)) return ryderMatches(app); // Team Ryder Cup (015 §3) and Partner “Rider” Cup (018 §4)
     if (!snap.anyPosted && !app.isFinal()) return waitingView(app);
     return teamGameView(app);
   },

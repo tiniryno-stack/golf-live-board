@@ -240,7 +240,7 @@ export function showBrief(app, onDone) {
     <div class="brief-top"><span class="kicker">Today’s game</span><button class="brief-skip" data-act="brief-done">Skip</button></div>
     <div class="brief-track">${pages.map((p, i) => `<section class="brief-page" aria-label="${i + 1} of ${pages.length}">${p}</section>`).join('')}</div>
     <div class="brief-foot">
-      <div class="brief-dots" aria-hidden="true">${pages.map((_, i) => `<i${i === 0 ? ' class="on"' : ''}></i>`).join('')}</div>
+      ${pages.length > 1 ? '' : '<!-- one page: no dots -->'}<div class="brief-dots${pages.length > 1 ? '' : ' none'}" aria-hidden="true">${pages.map((_, i) => `<i${i === 0 ? ' class="on"' : ''}></i>`).join('')}</div>
       <button class="btn primary big block" data-act="brief-next">${pages.length > 1 ? 'Next' : 'Let’s play'}</button>
     </div>
   </div>`;

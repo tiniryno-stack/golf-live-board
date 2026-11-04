@@ -159,6 +159,9 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
   flag = counted holes only (015 engine), a button to Matches (`ry-flag`); one-row ScorePad `ry-pads` (pure `ui.padWindow` /
   `ui.padLabel`, `tests/enter016.test.mjs`), window in `app.ui.ryWin['pid:hole']`; other cart = `.ry-slim`, Edit flips with
   `app.ui.enterFocus` (picking their 2nd score flips home). Other games keep the 013 Enter + ScoreStepper.
+- **Partner “Rider” Cup on the Ryder screens (handoff 018, Nov 4):** `js/riderview.js` (`isRider`, `riderState`) feeds the
+  same `ryderEnterView`, Matches (`ryder.js`) and Board strips with cart colors kept; Setup Carts → Tee times (matchups optional).
+  2v2, Match play and Scorecard only still use the old Enter (ScoreStepper) and Matches.
 - **2v2 headlines (fixed Nov 3):** board-level headlines (lead change, comeback, final) rank `game.people`, not the
   six pairings; `h.unit` = 'people' | 'sides' marks it, `headlineColor(mine, h, me)`.
 - **Small groups:** any roster that isn't 4 carts of 2 is a scorecard round (no teams).
@@ -234,14 +237,14 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
 - All storage goes through `db.local` (never `localStorage` directly) so `?sim=N` test phones stay
   separate. localStorage keys: `glb.device`, `glb.me.CODE`, `glb.admin.CODE`, `glb.recent`,
   `glb.queue.CODE`, `glb.seen.CODE`, `glb.alert.CODE.H`, `glb.switch.CODE.H`, `glb.brief.CODE`,
-  `glb.who.CODE`, `glb.cardOpen.CODE`, `glb.coach.{tile5,oppcart3,prov2}`, `glb.setupDraft`,
+  `glb.who.CODE`, `glb.cardOpen.CODE`, `glb.coach.{tile5,oppcart3,prov2,pad1}`, `glb.setupDraft`,
   `glb.theme`. Bump a coach key's suffix when its text changes so people see the new tip.
   `glb.recent` entries also carry Home's summary for each round (`recent.note`, from
   `home.roundSummary`: game, your name, live hole / place / points, or how it went).
 
 ## Testing (all headless, no network needed)
 
-**How much to run (Andrew, Oct 22 — this overrides earlier guidance):** `npm test` (seconds) after every
+**Phone sizes (Andrew, Nov 4):** fit and smoke test iPhone 15 / 16 / 17 sizes only (393 × 659, 402 × 681). **How much to run (Andrew, Oct 22 — this overrides earlier guidance):** `npm test` (seconds) after every
 change — that's the only suite that runs by default. **Do not run `npm run test:smoke` (the 20-phone browser
 rehearsal, ~6 min) or `npm run test:fit` / screenshots unless Andrew explicitly asks for them in that session.**
 He tests on his phone and reports back. **When a change touches score sync, joining, the offline queue, the
