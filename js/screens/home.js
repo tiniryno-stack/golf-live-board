@@ -134,6 +134,9 @@ function codeField() {
     </div>`;
 }
 
+// The Home header: the mark (feature 020, L2 lockup: ring centered on the capitals, 10px gap).
+const TITLE = `<h1 class="ts-title home-title"><span class="home-mark" aria-hidden="true"><img class="mk-dark" src="img/mark-dark.svg" alt="" width="30" height="30"><img class="mk-light" src="img/mark-light.svg" alt="" width="30" height="30"></span>Golf Live Board</h1>`;
+
 export default {
   topLeft: () => header(recent.all()),
 
@@ -150,7 +153,7 @@ export default {
 `;
     if (!rounds.length) {
       return `<div class="plain home">
-        <h1 class="ts-title home-title">Golf Live Board</h1>
+        ${TITLE}
         ${empty({ icon: 'flag', headline: 'No rounds yet', help: 'Start one and text the code to your group, or join a round a friend started.' })}
         <div class="home-join">${codeField()}</div>
         ${season}<div class="home-list">${extras}</div>
@@ -158,7 +161,7 @@ export default {
       </div>`;
     }
     return `<div class="plain home">
-      <h1 class="ts-title home-title">Golf Live Board</h1>
+      ${TITLE}
       ${live ? liveCard(live) : ''}
       ${season}
       ${extras.trim() ? `<div class="home-list">${extras}</div>` : ''}

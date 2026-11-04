@@ -1290,6 +1290,12 @@ details.fold summary::-webkit-details-marker { display: none; }
 .home-me .avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--surface-2); display: grid; place-items: center; font-size: 13px; font-weight: 600; }
 .home-me .hm-name { font-size: 15px; line-height: 20px; font-weight: 600; }
 .home-title { margin: var(--space-2) 0 var(--space-5); }
+/* The mark (020): 30px, ring (center 58% down the box) on the capitals' middle (18px down a 32/36 title) */
+.home-title { display: flex; align-items: center; gap: 10px; }
+.home-mark { flex: none; width: 30px; height: 30px; position: relative; top: -2.4px; }
+.home-mark img { display: block; width: 30px; height: 30px; }
+.home-mark .mk-light, [data-theme="light"] .home-mark .mk-dark { display: none; }
+[data-theme="light"] .home-mark .mk-light { display: block; }
 .home-k { color: var(--text-muted); margin: var(--space-5) 0 var(--space-2); }
 .home-title + .home-k { margin-top: 0; }
 .live-card { border-radius: var(--radius-2xl); background: var(--tint-you); border: 1.5px solid var(--cart-you); box-shadow: var(--shadow-card); padding: var(--space-4); }
