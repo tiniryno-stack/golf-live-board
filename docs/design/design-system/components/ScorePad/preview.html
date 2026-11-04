@@ -1,4 +1,4 @@
-<!-- @dsCard group="Scoring" height=300 subtitle="Enter for someone else in one tap" -->
+<!-- @dsCard group="Scoring" height=470 subtitle="Grid for others · strip for Team Ryder Cup Enter" -->
 <div class="root">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600;700&display=swap');
@@ -19,6 +19,12 @@
 .bogey{border-radius:5px;border:1.5px solid var(--text-muted)}
 .double{border-radius:5px;border:4px double var(--double);background:var(--double-bg);color:var(--double)}
 .big{width:40px;height:40px;font-size:22px}
+.k{font-family:var(--font-mono);font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin:16px 4px 8px}
+.pl{display:flex;align-items:center;gap:6px;height:22px;padding:0 2px}.pl b{font-size:15px;font-weight:700}.pl .st{width:7px;height:7px;border-radius:50%;background:var(--text)}.pl .k2{margin-left:auto;font-family:var(--font-mono);font-size:12px;font-weight:600;letter-spacing:1px;color:var(--text-muted)}
+.pads{display:grid;grid-template-columns:34px repeat(4,minmax(0,1fr)) 34px;gap:4px;margin:6px 0 8px}
+.pd{height:52px;border-radius:var(--radius-lg);background:var(--bg);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;color:var(--text);font:inherit}
+.pd.ar{color:var(--text-muted)}.pd.lk{border-color:var(--text-muted)}.pd.on{background:var(--text);border-color:transparent}.pd.on .m{color:var(--bg);border-color:var(--bg)}
+.ecard{border-radius:var(--radius-2xl);background:var(--surface-1);border:1.5px solid var(--cart-you);padding:10px 12px 4px}
 </style>
 <div class="list">
 <div class="r"><span class="dot"></span><span class="n"><b>Sam</b><i class="ok">✓ From Sam’s phone</i></span><span class="m big">3</span></div>
@@ -33,5 +39,12 @@
 <button class="chip"><span class="m double" style="font-size:14px">7+</span><small>Max</small></button>
 </div>
 </div>
+</div>
+<div class="k">Strip · Team Ryder Cup Enter</div>
+<div class="ecard">
+<div class="pl"><b>Andrew</b><span class="k2">TAP A SCORE</span></div>
+<div class="pads"><button class="pd ar">‹</button><button class="pd"><span class="m birdie">3</span></button><button class="pd lk"><span class="m">4</span></button><button class="pd"><span class="m bogey">5</span></button><button class="pd"><span class="m double">6</span></button><button class="pd ar">›</button></div>
+<div class="pl"><b>Alex</b><span class="st"></span><span class="k2" style="color:var(--cart-you-text)">BIRDIE</span></div>
+<div class="pads"><button class="pd ar">‹</button><button class="pd on"><span class="m birdie">3</span></button><button class="pd lk"><span class="m">4</span></button><button class="pd"><span class="m bogey">5</span></button><button class="pd"><span class="m double">6</span></button><button class="pd ar">›</button></div>
 </div>
 </div>

@@ -1,0 +1,19 @@
+<!-- @dsCard group="Scoring" height=260 subtitle="GPS yardages on Enter: back · middle · front" -->
+<div class="root">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600;700&display=swap');
+.root{font-family:var(--font-sans);color:var(--text);background:var(--bg);padding:16px;max-width:393px;box-sizing:border-box}
+.lbl{font-family:var(--font-mono);font-size:12px;line-height:16px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted)}
+.you{color:var(--cart-you-text)}
+.gc{display:flex;align-items:center;gap:14px;height:92px;padding:0 14px;border-radius:var(--radius-2xl);background:var(--surface-1);margin-bottom:8px}
+.nums{flex:1;display:grid;grid-template-columns:1fr 1.35fr 1fr;align-items:center;text-align:center}
+.gn{display:flex;flex-direction:column;align-items:center;gap:2px}.gn b{font-family:var(--font-mono);font-size:17px;font-weight:600;line-height:1;color:var(--text-muted)}
+.gn.mid b{font-size:32px;font-weight:700;letter-spacing:-1.5px;color:var(--text)}.gn.mid .lbl{color:var(--text)}
+.off{height:56px;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 14px;border-radius:var(--radius-2xl);background:var(--surface-1);font-size:15px;color:var(--text-muted)}
+.btn{height:36px;padding:0 14px;border-radius:var(--radius-md);border:1px solid var(--line);background:var(--bg);color:var(--text);font:600 15px var(--font-sans)}
+.g1{fill:var(--surface-3)}.g2{fill:var(--line)}
+</style>
+<div class="gc"><svg width="60" height="64" viewBox="0 0 60 64" aria-hidden="true" style="color:var(--text)"><defs><clipPath id="gr"><path d="M30 3C47 3 57 14 56 30C55 48 45 61 29 61C13 61 4 49 4 32C4 15 14 3 30 3Z"/></clipPath></defs><g clip-path="url(#gr)"><rect width="60" height="22" fill="currentColor" fill-opacity=".30"/><rect y="22" width="60" height="20" fill="currentColor" fill-opacity=".19"/><rect y="42" width="60" height="22" fill="currentColor" fill-opacity=".10"/></g><line x1="0" x2="60" y1="22" y2="22" stroke="var(--surface-1)" stroke-width="2"/><line x1="0" x2="60" y1="42" y2="42" stroke="var(--surface-1)" stroke-width="2"/><path d="M30 3C47 3 57 14 56 30C55 48 45 61 29 61C13 61 4 49 4 32C4 15 14 3 30 3Z" fill="none" stroke="var(--text-muted)" stroke-width="1.5"/><circle cx="30" cy="32" r="3" fill="currentColor"/></svg>
+<div class="nums"><div class="gn"><b>481</b><span class="lbl">Front</span></div><div class="gn mid"><b>492</b><span class="lbl">Middle</span></div><div class="gn"><b>505</b><span class="lbl">Back</span></div></div></div>
+<div class="off"><span>Turn on location for yardages</span><button class="btn">Turn on</button></div>
+</div>

@@ -33,6 +33,8 @@
   --cart-b: #5b9bff;
   --cart-c: #ff6fb5;
   --cart-d: #b18cff;
+  --cart-e: #36c5c5;
+  --cart-f: #e3b341;
   --tint-you: rgba(61,220,132,0.10);
   --tint-a: rgba(255,159,67,0.12);
   --tint-b: rgba(91,155,255,0.12);
@@ -50,7 +52,7 @@
   --shadow-card: none;
   --shadow-float: 0 8px 24px rgba(0,0,0,0.45);
   --shadow-dock: inset 0 1px 0 rgba(255,255,255,0.10), 0 0 28px rgba(255,255,255,0.06);
-  --glass: rgba(24,26,31,0.72);
+  --glass: rgba(21,23,27,0.92);
   --glass-line: rgba(255,255,255,0.09);
   --shadow-sheet: 0 -8px 32px rgba(0,0,0,0.5);
 }
@@ -68,6 +70,8 @@ html.light, [data-theme="light"]{
   --cart-b: #1a5fd0;
   --cart-c: #c02a70;
   --cart-d: #6e3fd0;
+  --cart-e: #0e8c8c;
+  --cart-f: #8a6000;
   --tint-you: rgba(18,163,92,0.09);
   --tint-a: rgba(179,92,0,0.08);
   --tint-b: rgba(26,95,208,0.08);
@@ -85,7 +89,7 @@ html.light, [data-theme="light"]{
   --shadow-card: 0 1px 2px rgba(11,13,16,0.06), 0 4px 12px rgba(11,13,16,0.05);
   --shadow-float: 0 8px 24px rgba(11,13,16,0.12);
   --shadow-dock: 0 8px 24px rgba(11,13,16,0.12);
-  --glass: rgba(255,255,255,0.74);
+  --glass: rgba(255,255,255,0.94);
   --glass-line: rgba(11,13,16,0.08);
   --shadow-sheet: 0 -8px 32px rgba(11,13,16,0.16);
 }

@@ -1,3 +1,5 @@
+**Legacy.** Still live on Enter for Partner “Rider” Cup, 2v2 and Match play; new work uses the Score pad strip and Match flag (Team Ryder Cup Enter).
+
 A full-width player row with big − and + buttons and the score in its score mark; two of them stacked make the main team Enter screen.
 
 **Consumer provides:** player name, the hole's par, current score (or none yet), whether the player gets a stroke, and the minus/plus handlers.

@@ -1,3 +1,5 @@
+**Legacy.** Still live on Matches and Card for team games; the standard is Team Ryder Cup's: Matches shows only your match, and other matches open as a read-only sheet from the Board.
+
 How you look at another match (Matches) or another group (Card) without leaving the screen: yours folds into a pinned green bar, theirs opens below in its own box.
 
 **Consumer provides:** your summary (label + score), the other item's header row and its full content, and which one is open.

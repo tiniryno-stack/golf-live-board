@@ -5,22 +5,16 @@
    from docs/design/design-system/tokens.css. Use those names. Below: what the system doesn't have yet,
    and the older names as aliases while screens move over (BUILD-PLAN.md §2). */
 :root, [data-theme="dark"] {
-  /* not in the system yet: carts E/F (5–6 player match play) — flagged for the design system */
-  --cart-e: #36c5c5; --cart-f: #e3b341;
-  /* retired as screens move over: line-strong → line, text-faint → text-muted, tint-n → surface-2,
-     glass → surface-1 */
+  /* retired as screens move over: line-strong → line, text-faint → text-muted, tint-n → surface-2 */
   --line-strong: #3b4048;
   --text-faint: rgba(167, 172, 180, .55);
   --tint-n: rgba(167, 172, 180, .10);
-  --glass: rgba(21, 23, 27, .92);
   color-scheme: dark;
 }
 [data-theme="light"] {
-  --cart-e: #0e8c8c; --cart-f: #8a6000;
   --line-strong: #c3c8cf;
   --text-faint: #8a9099;
   --tint-n: rgba(79, 85, 94, .08);
-  --glass: rgba(255, 255, 255, .94);
   color-scheme: light;
 }
 :root {

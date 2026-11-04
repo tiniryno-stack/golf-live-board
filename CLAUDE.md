@@ -149,7 +149,7 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
   SQL `_same_foursome` read it — migration `supabase/migrations/2026-11-03-team-ryder-cup.sql` **applied to the live
   DB Nov 3** by Andrew in the SQL Editor and verified). Each match = 1 side
   point (`game.sides[]`, `toWin` = matches/2 + ½, 6–6 = shared). Headlines rank sides. `sim.html` → **Team Ryder Cup · 16 phones**.
-  Colors: your cart green, side 1 blue, side 2 orange. `ryderSetup()` in scoring.js builds the roster from players in order.
+  Colors (since 015): your cart green, every other cart and both sides neutral grey (`--text-muted`). `ryderSetup()` in scoring.js builds the roster from players in order.
 - **Team Ryder Cup v2 (handoff 015, branch `design/015-team-ryder-cup`):** 16 players only. `scoring.ryderState(snap, myTeam)`
   (pure, `tests/ryder015.test.mjs`) = every match / rotation / side from the viewer's side: a hole counts only with all four
   scores, hole points freeze at the 6½ clinch, nothing provisional, two rotations can be live. Screens in `js/screens/ryder.js`

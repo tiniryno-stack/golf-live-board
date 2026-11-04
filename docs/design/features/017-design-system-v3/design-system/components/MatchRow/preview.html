@@ -1,0 +1,25 @@
+<!-- @dsCard group="Board" height=300 subtitle="Team Ryder Cup: stacked names, a flag on the side that holds the point" -->
+<div class="root">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600;700&display=swap');
+.root{font-family:var(--font-sans);color:var(--text);background:var(--bg);padding:16px;max-width:393px;box-sizing:border-box}
+.lbl{font-family:var(--font-mono);font-size:12px;line-height:16px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted)}
+.you{color:var(--cart-you-text)}
+.h{height:40px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 12px;border:1px solid var(--line);border-radius:var(--radius-md);box-sizing:border-box}
+.h>:last-child{justify-self:end}.t{font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--text-muted)}
+.row{min-height:54px;display:grid;grid-template-columns:1fr 0 1fr;margin-top:2px}
+.c{display:flex;align-items:center;padding:6px 12px}.c.r{justify-content:flex-end;text-align:right}
+.l.hold{background:var(--surface-1);border-radius:var(--radius-lg) 0 0 var(--radius-lg)}
+.r.hold{background:var(--surface-1);border-radius:0 var(--radius-lg) var(--radius-lg) 0}
+.nm{display:flex;flex-direction:column;font-size:13px;line-height:16px;font-weight:600}.nm.m{color:var(--text-muted)}
+.line{position:relative}
+.f{position:absolute;top:50%;width:72px;height:26px;margin-top:-13px;display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:12px;font-weight:700;white-space:nowrap}
+.at-line{left:-36px;border-radius:var(--radius-sm)}.at-us{right:0;border-radius:var(--radius-sm) 0 0 var(--radius-sm)}.at-them{left:0;border-radius:0 var(--radius-sm) var(--radius-sm) 0}
+.up{background:var(--text);color:var(--bg)}.won{background:var(--surface-3);color:var(--text)}.tee{border:1px dashed var(--line);color:var(--text-muted);background:var(--bg);box-sizing:border-box}
+</style>
+<div class="h"><span class="lbl">Holes 7–12</span><span class="t"><span class="you">1</span> – 0</span><span class="lbl you">Live</span></div>
+<div class="row"><div class="c l"><span class="nm you"><span>Andrew</span><span>Alex</span></span></div><div class="line"><span class="f up at-line">2–2</span></div><div class="c r"><span class="nm"><span>Sean</span><span>Brandon</span></span></div></div>
+<div class="row"><div class="c l hold"><span class="nm"><span>Justin</span><span>Chuck</span></span></div><div class="line"><span class="f up at-us">1 UP</span></div><div class="c r"><span class="nm"><span>Elijah</span><span>Marcus</span></span></div></div>
+<div class="row"><div class="c l"><span class="nm m"><span>Mitch</span><span>Peter</span></span></div><div class="line"><span class="f won at-them">✓ 6½–5½</span></div><div class="c r hold"><span class="nm"><span>Josh</span><span>Baker</span></span></div></div>
+<div class="row"><div class="c l"><span class="nm"><span>Ant</span><span>Steve</span></span></div><div class="line"><span class="f tee at-line">9:10</span></div><div class="c r"><span class="nm"><span>Joseph</span><span>Jay</span></span></div></div>
+</div>

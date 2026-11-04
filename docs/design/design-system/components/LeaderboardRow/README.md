@@ -1,3 +1,5 @@
+**Legacy.** Still live on the Board for Match play, 2v2 and Partner “Rider” Cup; the standard is the Cup bar plus Match rows (Team Ryder Cup).
+
 A ranked team row on the Board: position, team name, players and record, a progress bar, and points.
 
 **Consumer provides:** position, team (name, players, color, yours or not), record, holes played, official points and provisional points.
@@ -7,3 +9,4 @@ A ranked team row on the Board: position, team name, players and record, a progr
 - The bar shows official points solid and provisional points hatched (diagonal stripes in the same color).
 - Provisional points also get a dashed `text-muted` tag ("+1½ prov") under the total. Provisional = from a rotation still in play.
 - Rows are separated by `line` hairlines, not boxed.
+- Used by Match play, 2v2 and Partner “Rider” Cup. Team Ryder Cup does not use it: its Board is the Cup bar plus Match rows, and it has no provisional points.

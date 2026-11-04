@@ -1,0 +1,50 @@
+<!-- @dsCard group="Scoring" height=470 subtitle="Grid for others · strip for Team Ryder Cup Enter" -->
+<div class="root">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600;700&display=swap');
+.root{font-family:var(--font-sans);color:var(--text);background:var(--bg);padding:16px;max-width:393px;box-sizing:border-box}
+.list{border-radius:var(--radius-xl);background:var(--surface-1);overflow:hidden}
+.r{display:flex;align-items:center;gap:10px;min-height:58px;padding:0 14px}
+.r+.r,.open{border-top:1px solid var(--line)}
+.dot{width:10px;height:10px;border-radius:5px;background:var(--text-muted)}
+.n{flex:1}.n b{display:block;font-size:16px;font-weight:600}.n i{display:block;font-style:normal;font-size:12px;color:var(--text-muted);margin-top:2px}
+.n i.ok{color:var(--cart-you-text)}
+.open{background:var(--surface-2)}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;padding:0 12px 12px}
+.chip{height:52px;border-radius:var(--radius-md);border:0;background:var(--surface-1);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font:inherit;color:inherit}
+.chip.par{border:2px solid var(--text-muted)}
+.chip small{font-size:11px;color:var(--text-muted)}
+.m{font-family:var(--font-mono);font-weight:700;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;width:30px;height:30px;font-size:17px}
+.birdie{border-radius:50%;border:1.5px solid var(--text)}
+.bogey{border-radius:5px;border:1.5px solid var(--text-muted)}
+.double{border-radius:5px;border:4px double var(--double);background:var(--double-bg);color:var(--double)}
+.big{width:40px;height:40px;font-size:22px}
+.k{font-family:var(--font-mono);font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin:16px 4px 8px}
+.pl{display:flex;align-items:center;gap:6px;height:22px;padding:0 2px}.pl b{font-size:15px;font-weight:700}.pl .st{width:7px;height:7px;border-radius:50%;background:var(--text)}.pl .k2{margin-left:auto;font-family:var(--font-mono);font-size:12px;font-weight:600;letter-spacing:1px;color:var(--text-muted)}
+.pads{display:grid;grid-template-columns:34px repeat(4,minmax(0,1fr)) 34px;gap:4px;margin:6px 0 8px}
+.pd{height:52px;border-radius:var(--radius-lg);background:var(--bg);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;color:var(--text);font:inherit}
+.pd.ar{color:var(--text-muted)}.pd.lk{border-color:var(--text-muted)}.pd.on{background:var(--text);border-color:transparent}.pd.on .m{color:var(--bg);border-color:var(--bg)}
+.ecard{border-radius:var(--radius-2xl);background:var(--surface-1);border:1.5px solid var(--cart-you);padding:10px 12px 4px}
+</style>
+<div class="list">
+<div class="r"><span class="dot"></span><span class="n"><b>Sam</b><i class="ok">✓ From Sam’s phone</i></span><span class="m big">3</span></div>
+<div class="open">
+<div class="r"><span class="dot"></span><span class="n"><b>Jake</b><i>Waiting on Jake · tap to enter</i></span></div>
+<div class="grid">
+<button class="chip"><span class="m birdie">2</span><small>Birdie</small></button>
+<button class="chip par"><span class="m">3</span><small>Par</small></button>
+<button class="chip"><span class="m bogey">4</span><small>Bogey</small></button>
+<button class="chip"><span class="m double">5</span><small>Double</small></button>
+<button class="chip"><span class="m double">6</span><small>Triple</small></button>
+<button class="chip"><span class="m double" style="font-size:14px">7+</span><small>Max</small></button>
+</div>
+</div>
+</div>
+<div class="k">Strip · Team Ryder Cup Enter</div>
+<div class="ecard">
+<div class="pl"><b>Andrew</b><span class="k2">TAP A SCORE</span></div>
+<div class="pads"><button class="pd ar">‹</button><button class="pd"><span class="m birdie">3</span></button><button class="pd lk"><span class="m">4</span></button><button class="pd"><span class="m bogey">5</span></button><button class="pd"><span class="m double">6</span></button><button class="pd ar">›</button></div>
+<div class="pl"><b>Alex</b><span class="st"></span><span class="k2" style="color:var(--cart-you-text)">BIRDIE</span></div>
+<div class="pads"><button class="pd ar">‹</button><button class="pd on"><span class="m birdie">3</span></button><button class="pd lk"><span class="m">4</span></button><button class="pd"><span class="m bogey">5</span></button><button class="pd"><span class="m double">6</span></button><button class="pd ar">›</button></div>
+</div>
+</div>

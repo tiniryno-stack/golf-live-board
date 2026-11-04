@@ -1,0 +1,23 @@
+<!-- @dsCard group="Board" height=230 subtitle="Team Ryder Cup: the cup card, one segment per match" -->
+<div class="root">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600;700&display=swap');
+.root{font-family:var(--font-sans);color:var(--text);background:var(--bg);padding:16px;max-width:393px;box-sizing:border-box}
+.lbl{font-family:var(--font-mono);font-size:12px;line-height:16px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted)}
+.you{color:var(--cart-you-text)}
+.card{background:var(--surface-1);border-radius:var(--radius-2xl);box-shadow:var(--shadow-card);padding:16px}
+.k{text-align:center;margin-bottom:8px}
+.top{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:end}
+.s{display:flex;align-items:flex-end;gap:10px}.s.r{justify-content:flex-start}
+.sn{font-size:15px;font-weight:700;line-height:20px;color:var(--text-muted);padding-bottom:12px}
+.num{font-family:var(--font-mono);font-size:64px;line-height:1.1;font-weight:700;letter-spacing:-0.03em}
+.bar{display:flex;align-items:center;gap:3px;margin-top:12px}.g{flex:1;display:flex;gap:3px}
+.mid{width:2px;height:20px;background:var(--text);border-radius:1px}
+.seg{flex:1;height:12px;border-radius:3px;background:var(--surface-2);position:relative;overflow:hidden}
+.seg b{position:absolute;top:0;bottom:0}.us{left:0;width:100%;background:var(--cart-you)}.th{right:0;width:100%;background:var(--text-muted)}
+.hh .us{width:50%}.hh .th{width:50%}
+</style>
+<div class="card"><div class="lbl k">6 left · 6½ wins</div>
+<div class="top"><div class="s"><span class="sn you">Team Andrew</span><span class="num you">4</span></div><div class="s r"><span class="sn">Team Josh</span><span class="num">2</span></div></div>
+<div class="bar"><div class="g"><i class="seg"><b class="us"></b></i><i class="seg"><b class="us"></b></i><i class="seg"><b class="us"></b></i><i class="seg"><b class="us"></b></i><i class="seg"></i><i class="seg"></i></div><i class="mid"></i><div class="g"><i class="seg"></i><i class="seg"></i><i class="seg"></i><i class="seg"></i><i class="seg"><b class="th"></b></i><i class="seg"><b class="th"></b></i></div></div></div>
+</div>
