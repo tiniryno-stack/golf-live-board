@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Team Ryder Cup · Final</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&amp;family=Geist+Mono:wght@500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+.t{--bg:#0A0B0D;--s1:#15171B;--s2:#1F2227;--s3:#2A2E35;--tx:#F4F5F7;--tx2:#A7ACB4;--ln:#2B2F36;--me:#3DDC84;--meT:#3DDC84;--tintMe:rgba(61,220,132,.10);--btn:#F4F5F7;--onBtn:#0A0B0D;--glass:rgba(21,23,27,.92);--gl:rgba(255,255,255,.09);--dock:inset 0 1px 0 rgba(255,255,255,.10),0 0 28px rgba(255,255,255,.06);--card:none;--hl:#2A2E35}
+.t.light{--bg:#F2F3F5;--s1:#FFFFFF;--s2:#E8EAEE;--s3:#FFFFFF;--tx:#0B0D10;--tx2:#4F555E;--ln:#D5D9DF;--me:#12A35C;--meT:#0A7A43;--tintMe:rgba(18,163,92,.09);--btn:#0B0D10;--onBtn:#FFFFFF;--glass:rgba(255,255,255,.94);--gl:rgba(11,13,16,.08);--dock:0 8px 24px rgba(11,13,16,.12);--card:0 1px 2px rgba(11,13,16,.06),0 4px 12px rgba(11,13,16,.05);--hl:#E8EAEE}
+.mono,.lbl{font-family:'Geist Mono',ui-monospace,monospace}
+.lbl{font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--tx2)}
+.seg{flex:1;height:12px;border-radius:3px;background:var(--s2)}.seg.us{background:var(--me)}.seg.th{background:var(--tx2)}
+.cr{display:grid;grid-template-columns:minmax(0,1fr) 72px 40px;align-items:center;gap:8px;height:40px;font-size:15px;font-weight:600;border-top:1px solid var(--ln)}.cr .rc{font-family:'Geist Mono',monospace;font-size:13px;color:var(--tx2);text-align:right}.cr .pt{font-family:'Geist Mono',monospace;font-size:17px;font-weight:700;text-align:right}
+.tab{flex:1;height:56px;border:0;background:transparent;display:flex;align-items:center;justify-content:center;color:var(--tx2);position:relative;z-index:1}.tab.on{color:var(--tx)}
+button{font:inherit;color:inherit;cursor:pointer}
+</style>
+</helmet>
+<div class="t {{mode}}" style="width: 393px; height: 852px; box-sizing: border-box; background: var(--bg); color: var(--tx); font-family: Geist, system-ui, sans-serif; position: relative; overflow: hidden">
+<div style="height: 59px"></div>
+<div style="display: flex; align-items: center; gap: 10px; padding: 0 16px; height: 56px">
+<span style="width: 36px; height: 36px; border-radius: 18px; background: var(--s2); display: inline-flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700">A</span>
+<b style="font-size: 17px; font-weight: 600">Andrew</b>
+<span style="flex: 1; text-align: right; font-size: 15px; color: var(--tx2)">Sherrill Park · Sat</span>
+<button aria-label="Share" style="width: 40px; height: 40px; border-radius: 20px; border: 0; background: var(--s2); display: inline-flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13M7 8l5-5 5 5M5 14v6h14v-6"></path></svg></button>
+<button aria-label="Round menu" style="width: 40px; height: 40px; border-radius: 20px; border: 0; background: var(--s2); font-size: 18px; letter-spacing: 1px">···</button>
+</div>
+<div style="padding: 8px 16px 0">
+<div style="padding: 20px 16px 16px; border-radius: 24px; background: var(--s1); border: 1.5px solid var(--me); box-shadow: var(--card); text-align: center; position: relative; overflow: hidden">
+<div style="position: absolute; left: 0; right: 0; top: 0; height: 190px; background: var(--tintMe); pointer-events: none"></div>
+<div style="position: relative">
+<div class="lbl">Final · 12 matches</div>
+<svg aria-hidden="true" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="var(--me)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin-top: 10px"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z"></path><path d="M7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3"></path></svg>
+<div style="font-size: 36px; font-weight: 800; letter-spacing: -1.3px; line-height: 1.05; margin-top: 6px; color: var(--meT)">Team Andrew</div>
+<div style="font-size: 17px; font-weight: 600; color: var(--tx2); margin-top: 4px">wins the cup</div>
+<div class="mono" style="font-size: 88px; font-weight: 700; letter-spacing: -4px; line-height: 1; margin-top: 10px"><span style="color: var(--meT)">7</span><span style="color: var(--tx2); font-size: 56px; letter-spacing: -2px; margin: 0 6px; vertical-align: 10px">–</span><span style="color: var(--tx2)">5</span></div>
+<div style="display: flex; align-items: center; gap: 3px; margin-top: 14px"><div style="flex: 1; display: flex; gap: 3px"><i class="seg us"></i><i class="seg us"></i><i class="seg us"></i><i class="seg us"></i><i class="seg us"></i><i class="seg th"></i></div><i style="width: 2px; height: 20px; background: var(--tx); border-radius: 1px"></i><div style="flex: 1; display: flex; gap: 3px"><i class="seg us"></i><i class="seg us"></i><i class="seg th"></i><i class="seg th"></i><i class="seg th"></i><i class="seg th"></i></div></div>
+<div style="display: flex; justify-content: center; gap: 14px; margin-top: 12px; font-size: 13px; color: var(--tx2)"><span>Clinched on hole 16</span><span>·</span><span>MVP cart <b style="color: var(--tx)">Joseph + Jay</b> 3–0</span></div>
+<button style="width: 100%; height: 56px; margin-top: 16px; border-radius: 18px; border: 0; background: var(--btn); color: var(--onBtn); font-size: 17px; font-weight: 600">Round recap</button>
+<button style="width: 100%; height: 48px; margin-top: 8px; border-radius: 14px; border: 0; background: transparent; color: var(--tx); font-size: 15px; font-weight: 600">Share the result</button>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 16px; margin-top: 16px">
+<div><div class="lbl" style="color: var(--meT); margin: 0 0 4px 2px">Team Andrew · 7</div>
+<div class="cr" style="border: 0"><span style="color: var(--meT)">Joseph + Jay</span><span class="rc">3–0</span><span class="pt">3</span></div>
+<div class="cr"><span style="color: var(--meT)">Andrew + Alex</span><span class="rc">2–1</span><span class="pt">2</span></div>
+<div class="cr"><span style="color: var(--meT)">Ant + Steve</span><span class="rc">1–1–1</span><span class="pt">1½</span></div>
+<div class="cr"><span style="color: var(--meT)">Mitch + Peter</span><span class="rc">0–2–1</span><span class="pt">½</span></div></div>
+<div><div class="lbl" style="margin: 0 0 4px 2px">Team Josh · 5</div>
+<div class="cr" style="border: 0"><span>Sean + Brandon</span><span class="rc">2–1</span><span class="pt">2</span></div>
+<div class="cr"><span>Josh + Baker</span><span class="rc">1–1–1</span><span class="pt">1½</span></div>
+<div class="cr"><span>Justin + Chuck</span><span class="rc">1–2</span><span class="pt">1</span></div>
+<div class="cr"><span>Elijah + Marcus</span><span class="rc">0–2–1</span><span class="pt">½</span></div></div>
+</div>
+</div>
+<nav aria-label="Round" style="position: absolute; left: 16px; right: 16px; bottom: 24px; display: flex; padding: 6px; border-radius: 34px; background: var(--glass); border: 1px solid var(--gl); box-shadow: var(--dock)">
+<div style="position: absolute; top: 6px; left: 6px; width: calc((100% - 12px) / 4); height: 56px; border-radius: 28px; background: var(--hl); transform: translateX(200%)"></div>
+<button class="tab" aria-label="Enter"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4h11l-2 4 2 4H5"></path></svg></button>
+<button class="tab" aria-label="Matches"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8.5" cy="12" r="5"></circle><circle cx="15.5" cy="12" r="5"></circle></svg></button>
+<button class="tab on" aria-label="Board" aria-current="page"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h11M4 18h7"></path></svg></button>
+<button class="tab" aria-label="Card"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M3 10h18M3 15h18M9 4v16M15 4v16"></path></svg></button>
+</nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"mode":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":393,"height":852}}'>
+class Component extends DCLogic {
+renderVals() { return { mode: this.props.mode ?? 'dark' }; }
+}
+</script>
+</body>
+</html>

@@ -162,6 +162,8 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
 - **Partner “Rider” Cup on the Ryder screens (handoff 018, Nov 4):** `js/riderview.js` (`isRider`, `riderState`) feeds the
   same `ryderEnterView`, Matches (`ryder.js`) and Board strips with cart colors kept; Setup Carts → Tee times (matchups optional).
   2v2, Match play and Scorecard only still use the old Enter (ScoreStepper) and Matches.
+- **Team Ryder Cup final card (handoff 019, Nov 4):** `finalCard` / `recordList` in `js/screens/ryder.js` replace the cup card
+  when `ryderState(...).final` or the round is finalized; `ry-share` = share sheet (recap leaderboard image + result line).
 - **2v2 headlines (fixed Nov 3):** board-level headlines (lead change, comeback, final) rank `game.people`, not the
   six pairings; `h.unit` = 'people' | 'sides' marks it, `headlineColor(mine, h, me)`.
 - **Small groups:** any roster that isn't 4 carts of 2 is a scorecard round (no teams).

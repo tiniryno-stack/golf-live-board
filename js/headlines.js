@@ -278,8 +278,8 @@ function atHole(snap, st, h, at) {
     if (unitKind === 'sides') {
       const [a, b] = g.sides;
       const text = a.points > b.points
-        ? `Final: ${a.name} win ${fmtPts(a.points)}–${fmtPts(b.points)}`
-        : `Final: ${a.name} and ${b.name} share the day ${fmtPts(a.points)}–${fmtPts(b.points)}`;
+        ? `${a.name} take the cup ${fmtPts(a.points)}–${fmtPts(b.points)}` // 019
+        : `Cup shared ${fmtPts(a.points)}–${fmtPts(b.points)}`;
       produced.push(mk('roundFinal', a.points > b.points ? [a.sideId] : [a.sideId, b.sideId], h, text, at, a.points > b.points ? a.sideId : null, 'sides'));
     } else if (unitKind === 'people') {
       const top = g.people.filter((r) => r.rank === 1);

@@ -4,8 +4,8 @@
 // 018: Partner “Rider” Cup uses the same screens through riderview.riderState (same shapes, plus
 // cart names and colors: names, bars and dots wear the cart colors; Team Ryder Cup stays grey).
 
-import { esc, icon, seg, seg2, mark } from '../ui.js';
-import { fmtPts, fmtToPar, playerLeaderboard, projectedGross, ryderState, ryderNeedLine, ryderHoleLine, teeTimeName } from '../scoring.js';
+import { esc, icon, seg, seg2, mark, copyText } from '../ui.js';
+import { fmtPts, fmtToPar, playerLeaderboard, projectedGross, ryderState, ryderNeedLine, ryderHoleLine, teeTimeName, holeAt } from '../scoring.js';
 import { riderState } from '../riderview.js';
 
 export const ryState = (app) => ryderState(app.snapshot, app.myTeam()) || riderState(app.snapshot, app.myTeam());
@@ -122,10 +122,86 @@ export function rotationStrips(app, st) {
   return st.order.map((r) => rotation(app, r, isOpen(r), myCart)).join('');
 }
 
+// ───────────────────────────────────────────── the final card (handoff 019)
+
+/** The hole the winning side reached the cup on (play order), or null (shared / not decided). */
+function clinchHole(app, st, winner) {
+  if (!winner || winner === 'shared') return null;
+  const donePos = (m) => m.to - (m.decidedEarly || 0);
+  for (let pos = 1; pos <= 18; pos++) {
+    const pts = st.matches.filter((m) => m.sidePts && donePos(m) <= pos).reduce((a, m) => a + m.sidePts[winner], 0);
+    if (pts >= st.toWin - 1e-9) return holeAt(app.snapshot.settings, pos);
+  }
+  return null;
+}
+
+/** Each cart's record and match points, by side: sorted by points, then wins. */
+function cartRecords(st, side) {
+  const carts = new Map();
+  for (const m of st.matches) {
+    for (const [k, c] of [['us', m.us], ['them', m.them]]) {
+      if ((k === 'us') !== (side === 'us')) continue;
+      const r = carts.get(c.id) || { cart: c, w: 0, l: 0, h: 0, pts: 0 };
+      if (m.sidePts) {
+        const v = m.sidePts[k];
+        r.pts += v;
+        if (v === 1) r.w++; else if (v === 0.5) r.h++; else r.l++;
+      }
+      carts.set(c.id, r);
+    }
+  }
+  return [...carts.values()].sort((a, b) => b.pts - a.pts || b.w - a.w || a.cart.id.localeCompare(b.cart.id));
+}
+
+function recordList(st, side) {
+  const s = st.sides[side];
+  const rows = cartRecords(st, side).map((r) => `<div class="ry-rec">
+      <span class="ellipsis${side === 'us' ? ' you' : ''}">${esc(r.cart.names.join(' + '))}</span>
+      <span class="mono small ry-rec-r">${r.w}–${r.l}${r.h ? `–${r.h}` : ''}</span><span class="mono ry-rec-p">${fmtPts(r.pts)}</span></div>`).join('');
+  return `<div class="ry-recs"><div class="lbl${side === 'us' ? ' you' : ''}">${esc(s.name.toUpperCase())} · ${fmtPts(s.total)}</div>${rows}</div>`;
+}
+
+/** One line for the share sheet: "Team Andrew win the cup 7–5 · Twin Creeks". */
+function resultLine(app, st) {
+  const u = fmtPts(st.sides.us.total), t = fmtPts(st.sides.them.total);
+  const c = app.snapshot.course?.shortName || app.snapshot.course?.name || '';
+  const w = st.sides.us.total > st.sides.them.total ? `${st.sides.us.name} win the cup ${u}–${t}` : st.sides.them.total > st.sides.us.total ? `${st.sides.them.name} win the cup ${t}–${u}` : `Cup shared ${u}–${t}`;
+  return `${w}${c ? ` · ${c}` : ''}`;
+}
+
+function finalCard(app, st) {
+  const u = st.sides.us.total, t = st.sides.them.total;
+  const winner = u > t ? 'us' : t > u ? 'them' : 'shared';
+  const won = winner === 'us';
+  const hole = clinchHole(app, st, winner);
+  const mvp = st.mvp ? `MVP cart <b>${esc(st.mvp.cart.names.join(' + '))}</b> ${fmtPts(st.mvp.matchPts)}–${fmtPts(st.mvp.record.length - st.mvp.matchPts)}` : '';
+  const line = [hole ? `Clinched on hole ${hole}` : '', mvp].filter(Boolean).join(' · ');
+  const finalize = app.isOrganizer() && !app.isFinal() ? `<button class="btn primary block ry-finalize" data-act="board-finalize">${icon('lock', 16)} Finalize round</button>` : '';
+  return `<div class="ry-endcard${won ? ' won' : ''}">
+      <div class="ry-end-wash">
+        <div class="lbl">${app.isFinal() ? 'FINAL · LOCKED' : `FINAL · ${st.matches.length} MATCHES`}</div>
+        <span class="ry-trophy">${icon('trophy', 44)}</span>
+        <div class="ry-end-who${won ? ' you' : ''}">${winner === 'shared' ? 'Cup shared' : esc(st.sides[winner].name)}</div>
+        ${winner === 'shared' ? '' : '<div class="ry-end-sub">wins the cup</div>'}
+      </div>
+      <div class="ry-end-score mono"><span class="you">${fmtPts(u)}</span><span class="ry-end-dash">–</span><span class="muted">${fmtPts(t)}</span></div>
+      ${cupBar(st)}
+      ${line ? `<div class="small ry-end-line">${line}</div>` : ''}
+      <button class="btn primary big block ry-end-btn" data-act="recap-open">Round recap</button>
+      <button class="btn ghost block" data-act="ry-share">Share the result</button>
+    </div>${finalize}`;
+}
+
 /** Board → Cup view for a Team Ryder Cup. */
 export function ryderBoard(app, { segs = '', players = '' } = {}) {
   const st = ryderState(app.snapshot, app.myTeam());
   if (!st) return '';
+  const view0 = app.ui.boardView === 'players' ? 'players' : 'teams';
+  if (st.final || app.isFinal()) {
+    // 019: the round is over → the result card, then both sides' cart records (every match still below).
+    return `<div class="plain ry-board ry-done">${finalCard(app, st)}${segs}
+      ${view0 === 'players' ? players : `${recordList(st, 'us')}${recordList(st, 'them')}${rotationStrips(app, st)}`}</div>`;
+  }
   const mvp = st.final && st.mvp
     ? `<div class="ry-final">${icon('trophy', 20)}<span class="ellipsis">${esc(st.mvp.cart.names.join(' + '))} ${fmtPts(st.mvp.matchPts)}–${fmtPts(st.mvp.record.length - st.mvp.matchPts)} · MVP cart</span><button class="btn small" data-act="recap-open">Recap</button></div>`
     : '';
@@ -246,6 +322,21 @@ export const ryderActions = {
     const now = (app.ui.ryFold || {})[r.index] ?? (!anyLiveOrDone && r.index === 0);
     app.ui.ryFold = { ...(app.ui.ryFold || {}), [r.index]: !now };
     app.render();
+  },
+  'ry-share': async (el, ev, app) => {
+    // 019: the result line + the recap's leaderboard image through the share sheet; else copy the line.
+    const st = ryderState(app.snapshot, app.myTeam());
+    const text = resultLine(app, st);
+    try {
+      const { recapImages } = await import('./recap.js');
+      const [img] = await recapImages(app);
+      const blob = await new Promise((r) => img.canvas.toBlob(r, 'image/png'));
+      const file = blob ? new File([blob], 'team-ryder-cup.png', { type: 'image/png' }) : null;
+      if (file && navigator.canShare?.({ files: [file], text })) { await navigator.share({ files: [file], text }); return; }
+      if (navigator.share) { await navigator.share({ text }); return; }
+    } catch (e) { if (e?.name === 'AbortError') return; }
+    const ok = await copyText(text);
+    app.toast({ title: ok ? 'Result copied' : text });
   },
   'ry-rot': (el, ev, app) => { app.ui.ryMatch = el.dataset.v; app.ui.ryRot = null; app.render(); },
   'ry-hole': (el, ev, app) => { app.ui.ryHole = { ...(app.ui.ryHole || {}), [el.dataset.m]: Number(el.dataset.v) }; app.render(); },

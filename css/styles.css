@@ -1855,3 +1855,31 @@ details.fold summary::-webkit-details-marker { display: none; }
 .brief-rots.one-line .rv small::before { content: '· '; }
 /* Small phones (016 §0): the 016/018 Enter may scroll, so it grows instead of sitting at 100% (keeps Next clear of the tab bar). */
 .ry-enter { height: auto; min-height: 100%; }
+
+/* Team Ryder Cup final card (handoff 019). Sizes stay on the type scale: title 32 for the winner, number-xl 64 for the score (spec: 36 / 88, flagged). */
+.ry-endcard { position: relative; overflow: hidden; background: var(--surface-1); border-radius: var(--radius-2xl); box-shadow: inset 0 0 0 1.5px var(--line), var(--shadow-card); padding: 0 var(--space-4) var(--space-4); text-align: center; }
+.ry-endcard.won { box-shadow: inset 0 0 0 1.5px var(--cart-you), var(--shadow-card); }
+.ry-end-wash { margin: 0 calc(-1 * var(--space-4)); padding: var(--space-5) var(--space-4) var(--space-3); }
+.ry-endcard.won .ry-end-wash { background: var(--tint-you); }
+.ry-end-wash .lbl { color: var(--text-muted); }
+.ry-trophy { display: block; margin: var(--space-3) auto 0; color: var(--text-muted); }
+.ry-endcard.won .ry-trophy { color: var(--cart-you); }
+.ry-end-who { font-size: 32px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; margin-top: var(--space-2); color: var(--text); overflow-wrap: anywhere; }
+.ry-end-who.you { color: var(--cart-you-text); }
+.ry-end-sub { font-size: 17px; font-weight: 600; color: var(--text-muted); margin-top: 2px; }
+.ry-end-score { font-size: 64px; font-weight: 700; letter-spacing: -0.04em; line-height: 1.05; margin-top: var(--space-2); display: flex; justify-content: center; align-items: baseline; gap: 6px; }
+.ry-end-score .you { color: var(--cart-you-text); } .ry-end-score .muted { color: var(--text-muted); }
+.ry-end-dash { font-size: 32px; color: var(--text-muted); }
+.ry-end-line { color: var(--text-muted); margin-top: var(--space-3); font-size: 13px; }
+.ry-end-line b { color: var(--text); font-weight: 600; }
+.ry-end-btn { margin-top: var(--space-4); }
+.ry-endcard .btn.ghost { margin-top: var(--space-2); }
+.ry-finalize { margin-top: var(--space-3); }
+.ry-recs { margin-top: var(--space-5); }
+.ry-recs .lbl { color: var(--text-muted); margin-bottom: 4px; }
+.ry-recs .lbl.you { color: var(--cart-you-text); }
+.ry-rec { display: grid; grid-template-columns: minmax(0, 1fr) auto 40px; align-items: center; gap: var(--space-3); min-height: 40px; border-bottom: 1px solid var(--line); font-size: 15px; font-weight: 600; }
+.ry-rec:last-child { border-bottom: 0; }
+.ry-rec .you { color: var(--cart-you-text); }
+.ry-rec-r { color: var(--text-muted); font-size: 13px; }
+.ry-rec-p { font-size: 17px; font-weight: 700; text-align: right; }

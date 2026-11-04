@@ -160,7 +160,7 @@ test('Team Ryder Cup headlines are about sides and matches, not carts', () => {
   const cl = hl.find((h) => h.type === 'cupClinched');
   assert.equal(cl, undefined, '4–2 at the very end = the final says it');
   const fin = hl.find((h) => h.type === 'roundFinal');
-  assert.equal(fin.text, 'Final: Team Justin win 4–2');
+  assert.equal(fin.text, 'Team Justin take the cup 4–2', '019 copy');
   assert.equal(fin.hero, '2');
   const mf = hl.find((h) => h.type === 'matchupFinal');
   assert.match(mf.text, /^Andrew \+ Alex beat Justin \+ Chuck 12–0$/);
