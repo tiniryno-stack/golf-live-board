@@ -1,6 +1,6 @@
 # 020 · Brand mark, app icon and one loading screen
 
-Status: not built
+Status: built in 1290a4b
 
 The app gets its mark (a ring and a green ball), a real home screen icon, a favicon, iOS launch images, and one loading screen that replaces the splash flag, the "Opening…" spinner and the No signal page. Assets are in `assets/`; the loading screen's states are in `screenshots/` and the animation in `mockups/Loading.dc.html` (open it in a browser next to `support.js`; `?state=opening|slow|nosignal&mode=light` freezes a state).
 
