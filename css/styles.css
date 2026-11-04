@@ -866,13 +866,7 @@ a { color: inherit; }
   .fullcard, .away { animation: none; }
 }
 
-/* ───────────────────────────────────────────── launch screen + portrait only */
-.splash {
-  position: fixed; inset: 0; z-index: 100; background: var(--bg); display: grid; place-items: center;
-  transition: opacity .25s;
-}
-.splash svg { width: 64px; height: 64px; color: var(--line); }
-.splash.gone { opacity: 0; pointer-events: none; }
+/* ───────────────────────────────────────────── portrait only (the loading screen #loader is styled in index.html) */
 .landscape {
   display: none; position: fixed; inset: 0; z-index: 200; background: var(--bg); color: var(--text);
   align-items: center; justify-content: center; flex-direction: column; gap: 12px; font-size: 17px; font-weight: 700;
@@ -939,7 +933,7 @@ details.fold { margin: 6px 0 14px; }
 details.fold summary { min-height: var(--tap); display: flex; align-items: center; font-weight: 600; color: var(--ink-soft); cursor: pointer; list-style: none; }
 details.fold summary::-webkit-details-marker { display: none; }
 
-/* Opening a round / something went wrong: never a blank screen */
+/* Spinner: the recap pager only (opening a round = the loading screen, feature 020) */
 .loading-state { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; min-height: 50vh; text-align: center; }
 .spinner { width: 28px; height: 28px; border-radius: 50%; border: 3px solid var(--line-strong); border-top-color: var(--ink); animation: spin .8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }

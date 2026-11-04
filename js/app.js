@@ -22,6 +22,7 @@ import crew from './screens/crew.js';
 import { gps } from './gps.js';
 import { loadGeo } from './geoload.js';
 import { FLAGS } from './flags.js';
+import { initLoader, showLoader, updateLoader, loaderReady, hideLoaderNow } from './loader.js';
 
 const SCREENS = { home, setup, season, enter, matches, board, card, host, crew };
 const TABS = [
@@ -707,6 +708,7 @@ async function loadRound(code) {
   app.me = db.me.get(code);
   app.adminPin = db.admin.get(code);
   app.unsynced = db.queue.count(code);
+  showLoader(); // the loading screen covers opening a round (feature 020)
   render();
   let res;
   try {
@@ -719,17 +721,17 @@ async function loadRound(code) {
     if (seq !== loadSeq) return;
     app.loading = false;
     app.loadError = e.message || 'No connection';
-    hideSplash();
     render();
+    updateLoader(); // No signal + Try again, on the loading screen
     return;
   }
   if (seq !== loadSeq) return;
   app.loading = false;
-  hideSplash();
   if (!res) {
     app.notFound = true;
     db.forgetRound(code);
     render();
+    loaderReady();
     return;
   }
   app.event = res.event;
@@ -745,6 +747,7 @@ async function loadRound(code) {
     app.route = parseHash();
   }
   render();
+  loaderReady(); // app.snapshot is in: the ball finishes its lap and drops
   processHeadlines('away');
   fx.renderBanners(app);
 
@@ -1077,10 +1080,10 @@ function route() {
     }
   } else {
     if (app.code) closeRound();
-    hideSplash();
     const s = SCREENS[app.route.name];
     s.enter?.(app);
     render();
+    loaderReady(); // Home (or Setup…) has rendered
   }
   if (prev.name !== app.route.name) $('content').scrollTop = 0;
 }
@@ -1142,15 +1145,7 @@ document.addEventListener('focusout', () => {
 });
 
 function renderRoundState() {
-  if (app.loading) {
-    return `<div class="plain loading-state"><div class="spinner" aria-hidden="true"></div>
-      <p class="soft">Opening ${esc(app.code || 'the round')}…</p></div>`;
-  }
-  if (app.loadError) {
-    return `<div class="plain"><h1 class="title">No signal</h1>
-      <p class="soft">Couldn’t reach the scoreboard. Scores you enter are saved on this phone and sync when you’re back.</p>
-      <button class="btn primary block big" data-act="retry-load">Try again</button></div>`;
-  }
+  if (app.loading || app.loadError) return ''; // the loading screen (js/loader.js) covers these
   if (app.deleted) {
     return `<div class="plain"><h1 class="title">Round deleted</h1>
       <p class="soft">The organizer deleted ${esc(app.code)}. Start or join another round from Home.</p>
@@ -1243,7 +1238,7 @@ function renderSheet() {
 // Never a blank screen: if drawing fails, say so, show the error (screenshot-able) and offer a reload.
 function showCrash(e) {
   console.error(e);
-  hideSplash();
+  hideLoaderNow();
   // Clear anything on top so the message (and Reload) is what you see.
   app.sheet = null;
   $('sheet').className = 'sheet-root';
@@ -1262,15 +1257,6 @@ window.addEventListener('error', (ev) => {
 window.addEventListener('unhandledrejection', (ev) => {
   if (blankScreen()) showCrash(ev.reason);
 });
-
-let splashGone = false;
-function hideSplash() {
-  if (splashGone) return;
-  splashGone = true;
-  const s = $('splash');
-  s.classList.add('gone');
-  setTimeout(() => s.remove(), 300);
-}
 
 // ───────────────────────────────────────────── input: taps, long-press, typing
 
@@ -1412,6 +1398,7 @@ if (db.STANDALONE) {
   fit();
   addEventListener('resize', fit);
 }
+initLoader(() => ({ loading: app.loading, error: !!app.loadError, code: app.code }));
 route();
 if (db.moved) app.toast({ title: 'You’re all set', sub: 'Same phone as in Safari: your rounds and crew came with you.' });
-setTimeout(hideSplash, 4000); // never strand anyone on the launch screen
+setTimeout(() => { if (!app.loading && !app.loadError) loaderReady(); }, 4000); // never strand anyone on the launch screen

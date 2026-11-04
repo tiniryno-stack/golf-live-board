@@ -191,7 +191,7 @@ for (const size of SIZES) {
   page.on('pageerror', (e) => errors.push(e.message));
   const go = async (hash) => {
     await page.goto(`${srv.origin}/${hash}`);
-    await page.waitForSelector('#splash', { state: 'detached', timeout: 8000 }).catch(() => {});
+    await page.waitForSelector('#loader', { state: 'hidden', timeout: 8000 }).catch(() => {});
     await page.waitForTimeout(500);
     await page.evaluate(() => {
       document.getElementById('overlay').innerHTML = '';
@@ -425,7 +425,7 @@ for (const size of SIZES) {
     const pg = await ctxG.newPage();
     pg.on('pageerror', (e) => errors.push(e.message));
     const gpsCheck = async (pg, name) => {
-      await pg.waitForSelector('#splash', { state: 'detached', timeout: 8000 }).catch(() => {});
+      await pg.waitForSelector('#loader', { state: 'hidden', timeout: 8000 }).catch(() => {});
       await pg.waitForTimeout(700);
       await pg.evaluate(() => { document.getElementById('overlay').innerHTML = ''; document.getElementById('overlay').className = 'overlay-root'; document.getElementById('banners').innerHTML = ''; });
       const info = await pg.evaluate(() => {
