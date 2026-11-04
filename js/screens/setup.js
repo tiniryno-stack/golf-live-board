@@ -462,7 +462,7 @@ function courseOf(s, c) {
 function buildRyder(s, c, shown) {
   const d = rySides(s), tee = ryTee(s);
   const order = [...d.A, ...tee].flatMap((k) => [2 * k, 2 * k + 1]);
-  const players = order.map((i) => s.players[i]).map((p) => ({
+  const players = order.map((k) => s.players[k]).map((p, i) => ({
     id: `p${i + 1}`, personId: p.personId || db.uuid(), name: shown[i],
     firstName: p.firstName, lastName: p.lastName || '', ...(p.nickname ? { nickname: p.nickname } : {}),
     strokes: p.strokes === '' || p.strokes == null || Number.isNaN(Number(p.strokes)) ? null : Math.max(0, Math.round(Number(p.strokes))),
@@ -1637,9 +1637,18 @@ export default {
           return;
         }
       } catch { /* keep going */ }
-      let res;
+      let res, round;
       try {
-        res = await db.api.createEvent(buildRound(s));
+        round = buildRound(s);
+      } catch (e) {
+        // A bug building the round is not a signal problem: say so instead of "No signal" (Nov 4).
+        s.saving = false;
+        app.render();
+        app.toast({ title: 'Couldn’t start the round', sub: e?.message || 'Something in Setup is off. Go back a step and try again.', error: true });
+        return;
+      }
+      try {
+        res = await db.api.createEvent(round);
       } catch {
         s.saving = false;
         app.render();
