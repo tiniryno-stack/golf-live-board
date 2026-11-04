@@ -1,5 +1,5 @@
 {
- "v": "20261104015340",
+ "v": "20261104030326",
  "files": [
   "css/styles.css",
   "css/tokens.css",
@@ -17,6 +17,7 @@
   "js/headlines.js",
   "js/names.js",
   "js/race.js",
+  "js/riderview.js",
   "js/scoring.js",
   "js/screens/board.js",
   "js/screens/brief.js",
