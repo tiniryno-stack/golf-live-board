@@ -67,7 +67,13 @@ after the first playtest; section 13 is the V2 backlog.
   sheet clears the hash. **No web manifest**: a manifest `start_url` would replace the saved link.
 - `db.STANDALONE` → `html.standalone` → the tab bar / setup footers / sheets sit inside the home
   line's safe area instead of leaving it blank. Tests force it with `window.__GLB_STANDALONE` /
-  `window.__GLB_IOS`. Icon: `icon-180.png` (apple-touch-icon), name "Golf Board".
+  `window.__GLB_IOS`. Icon: `icon-180.png` (apple-touch-icon, the ring + ball mark since 020), name "Golf Board".
+- **Startup images (020):** `img/startup/*.png`, seven `apple-touch-startup-image` links in index.html (portrait,
+  per device size). Standalone only reads these — one more reason the Add-to-Home-Screen move link must keep working
+  and there must be **no manifest**. They draw the mark 300pt from the top, exactly where `#loader` draws it.
+- **Loading screen (020):** `#loader` (inline styles in index.html + `js/loader.js`) is the only launch / opening / No
+  signal screen; there is no `#splash` and no in-page spinner. Tests wait for `#loader` to be hidden, and look for
+  "Opening…" / "No signal" / Try again inside `#loader`, not `#content`.
 - iPhone bug: the home screen app's page is ~one status bar shorter than the screen (blank strip at
   the bottom, under sheets too). app.js sets `--app-h` = real screen height; `.standalone .app` and
   the fixed overlay roots use it. Host's Save bar only shows when something changed.
@@ -87,7 +93,7 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
 | `js/names.js` | **pure**: `splitName`, `fullName`, `nameKey`, `displayNames` (first names; "Andrew D." on a clash) |
 | `js/teams.js` | jersey colors (`teamColor`), `headlineColor`, Pokémon quick names |
 | `js/db.js` | localStorage helpers, device ID, RPC wrappers (`api.*`), reads, offline queue (latest wins; `fill` flag), realtime subscribe |
-| `js/app.js` | router/state, render loop (wrapped in an error boundary → "Something went wrong"), round loading (12 s timeout → "No signal / Try again"), join flow (name → cart-name picker → Today's game), realtime handlers, actions |
+| `js/app.js` | router/state, render loop (wrapped in an error boundary → "Something went wrong"), round loading (12 s timeout → "No signal / Try again" on the loading screen, `js/loader.js`), join flow (name → cart-name picker → Today's game), realtime handlers, actions |
 | `js/ui.js` | `esc`, `icon` (SVG set), `seg`, formatting helpers |
 | `js/screens/*.js` | `enter` (score entry), `matches`, `board` (+ final card), `card`, `host` (organizer), `home`, `setup`, `season`, `sheets` (all bottom sheets incl. hole grid, team breakdown, menu), `toasts` (toasts, banners, full-screen cards, picker, Today's game pager, recap pager, coach tips), `brief` (Today's game content), `recap` (canvas-drawn keepsake PNGs) |
 | `sim.html` + `js/sim.js` | **Test with 8 phones** (laptop: 8 side by side; phone ≤700px: one full-size phone + 1–8 switcher, extras under More): makes a practice round (own crew → never in Season standings), 8 iframes `index.html?sim=N`, each its own device signed in as player N (phone 1 = organizer), **Play a hole** (random realistic score per phone, then taps Next hole), one-group-only buttons, reset/delete. `?sim=N` prefixes every storage key with `simN.` (`db.local`, `local.keys()`) |

@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Loading screen</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&amp;family=Geist+Mono:wght@600&amp;display=swap">
+<style>
+body{margin:0}
+.t{--bg:#0A0B0D;--s1:#15171B;--s2:#1F2227;--tx:#F4F5F7;--tx2:#A7ACB4;--ln:#2B2F36;--g:#3DDC84;--btn:#F4F5F7;--onBtn:#0A0B0D}
+.t.light{--bg:#F2F3F5;--s1:#FFFFFF;--s2:#E8EAEE;--tx:#0B0D10;--tx2:#4F555E;--ln:#D5D9DF;--g:#12A35C;--btn:#0B0D10;--onBtn:#FFFFFF}
+.lbl{font-family:'Geist Mono',ui-monospace,monospace;font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--tx2)}
+.orbit{transform-origin:42px 58px;animation:orbit 1000ms linear infinite}
+@keyframes orbit{to{transform:rotate(360deg)}}
+.drop{transform-origin:73.1px 26.9px;animation:drop 460ms cubic-bezier(.4,0,1,1) both}
+@keyframes drop{0%{transform:translate(0,0) scale(1);opacity:1}70%{transform:translate(-31px,31px) scale(.55);opacity:1}100%{transform:translate(-31px,31px) scale(.22);opacity:0}}
+.ring.dip{animation:settle 420ms cubic-bezier(.2,.8,.2,1) both}
+@keyframes settle{0%,30%{transform:translate(0,0)}55%{transform:translate(0,2px)}100%{transform:translate(0,0)}}
+.scr{transition:opacity 280ms cubic-bezier(.2,.8,.2,1)}.scr.gone{opacity:0}
+.fade{animation:fade 280ms cubic-bezier(.2,.8,.2,1) both}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.orbit,.drop,.ring,.fade{animation:none}}
+button{font:inherit;color:inherit;cursor:pointer}
+</style>
+</helmet>
+<div class="t {{mode}} scr {{scrCls}}" style="width: 393px; height: 852px; box-sizing: border-box; background: var(--bg); color: var(--tx); font-family: Geist, system-ui, sans-serif; position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 300px">
+<div style="display: flex; flex-direction: column; align-items: center">
+<svg width="120" height="120" viewBox="0 0 100 100" role="img" aria-label="Golf Live Board" style="color: var(--tx); overflow: visible">
+<circle class="ring {{ringCls}}" cx="42" cy="58" r="30" fill="none" stroke="currentColor" stroke-width="13"></circle>
+<circle class="{{ballCls}}" cx="73.1" cy="26.9" r="11" fill="var(--g)"></circle>
+</svg>
+<div style="font-size: 20px; font-weight: 800; letter-spacing: -0.6px; margin-top: 22px">Golf Live Board</div>
+<div style="min-height: 120px; margin-top: 28px; display: flex; flex-direction: column; align-items: center; width: 393px; padding: 0 32px; box-sizing: border-box; text-align: center">
+<sc-if value="{{opening}}" hint-placeholder-val="{{ false }}"><div class="fade" style="font-size: 15px; color: var(--tx2)">Opening {{code}}…</div></sc-if>
+<sc-if value="{{slow}}" hint-placeholder-val="{{ false }}"><div class="fade" style="font-size: 15px; color: var(--tx2)">Still connecting…</div><div class="fade" style="font-size: 13px; color: var(--tx2); margin-top: 6px">Scores you enter are saved on this phone and sync when you’re back.</div></sc-if>
+<sc-if value="{{nosig}}" hint-placeholder-val="{{ false }}"><div class="fade" style="font-size: 22px; font-weight: 700">No signal</div><div class="fade" style="font-size: 15px; color: var(--tx2); margin-top: 6px">Couldn’t reach the scoreboard. Scores you enter are saved on this phone and sync when you’re back.</div><button class="fade" onClick="{{retry}}" style="margin-top: 18px; height: 52px; padding: 0 28px; border-radius: 16px; border: 0; background: var(--btn); color: var(--onBtn); font-size: 17px; font-weight: 600">Try again</button></sc-if>
+</div>
+</div>
+<div style="position: absolute; bottom: 48px; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; gap: 10px"><button onClick="{{loadNow}}" style="height: 36px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--ln); background: transparent; color: var(--tx2); font-size: 13px; font-weight: 600">Simulate: loaded (prototype only)</button><span class="lbl">{{stateLbl}}</span></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"mode":{"editor":"enum","options":["dark","light"],"default":"dark"},"state":{"editor":"enum","options":["auto","boot","opening","slow","nosignal","loaded"],"default":"auto"},"$preview":{"width":393,"height":852}}'>
+class Component extends DCLogic {
+constructor(p) { super(p); this.state = { st: 'boot', t: [], t0: Date.now() }; }
+componentDidMount() { this.run(); }
+componentWillUnmount() { this.stop(); }
+stop() { for (const t of this.state.t) clearTimeout(t); }
+run() {
+this.stop();
+const t0 = Date.now();
+if ((this.props.state ?? 'auto') !== 'auto') { this.setState({ st: 'boot', t: [], t0 }); return; }
+const t = [];
+t.push(setTimeout(() => this.setState({ st: 'opening' }), 1500));
+t.push(setTimeout(() => this.land(), 4800));
+this.setState({ st: 'boot', t, t0 });
+}
+land() {
+if (this.state.st === 'loaded' || this.state.st === 'gone') return;
+const LAP = 1000, elapsed = Date.now() - this.state.t0, wait = LAP - (elapsed % LAP);
+const t = [...this.state.t];
+t.push(setTimeout(() => this.setState({ st: 'loaded' }), wait));
+t.push(setTimeout(() => this.setState({ st: 'gone' }), wait + 520));
+t.push(setTimeout(() => this.run(), wait + 2200));
+this.setState({ t });
+}
+renderVals() {
+const fixed = this.props.state ?? 'auto';
+const st = fixed === 'auto' ? this.state.st : fixed;
+const lbl = { boot: 'Launch · 0–1.5 s · the putt circles the hole', opening: 'Opening · after 1.5 s', slow: 'Slow · after 8 s', nosignal: 'No signal · after 12 s', loaded: 'Loaded · finishes the lap, drops in', gone: 'Gone · the screen fades to the app' }[st];
+return {
+mode: this.props.mode ?? 'dark', code: 'TC482',
+opening: st === 'opening', slow: st === 'slow', nosig: st === 'nosignal',
+ballCls: st === 'nosignal' ? '' : st === 'loaded' || st === 'gone' ? 'drop' : 'orbit',
+ringCls: st === 'loaded' || st === 'gone' ? 'dip' : '',
+scrCls: st === 'gone' ? 'gone' : '',
+stateLbl: lbl,
+retry: () => this.run(),
+loadNow: () => this.land()
+};
+}
+}
+</script>
+</body>
+</html>

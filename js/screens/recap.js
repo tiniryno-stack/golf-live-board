@@ -127,8 +127,44 @@ function header(ctx, kicker, title, titleColor = C.ink) {
 function footer(ctx, h, app) {
   ctx.fillStyle = C.line;
   ctx.fillRect(PAD, h - 92, W - PAD * 2, 2);
-  text(ctx, 'Golf Live Board', PAD, h - 44, { size: 24, weight: 700, color: C.faint });
-  text(ctx, app.code || '', W - PAD, h - 44, { size: 24, weight: 700, color: C.faint, align: 'right', mono: true });
+  text(ctx, app.code || '', PAD, h - 44, { size: 24, weight: 700, color: C.faint, mono: true });
+  // The stamp (feature 020): the lockup, bottom right, 18pt tall at the image's ~2.75× scale (50px),
+  // ring + wordmark in text-muted, the ball stays green. Falls back to the plain text if it didn't load.
+  if (stamp) ctx.drawImage(stamp, W - PAD - STAMP_H * stamp.width / stamp.height, h - 80, STAMP_H * stamp.width / stamp.height, STAMP_H);
+  else text(ctx, 'Golf Live Board', W - PAD, h - 44, { size: 24, weight: 700, color: C.faint, align: 'right' });
+}
+
+const STAMP_H = 50;
+let stamp = null;
+/** The lockup PNG, recolored: its light-grey ring + wordmark → text-muted (C.soft); green pixels untouched. */
+async function loadStamp() {
+  if (stamp) return;
+  try {
+    const img = new Image();
+    img.src = new URL('../../img/lockup-dark@2x.png', import.meta.url).href;
+    await Promise.race([img.decode(), new Promise((_, no) => setTimeout(() => no(new Error('slow')), 2500))]);
+    const cv = document.createElement('canvas');
+    cv.width = img.naturalWidth;
+    cv.height = img.naturalHeight;
+    const ctx = cv.getContext('2d');
+    ctx.drawImage(img, 0, 0);
+    const d = ctx.getImageData(0, 0, cv.width, cv.height);
+    const [r, g, b] = [0xa7, 0xac, 0xb4];
+    let right = 0;
+    for (let i = 0; i < d.data.length; i += 4) {
+      const px = d.data;
+      if (px[i + 3]) right = Math.max(right, (i / 4) % cv.width);
+      if (px[i + 1] - px[i] > 40) continue; // the green ball
+      px[i] = r; px[i + 1] = g; px[i + 2] = b;
+    }
+    ctx.putImageData(d, 0, 0);
+    // Trim the PNG's empty right edge so the wordmark ends on the right margin.
+    const out = document.createElement('canvas');
+    out.width = right + 2;
+    out.height = cv.height;
+    out.getContext('2d').drawImage(cv, 0, 0);
+    stamp = out;
+  } catch { stamp = null; }
 }
 
 function ctxInfo(app) {
@@ -503,7 +539,7 @@ function fullReport(app) {
 
 /** The recap images for this phone: leaderboard, then (if you played) your card and your cart, then everyone. */
 export async function recapImages(app) {
-  await loadFonts();
+  await Promise.all([loadFonts(), loadStamp()]);
   const out = [{ key: 'board', title: app.snapshot.game ? 'Final leaderboard' : 'Leaderboard', canvas: leaderboard(app) }];
   if (app.myPlayer()) out.push({ key: 'me', title: 'Your scorecard', canvas: scorecard(app) });
   if (app.myTeam() && app.snapshot.teamById.get(app.myTeam())) out.push({ key: 'cart', title: 'Your cart', canvas: cartCard(app) });
