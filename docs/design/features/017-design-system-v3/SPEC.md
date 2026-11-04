@@ -1,6 +1,6 @@
 # 017 · Design system v3 (sync the repo copy)
 
-Status: not built
+Status: built in 81d6b20
 
 Changes the look's source of truth only. No screen changes, no new behavior.
 
