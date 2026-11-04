@@ -1,5 +1,5 @@
 {
- "v": "20261104033948",
+ "v": "20261104064926",
  "files": [
   "css/styles.css",
   "css/tokens.css",
@@ -15,6 +15,7 @@
   "js/geoload.js",
   "js/gps.js",
   "js/headlines.js",
+  "js/loader.js",
   "js/names.js",
   "js/race.js",
   "js/riderview.js",
