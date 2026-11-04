@@ -1,6 +1,6 @@
 # 019 · Team Ryder Cup · a bigger finish
 
-Status: not built
+Status: built in 25dcd48
 
 When a Team Ryder Cup round is over (every score in, or finalized), the Board's cup card becomes the **final card**. Today the final state is the same card with FINAL on it; it should land like a result. Screenshots in `screenshots/`, mockup in `mockups/Ryder-Final.dc.html` (`?mode=light` for light).
 
