@@ -1,6 +1,6 @@
 # 018 · Partner “Rider” Cup on the Team Ryder Cup screens
 
-Status: not built
+Status: built in d08bb8d
 
 Partner “Rider” Cup (game `carts`, 8 players in 4 carts or 6 in 3) adopts the Team Ryder Cup screens from handoffs 015 and 016. Same engine, same rules, same settings. What changes is how it looks and reads. Target screenshots are in `screenshots/`; the as-built Team Ryder Cup screens on `main` are the reference for anything not shown here. Mockups in `mockups/` are reference only (open with `?mode=light` for light).
 
