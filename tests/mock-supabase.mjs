@@ -455,7 +455,12 @@ export function createBackend() {
       const val = rest.join('.');
       if (op === 'eq') out = out.filter((r) => String(r[k]) === val);
       else if (op === 'gte') out = out.filter((r) => String(r[k]) >= val);
-      else if (op === 'in') {
+      else if (op === 'cs') { // jsonb contains (e.g. roster cs {"players":[{"personId":"…"}]})
+        const want = JSON.parse(val);
+        const has = (x, w) => (Array.isArray(w) ? Array.isArray(x) && w.every((wi) => x.some((xi) => has(xi, wi)))
+          : w && typeof w === 'object' ? !!x && typeof x === 'object' && Object.entries(w).every(([kk, vv]) => has(x[kk], vv)) : x === w);
+        out = out.filter((r) => has(r[k], want));
+      } else if (op === 'in') {
         const set = new Set(val.replace(/^\(|\)$/g, '').split(',').map((s) => s.replace(/^"|"$/g, '')));
         out = out.filter((r) => set.has(String(r[k])));
       }
@@ -492,7 +497,7 @@ export function createBackend() {
   }
 
   const backend = {
-    tables: t, rpc, handle, calls: [], offline: false, stall: false, oga: { blocked: false, down: false, calls: [] },
+    tables: t, rpc, handle, select, calls: [], offline: false, stall: false, oga: { blocked: false, down: false, calls: [] },
     // course-geo: be.geo.down = the function can't be reached; be.geo.osmDown / aiDown = it finds nothing (row 'failed').
     geo: { down: false, osmDown: false, aiDown: false, calls: [] },
   };

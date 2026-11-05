@@ -65,6 +65,10 @@ after the first playtest; section 13 is the V2 backlog.
   home screen app's first open, then clears the link. Safari ignores `#move=` (a mis-sent link does
   nothing for a friend); a home screen app that already has a `glb.me.*` ignores it too. Closing the
   sheet clears the hash. **No web manifest**: a manifest `start_url` would replace the saved link.
+- **Your rounds on a new phone (Nov 5):** opening a round as yourself stores your personId (`glb.people`, also moved by
+  Add to Home Screen); Home runs `db.syncMyRounds()` once per open: events whose roster contains you (`roster cs …`) that
+  this phone never saw are added to Recent rounds. Claims are per device, so to *be* you in old rounds on a new device the
+  claims move server-side (done for Andrew Nov 5: device 39818980… → f7a34c68…, incl. Founders Crew ownership).
 - `db.STANDALONE` → `html.standalone` → the tab bar / setup footers / sheets sit inside the home
   line's safe area instead of leaving it blank. Tests force it with `window.__GLB_STANDALONE` /
   `window.__GLB_IOS`. Icon: `icon-180.png` (apple-touch-icon, the ring + ball mark since 020), name "Golf Board".

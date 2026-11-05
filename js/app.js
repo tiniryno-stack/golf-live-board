@@ -273,9 +273,11 @@ function onQueueSaved(item, res) {
 /** The crew learns which person this phone is from the name it plays as (feature 006, "you" across rounds). */
 function rememberCrewMe() {
   const ev = app.event;
-  if (!ev?.crew_id || !app.me || String(ev.settings?.practice) === 'true') return;
+  if (!app.me || String(ev?.settings?.practice) === 'true') return;
   const pid = (ev.roster?.players || []).find((p) => p.id === app.me)?.personId;
   if (!pid) return;
+  db.people.add(pid); // so Home can find your other rounds on a new phone (Nov 5)
+  if (!ev.crew_id) return;
   const c = db.crews.get(ev.crew_id);
   if (!c?.me) db.crews.put({ id: ev.crew_id, me: pid });
 }

@@ -77,7 +77,7 @@ export const STANDALONE = (() => {
   }
 })();
 
-const MOVE_KEYS = /^glb\.(device|recent|theme|crews|crew$|me\.|admin\.|brief\.|who\.|coach\.|seen\.)/;
+const MOVE_KEYS = /^glb\.(device|recent|people|theme|crews|crew$|me\.|admin\.|brief\.|who\.|coach\.|seen\.)/;
 const toB64 = (s) => btoa(String.fromCharCode(...new TextEncoder().encode(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const fromB64 = (s) => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0)));
 
@@ -208,6 +208,42 @@ export const recent = {
     local.set('glb.recent', list);
   },
 };
+
+/** The people this phone has played as (personId), so a new phone or home screen app can find its rounds (Nov 5). */
+export const people = {
+  all: () => local.get('glb.people', []),
+  add(personId) {
+    if (!personId) return;
+    const list = people.all();
+    if (!list.includes(personId)) local.set('glb.people', [...list, personId].slice(-6));
+  },
+};
+
+/**
+ * Rounds you're in that this phone has never opened (a new phone, or the home screen app's own storage):
+ * every event whose roster has one of your personIds. Added to Recent rounds in date order, newest first.
+ * Returns how many were added.
+ */
+export async function syncMyRounds() {
+  const ids = people.all();
+  if (!ids.length) return 0;
+  const found = new Map();
+  for (const personId of ids) {
+    const rows = (await select(sb().from('events').select('code,name,played_on,crew_id,course,settings,created_at')
+      .contains('roster', { players: [{ personId }] }).order('created_at', { ascending: false }).limit(20))) || [];
+    for (const r of rows) found.set(r.code, r);
+  }
+  const have = new Set(recent.all().map((r) => r.code));
+  const add = [...found.values()].filter((r) => !have.has(r.code) && String(r.settings?.practice) !== 'true');
+  if (!add.length) return 0;
+  const rows = add.map((ev) => ({
+    code: ev.code, name: ev.name, played_on: ev.played_on || null, crew_id: ev.crew_id || null,
+    course: ev.course?.shortName || ev.course?.name || '', at: Date.parse(ev.created_at) || 0, synced: true,
+  }));
+  const list = [...recent.all(), ...rows].sort((a, b) => (b.at || 0) - (a.at || 0));
+  local.set('glb.recent', list.slice(0, 12));
+  return rows.length;
+}
 
 /** Forget everything this phone kept about a round (after it's deleted). */
 export function forgetRound(code) {

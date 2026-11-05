@@ -39,3 +39,13 @@ test('Crews + people: rounds keep a crew’s people in step; a taken full name n
   make([{ id: 'p1', personId: 'bbbbbbbb-1111-4222-8333-444444444444', name: 'Player 1' }], '2026-10-21', null, { practice: true });
   assert.equal(be.tables.people.has('bbbbbbbb-1111-4222-8333-444444444444'), false, 'practice rounds stay out of people');
 });
+
+test('Nov 5: a new phone finds your rounds by personId (roster contains you), practice rounds left out', async () => {
+  const { createBackend } = await import('./mock-supabase.mjs');
+  const be = createBackend();
+  const roster = (pid) => ({ groups: [], teams: [], players: [{ id: 'p1', personId: pid, name: 'Andrew' }] });
+  be.rpc.create_event({ p_name: 'Mine', p_course: {}, p_roster: roster('me'), p_settings: {} });
+  be.rpc.create_event({ p_name: 'Theirs', p_course: {}, p_roster: roster('them'), p_settings: {} });
+  const res = be.select('events', new URLSearchParams({ roster: `cs.${JSON.stringify({ players: [{ personId: 'me' }] })}` }));
+  assert.deepEqual(res.body.map((e) => e.name), ['Mine']);
+});

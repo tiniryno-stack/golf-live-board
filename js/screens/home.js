@@ -5,7 +5,7 @@
 // lives in a round's ⋯ menu. Everything here comes from this phone (glb.recent), no network.
 
 import { esc, icon, prettyDate, initials, empty } from '../ui.js';
-import { recent, normCode, STANDALONE, moveLink } from '../db.js';
+import { recent, normCode, STANDALONE, moveLink, syncMyRounds } from '../db.js';
 import { homeCrew } from './crew.js';
 import { fmtPts, fmtToPar, playerLeaderboard } from '../scoring.js';
 
@@ -136,11 +136,17 @@ function codeField() {
 
 // The Home header: the mark (feature 020, L2 lockup: ring centered on the capitals, 10px gap).
 const TITLE = `<h1 class="ts-title home-title"><span class="home-mark" aria-hidden="true"><img class="mk-dark" src="img/mark-dark.svg" alt="" width="30" height="30"><img class="mk-light" src="img/mark-light.svg" alt="" width="30" height="30"></span>Golf Live Board</h1>`;
+let synced = false;
 
 export default {
   topLeft: () => header(recent.all()),
 
   render(app) {
+    // Once per open: pull in your rounds this phone has never seen (new phone / home screen app).
+    if (!synced) {
+      synced = true;
+      syncMyRounds().then((n) => { if (n) app.render(); }).catch(() => { /* offline: next open */ });
+    }
     const rounds = recent.all();
     const now = Date.now();
     const live = rounds.find((r) => r.live && !r.done && now - (r.seen || r.at || 0) < LIVE_FOR) || null;
