@@ -1,0 +1,16 @@
+.green-card {
+  display: flex; align-items: center; gap: 14px; height: 92px; margin: 10px 8px 0; padding: 0 14px;
+  border-radius: 22px; background: var(--surface-1); color: var(--text);
+}
+.green-card.compact { height: 68px; }
+.green-pic { flex: none; display: grid; place-items: center; }
+.green-svg { display: block; }
+.green-nums { flex: 1; min-width: 0; display: grid; grid-template-columns: 1fr 1.35fr 1fr; align-items: center; text-align: center; }
+.green-nums .gn { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; }
+.green-nums .gn b { font-size: 17px; font-weight: 600; line-height: 1; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.green-nums .gn .label { font-size: 12px; letter-spacing: .08em; color: var(--text-muted); }
+.green-nums .gn.mid b { font-size: 32px; font-weight: 700; letter-spacing: -1.5px; color: var(--text); }
+.green-nums .gn.mid .label { color: var(--text); }
+.green-card.compact .gn b { font-size: 15px; }
+.green-card.compact .gn.mid b { font-size: 32px; }
+.green-card.weak .gn b, .green-card.finding .gn b { color: var(--text-muted); }
