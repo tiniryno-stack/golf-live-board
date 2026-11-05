@@ -24,6 +24,11 @@
   <style>
     /* The loading screen (feature 020) is styled here, not in styles.css, so it is right from the first
        paint, before the loader below has fetched the CSS. Colors = design tokens (dark / light). */
+    /* The page itself is painted from the first frame too: until styles.css loads, an unpainted page is white,
+       and on the home screen app (a page ~one status bar shorter than the screen) that showed as a white
+       sliver at the bottom for a frame (Nov 5). */
+    html, body { margin: 0; background: #0a0b0d; color-scheme: dark; }
+    html[data-theme="light"], html[data-theme="light"] body { background: #f2f3f5; color-scheme: light; }
     .loader { --ld-bg: #0a0b0d; --ld-text: #f4f5f7; --ld-muted: #a7acb4; --ld-ball: #3ddc84; --ld-button: #f4f5f7; --ld-on-button: #0a0b0d; }
     [data-theme="light"] .loader { --ld-bg: #f2f3f5; --ld-text: #0b0d10; --ld-muted: #4f555e; --ld-ball: #12a35c; --ld-button: #0b0d10; --ld-on-button: #ffffff; }
     .loader {
@@ -59,6 +64,14 @@
   <script>
     // Theme before first paint: dark by default, light if this phone chose it.
     try { if (JSON.parse(localStorage.getItem('glb.theme')) === 'light') document.documentElement.dataset.theme = 'light'; } catch (e) {}
+    // Home screen app: the real screen height before the first paint too (app.js keeps it updated), so the
+    // loading screen covers the whole screen from frame one. Same rule as app.js; standalone = no Safari bars.
+    try {
+      if (navigator.standalone || matchMedia('(display-mode: standalone)').matches) {
+        var tall = Math.max(screen.width, screen.height), short = Math.min(screen.width, screen.height);
+        document.documentElement.style.setProperty('--app-h', (innerHeight > innerWidth ? tall : short) + 'px');
+      }
+    } catch (e) {}
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
