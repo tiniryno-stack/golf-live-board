@@ -21,7 +21,7 @@ import { FLAGS } from '../flags.js';
 import { loadGeo } from '../geoload.js';
 import { TEAM_NAME_PICKS, isDefaultTeamName } from '../teams.js';
 import { initials } from '../ui.js';
-import { countsAsPlayed, draftedRoster, newLobby, toTeamsStage, withStartTimes, keepNames, rosterKey, allTimesSet, addMinutes, lobbyOf } from '../lobby.js';
+import { countsAsPlayed, draftedRoster, newLobby, toTeamsStage, withStartTimes, keepNames, rosterKey, allTimesSet, addMinutes, lobbyOf, lobbyState, maySaveStep } from '../lobby.js';
 
 const TEAM_IDS = ['A', 'B', 'C', 'D'];
 const DRAFT_KEY = 'glb.setupDraft';
@@ -989,12 +989,12 @@ async function saveLobbyStep(app) {
   let fresh;
   try { fresh = await db.fetchEvent(s.lobby.code); } catch { fresh = null; }
   if (!fresh) { app.toast({ title: 'No signal', sub: 'Not saved. Try again.', error: true }); return; }
-  if (rosterKey(fresh.roster) !== s.lobby.key) {
+  if (rosterKey(fresh.roster) !== s.lobby.key || !maySaveStep(s.lobby.mode, lobbyState(fresh, app.now()))) {
     // Someone (a co-host, a Replace) changed the players since this step opened: never overwrite them.
     app.setup = null;
     app.event = { ...app.event, ...fresh };
     app.render();
-    app.toast({ title: 'The players changed meanwhile', sub: 'Nothing saved. Open the step again.', error: true });
+    app.toast({ title: 'The round changed meanwhile', sub: 'Nothing saved (players, a call-off or scoring opened). Open the step again.', error: true });
     return;
   }
   const times = (s.settings.teeTimes || []).slice(0, 4);

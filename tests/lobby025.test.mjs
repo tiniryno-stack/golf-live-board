@@ -207,6 +207,16 @@ test('writers: start times (late on the day opens at once), moving the start, op
   assert.deepEqual([back.lobby.stage, back.lobby.opensAt, back.teeTimes], ['lobby', null, []]);
   assert.equal('lobby' in L.withoutLobby(s1), false);
   assert.equal(ev.settings.lobby.stage, 'teams', 'writers never mutate');
+  // A step opened earlier never undoes a call-off or closes an opened round.
+  const st = (e2, now = at('2026-11-04T18:00:00Z')) => L.lobbyState(e2, now);
+  assert.equal(L.maySaveStep('draft', st(lobbyEvent())), true);
+  assert.equal(L.maySaveStep('draft', st(drafted())), true, 'redraft over teams');
+  assert.equal(L.maySaveStep('tee', st(lobbyEvent())), false, 'no carts yet');
+  assert.equal(L.maySaveStep('tee', st(drafted())), true);
+  assert.equal(L.maySaveStep('draft', st(drafted({ stage: 'off' }))), false, 'called off meanwhile');
+  const opened = drafted({ stage: 'ready', opensAt: '2026-11-07T13:30:00.000Z' }, ['08:00', '08:10', '08:20', '08:30']);
+  assert.equal(L.maySaveStep('tee', st(opened, at('2026-11-07T13:31:00Z'))), false, 'scoring already open');
+  assert.equal(L.maySaveStep('tee', st(opened)), true, 'ready, not open yet: start times can move');
 });
 
 test('the queue keeps a not_open score only when the round is about to open; server timestamps parse', () => {

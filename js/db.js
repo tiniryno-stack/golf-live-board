@@ -198,8 +198,10 @@ export const recent = {
   },
   remember(ev) {
     if (!ev?.code) return;
+    const was = recent.all().find((r) => r.code === ev.code);
     const list = recent.all().filter((r) => r.code !== ev.code);
     list.unshift({
+      ...(was?.lobbyPid ? { lobbyPid: was.lobbyPid } : {}), ...(was?.lobby ? { lobby: was.lobby } : {}), // 025: who this phone was
       code: ev.code, name: ev.name, played_on: ev.played_on || null, crew_id: ev.crew_id || null,
       practice: String(ev.settings?.practice) === 'true' || undefined,
       course: ev.course?.shortName || ev.course?.name || '', at: Date.now(),

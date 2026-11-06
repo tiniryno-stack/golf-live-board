@@ -477,6 +477,8 @@ export default {
         app.toast({ title: 'Not saved', sub: problem, error: true });
         return;
       }
+      // 025: the lobby (opensAt, notice, stage) is never taken from a draft opened earlier: the latest copy wins.
+      if (app.event.settings?.lobby !== undefined) d.settings.lobby = clone(app.event.settings.lobby);
       for (const t of d.roster.teams || []) t.name = t.name.trim() || `Cart ${t.id}`;
       for (const p of d.roster.players) p.name = p.name.trim();
       const ok = await app.saveEvent({ course: d.course, roster: d.roster, settings: d.settings, name: d.name.trim() });

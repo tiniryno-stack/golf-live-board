@@ -136,7 +136,8 @@ function early(app, st, { watching = false } = {}) {
 function teamCard(side, open, act) {
   if (!side) return '';
   const carts = side.carts.map((c) => row(esc(c.names), c.mine ? 'your cart' : '', { cls: c.mine ? 'you' : 'plain' })).join('');
-  return `<div class="card lb-card lb-rows">${row(esc(side.name), `${side.carts.length * 2} players`, act ? { act, chev: !open } : {})}${open ? carts : ''}</div>`;
+  const mine = side.carts.some((c) => c.mine);
+  return `<div class="card lb-card lb-rows">${row(esc(side.name), mine ? 'your team' : `${side.carts.length * 2} players`, act ? { act, chev: !open } : {})}${open ? carts : ''}</div>`;
 }
 
 /** 5 · teams are set. Only your cart is green; the other team folds into one row. */
@@ -145,7 +146,7 @@ function drafted(app, st) {
   if (!m) return early(app, st);
   const ev = app.event;
   const open = app.ui.lbOther === app.code;
-  return `${head(esc(ev.name), `You’re on ${esc(m.side?.name || 'a team')}`, `${esc(dayName(st.date, app.now(), st.tz))} ${esc(st.startLabel)} · ${esc(ev.course?.shortName || ev.course?.name || '')}`)}
+  return `${head(`${esc(ev.name)} · teams are set`, `You’re on ${esc(m.side?.name || 'a team')}`, `${esc(dayName(st.date, app.now(), st.tz))} ${esc(st.startLabel)} · ${esc(ev.course?.shortName || ev.course?.name || '')}`)}
     ${noticeCard(st)}
     ${hostRow(app, st)}
     ${teamCard(m.side, true)}
@@ -208,7 +209,8 @@ function removed(app, st) {
 function gameday(app) {
   const m = myLobby(app.event, app.me);
   const h = playOrder(app.event.settings || {})[0] || 1;
-  return `${head(`${esc(app.event.name)} · scoring is open`, m ? `${esc(m.side?.name || '')} · ${esc(m.tee || '')}${m.mate ? ` with ${esc(m.mate)}` : ''}` : 'Scoring is open',
+  const title = m ? [m.side?.name, [m.tee, m.mate ? `with ${m.mate}` : ''].filter(Boolean).join(' ')].filter(Boolean).map(esc).join(' · ') : '';
+  return `${head(`${esc(app.event.name)} · scoring is open`, title || 'Scoring is open',
       m?.matches[0]?.vs ? `First up, holes ${esc(m.matches[0].holes)} against ${esc(m.matches[0].vs)}.` : '')}
     ${foot(`<button class="btn primary nr-cta" data-act="lb-go1">Go to hole ${h}</button>
       <button class="btn ghost block lb-quiet" data-act="lb-howday">How today’s game works</button>`)}`;
@@ -220,7 +222,8 @@ const VIEWS = { landing, who, welcome, early, watch: (a, s) => early(a, s, { wat
 async function textHost(app, st) {
   const text = `Hi ${st.hostName}, about ${app.event.name}: `;
   if (navigator.share) {
-    try { await navigator.share({ text }); return; } catch { /* cancelled */ }
+    try { await navigator.share({ text }); } catch { /* cancelled: nothing to say */ }
+    return;
   }
   app.toast({ title: `Text ${st.hostName} from your messages`, sub: 'There’s no number in Golf Board.' });
 }
@@ -229,7 +232,8 @@ export default {
   render(app) {
     const st = app.lobby();
     const v = app.lobbyView();
-    if (!st || !v) return '';
+    // Never a blank screen: if the round moved on between a check and this draw, say so and offer the round.
+    if (!st || !v) return `<div class="plain"><h1 class="title">${esc(app.event?.name || '')}</h1><button class="btn primary block big" data-act="go" data-v="${esc(app.tabHash(app.homeTab()))}">Open the round</button></div>`;
     return `<div class="plain nr-setup lb">${(VIEWS[v] || early)(app, st)}</div>`;
   },
   actions: {

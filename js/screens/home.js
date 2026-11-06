@@ -5,7 +5,7 @@
 // lives in a round's ⋯ menu. Everything here comes from this phone (glb.recent), no network.
 
 import { esc, icon, prettyDate, initials, empty } from '../ui.js';
-import { recent, normCode, STANDALONE, moveLink, syncMyRounds, local, refreshLobbies, owner } from '../db.js';
+import { recent, normCode, STANDALONE, moveLink, syncMyRounds, local, refreshLobbies, owner, clock } from '../db.js';
 import { lobbyState, homeCard } from '../lobby.js';
 import { homeCrew } from './crew.js';
 import { fmtPts, fmtToPar, playerLeaderboard } from '../scoring.js';
@@ -171,7 +171,7 @@ export default {
     if (!synced) {
       synced = true;
       syncMyRounds().then((n) => { if (n) app.render(); }).catch(() => { /* offline: next open */ });
-      refreshLobbies().then((n) => { if (n) app.render(); }).catch(() => { /* offline: next open */ }); // 025
+      refreshLobbies(clock.now()).then((n) => { if (n) app.render(); }).catch(() => { /* offline: next open */ }); // 025
     }
     const rounds = recent.all();
     const now = Date.now();
@@ -221,7 +221,7 @@ export default {
     'home-joinsheet': (el, ev, app) => app.openSheet('join', {}),
     'home-text': async (el, ev, app) => {
       const text = `Hi ${el.dataset.v}, about ${el.dataset.r}: `;
-      if (navigator.share) { try { await navigator.share({ text }); return; } catch { /* cancelled */ } }
+      if (navigator.share) { try { await navigator.share({ text }); } catch { /* cancelled */ } return; }
       app.toast({ title: `Text ${el.dataset.v} from your messages`, sub: 'There’s no number in Golf Board.' });
     },
     'home-join': (el, ev, app) => {

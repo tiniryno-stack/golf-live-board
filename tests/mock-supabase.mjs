@@ -348,7 +348,7 @@ export function createBackend() {
       if (!e) return no('not_found');
       const ids = new Set((e.roster.players || []).map((p) => p.id));
       const cs = t.claims.filter((c) => c.event_id === e.id && ids.has(c.player_id));
-      return { ok: true, total: ids.size, claimed: cs.length, in_app: cs.filter((c) => c.in_app).length };
+      return { ok: true, total: (e.roster.players || []).length, claimed: cs.length, in_app: cs.filter((c) => c.in_app).length };
     },
     // 025: organizer only; the date (and, for a lobby at 'ready', opensAt in the same write).
     set_round_date({ p_code, p_admin_pin, p_date, p_opens_at = null }) {

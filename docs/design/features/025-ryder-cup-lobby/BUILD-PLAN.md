@@ -235,7 +235,7 @@ call off. 6. Countdown + Scoring is open. Then: live DB (rollback test → apply
 | Round | Architect | Database | Frontend | Tests | Product QA | Red team | What changed |
 |---|---|---|---|---|---|---|---|
 | 0 · plan | 6.5 | 7 | 6.5 | 7 | 7 | 6 | Plan reviewed; every point below folded into §12 before code. |
-| 1 · code | | | | | | | |
+| 1 · code | 8 | 8 | 8 | 8 | 8 | 7 | Code reviewed after the build; every confirmed bug fixed the same night (§14). Owner asked for two rounds, so no third round. |
 
 ## 12 · Round 0 changes (what the council asked for, as built)
 
@@ -292,3 +292,27 @@ call off. 6. Countdown + Scoring is open. Then: live DB (rollback test → apply
 4. **Rollback**: `supabase/migrations/2026-11-06-ryder-lobby-rollback.sql` (one paste in the SQL Editor; restores the
    previous `upsert_score`, `fill_score`, `update_event`, `_setting_label`, `whoami` and drops what 025 added). The live
    bodies before 025 were checked against it.
+
+## 14 · Round 1 fixes (code council, after the build)
+
+- **Lobby steps check the round as it is now** (architect): the draft / start times refuse to save when the players
+  changed, the round was called off, or scoring opened meanwhile (`lobby.maySaveStep`, tested).
+- **Remove** decides "redraft" from the fresh roster and only says "off the list" when the save worked; a called-off
+  round stays off. **Undo** restores only who the slot is (never stale cart data), then frees the sub's phone.
+- **Replace** saves the roster first, then frees the old phone (tried twice; a toast if it still holds the spot), so a
+  phone opening in between can't take the slot back (red team).
+- **When sheet**: the date (with opensAt, one statement) goes first; a failed fetch or date says "Nothing changed".
+- **Host Rules save** (after the round opens) always keeps the latest `settings.lobby`, never a stale draft's opensAt (database).
+- **Spot given to a sub** survives reopening the round (`recent.remember` keeps `lobbyPid`) (red team).
+- **"I'm not X" in a lobby** goes to the A–Z list; the lobby's "ask" has its own skip key, and a watcher gets the normal
+  Who are you? the moment scoring opens (product QA).
+- **Kept not_open scores** no longer refetch every flush; Text Andrew's cancel no longer toasts; Home's cards use the
+  server-corrected clock.
+- **Phone and server read `openedEarly` the same way** (boolean or "true"), with edge tests (2 h cutoff, zero-fraction
+  timestamps, fill on off / teams, a bad opensAt stays closed, open beats an untold notice) (tests).
+- **Copy**: "· teams are set" kicker and "your team" on screen 5; Scoring is open title never shows a stray "·";
+  the lobby screen never draws blank.
+- **Not done (low, noted for the owner):** the audit log line for "Open scoring now" says "Round plan · ready → ready"
+  (no "opened early" wording); `_lobby_gate` could be SECURITY INVOKER (it's already not callable by anon, verified
+  live); "organizer" tag in Who's playing (the round stores the organizer's name, not his player); `lobby_counts` with
+  a non-array roster would error (the app never writes one). Each would be a small follow-up migration.

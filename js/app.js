@@ -283,7 +283,7 @@ function onQueueReject(item, error, res = {}) {
       const when = res.stage === 'ready' && st?.tz ? clock12(wallClock(parseTime(res.opens_at), st.tz)) : '';
       app.toast(res.kept ? { title: `Scoring opens at ${when}`, sub: 'Your score is saved on this phone and sends then.' } : { title: when ? `Scoring opens at ${when}` : 'Scoring isn’t open yet', sub: 'That score wasn’t saved.' });
     }
-    refetchAll();
+    if (!res.kept) refetchAll(); // a kept score just waits for the round to open (the open timer refetches then)
     return;
   }
   const name = app.snapshot?.playerById.get(item.playerId)?.name || 'score';
@@ -491,6 +491,7 @@ app.notMe = async () => {
   channel?.send({ kind: 'leave', playerId: was });
   app.toast({ title: `Okay, you’re not ${p?.name || 'them'}`, sub: 'Pick your own name.' });
   await refreshClaimed();
+  if (app.lobby() && !app.lobby().open) { app.ui.lobbyPick = app.code; render(); return; } // 025: the A–Z list
   app.openSheet('who', {});
 };
 
@@ -986,7 +987,6 @@ function onRemoteEvent(row) {
   const lineupsNow = JSON.stringify(row.settings?.lineups || before.settings?.lineups || []);
   if (app.lobby() && !app.lobby().open) {
     // 025: the lobby screen itself shows what changed (teams, start times, notices); no generic toast.
-    if (!before.settings?.lobby?.opensAt && row.settings?.lobby?.opensAt) scheduleLobbyTick();
   } else if (finalChanged && !app.adminPin) {
     app.toast(row.finalized_at
       ? { title: 'The round is final', sub: 'Scores are locked. Nice playing.' }
@@ -1175,8 +1175,8 @@ async function maybeAskWho() {
     if (st.stage === 'off' || app.lobbyRemoved()) return;
     const { plan, pid } = joinPlan({ owner: db.owner.get(), roster: app.event.roster, claims: app.claimed, deviceClaim: app.me, practice: isPractice() });
     if (plan === 'auto') await app.claim(pid, { auto: true });
-    else if (plan === 'ask' && app.route.tab !== 'host' && !db.local.get(`glb.who.${app.code}`)) {
-      db.local.set(`glb.who.${app.code}`, true);
+    else if (plan === 'ask' && app.route.tab !== 'host' && !db.local.get(`glb.who.${app.code}.lobby`)) {
+      db.local.set(`glb.who.${app.code}.lobby`, true); // its own key: the normal Who are you? still runs once it opens
       app.openSheet('taken', { pid, lobby: true });
     }
     return;
@@ -1326,7 +1326,12 @@ function scheduleLobbyTick() {
   lobbyTimer = setTimeout(async () => {
     lobbyTimer = null;
     const s2 = app.lobby();
-    if (s2 && s2.stage === 'ready' && s2.msToOpen <= 1000) { await refetchAll(); db.flush(); }
+    if (s2 && s2.stage === 'ready' && s2.msToOpen <= 1000) {
+      await refetchAll();
+      db.flush();
+      // Opened: a phone that's watching (or was picking its name) gets today's normal Who are you?.
+      if (app.lobby()?.open && !app.me) maybeAskWho();
+    }
     render();
   }, wait);
 }

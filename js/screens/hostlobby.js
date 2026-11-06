@@ -285,11 +285,6 @@ function relabel(roster) {
 async function doReplace(app, pid, person) {
   const old = pid ? clone((app.event.roster.players || []).find((x) => x.id === pid) || null) : null;
   if (pid && !old) return;
-  if (pid) {
-    // Free the old phone first: a failure after this leaves an open spot, never an old phone holding the new name.
-    try { await db.api.releasePlayer(app.code, app.adminPin, pid); } catch { app.toast({ title: 'No signal', sub: 'Nothing changed. Try again.', error: true }); return; }
-    app.claimed.delete(pid);
-  }
   let newId = pid;
   const ok = await saveLobby(app, ({ roster }) => {
     const slot = pid ? roster.players.find((x) => x.id === pid) : null;
@@ -304,37 +299,55 @@ async function doReplace(app, pid, person) {
     return { roster: relabel(roster) };
   });
   if (!ok) return;
+  // The roster first, then free the old phone: once the slot is Kyle's, the old phone can't auto-join it back
+  // (its owner isn't on the roster any more). Scoring isn't open, so the moment in between can't write scores.
+  if (pid) await releaseSlot(app, pid);
   share(app, pid ? 'sub' : 'person', { name: person.first, undo: pid ? { pid, prev: old } : null });
 }
 
+/** release_player, tried twice; says so if it still didn't work (Free up in Players fixes it). */
+async function releaseSlot(app, pid) {
+  for (let i = 0; i < 2; i++) {
+    try {
+      const r = await db.api.releasePlayer(app.code, app.adminPin, pid);
+      if (r?.ok) { app.claimed.delete(pid); return true; }
+    } catch { /* retry once */ }
+  }
+  app.toast({ title: 'The old phone still holds that spot', sub: 'Host → Players → Free up, when you have signal.', error: true });
+  return false;
+}
+
 async function undoReplace(app, { pid, prev }) {
-  try { await db.api.releasePlayer(app.code, app.adminPin, pid); } catch { /* the sub may not have joined yet */ }
-  app.claimed.delete(pid);
   const ok = await saveLobby(app, ({ roster }) => {
     const i = roster.players.findIndex((x) => x.id === pid);
     if (i < 0) return null;
-    roster.players[i] = { ...roster.players[i], ...prev };
-    if (!prev.nickname) delete roster.players[i].nickname;
+    // Only who the slot is: its cart and start time stay what they are now (a redraft may have happened since).
+    const { personId, firstName, lastName, nickname, name } = prev;
+    roster.players[i] = { ...roster.players[i], personId, firstName, lastName, name };
+    if (nickname) roster.players[i].nickname = nickname; else delete roster.players[i].nickname;
     return { roster: relabel(roster) };
   });
+  if (ok) await releaseSlot(app, pid); // the sub's phone lets go after the slot is his again
   app.closeSheet();
   if (ok) app.toast({ title: `${first(prev)} is back on the list`, sub: 'His phone joins him again next time it opens.' });
 }
 
-async function removePlayer(app, pid, redraft) {
+async function removePlayer(app, pid) {
   const p = (app.event.roster.players || []).find((x) => x.id === pid);
   try { await db.api.releasePlayer(app.code, app.adminPin, pid); } catch { /* keep going: the roster change is what matters */ }
   app.claimed.delete(pid);
-  await saveLobby(app, ({ roster, settings }) => {
+  const ok = await saveLobby(app, ({ roster, settings }) => {
+    if (!roster.players.some((x) => x.id === pid)) return null;
     roster.players = roster.players.filter((x) => x.id !== pid);
-    if (!redraft) return { roster: relabel(roster) };
-    // Remove and redraft: no carts, no sides, no start times; back to names only.
+    // Decided on the fresh roster (a co-host may have drafted meanwhile): once there are carts, removing someone
+    // clears the teams and the draft starts over (no carts, sides or start times). A called-off round stays off.
+    if (!(roster.teams || []).length) return { roster: relabel(roster) };
     roster.players.forEach((x) => { x.teamId = null; x.groupId = null; });
     Object.assign(roster, { teams: [], sides: [], groups: [] });
     return { roster: relabel(roster), settings: L.toLobbyStage(settings) };
   });
   app.closeSheet();
-  app.toast({ title: `${first(p)} is off the list`, sub: 'Team Ryder Cup needs 16 to draft: add someone in Players.' });
+  if (ok) app.toast({ title: `${first(p)} is off the list`, sub: 'Team Ryder Cup needs 16 to draft: add someone in Players.' });
 }
 
 export const lobbyActions = {
@@ -428,12 +441,12 @@ export const lobbyActions = {
       app.openSheet('confirm', {
         title: `Remove ${first(p)}?`, body: 'After the draft, removing a player clears the teams and the draft starts over. Replacing him keeps the teams.',
         ok: `Replace ${first(p)} instead`, onOk: () => app.openSheet('lobby-replace', { pid, q: '' }),
-        alt: 'Remove and redraft', onAlt: () => removePlayer(app, pid, true), danger: false,
+        alt: 'Remove and redraft', onAlt: () => removePlayer(app, pid), danger: false,
       });
     } else {
       app.openSheet('confirm', {
         title: `Remove ${first(p)}?`, body: 'He comes off the list. Team Ryder Cup needs 16 to draft, so add someone after.',
-        ok: `Remove ${first(p)}`, danger: true, onOk: () => removePlayer(app, pid, false),
+        ok: `Remove ${first(p)}`, danger: true, onOk: () => removePlayer(app, pid),
       });
     }
   },
@@ -456,31 +469,31 @@ export const lobbyActions = {
     const st = app.lobby();
     if (date < st.today) { app.toast({ title: 'That date has passed', sub: 'Pick today or later.', error: true }); return; }
     const host = st.hostName;
-    let opensAt = null, notice = null;
-    const ok = await saveLobby(app, ({ settings, event }) => {
-      let { settings: next, moved } = L.withWhen(settings, date, time);
-      if (back) next = L.bringBack(next);
-      const wasDate = event.played_on;
-      const parts = [];
-      if (date !== wasDate) parts.push(L.notices.redated(host, date, wasDate));
-      if (moved) parts.push(L.notices.moved(host, time, L.addMinutes(time, -moved)));
-      notice = back ? `${L.notices.back(host)}${parts.length ? ` ${parts.join(' ')}` : ''}` : parts.join(' ');
-      if (!notice && !back) return null;
-      next = L.withNotice(next, notice, app.now(), [date, wasDate].sort().pop());
-      opensAt = next.lobby.opensAt;
-      return { settings: next };
-    });
-    if (ok === false && !notice) { app.closeSheet(); app.toast({ title: 'Nothing changed' }); return; }
-    if (!ok) return;
-    if (date !== app.event.played_on) {
+    let fresh;
+    try { fresh = await db.fetchEvent(app.code); } catch { fresh = null; }
+    if (!fresh) { app.toast({ title: 'No signal', sub: 'Nothing changed. Try again.', error: true }); return; }
+    let { settings: next, moved } = L.withWhen(fresh.settings, date, time);
+    if (back) next = L.bringBack(next);
+    const wasDate = fresh.played_on;
+    const parts = [];
+    if (date !== wasDate) parts.push(L.notices.redated(host, date, wasDate));
+    if (moved) parts.push(L.notices.moved(host, time, L.addMinutes(time, -moved)));
+    const notice = back ? `${L.notices.back(host)}${parts.length ? ` ${parts.join(' ')}` : ''}` : parts.join(' ');
+    if (!notice) { app.closeSheet(); app.toast({ title: 'Nothing changed' }); return; }
+    next = L.withNotice(next, notice, app.now(), [date, wasDate].sort().pop());
+    // The date (with its opensAt, in one statement) goes first: if it fails, nothing else has changed.
+    if (date !== wasDate) {
       try {
-        const r = await db.api.setRoundDate(app.code, app.adminPin, date, opensAt);
+        const r = await db.api.setRoundDate(app.code, app.adminPin, date, next.lobby.opensAt);
         if (!r?.ok) throw new Error(r?.error);
-        app.event = { ...app.event, played_on: date };
       } catch (e) {
-        app.toast({ title: 'The date didn’t save', sub: e?.message === 'bad_date' ? 'Pick a date within the next year.' : 'Try again.', error: true });
+        app.toast({ title: 'The date didn’t save', sub: e?.message === 'bad_date' ? 'Pick a date within the next year.' : 'Nothing changed. Try again.', error: true });
+        return;
       }
     }
+    app.event = { ...app.event, ...fresh, played_on: date };
+    const ok = await app.saveEvent({ course: fresh.course, roster: fresh.roster, settings: next, name: fresh.name });
+    if (!ok) return;
     app.closeSheet();
     app.refetch();
     app.render();

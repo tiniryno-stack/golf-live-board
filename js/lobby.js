@@ -422,6 +422,15 @@ export function keepNames(roster, before) {
   };
 }
 
+/**
+ * May a lobby step (the draft or the start times) save onto the round as it is now? Only while it hasn't opened and
+ * is still at that step's stages: a call-off or an opened round is never silently undone by a step opened earlier.
+ */
+export function maySaveStep(mode, state) {
+  if (!state || state.open) return false;
+  return mode === 'tee' ? state.stage === 'teams' || state.stage === 'ready' : state.stage === 'lobby' || state.stage === 'teams';
+}
+
 /** Same players (ids and people) as when a step opened? Otherwise someone else changed the roster meanwhile. */
 export const rosterKey = (roster) => (roster?.players || []).map((p) => `${p.id}:${p.personId || ''}`).sort().join(',');
 
