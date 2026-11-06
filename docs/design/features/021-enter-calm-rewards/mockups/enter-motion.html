@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Enter · reward prototype</title>
+<link rel="stylesheet" href="../../../design-system/tokens.css">
+<link rel="stylesheet" href="greencard.css">
+<style>
+@font-face{font-family:Geist;src:url(../../../../../node_modules/geist/dist/fonts/geist-sans/Geist-Variable.woff2) format('woff2');font-weight:100 900}
+@font-face{font-family:"Geist Mono";src:url(../../../../../node_modules/geist/dist/fonts/geist-mono/GeistMono-Variable.woff2) format('woff2');font-weight:100 900}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font-sans)}
+.mono{font-family:var(--font-mono)}
+.phone{width:393px;height:659px;position:relative;overflow:hidden;background:var(--bg)}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.ib{width:48px;height:48px;display:grid;place-items:center}
+.green-card{margin:6px 0 0!important}
+.green-nums .label{font-family:var(--font-mono);font-size:12px;font-weight:600}
+.hdr{padding:6px 4px 0 16px;display:flex;align-items:center;height:54px}
+.hdr h1{margin:0;flex:1;font-size:24px;line-height:28px;font-weight:700;letter-spacing:-.5px}
+.hdr h1 span{font-size:17px;font-weight:500;color:var(--text-muted);margin-left:8px}
+.body{padding:0 16px}
+.match{height:36px;display:flex;align-items:center;justify-content:space-between;font-size:15px;font-weight:500;color:var(--text-muted);position:relative}
+.match .up{color:var(--cart-you-text);font-weight:700;font-family:var(--font-mono);display:inline-flex;overflow:hidden;height:20px}
+.match .up .roll{display:flex;flex-direction:column;line-height:20px}
+.match .end{display:flex;align-items:center;gap:12px}
+.match .won{color:var(--cart-you-text);font-size:15px;font-weight:600;opacity:0}
+.row{padding:8px 0 4px;border-top:1px solid rgba(255,255,255,.05)}
+.row .nm{height:24px;display:flex;align-items:center;gap:8px;margin-bottom:2px}
+.row .nm b{font-size:17px;font-weight:600}
+.stk{font-size:13px;font-weight:500;color:var(--text-muted)}
+.word{font-size:15px;font-weight:700;opacity:0;color:var(--text)}
+.word.dbl{color:var(--double)}
+.word.quiet{color:var(--text-muted)}
+.word.big{font-size:17px}
+.word.big.anim{animation-duration:3s!important}
+.pads{display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) 56px;gap:6px}
+.pad{height:64px;border-radius:var(--radius-lg);display:grid;place-items:center;position:relative;--pb:var(--bg);color:var(--text)}
+.pad.sel{background:var(--text);color:var(--bg);--pb:var(--text)}
+.pad svg.m{position:absolute;inset:0;margin:auto;overflow:visible}
+.pad .n{font-family:var(--font-mono);font-weight:700;font-size:22px;position:relative}
+.pad .ln{fill:none;stroke:var(--text-muted);stroke-width:1.5}
+.pad.sel .ln{stroke:var(--bg);stroke-width:1.75}
+.pad .ln.base{opacity:1}
+.pad.sel.anim .ln.base{opacity:.3;animation:none!important;stroke-dasharray:none}
+.pad.sel.dbl .ln{stroke:#b42318;stroke-width:2}
+.pad.sel.dbl .n{color:#b42318}
+.ripple{position:absolute;inset:0;margin:auto;width:56px;height:56px;border-radius:50%;box-shadow:0 0 0 2px var(--text);opacity:0;pointer-events:none}
+/* collapsed summary (4B) */
+.sum{height:64px;border-top:1px solid rgba(255,255,255,.05);display:flex;align-items:center;gap:16px;width:100%;text-align:left;overflow:hidden}
+.sum .p{display:inline-flex;align-items:center;gap:8px;font-size:17px;font-weight:600}
+.sum .ok{margin-left:auto;color:var(--text-muted);font-size:15px;font-weight:600;display:flex;align-items:center;gap:6px}
+.sm{position:relative;width:30px;height:30px;display:grid;place-items:center;font-family:var(--font-mono);font-weight:700;font-size:15px}
+.sm svg{position:absolute;inset:0}
+.sm .ln{fill:none;stroke:var(--text);stroke-width:1.5}
+.sm.s .ln{stroke:var(--text-muted)}
+.sm.d{color:var(--double)} .sm.d .ln{stroke:var(--double)}
+.line{height:60px;border-top:1px solid rgba(255,255,255,.05);display:flex;align-items:center;gap:14px;width:100%;text-align:left}
+.line .who{flex:1;display:flex;gap:18px;align-items:center;font-size:17px;font-weight:600}
+.line .who>span{display:inline-flex;align-items:center;gap:8px}
+.line .go{font-size:15px;font-weight:600;display:flex;align-items:center;gap:2px}
+.dash{font-family:var(--font-mono);color:var(--text-muted);font-weight:600;width:26px;text-align:center}
+.dock{position:absolute;left:16px;right:16px;bottom:104px}
+.next{height:var(--button-primary);border-radius:var(--radius-lg);width:100%;font-size:17px;font-weight:600;position:relative;overflow:hidden;background:var(--surface-1);color:var(--text-muted)}
+.next .fill{position:absolute;inset:0;background:var(--button);transform-origin:left;transform:scaleX(0)}
+.next .t{position:relative}
+.next.go .fill{transform:scaleX(1)}
+.next.go{color:var(--on-button)}
+.tabs{position:absolute;left:16px;right:16px;bottom:24px;height:64px;border-radius:var(--radius-2xl);background:var(--glass);box-shadow:var(--shadow-dock),inset 0 0 0 1px var(--glass-line);display:grid;grid-template-columns:repeat(4,1fr);padding:6px}
+.tabs div{display:grid;place-items:center;border-radius:20px;color:var(--text-muted)}
+.tabs div.cur{background:var(--surface-3);color:var(--text)}
+svg{display:block}
+/* ── motion (all 160–450ms, ease-out; off for reduced motion) ── */
+@keyframes bump{0%{transform:scale(.92)}55%{transform:scale(1.06)}100%{transform:scale(1)}}
+@keyframes draw{from{stroke-dashoffset:var(--len)}to{stroke-dashoffset:0}}
+@keyframes word{0%{opacity:0;transform:translateY(6px)}15%{opacity:1;transform:none}75%{opacity:1}100%{opacity:0}}
+@keyframes ripple{0%{opacity:.55;transform:scale(.7)}100%{opacity:0;transform:scale(1.35)}}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-5px)}40%{transform:translateX(5px)}60%{transform:translateX(-3px)}80%{transform:translateX(2px)}}
+@keyframes fillx{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes roll{from{transform:translateY(0)}to{transform:translateY(-20px)}}
+@keyframes wonin{0%{opacity:0;transform:translateX(8px)}20%{opacity:1;transform:none}80%{opacity:1}100%{opacity:0}}
+@keyframes fold{from{max-height:var(--h0);opacity:1}to{max-height:0;opacity:0;padding:0}}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes grow{from{max-height:0}to{max-height:64px}}
+@keyframes ink{from{color:var(--text-muted)}to{color:var(--on-button)}}
+.pad.sel.anim{animation:bump .22s cubic-bezier(.2,.8,.2,1)}
+.pad .ln.draw{opacity:0}
+.pad.sel .ln.draw{opacity:1}
+.pad.sel.anim .ln.draw{stroke-dasharray:var(--len);animation:draw .32s .06s cubic-bezier(.3,.7,.2,1) both}
+@keyframes stamp{0%{transform:scale(1.45) rotate(-4deg);opacity:.35}60%{transform:scale(.95) rotate(1deg);opacity:1}100%{transform:none;opacity:1}}
+@keyframes thud{0%,100%{transform:none}40%{transform:translateY(2px) scale(.98)}}
+.pad.sel.anim.dbl.stamp{animation:thud .22s .14s ease-out}
+.pad.sel.anim.dbl:not(.stamp) .ln.draw{animation:draw .32s .06s cubic-bezier(.3,.7,.2,1) both;stroke-dasharray:var(--len)}
+.pad.sel.anim.dbl.stamp svg.m{animation:stamp .16s cubic-bezier(.2,.8,.2,1) both}
+.pad.sel.anim.dbl .ln.draw{animation:none;stroke-dasharray:none}
+.word.dbl.anim{animation:word 1.6s ease-out both,tilt .3s .05s cubic-bezier(.2,.8,.2,1) both}
+@keyframes tilt{0%{transform:rotate(-4deg) translateY(4px)}100%{transform:none}}
+.word.anim{animation:word 1.6s ease-out both}
+.ripple.anim{animation:ripple .45s .1s ease-out both}
+.ripple.anim.r2{animation-delay:.25s}
+@keyframes shine{from{transform:translateX(-120%)}to{transform:translateX(220%)}}
+.next .sh{position:absolute;top:0;bottom:0;width:40%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.0) 10%,rgba(10,11,13,.10) 50%,transparent 90%);transform:translateX(-120%)}
+.next.go.anim{animation:bump .22s .05s cubic-bezier(.2,.8,.2,1)}
+.match .up.anim .roll{animation:roll .3s .2s cubic-bezier(.3,.7,.2,1) both}
+.match .won.anim{animation:wonin 2.4s .5s ease-out both}
+.rowwrap.folding{overflow:hidden;max-height:var(--h0);animation:fold .32s .5s cubic-bezier(.4,0,.2,1) both}
+.sum.anim{animation:grow .32s .5s cubic-bezier(.4,0,.2,1) both,rise .28s .7s cubic-bezier(.2,.8,.2,1) both}
+.sum.anim .sm .ln{stroke-dasharray:var(--len);animation:draw .3s .85s cubic-bezier(.3,.7,.2,1) both}
+@keyframes fadeonly{0%{opacity:0}15%{opacity:1}75%{opacity:1}100%{opacity:0}}
+@media (prefers-reduced-motion: reduce){*{animation:none!important}.word.anim{animation:fadeonly 1.6s linear both!important}}
+</style></head>
+<body><div class="phone" id="ph"></div>
+<script>
+const GC={"6":{"y":{"front":501,"middle":515,"back":531,"bearing":-2.9846680218474226},"svg":"<svg class=\"green-svg\" viewBox=\"0 0 62 64\" width=\"62\" height=\"64\" aria-hidden=\"true\">\n    <defs><clipPath id=\"gc\"><path d=\"M30.1 62.0C28.1 61.7 25.9 60.9 23.9 59.6C21.8 58.3 19.7 56.5 17.9 54.4C16.1 52.3 14.4 49.6 13.1 46.8C11.8 43.9 10.7 40.7 10.0 37.5C9.4 34.3 9.0 30.8 9.2 27.6C9.3 24.3 9.8 21.0 10.7 18.1C11.6 15.2 13.0 12.4 14.7 10.2C16.3 7.9 18.4 6.0 20.5 4.6C22.7 3.2 25.2 2.3 27.6 2.0C30.0 1.7 32.6 1.8 35.0 2.6C37.4 3.3 39.8 4.6 42.0 6.4C44.1 8.3 46.2 10.7 47.8 13.4C49.4 16.1 50.8 19.4 51.6 22.7C52.5 26.0 52.9 29.8 52.8 33.2C52.8 36.6 52.2 40.2 51.3 43.4C50.4 46.5 49.0 49.6 47.5 52.0C46.0 54.5 44.1 56.6 42.2 58.2C40.3 59.8 38.3 60.9 36.3 61.6C34.3 62.2 32.2 62.3 30.1 62.0Z\"/></clipPath></defs>\n    <rect x=\"0\" y=\"2.0\" width=\"62\" height=\"20.0\" fill=\"currentColor\" fill-opacity=\"0.3\" clip-path=\"url(#gc)\"/><rect x=\"0\" y=\"22.0\" width=\"62\" height=\"20.0\" fill=\"currentColor\" fill-opacity=\"0.19\" clip-path=\"url(#gc)\"/><rect x=\"0\" y=\"42.0\" width=\"62\" height=\"20.0\" fill=\"currentColor\" fill-opacity=\"0.1\" clip-path=\"url(#gc)\"/>\n    <line x1=\"0\" x2=\"62\" y1=\"22.0\" y2=\"22.0\" stroke=\"var(--surface-1)\" stroke-width=\"2\"/><line x1=\"0\" x2=\"62\" y1=\"42.0\" y2=\"42.0\" stroke=\"var(--surface-1)\" stroke-width=\"2\"/>\n    <path d=\"M30.1 62.0C28.1 61.7 25.9 60.9 23.9 59.6C21.8 58.3 19.7 56.5 17.9 54.4C16.1 52.3 14.4 49.6 13.1 46.8C11.8 43.9 10.7 40.7 10.0 37.5C9.4 34.3 9.0 30.8 9.2 27.6C9.3 24.3 9.8 21.0 10.7 18.1C11.6 15.2 13.0 12.4 14.7 10.2C16.3 7.9 18.4 6.0 20.5 4.6C22.7 3.2 25.2 2.3 27.6 2.0C30.0 1.7 32.6 1.8 35.0 2.6C37.4 3.3 39.8 4.6 42.0 6.4C44.1 8.3 46.2 10.7 47.8 13.4C49.4 16.1 50.8 19.4 51.6 22.7C52.5 26.0 52.9 29.8 52.8 33.2C52.8 36.6 52.2 40.2 51.3 43.4C50.4 46.5 49.0 49.6 47.5 52.0C46.0 54.5 44.1 56.6 42.2 58.2C40.3 59.8 38.3 60.9 36.3 61.6C34.3 62.2 32.2 62.3 30.1 62.0Z\" fill=\"none\" stroke=\"var(--text-muted)\" stroke-width=\"1.5\"/>\n    <circle cx=\"30.8\" cy=\"32.4\" r=\"3\" fill=\"currentColor\"/>\n  </svg>"},"11":{"y":{"front":140,"middle":158,"back":176,"bearing":-0.791470896838751},"svg":"<svg class=\"green-svg\" viewBox=\"0 0 62 64\" width=\"62\" height=\"64\" aria-hidden=\"true\">\n    <defs><clipPath id=\"gc\"><path d=\"M4.7 28.6C6.4 31.4 9.0 34.4 12.2 37.3C15.4 40.1 19.8 43.2 23.9 45.7C28.1 48.1 33.1 50.5 37.2 51.9C41.3 53.3 45.5 54.1 48.7 54.2C52.0 54.3 54.6 53.6 56.5 52.5C58.4 51.5 59.5 49.8 60.0 48.0C60.5 46.3 60.2 44.1 59.5 42.0C58.8 39.9 57.5 37.6 55.8 35.4C54.2 33.2 52.0 30.9 49.6 28.8C47.2 26.6 44.3 24.4 41.3 22.4C38.3 20.4 34.9 18.3 31.7 16.6C28.4 14.8 24.9 13.1 21.9 12.0C18.9 10.9 15.9 10.0 13.5 9.8C11.0 9.6 8.9 9.9 7.2 10.7C5.5 11.5 4.1 12.9 3.2 14.6C2.4 16.3 1.8 18.5 2.0 20.9C2.2 23.2 3.0 25.9 4.7 28.6Z\"/></clipPath></defs>\n    <rect x=\"0\" y=\"9.8\" width=\"62\" height=\"14.8\" fill=\"currentColor\" fill-opacity=\"0.3\" clip-path=\"url(#gc)\"/><rect x=\"0\" y=\"24.6\" width=\"62\" height=\"14.8\" fill=\"currentColor\" fill-opacity=\"0.19\" clip-path=\"url(#gc)\"/><rect x=\"0\" y=\"39.4\" width=\"62\" height=\"14.8\" fill=\"currentColor\" fill-opacity=\"0.1\" clip-path=\"url(#gc)\"/>\n    <line x1=\"0\" x2=\"62\" y1=\"24.6\" y2=\"24.6\" stroke=\"var(--surface-1)\" stroke-width=\"2\"/><line x1=\"0\" x2=\"62\" y1=\"39.4\" y2=\"39.4\" stroke=\"var(--surface-1)\" stroke-width=\"2\"/>\n    <path d=\"M4.7 28.6C6.4 31.4 9.0 34.4 12.2 37.3C15.4 40.1 19.8 43.2 23.9 45.7C28.1 48.1 33.1 50.5 37.2 51.9C41.3 53.3 45.5 54.1 48.7 54.2C52.0 54.3 54.6 53.6 56.5 52.5C58.4 51.5 59.5 49.8 60.0 48.0C60.5 46.3 60.2 44.1 59.5 42.0C58.8 39.9 57.5 37.6 55.8 35.4C54.2 33.2 52.0 30.9 49.6 28.8C47.2 26.6 44.3 24.4 41.3 22.4C38.3 20.4 34.9 18.3 31.7 16.6C28.4 14.8 24.9 13.1 21.9 12.0C18.9 10.9 15.9 10.0 13.5 9.8C11.0 9.6 8.9 9.9 7.2 10.7C5.5 11.5 4.1 12.9 3.2 14.6C2.4 16.3 1.8 18.5 2.0 20.9C2.2 23.2 3.0 25.9 4.7 28.6Z\" fill=\"none\" stroke=\"var(--text-muted)\" stroke-width=\"1.5\"/>\n    <circle cx=\"31.1\" cy=\"31.2\" r=\"3\" fill=\"currentColor\"/>\n  </svg>"},"12":{"y":{"front":401,"middle":412,"back":424,"bearing":-0.4443814218971794},"svg":"<svg class=\"green-svg\" viewBox=\"0 0 62 64\" width=\"62\" height=\"64\" aria-hidden=\"true\">\n    <defs><clipPath id=\"gc\"><path d=\"M48.0 44.4C49.0 41.1 49.8 37.0 50.2 33.2C50.5 29.4 50.5 25.3 50.0 21.7C49.5 18.1 48.4 14.6 47.1 11.8C45.7 9.1 43.8 6.6 41.8 5.0C39.8 3.4 37.4 2.3 35.1 2.0C32.8 1.7 30.3 2.1 28.0 3.1C25.7 4.1 23.4 5.9 21.4 8.0C19.5 10.1 17.6 12.8 16.1 15.6C14.7 18.5 13.5 21.8 12.8 24.9C12.1 28.1 11.7 31.5 11.8 34.6C11.9 37.7 12.5 40.9 13.3 43.7C14.2 46.5 15.5 49.2 16.9 51.5C18.3 53.8 20.1 56.0 21.9 57.6C23.8 59.2 25.8 60.5 27.8 61.2C29.7 62.0 31.8 62.3 33.7 62.0C35.6 61.7 37.5 60.9 39.2 59.5C41.0 58.1 42.7 56.1 44.1 53.6C45.6 51.0 47.0 47.8 48.0 44.4Z\"/></clipPath></defs>\n    <rect x=\"0\" y=\"2.0\" width=\"62\" height=\"20.0\" fill=\"currentColor\" fill-opacity=\"0.3\" clip-path=\"url(#gc)\"/><rect x=\"0\" y=\"22.0\" width=\"62\" height=\"20.0\" fill=\"currentColor\" fill-opacity=\"0.19\" clip-path=\"url(#gc)\"/><rect x=\"0\" y=\"42.0\" width=\"62\" height=\"20.0\" fill=\"currentColor\" fill-opacity=\"0.1\" clip-path=\"url(#gc)\"/>\n    <line x1=\"0\" x2=\"62\" y1=\"22.0\" y2=\"22.0\" stroke=\"var(--surface-1)\" stroke-width=\"2\"/><line x1=\"0\" x2=\"62\" y1=\"42.0\" y2=\"42.0\" stroke=\"var(--surface-1)\" stroke-width=\"2\"/>\n    <path d=\"M48.0 44.4C49.0 41.1 49.8 37.0 50.2 33.2C50.5 29.4 50.5 25.3 50.0 21.7C49.5 18.1 48.4 14.6 47.1 11.8C45.7 9.1 43.8 6.6 41.8 5.0C39.8 3.4 37.4 2.3 35.1 2.0C32.8 1.7 30.3 2.1 28.0 3.1C25.7 4.1 23.4 5.9 21.4 8.0C19.5 10.1 17.6 12.8 16.1 15.6C14.7 18.5 13.5 21.8 12.8 24.9C12.1 28.1 11.7 31.5 11.8 34.6C11.9 37.7 12.5 40.9 13.3 43.7C14.2 46.5 15.5 49.2 16.9 51.5C18.3 53.8 20.1 56.0 21.9 57.6C23.8 59.2 25.8 60.5 27.8 61.2C29.7 62.0 31.8 62.3 33.7 62.0C35.6 61.7 37.5 60.9 39.2 59.5C41.0 58.1 42.7 56.1 44.1 53.6C45.6 51.0 47.0 47.8 48.0 44.4Z\" fill=\"none\" stroke=\"var(--text-muted)\" stroke-width=\"1.5\"/>\n    <circle cx=\"31.1\" cy=\"33.0\" r=\"3\" fill=\"currentColor\"/>\n  </svg>"},"13":{"y":{"front":480,"middle":494,"back":508,"bearing":-0.8832641108587275},"svg":"<svg class=\"green-svg\" viewBox=\"0 0 62 64\" width=\"62\" height=\"64\" aria-hidden=\"true\">\n    <defs><clipPath id=\"gc\"><path d=\"M25.9 47.9C29.0 49.3 32.6 50.8 35.7 51.7C38.8 52.6 42.0 53.3 44.6 53.5C47.2 53.7 49.4 53.4 51.4 52.8C53.3 52.2 54.8 51.2 56.1 50.0C57.4 48.7 58.3 47.2 59.0 45.5C59.6 43.8 60.0 41.8 60.0 39.8C60.0 37.9 59.6 35.7 58.9 33.6C58.2 31.6 57.0 29.5 55.5 27.5C54.0 25.6 52.1 23.7 49.9 22.0C47.6 20.2 44.9 18.5 42.1 17.0C39.2 15.5 35.9 14.1 32.9 13.0C29.8 12.0 26.6 11.1 23.8 10.7C21.0 10.3 18.3 10.2 16.0 10.5C13.7 10.8 11.7 11.4 10.0 12.3C8.3 13.2 6.9 14.4 5.7 15.6C4.5 16.9 3.7 18.5 3.0 20.0C2.4 21.5 2.1 23.2 2.0 24.8C1.9 26.4 2.1 27.9 2.7 29.5C3.2 31.0 4.0 32.4 5.1 33.9C6.3 35.4 7.8 36.9 9.7 38.4C11.7 40.0 14.1 41.6 16.7 43.2C19.4 44.7 22.7 46.5 25.9 47.9Z\"/></clipPath></defs>\n    <rect x=\"0\" y=\"10.5\" width=\"62\" height=\"14.3\" fill=\"currentColor\" fill-opacity=\"0.3\" clip-path=\"url(#gc)\"/><rect x=\"0\" y=\"24.8\" width=\"62\" height=\"14.3\" fill=\"currentColor\" fill-opacity=\"0.19\" clip-path=\"url(#gc)\"/><rect x=\"0\" y=\"39.2\" width=\"62\" height=\"14.3\" fill=\"currentColor\" fill-opacity=\"0.1\" clip-path=\"url(#gc)\"/>\n    <line x1=\"0\" x2=\"62\" y1=\"24.8\" y2=\"24.8\" stroke=\"var(--surface-1)\" stroke-width=\"2\"/><line x1=\"0\" x2=\"62\" y1=\"39.2\" y2=\"39.2\" stroke=\"var(--surface-1)\" stroke-width=\"2\"/>\n    <path d=\"M25.9 47.9C29.0 49.3 32.6 50.8 35.7 51.7C38.8 52.6 42.0 53.3 44.6 53.5C47.2 53.7 49.4 53.4 51.4 52.8C53.3 52.2 54.8 51.2 56.1 50.0C57.4 48.7 58.3 47.2 59.0 45.5C59.6 43.8 60.0 41.8 60.0 39.8C60.0 37.9 59.6 35.7 58.9 33.6C58.2 31.6 57.0 29.5 55.5 27.5C54.0 25.6 52.1 23.7 49.9 22.0C47.6 20.2 44.9 18.5 42.1 17.0C39.2 15.5 35.9 14.1 32.9 13.0C29.8 12.0 26.6 11.1 23.8 10.7C21.0 10.3 18.3 10.2 16.0 10.5C13.7 10.8 11.7 11.4 10.0 12.3C8.3 13.2 6.9 14.4 5.7 15.6C4.5 16.9 3.7 18.5 3.0 20.0C2.4 21.5 2.1 23.2 2.0 24.8C1.9 26.4 2.1 27.9 2.7 29.5C3.2 31.0 4.0 32.4 5.1 33.9C6.3 35.4 7.8 36.9 9.7 38.4C11.7 40.0 14.1 41.6 16.7 43.2C19.4 44.7 22.7 46.5 25.9 47.9Z\" fill=\"none\" stroke=\"var(--text-muted)\" stroke-width=\"1.5\"/>\n    <circle cx=\"30.3\" cy=\"31.5\" r=\"3\" fill=\"currentColor\"/>\n  </svg>"}};
+const S=Object.assign({concept:'a',a:null,b:null,c:null,d:null,last:null,up:2,folded:false}, JSON.parse(decodeURIComponent(location.hash.slice(1)||'{}')));
+const par=S.par||3, hole=S.hole||11; const g=GC[String(hole)]||GC['11'];
+const kind=s=>{const d=s-par;return d<=-2?'cc':d===-1?'c':d===0?'p':d===1?'s':'d'};
+const word=s=>({cc:'EAGLE',c:'BIRDIE',p:'PAR',s:'BOGEY',d:(s-par===2?'DOUBLE':s-par===3?'TRIPLE':'+'+(s-par))})[kind(s)];
+// mark outline as SVG path so it can draw itself
+function markSvg(s,size=40,cls='ln'){
+  const k=kind(s), h=size/2;
+  const circ=(r)=>({d:`M ${h} ${h-r} a ${r} ${r} 0 1 1 0 ${2*r} a ${r} ${r} 0 1 1 0 ${-2*r}`,len:2*Math.PI*r});
+  const sq=(i)=>{const a=i,b=size-i;return {d:`M ${a+4} ${a} H ${b-4} Q ${b} ${a} ${b} ${a+4} V ${b-4} Q ${b} ${b} ${b-4} ${b} H ${a+4} Q ${a} ${b} ${a} ${b-4} V ${a+4} Q ${a} ${a} ${a+4} ${a}`,len:4*(b-a)}};
+  let ps=[]; if(k==='c')ps=[circ(h-1)]; if(k==='cc')ps=[circ(h-1),circ(h-5.5)]; if(k==='s')ps=[sq(1)]; if(k==='d')ps=[sq(1),sq(5.5)];
+  if(!ps.length) return '';
+  return `<svg class="m" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" aria-hidden="true">${ps.map(p=>`<path class="${cls} base" d="${p.d}"/>`).join('')}${ps.map((p,i)=>`<path class="${cls} draw" d="${p.d}" style="--len:${p.len.toFixed(1)};animation-delay:${0.06+i*0.12}s"/>`).join('')}</svg>`;
+}
+const sv=(w,d)=>`<svg width="${w}" height="${w}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+const ic={l:sv(24,'<path d="M15 6l-6 6 6 6"/>'),r:sv(24,'<path d="M9 6l6 6-6 6"/>'),rs:sv(18,'<path d="M9 6l6 6-6 6"/>'),chk:sv(18,'<path d="M5 12l5 5 9-10"/>'),
+dots:'<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>',
+flag:sv(24,'<path d="M6 21V4h11l-2 4 2 4H6"/>'),rings:sv(24,'<circle cx="8" cy="12" r="4"/><circle cx="16" cy="12" r="4"/>'),list:sv(24,'<path d="M4 7h16M4 12h11M4 17h7"/>'),grid:sv(24,'<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 10h16M4 15h16M10 4v16M15 4v16"/>')};
+const card=`<div class="green-card"><div class="green-pic">${g.svg}</div><div class="green-nums mono"><div class="gn"><b>${Math.round(g.y.front)}</b><span class="label">FRONT</span></div><div class="gn mid"><b>${Math.round(g.y.middle)}</b><span class="label">MIDDLE</span></div><div class="gn"><b>${Math.round(g.y.back)}</b><span class="label">BACK</span></div></div></div>`;
+function smark(s){const k=kind(s);return `<span class="sm ${k}">${markSvg(s,30)}${s}</span>`}
+function render(){
+  const left=['a','b','c','d'].filter(k=>!S[k]).length;
+  const allIn=left===0, mineIn=S.a&&S.b;
+  const pads=(k,stk)=>{const sel=S[k];const w=[par-1,par,par+1,par+2];const out=sel&&!w.includes(sel);const cells=out?[...w,sel]:w;return `<div class="pads">${cells.map(s=>{const on=s===sel, an=on&&S.last===k;const netD=(stk?s-1:s)-par; return `<button class="pad ${on?'sel':''} ${an?'anim':''} ${kind(s)==='d'?'dbl':''} ${netD>=2?'stamp':''}" data-k="${k}" data-s="${s}" aria-label="${s}, ${word(s).toLowerCase()}">${markSvg(s)}<span class="n">${s}</span>${an&&kind(s)==='cc'?'<span class="ripple anim"></span><span class="ripple anim r2"></span>':''}</button>`}).join('')}${out?'':`<button class="pad" aria-label="Other scores">${ic.dots}</button>`}</div>`};
+  const reward=(s,stk)=>{const net=stk?s-1:s, d=net-par; const W=d<=-3?(s===1?'Ace':'Albatross'):d===-2?(s===1?'Ace':'Eagle'):d===-1?'Birdie':d===0?'Par':d===1?'Bogey':d===2?'Double':d===3?'Triple':d===4?'Quad':'+'+d; const isNet=stk&&net!==s; return {txt:isNet?'Net '+W.toLowerCase():W, cls:d>=2?'dbl':d<=-2?'big':d>=0?'quiet':''}};
+const prow=(k,n,stk)=>{const s=S[k];const r=s&&S.last===k?reward(s,stk):null;return `<div class="row"><div class="nm"><b>${n}</b>${stk?`<span class="stk">1 stroke${s&&!r?` · net ${s-1}`:''}</span>`:''}${r?`<span class="word anim ${r.cls}">${r.txt}</span>`:''}</div>${pads(k,stk)}</div>`};
+  const who=(n,s)=>`<span>${n} ${s?smark(s):'<span class="dash">–</span>'}</span>`;
+  let mine;
+  if(S.concept==='b' && mineIn && S.folded!=='open'){
+    const folding=S.last==='a'||S.last==='b';
+    mine=`${folding?`<div class="rowwrap folding" style="--h0:220px">${prow('a','Andrew B.')}${prow('b','Sean',1)}</div>`:''}<button class="sum ${folding?'anim':''}"><span class="p">Andrew B. ${smark(S.a)}</span><span class="p">Sean ${smark(S.b)}</span><span class="ok">${ic.chk} In</span></button>`;
+  } else mine=prow('a','Andrew B.')+prow('b','Sean',1);
+  const net=(k)=>k==='b'?S.b-1:S[k];
+  let pts=null; if(allIn){const lbU=Math.min(net('a'),net('b')),lbT=Math.min(S.c,S.d),tU=net('a')+net('b'),tT=S.c+S.d; pts=(lbU<lbT?1:lbU===lbT?.5:0)+(tU<tT?1:tU===tT?.5:0);}
+  const fmt=(x)=>{const w=Math.floor(x),h=x-w>0;return (w?String(w):'')+(h?'½':'')||'0'};
+  const st=(n)=>n>0?`${n} UP`:n<0?`${-n} DN`:'AS';
+  const newUp=pts==null?S.up:S.up+2*pts-2;
+  const wonNow=allIn&&!!S.last;
+  const ptsTxt=pts==null?'':`+${fmt(pts)} ${pts<=1?'point':'points'}`.replace('+0 points','No points');
+  const up=`<span class="up ${wonNow&&newUp!==S.up?'anim':''}" style="${newUp<=0&&wonNow?'color:var(--text-muted)':''}"><span class="roll"><span>${st(S.up)}</span>${wonNow&&newUp!==S.up?`<span>${st(newUp)}</span>`:''}</span></span>`;
+  document.getElementById('ph').innerHTML=`<div class="hdr"><h1>Hole ${hole}<span>Par ${par}</span></h1><button class="ib">${ic.l}</button><button class="ib">${ic.r}</button><button class="ib" style="color:var(--text-muted)">${ic.dots}</button></div>
+  <div class="body">${card}<div class="match"><span>vs Fore Play</span><span class="end">${wonNow?`<span class="won anim" style="${pts<1?'color:var(--text-muted)':''}">${ptsTxt}</span>`:''}${up}</span></div>${mine}
+  <button class="line" data-them="1"><div class="who">${who('Sam',S.c)}${who('Jake',S.d)}</div><span class="go">${S.c&&S.d?'Edit':'Enter'} ${ic.rs}</span></button></div>
+  <div class="dock"><button class="next ${allIn?'go':''} ${allIn&&S.last?'anim':''}"><span class="fill"></span><span class="t">${allIn?'Next hole':mineIn?'Waiting on Sam + Jake':`Next hole · ${left} to go`}</span></button></div>
+  <nav class="tabs"><div class="cur">${ic.flag}</div><div>${ic.rings}</div><div>${ic.list}</div><div>${ic.grid}</div></nav>`;
+}
+document.addEventListener('click',e=>{
+  const p=e.target.closest('.pad[data-k]'); if(p){S[p.dataset.k]=+p.dataset.s;S.last=p.dataset.k;render();if(navigator.vibrate)navigator.vibrate(kind(+p.dataset.s)==='d'?[12,40,12]:10);return;}
+  if(e.target.closest('.sum')){S.folded='open';S.last=null;render();return;}
+  if(e.target.closest('[data-them]')){S.c=S.c||5;S.d=S.d||3;S.last='c';render();return;}
+});
+render();
+window.__S=S; window.__render=render;
+</script></body></html>

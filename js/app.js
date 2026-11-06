@@ -138,10 +138,13 @@ app.openSheet = (type, props = {}) => {
   renderSheet();
 };
 app.closeSheet = () => {
+  const was = app.sheet?.type;
   app.sheet = null;
   // Leaving the Add to Home Screen sheet: take this phone's keys back out of the address bar.
   if (location.hash.startsWith('#move=')) history.replaceState(null, '', `${location.pathname}${location.search}#/`);
   renderSheet();
+  // 021: closing an Enter sheet lets a waiting points moment start on the screen underneath.
+  if (was?.startsWith('ce-')) { app.ui.ceSheetAt = Date.now(); render(); }
 };
 
 // ───────────────────────────────────────────── scores
@@ -1213,7 +1216,8 @@ function renderTabbar(el, show) {
 
 function renderSyncChip() {
   // Connection pill (design system → Toast): under the header while offline with scores waiting to send.
-  const off = app.code && (typeof navigator !== 'undefined' && navigator.onLine === false) && app.unsynced > 0;
+  // 021: the calm team Enter says it in its own status line instead.
+  const off = app.code && (typeof navigator !== 'undefined' && navigator.onLine === false) && app.unsynced > 0 && !document.querySelector('#content .ce');
   let pill = document.getElementById('netpill');
   if (off && !pill) {
     pill = document.createElement('div');
@@ -1230,8 +1234,8 @@ function renderSyncChip() {
   el.textContent = n ? `${n} unsynced` : app.live === 'live' ? 'Synced' : app.live === 'reconnecting' ? 'Reconnecting' : 'Synced';
 }
 app.renderSyncChip = renderSyncChip;
-window.addEventListener('online', () => renderSyncChip());
-window.addEventListener('offline', () => renderSyncChip());
+window.addEventListener('online', () => { renderSyncChip(); if (document.querySelector('#content .ce')) render(); });
+window.addEventListener('offline', () => { renderSyncChip(); if (document.querySelector('#content .ce')) render(); });
 
 function renderSheet() {
   sheets.render($('sheet'), app);

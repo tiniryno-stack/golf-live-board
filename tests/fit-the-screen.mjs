@@ -97,10 +97,10 @@ async function check(page, size, screen, extra) {
       }
     }
     if (extra === 'enter' && document.querySelector('.ry-enter')) {
-      // 016 / 018 Enter (Team Ryder Cup, Partner “Rider” Cup): one card, one-row score pads.
+      // 021/022 calm Enter (Team Ryder Cup, Partner “Rider” Cup): flat rows, 4 bare pads + ⋯, the other cart one quiet row.
       // Never scrolls from the iPhone 15/16 up; smaller phones may scroll after the green card goes Compact (016 §0).
       if (vh >= 640 && content.scrollHeight > content.clientHeight + 1) problems.push(`Enter needs scrolling (${content.scrollHeight} > ${content.clientHeight})`);
-      const next = document.querySelector('.ry-next');
+      const next = document.querySelector('.ce-next');
       if (vh >= 640 && (!next || !onScreen(next) || !within(next, content))) problems.push('Next hole off screen');
       // Smaller phones scroll: Next must still be reachable above the tab bar.
       if (next && content.scrollHeight > content.clientHeight + 1) {
@@ -108,15 +108,15 @@ async function check(page, size, screen, extra) {
         const room = content.scrollHeight - content.clientHeight; // how far it can scroll
         if (box(next).bottom - room > tb.top + 1) problems.push('Next hole can\'t scroll clear of the tab bar');
       }
-      const rows = document.querySelectorAll('.ry-ecard .ry-player');
+      const rows = document.querySelectorAll('.ce .ce-row, .ce .ce-ro');
       if (!rows.length) problems.push('no score rows rendered');
       rows.forEach((r, i) => {
-        const name = r.querySelector('.ry-pl-n');
-        if (name.scrollWidth > name.clientWidth + 1) problems.push(`row ${i + 1}: “${name.textContent}” cut off`);
-        r.querySelectorAll('.ry-pad').forEach((pd) => { const b = box(pd); if (b.width < 47.5 || b.height < 47.5) problems.push(`row ${i + 1}: pad ${Math.round(b.width)}×${Math.round(b.height)} < 48`); });
+        const name = r.querySelector('b');
+        if (name && name.scrollWidth > name.clientWidth + 1) problems.push(`row ${i + 1}: “${name.textContent}” cut off`);
+        r.querySelectorAll('.ce-pad').forEach((pd) => { const b = box(pd); if (b.width < 47.5 || b.height < 47.5) problems.push(`row ${i + 1}: pad ${Math.round(b.width)}×${Math.round(b.height)} < 48`); });
       });
-      document.querySelectorAll('.ry-slim').forEach((sl) => { if (box(sl).height > 60) problems.push(`the other cart should be one slim row (${Math.round(box(sl).height)}px)`); });
-      if (document.querySelector('.ry-slim .ry-pad')) problems.push('a slim row should not be editable');
+      document.querySelectorAll('.ce-line').forEach((sl) => { if (box(sl).height > 60) problems.push(`the other cart should be one quiet row (${Math.round(box(sl).height)}px)`); });
+      if (document.querySelector('.ce-line .ce-pad')) problems.push('the other cart row should not be editable');
     } else if (extra === 'enter') {
       if (content.scrollHeight > content.clientHeight + 1) problems.push(`Enter needs scrolling (${content.scrollHeight} > ${content.clientHeight})`);
       const next = document.querySelector('.next-btn');
@@ -250,15 +250,17 @@ for (const size of SIZES) {
   await page.waitForTimeout(350);
   await page.evaluate(() => { window.__glb.ui.hole = 6; window.__glb.ui.unlocked = 6; window.__glb.render(); }); // a past hole, unlocked for editing
   await check(page, size, 'Enter (hole 6)', 'enter');
-  // 018: Partner “Rider” Cup Enter = the 016 layout (slim row with Edit flips to their cart, YOU row flips back).
-  await page.tap('.ry-slim[data-v="opp"]');
-  await check(page, size, 'Enter (their cart open)', 'enter');
-  await page.tap('.ry-slim[data-v="mine"]');
-  if (!(await page.$('.ry-slim[data-v="opp"]'))) { failures.push(`${size[0]} · tap back`); rows.push([`${size[0]} · Enter tap back to yours`, 'FAIL: theirs still open']); }
+  // 021/022: the other cart is one quiet row that opens its own sheet (Done closes it).
+  await page.tap('.ce-line');
+  await page.waitForTimeout(400);
+  await check(page, size, 'Enter (their scores sheet)', 'enter');
+  await page.tap('#sheet .ce-done');
+  await page.waitForTimeout(350);
+  if (await page.$('#sheet.open .ce-sheet')) { failures.push(`${size[0]} · their sheet`); rows.push([`${size[0]} · Enter their sheet closes`, 'FAIL: still open']); }
   // A finished hole two back: locked view still fits
   await page.evaluate(() => { window.__glb.ui.hole = 1; window.__glb.render(); });
   await check(page, size, 'Enter (hole 1, locked)', 'enter');
-  if (!(await page.$('.cart.mine.locked, .ry-ecard.locked'))) { failures.push(`${size[0]} · locked`); rows.push([`${size[0]} · hole 1 locked`, 'FAIL: not locked']); }
+  if (!(await page.$('.cart.mine.locked, .ce .ce-ro'))) { failures.push(`${size[0]} · locked`); rows.push([`${size[0]} · hole 1 locked`, 'FAIL: not locked']); }
   // The hole grid
   await page.evaluate(() => window.__glb.openSheet('holes', {}));
   await page.waitForTimeout(450);

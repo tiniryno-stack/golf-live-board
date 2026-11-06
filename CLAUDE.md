@@ -169,6 +169,11 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
   flag = counted holes only (015 engine), a button to Matches (`ry-flag`); one-row ScorePad `ry-pads` (pure `ui.padWindow` /
   `ui.padLabel`, `tests/enter016.test.mjs`), window in `app.ui.ryWin['pid:hole']`; other cart = `.ry-slim`, Edit flips with
   `app.ui.enterFocus` (picking their 2nd score flips home). Other games keep the 013 Enter + ScoreStepper.
+- **Calm team Enter (handoffs 021 + 022, Nov 5):** `ryderEnterView` now draws the calm screen (`.ce`): match line, flat rows +
+  green rail, 4 bare pads + ⋯ (`ce-more` sheet), other cart = quiet row → `ce-theirs` sheet, reward motion from
+  022/motion.css with rules in pure `js/reward.js` (`tests/enter021.test.mjs`). Motion survives redraws via `data-t0` +
+  `ui.syncMotion`; hole points come from the engine's hole entry (`points.us`), played once per hole (`glb.seen.CODE.pts`).
+  ARCHITECTURE.md §8.3 has the details. The 016 window arrows / flag / progress strip are gone from this screen.
 - **Partner “Rider” Cup on the Ryder screens (handoff 018, Nov 4):** `js/riderview.js` (`isRider`, `riderState`) feeds the
   same `ryderEnterView`, Matches (`ryder.js`) and Board strips with cart colors kept; Setup Carts → Tee times (matchups optional).
   2v2, Match play and Scorecard only still use the old Enter (ScoreStepper) and Matches.
