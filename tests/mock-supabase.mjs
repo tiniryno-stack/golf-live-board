@@ -31,7 +31,20 @@ export function createBackend() {
     course_geo: [], // GPS yardages stage 3: the course-geo function route fills it (tests may push fixture rows)
   };
   let auditId = 1;
-  const now = () => new Date().toISOString();
+  // backend.clock (ms, or null = the real clock) drives every timestamp and the 025 lobby gate.
+  const nowMs = () => (backend.clock ?? Date.now());
+  const now = () => new Date(nowMs()).toISOString();
+  // Postgres's JSON form of a timestamptz (to_jsonb): "2026-11-07T13:30:00.000000+00:00".
+  const pgTs = (ms) => (ms == null || !Number.isFinite(ms) ? null : new Date(ms).toISOString().replace(/\.(\d{3})Z$/, '.$1000+00:00'));
+  // Mirrors _lobby_gate: null = scores may be written; else the not_open refusal.
+  const lobbyGate = (e) => {
+    const l = e.settings?.lobby;
+    if (!l || typeof l !== 'object' || Array.isArray(l) || String(e.settings.ryder) !== 'true') return null;
+    const at = l.opensAt ? Date.parse(l.opensAt) : NaN;
+    const early = l.openedEarly === true || l.openedEarly === 'true';
+    if (l.stage === 'ready' && Number.isFinite(at) && (early || nowMs() >= at)) return null;
+    return { ok: false, error: 'not_open', opens_at: pgTs(Number.isFinite(at) ? at : null), now: pgTs(nowMs()), stage: l.stage || 'lobby' };
+  };
   const ev = (code) => t.events.find((e) => e.code === String(code || '').trim().toUpperCase()) || null;
   const player = (e, pid) => (e.roster.players || []).find((p) => p.id === pid) || null;
   const pname = (e, pid) => player(e, pid)?.name ?? pid;
@@ -163,7 +176,7 @@ export function createBackend() {
     whoami({ p_code, p_device_id }) {
       const e = ev(p_code);
       if (!e) return no('not_found');
-      return { ok: true, player_id: claimOf(e, p_device_id)?.player_id ?? null };
+      return { ok: true, player_id: claimOf(e, p_device_id)?.player_id ?? null, now: pgTs(nowMs()) };
     },
     claim_player({ p_code, p_player_id, p_device_id }) {
       const e = ev(p_code);
@@ -174,7 +187,7 @@ export function createBackend() {
       if (mine?.player_id === p_player_id) return { ok: true, player_id: p_player_id };
       if (mine) return no('already_playing', { player_id: mine.player_id });
       if (t.claims.some((c) => c.event_id === e.id && c.player_id === p_player_id)) return no('taken');
-      t.claims.push({ event_id: e.id, player_id: p_player_id, device_id: p_device_id, claimed_at: now() });
+      t.claims.push({ event_id: e.id, player_id: p_player_id, device_id: p_device_id, claimed_at: now(), in_app: false });
       log(e, p.name, `Joined as ${p.name}`);
       return { ok: true, player_id: p_player_id };
     },
@@ -235,7 +248,7 @@ export function createBackend() {
       if (!actor) return no('not_your_foursome');
       const dev = t.jdev.get(r.id);
       t.claims = t.claims.filter((c) => !(c.event_id === e.id && (c.player_id === r.player_id || c.device_id === dev)));
-      t.claims.push({ event_id: e.id, player_id: r.player_id, device_id: dev, claimed_at: now() });
+      t.claims.push({ event_id: e.id, player_id: r.player_id, device_id: dev, claimed_at: now(), in_app: false });
       r.status = 'approved';
       r.approved_by = actor;
       log(e, actor, `Let in ${pname(e, r.player_id)}'s new phone`);
@@ -256,6 +269,8 @@ export function createBackend() {
     upsert_score({ p_code, p_device_id, p_player_id, p_hole, p_strokes }) {
       const e = ev(p_code);
       if (!e) return no('not_found');
+      const gate = lobbyGate(e); // 025
+      if (gate) return gate;
       const c = claimOf(e, p_device_id);
       if (!c) return no('not_claimed');
       if (!sameFoursome(e.roster, e.settings, c.player_id, p_player_id, p_hole)) return no('not_your_foursome');
@@ -272,6 +287,8 @@ export function createBackend() {
     fill_score({ p_code, p_device_id, p_player_id, p_hole, p_strokes }) {
       const e = ev(p_code);
       if (!e) return no('not_found');
+      const gate = lobbyGate(e); // 025: same gate as upsert_score
+      if (gate) return gate;
       const c = claimOf(e, p_device_id);
       if (!c) return no('not_claimed');
       if (!sameFoursome(e.roster, e.settings, c.player_id, p_player_id, p_hole)) return no('not_your_foursome');
@@ -305,6 +322,41 @@ export function createBackend() {
       t.claims = t.claims.filter((c) => !(c.event_id === e.id && c.player_id === p_player_id));
       if (before !== t.claims.length) log(e, 'Organizer', `Freed up ${pname(e, p_player_id)}'s spot`);
       return { ok: true, released: before !== t.claims.length };
+    },
+    // 025: the home screen app opened this round on this device.
+    mark_in_app({ p_code, p_device_id }) {
+      const e = ev(p_code);
+      if (!e) return no('not_found');
+      const c = claimOf(e, p_device_id);
+      const marked = !!c && !c.in_app;
+      if (c) c.in_app = true;
+      return { ok: true, marked, now: pgTs(nowMs()) };
+    },
+    // 025: organizer only; every roster player, claimed / in_app (no device ids).
+    lobby_status({ p_code, p_admin_pin }) {
+      const e = ev(p_code);
+      if (!e) return no('not_found');
+      if (!adminOk(e, p_admin_pin)) return no('bad_pin');
+      return { ok: true, now: pgTs(nowMs()), players: (e.roster.players || []).map((p) => {
+        const c = t.claims.find((x) => x.event_id === e.id && x.player_id === p.id);
+        return { player_id: p.id, claimed: !!c, in_app: !!c?.in_app };
+      }) };
+    },
+    // 025: organizer only; the date (and, for a lobby at 'ready', opensAt in the same write).
+    set_round_date({ p_code, p_admin_pin, p_date, p_opens_at = null }) {
+      const e = ev(p_code);
+      if (!e) return no('not_found');
+      if (!adminOk(e, p_admin_pin)) return no('bad_pin');
+      const d = /^\d{4}-\d{2}-\d{2}$/.test(String(p_date || '')) ? Date.parse(`${p_date}T00:00:00Z`) : NaN;
+      const today = Date.parse(`${now().slice(0, 10)}T00:00:00Z`);
+      if (!Number.isFinite(d) || d < today - 86400000 || d > today + 400 * 86400000) return no('bad_date');
+      const was = e.played_on;
+      e.played_on = p_date;
+      e.updated_at = now();
+      const l = e.settings?.lobby;
+      if (p_opens_at && l && typeof l === 'object' && !Array.isArray(l)) e.settings = { ...e.settings, lobby: { ...l, opensAt: p_opens_at } };
+      if (was !== p_date) log(e, 'Organizer', `Date · ${was} → ${p_date}`);
+      return { ok: true, played_on: p_date };
     },
     pick_team_name({ p_code, p_device_id, p_name }) {
       const e = ev(p_code);
@@ -516,7 +568,7 @@ export function createBackend() {
   }
 
   const backend = {
-    tables: t, rpc, handle, select, calls: [], offline: false, stall: false, oga: { blocked: false, down: false, calls: [] },
+    tables: t, rpc, handle, select, calls: [], clock: null, offline: false, stall: false, oga: { blocked: false, down: false, calls: [] },
     // course-geo: be.geo.down = the function can't be reached; be.geo.osmDown / aiDown = it finds nothing (row 'failed').
     geo: { down: false, osmDown: false, aiDown: false, calls: [] },
   };

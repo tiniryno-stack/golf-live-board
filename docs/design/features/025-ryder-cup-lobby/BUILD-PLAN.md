@@ -219,11 +219,59 @@ call off. 6. Countdown + Scoring is open. Then: live DB (rollback test → apply
 
 ## 10 · Open questions for the owner
 
-(filled in as the council raises them)
+1. **A player's second phone.** Someone who picks his name in Safari, then opens Golf Board on a home screen app that
+   was set up earlier (a different device), finds his own name "in use". Today: Andrew frees it up from Host → Players
+   (built), or the player asks to be let in (only the organizer can approve before scoring opens). A server rule
+   "before scoring opens, the owner's other device can take over a claim with no scores" would remove the step. Not
+   built: it changes claim rules (red team + product QA raised it).
+2. **Lost organizer phone.** Only the organizer PIN can draft and set start times. The Host lobby shows the PIN with
+   "screenshot it" and offers Co-host; a server fallback that opens scoring by itself on the day was not built (it
+   would override SPEC §6 "scoring waits on start times").
+3. **Changing the course** in a lobby round isn't built (Round options shows the course only). Delete and recreate
+   before people join if it's wrong.
 
 ## 11 · Council scores
 
 | Round | Architect | Database | Frontend | Tests | Product QA | Red team | What changed |
 |---|---|---|---|---|---|---|---|
-| 0 · plan | | | | | | | |
+| 0 · plan | 6.5 | 7 | 6.5 | 7 | 7 | 6 | Plan reviewed; every point below folded into §12 before code. |
 | 1 · code | | | | | | | |
+
+## 12 · Round 0 changes (what the council asked for, as built)
+
+- **Lobby edits stay inside the round** (architect): Start the draft / Set start times render Setup's own step views
+  inside Host (`app.setup` with `s.lobby`), so `closeRound()` never runs, `#/setup/CODE` (Run it back) is untouched and
+  `persist()` never writes `glb.setupDraft` for a lobby. The last button saves to the event.
+- **Ids**: `lobby.draftedRoster()` (pure) is the one place ids are set for Team Ryder Cup: kept when present, `p1…` for a
+  new round; both `buildRyder` spots use it. Tested by personId through draft + start-time swap. Add a player = highest
+  number + 1.
+- **Names stay put** through Set start times (`keepNames`: side names by side id, cart names by the pair).
+- **Stale writes** (red team, architect): every lobby save fetches the event first and applies its one change to the fresh
+  copy; the draft and start times refuse (`toast: someone changed the players`) when the roster's ids/personIds moved
+  since the step opened. No new RPC.
+- **Replace** = `release_player` first, then `update_event` (a failure leaves a free spot, never an old phone holding the
+  new name); Undo = restore the name + release the sub. The old phone's auto-join isn't blocked by `glb.who.CODE` in a
+  lobby. "Free up" per player in the lobby Players sheet (stuck names, long-lived asks).
+- **Server time**: `whoami` (every load) and every `not_open` / `mark_in_app` answer carry `now`; the phone keeps the skew.
+  `keepQueued()` keeps a `not_open` score queued when the round opens within 2 h (fast phone clock) and drops every
+  other refusal; one toast per flush.
+- **Gate** also requires `settings.ryder`; Run it back strips `lobby`; `set_round_date(…, p_opens_at)` writes the date and
+  opensAt in one statement; `update_event` logs "Round plan · lobby → teams", not the object; the helper's revoke is its
+  own migration file.
+- **Start times saved late on the day open at once** (`withStartTimes(…, nowMs)`); every group needs a time.
+- **Bring it back** until 30 days after the date (a rain-out moves the date in the same sheet).
+- **in_app** flag keyed by player id (`glb.inapp.CODE = pid`), re-marked after "I'm not X" / re-claims.
+- **Players see "haven't added Golf Board"** (SPEC wording kept) through a count-only `lobby_counts(p_code)` RPC (numbers,
+  no ids).
+- **Seasons / crew / Setup's last groups** skip lobby rounds that never opened.
+- **Words**: "first start around 8:00" (not "first tee"); kickers that confirm ("you're in", "scoring is open") are muted,
+  never green; only your cart row is green; notice = amber dot only; row actions = `.btn.small`; Home's Coming up uses
+  `.card`, never `.live-card`; screen 26 says "N of 16 have Golf Board" (no presence data).
+- **Lobby ⋯ menu**: Share round link · Light/Dark · How Team Ryder Cup works · Host settings (organizer). No Rules, Run it
+  back, Fix hole or the `who` sheet while gated (Pick my name opens the A–Z list).
+- **Safari players** get an "Add Golf Board to your home screen" row on every lobby view and the join code on the landing
+  ("Already have Golf Board? Open it and Join with code V4T3M").
+- **Organizer** is claimed as himself right after creating (024 owner on the roster).
+- Tests added to §7: TZ loop (`process.env.TZ` UTC / Tokyo / Los Angeles), mock clock edges (−1 ms / 0), unclaimed →
+  not_open, fill_score parity, Postgres timestamp strings, combined `nextHostStep` priorities, `keepQueued`,
+  `draftedRoster` ids, Run it back strip, seasons skip.
