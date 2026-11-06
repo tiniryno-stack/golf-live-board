@@ -100,6 +100,9 @@ test('nextHostStep: the one primary for each stage, in priority order', () => {
   assert.equal(L.nextHostStep(st(drafted({ stage: 'off', notice: note }))), 'tell', 'call it off → Tell the group first');
   assert.equal(L.nextHostStep(st(drafted({ stage: 'off', notice: note })), { told: note.at }), 'off');
   assert.equal(L.nextHostStep(st(lobbyEvent({ notice: note })), { count: 15 }), 'tell');
+  assert.equal(L.nextHostStep(st(ready, at('2026-11-07T13:00:00Z'))), 'waitOpen', 'the day, before it opens');
+  const openNote = drafted({ stage: 'ready', opensAt: '2026-11-07T13:30:00.000Z', notice: note }, ['08:00', '08:10', '08:20', '08:30']);
+  assert.equal(L.nextHostStep(st(openNote, at('2026-11-07T14:00:00Z'))), 'open', 'open beats an untold notice');
   assert.equal(L.nextHostStep(null), null);
 });
 
@@ -215,6 +218,12 @@ test('the queue keeps a not_open score only when the round is about to open; ser
   assert.equal(L.keepQueued({ ok: true }), false);
   assert.equal(L.parseTime('2026-11-07T13:30:00.123456+00:00'), at('2026-11-07T13:30:00.123Z'));
   assert.equal(L.parseTime('2026-11-07 13:30:00+00'), at('2026-11-07T13:30:00Z'));
+  assert.equal(L.parseTime('2026-11-07T13:30:00+00:00'), at('2026-11-07T13:30:00Z'), 'Postgres drops a zero fraction');
+  const near = (opens, now) => L.keepQueued(r({ stage: 'ready', opens_at: opens, now }));
+  assert.equal(near('2026-11-07T15:30:00Z', '2026-11-07T13:30:00Z'), true, 'exactly 2 h: keep');
+  assert.equal(near('2026-11-07T15:30:00.001Z', '2026-11-07T13:30:00Z'), false, '2 h + 1 ms: drop');
+  assert.equal(near(null, '2026-11-07T13:30:00Z'), false);
+  assert.equal(near('2026-11-07T13:30:00Z', '2026-11-07T13:31:00Z'), true, 'server says it just opened (skew): keep');
 });
 
 test('server gate (mock mirrors _lobby_gate): not_open until open, upsert + fill alike, admin always, old rounds untouched', () => {
@@ -259,7 +268,21 @@ test('server gate (mock mirrors _lobby_gate): not_open until open, upsert + fill
   e.settings = L.callOff(e.settings);
   assert.equal(write(D, 'p10', 3, 4).error, 'not_open');
   assert.equal(rpc.admin_upsert_score({ p_code: code, p_admin_pin: pin, p_player_id: 'p10', p_hole: 3, p_strokes: 4 }).ok, true);
-  e.settings = L.openNow(L.bringBack(e.settings), at('2026-11-07T13:40:00Z'));
+  assert.equal(fill(D, mate.id, 3, 4).error, 'not_open', 'fill: off');
+  e.settings = { ...e.settings, lobby: { ...e.settings.lobby, stage: 'teams' } };
+  assert.equal(fill(D, mate.id, 3, 4).error, 'not_open', 'fill: teams');
+  for (const bad of [null, 'garbage']) {
+    e.settings = { ...e.settings, lobby: { ...e.settings.lobby, stage: 'ready', opensAt: bad } };
+    assert.equal(write(D, 'p10', 3, 4).error, 'not_open', `ready with opensAt ${bad}: closed`);
+  }
+  // The phone and the server read openedEarly the same way (boolean or the text "true").
+  for (const early of [true, 'true']) {
+    const s2 = { ...e.settings, lobby: { ...e.settings.lobby, stage: 'ready', opensAt: '2026-11-07T15:00:00.000Z', openedEarly: early } };
+    e.settings = s2;
+    assert.equal(L.lobbyState({ ...e, settings: s2 }, be.clock).open, true);
+    assert.equal(write(D, 'p10', 5, 4).ok, true, `openedEarly ${JSON.stringify(early)}`);
+  }
+  e.settings = L.openNow(L.bringBack(L.callOff({ ...e.settings, lobby: { ...e.settings.lobby, openedEarly: false } })), at('2026-11-07T13:40:00Z'));
   be.clock = at('2026-11-07T13:00:00Z');
   assert.equal(write(D, 'p10', 4, 4).ok, true, 'openedEarly: open');
   // set_round_date: organizer only, sane dates, and opensAt in the same write.

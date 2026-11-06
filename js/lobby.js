@@ -116,7 +116,7 @@ export function lobbyOf(settings) {
     startTime: HHMM.test(String(l.startTime || '')) ? String(l.startTime) : '08:00',
     tz: validTz(l.tz) ? l.tz : 'UTC',
     opensAt: l.opensAt || null,
-    openedEarly: l.openedEarly === true,
+    openedEarly: l.openedEarly === true || l.openedEarly === 'true', // same as the server's _lobby_gate
     notice: n,
     cohost: l.cohost || null,
     hostName: String(l.hostName || '').trim() || 'The organizer',
