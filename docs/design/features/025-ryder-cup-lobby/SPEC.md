@@ -1,6 +1,6 @@
 # 025 · Team Ryder Cup lobby: join days ahead, play on Saturday
 
-Status: built in 4c7dcb0 (branch claude/vigilant-hopper-wlls0o; preview, not merged to main)
+Status: revised Nov 6 (carts stage + handicap reveal): building on claude/new-session-a0hcnv. First version built in 4c7dcb0.
 
 **The idea (owner, Nov 6).** For Team Ryder Cup, everyone knows days ahead that they're playing. The organizer should be able to **open the round as soon as he has the 16 names**, before carts, the draft and start times exist. He shares one link (Partiful or a group text) on Wednesday. Players tap it, pick their name and add Golf Board to their home screen. From then on they can see who's playing and what's still to come. After the draft they see their team and cart; once start times are set, they see their time and matches. On Saturday they just tap the icon. Scoring opens by itself 30 minutes before the first start time.
 
@@ -20,10 +20,10 @@ Mockups are reference only. Rebuild them with the app's components and tokens: n
 
 | # | key | screen | # | key | screen |
 |---|---|---|---|---|---|
-| 1 | landing | Lobby landing (Safari) | 15 | setupchoice | Setup: Invite now? |
-| 2 | who | Which one are you? (A–Z) | 16 | hostearly | Host · before the draft |
+| 1 | landing | Lobby landing (Safari): **Add to home screen first** | 15 | setupchoice | Setup: Invite now? |
+| 2 / 2b | who / whoapp | Which one are you? (A–Z): Safari fallback / **in the app** | 16 | hostearly | Host · before the draft |
 | 3 | welcome | See you Saturday (first open) | 17 | hostreplace | Replace a player |
-| 4 | early | Lobby · before the draft | 18 | replaceshare | Send the sub the link |
+| 4 | early | Lobby · before the draft (with **your handicap**) | 18 | replaceshare | Send the sub the link |
 | 5 | drafted | Lobby · teams are set | 19 | hostdrafted | Host · teams set |
 | 6 | teetimes | Lobby · start times set | 20 | hostoptions | Round options |
 | 7 | satwait | Saturday · start times coming | 21 | calloff | Call it off? |
@@ -41,7 +41,7 @@ Mockups are reference only. Rebuild them with the app's components and tokens: n
 
 ```
 settings.lobby = {
-  stage: 'lobby' | 'teams' | 'ready' | 'off',
+  stage: 'lobby' | 'carts' | 'teams' | 'ready' | 'off',
   startTime: 'HH:MM',            // the round's start (first group), organizer's local time
   tz: 'America/Chicago',         // IANA zone of the organizer's phone at creation (Intl.DateTimeFormat().resolvedOptions().timeZone)
   opensAt: ISO-8601 UTC | null,  // when scoring opens; set when stage becomes 'ready' (first start time − 30 min, computed in tz)
@@ -54,6 +54,7 @@ settings.lobby = {
 - The date is `events.played_on`. It's set at creation and changed with the new `set_round_date` RPC (§3).
 - **The stages:**
   - `lobby`: the names are set; there are no carts or sides yet (`roster.teams` and `roster.sides` are empty).
+  - `carts`: carts are paired (owner, Nov 6): `roster.teams` holds 8 carts with **temporary ids `C1`…`C8`**, no `sides`, so every player sees who they ride with. Ryder cart ids carry their side (`1A`…`2D`), so the draft renames each cart to its real id when it lands on a team. Player ids and `teamId` links are updated together, and claims are keyed by player id, so nobody who has joined loses their spot. `ryderState` / `compute` must ignore carts without sides.
   - `teams`: carts and the draft are saved, so `roster.teams` and `sides` are filled.
   - `ready`: start times are saved (`settings.teeTimes`, one per group), and `opensAt` is set.
   - `off`: called off.
@@ -67,10 +68,12 @@ settings.lobby = {
 
 **Setup (Team Ryder Cup only):** course → players (16, as today: crew chips, search, guests) → game = Team Ryder Cup. Then comes the new choice screen **15**: primary **Invite now, draft later**, secondary **Draft and tee times first**. The secondary is exactly today's Carts → Draft → Tee times flow.
 
-**Invite now** adds one small step, **When**: a date picker and a start-time picker, using the existing TextField pattern and native `<input type=date|time>`. It isn't drawn; build it from existing parts and flag it. Then it creates the event:
+**Invite now** adds two small steps. First **When**: a date picker and a start-time picker, using the existing TextField pattern and native `<input type=date|time>`. It isn't drawn; build it from existing parts and flag it. Then it creates the event:
 - `create_event` with `p_played_on` = the date;
 - `roster.players` with their personIds, and no teams or sides;
 - `settings.ryder` as today, and `settings.lobby = { stage: 'lobby', startTime, tz, ... }`.
+
+Then **Who rides together?** (`screenshots/handicap-flow/10-hostcarts.png`): Setup's existing `ryCartsView` (8 carts of 2, tap two names to swap, handicaps beside names). **Skip** is allowed, and carts can be paired later from Host → Carts. Saving sets stage `carts`.
 
 After that it goes straight to Host's lobby view (**16**) with the share sheet open (link + “You're on the list for Chuck's Bday on Saturday. Tap to join.”).
 
@@ -79,7 +82,9 @@ After that it goes straight to Host's lobby view (**16**) with the share sheet o
 - **Not in the app yet · K people:** one row per person (Peter “picked a name in Safari” · Chuck “not yet”), each with a **Share** pill (share sheet, ready message with the link). K plus N must add up to the roster.
 - **Players · replace a player ›** (§4) and **Co-host · Josh ›** (§5).
 - **The primary is always the next step:**
-  - in `lobby`: **Start the draft**, which runs Setup's existing `ryCartsView` → `ryDraftView` on this event's roster. Saving writes `roster.teams` / `sides` via `update_event` and sets stage `teams`. Player ids never change, so claims survive.
+  - in `lobby` (carts skipped): **Pair the carts** (the same carts step). In `carts`: **Enter the draft** (the draft happens in person; the organizer taps each pick in after). It runs two steps on the open round. See `screenshots/handicap-flow/11-hostdraft` and `12-hoststarts`: these are Setup's existing `ryDraftView` (“Draft · 1 of 2 · Drafting in person? Tap each cart as it's picked.”) and `ryTeeView` (“Draft · 2 of 2”, start times). The carts step only reopens if the organizer picks Host → Carts.
+    - Saving the draft writes `roster.teams` / `sides` via `update_event` and sets stage `teams`. Player ids never change, so claims survive.
+    - It's reachable from Host's lobby view (16) and from the organizer's own lobby (⋯ → Host).
   - in `teams`: first **Share the teams**, a one-time primary (share sheet: “Teams are set for Chuck's Bday. Open Golf Board to see yours.”). Then **Set start times**, which runs `ryTeeView` and saves `settings.teeTimes`. That sets stage `ready` and `opensAt` = first start time − 30 min on `played_on` in `tz`.
   - in `ready`, on the day before `opensAt` (**24**): “Scoring opens at 7:30”, with a secondary **Open scoring now**. That shows a confirm (**25**) and is allowed only on `played_on` in `tz`. It sets `openedEarly: true` and `opensAt = now`.
   - in `ready` after it opens (**27**): the normal Host, plus the checklist.
@@ -115,13 +120,24 @@ Round options → **Co-host** → pick a player (**cohost** = playerId) → the 
 
 ## 6 · Players
 
-- **Join (1 → 2 → 024 confirm → guide → 3):** a lobby round's landing (**1**) replaces the join intro: “You're on the list for Saturday”, the round card (date, course, game, players, “first start around 8:00”) and **Find my name**. The quiet “Not playing? Follow along” opens today's watching view.
-  - Name list (**2**): A–Z with search (no tee-time groups exist yet); a claimed name shows “on another phone”.
-  - Then 024's “You're Baker?” confirm, and the existing Add to Home Screen path on Home (move link).
-  - **No cart-name picker** in a lobby.
-  - First open (**3**): “See you Saturday, Baker” → **See who's playing**; an optional **Show me an example round** (**12**, three static pages, made-up names, nothing saved). The example round is a stretch goal; leave the link out if it isn't built.
+- **Join: the handicap flow (owner, Nov 6, replaces screens 1–3 for invite links).** See `screenshots/handicap-flow/` (`NN-key.png`, keys in `mockups/lobby-screens.html`) and `screenshots/this-weekend-flow.png`. Every button pulls toward the home screen and the reveal.
+  1. **invite**: kicker “Chuck's Bday · Sat Nov 9”, headline **“Andrew set your handicap”**, one line “16 players. Two teams. One cup.”, primary **Reveal my handicap**, quiet “Not playing? Follow along”. Nothing else.
+  2. **guide2**: “Step 1 of 2 · reveal your handicap”, then “Your handicap opens in the app” (put Golf Board on your home screen, 30 seconds), four steps, the pointer at Safari's ⋯, and the quiet **“Can't add it? Reveal it here”** (Safari fallback: name pick + reveal in Safari).
+     - The steps open from the existing Add to Home Screen move link, with **the round code in it** (024), so the icon opens straight into this round.
+     - The pointer and step pictures will be redrawn from the owner's real iOS 26 Safari screenshots (pending). Until then, use these steps.
+  3. **In the app, first open:** a phone whose owner is on the roster is joined automatically (024 'auto'). Anyone else gets **whoapp2** (“Step 2 of 2 · reveal your handicap”, A–Z + search, “on another phone” for claimed names), then 024's “You're Baker?” confirm.
+  4. **The reveal (reveal1 → reveal2 → reveal3), once per phone per round** (`glb.seen.CODE.hcp`):
+     - “Chuck's Bday · Baker” / **“Andrew has you at”**, then the number at 64 mono.
+     - It starts blurred (`filter: blur(6px)`, `text-muted`) and rolls through a few values to the real one (`strokes`), sharpening as it goes: about **1.2 s** in total, ease-out, with the last 300 ms settling on the number.
+     - Then, fading in at 200 ms each: the kicker turns green (it's you); “7th lowest of 16 · the field runs 4 to 20” (a rank by `strokes`, with ties shared); “Think it's off? Text Andrew.” (plain text, **no button**); and the primary **See who you're up against** → the lobby.
+     - Reduced motion: show the final frame at once.
+     - With no handicap set (`strokes` empty), skip the reveal and go straight to the lobby.
+  5. **The lobby** (4) as below. **No cart-name picker** in a lobby. The “See you Saturday” screen (3) is no longer in this path; the lobby itself says when and where.
+  - The plain landing (1) and Safari name list (2) stay for a lobby link opened without the invite (a Safari fallback / follow-along).
+  - **Handicaps:** the lobby shows **Your handicap · 12** with “Andrew sets these. Think it's off? Text Andrew.” (**text only, no button**, owner Nov 6). Who's playing shows everyone's handicap on the right. It comes from roster `strokes`, which Host already edits. No database change.
+  - **Host's share message:** “You're on the list for Chuck's Bday on Saturday. Tap this to reveal your handicap.”
 - **Lobby screen (4–8, 14):** when and where as the headline. Its content depends on the stage:
-  - **Before the draft (4):** “Coming up · Teams · Your start time and matches”, then **Who's playing** (the first four names, then “12 more · 3 haven't added Golf Board ›” → the full list).
+  - **Before the draft (4):** “Your handicap”, then **Your cart · Baker + Mitch** (your cart in green, “team after the draft”) once carts are paired (otherwise “Coming up · Teams · Your start time and matches”), then **Who's playing** (the first four names, then “12 more · 3 haven't added Golf Board ›” → the full list).
   - **Teams set (5):** your team; only **your cart** in green; the other team collapsed to one row.
   - **Ready (6):** “Saturday · 8:20 with Mitch”, your three matches, and “Scoring opens by itself at 7:30.”
   - **Day of, not ready (7):** “Andrew or Josh is setting start times · teams are set” with **Text Andrew**.

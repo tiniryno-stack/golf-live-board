@@ -316,3 +316,129 @@ call off. 6. Countdown + Scoring is open. Then: live DB (rollback test → apply
   (no "opened early" wording); `_lobby_gate` could be SECURITY INVOKER (it's already not callable by anon, verified
   live); "organizer" tag in Who's playing (the round stores the organizer's name, not his player); `lobby_counts` with
   a non-array roster would error (the app never writes one). Each would be a small follow-up migration.
+
+---
+
+# Part 2 · SPEC revision (Nov 6 evening): carts before the draft + the handicap reveal
+
+The owner sent a revised 025 zip (same folder, now in the repo). Part 1 above is built and live on `main`
+(`33708fe`). Part 2 builds only what the revision changes. Branch: `claude/new-session-a0hcnv` (the session's branch,
+off `main`).
+
+## P2.1 · What the revision changes (diff of SPEC.md)
+
+1. **New stage `carts`** between `lobby` and `teams`: carts are paired before the draft. `roster.teams` = 8 carts with
+   temporary ids `C1`…`C8`, no `sides`, no `groups`; every player sees who they ride with. The draft gives each cart
+   its real id (`1A`…`2D`). Player ids never change (claims are keyed by player id). `compute` / `ryderState` ignore
+   carts without sides.
+2. **Setup:** Invite now → When → create → **Who rides together?** (`ryCartsView`, handicaps beside names, **Skip**
+   allowed) → Host lobby with the invite share sheet.
+3. **Host primary:** `lobby` (carts skipped) → **Pair the carts**; `carts` → **Enter the draft** = two steps on the open
+   round: `ryDraftView` ("draft · 1 of 2 · Drafting in person? Tap each cart as it's picked.") then `ryTeeView` ("draft ·
+   2 of 2", Start times). New Host row **Carts · 8 paired ›** (the carts step reopens only from there).
+4. **Players, the handicap flow** (invite links): invite (“Andrew set your handicap”) → guide (Add to Home Screen, Step 1
+   of 2, pointer at Safari's ⋯, “Can't add it? Reveal it here”) → in the app: 024 auto-join or the A–Z list (“Step 2 of
+   2 · reveal your handicap”) → 024 confirm → **the reveal** (blur → roll → number, rank line, once per phone,
+   `glb.seen.CODE.hcp`) → the lobby. “See you Saturday” (3) leaves this path.
+5. **Lobby before the draft (4):** **Your handicap · 12** card (“Andrew sets these. Think it's off? Text Andrew.”, text
+   only), **Your cart · Baker + Mitch** (green, “team after the draft”) once paired (else Coming up), **Who's playing ·
+   handicap** with each handicap on the right.
+6. **Landing (1)** for a plain lobby link: “Add Golf Board to my home screen” first, “Join in Safari for now”.
+7. **Share message:** “You're on the list for Chuck's Bday on Saturday. Tap this to reveal your handicap.”
+
+No database change: the server gate already refuses every stage but an open `ready`; `update_event` takes any roster.
+
+## P2.2 · Data shapes
+
+```
+settings.lobby.stage: 'lobby' | 'carts' | 'teams' | 'ready' | 'off'      (prevStage may be 'carts')
+settings.lobby.hostId: playerId | null    // NEW, optional: the organizer's own player (024 owner on the roster at
+                                          // creation) → "organizer" tag in Who's playing. Absent on Part 1 rounds.
+roster at 'carts': { groups: [], sides: [], teams: [{ id:'C1', name:'Baker + Mitch' } … 'C8'],
+                     players: [{ …, teamId:'C1', groupId:null }] }
+localStorage (new): glb.seen.CODE.hcp (the reveal was shown on this phone). glb.seen.CODE.welcome is no longer read.
+route (new): #/e/CODE/hcp = the invite link (opens the round like #/e/CODE; marks this load as an invite).
+```
+
+`lobbyState()` gains `paired` (stage `carts`) and checks the stage against the roster: `carts` needs C-carts and no
+sides (else `lobby`); `teams`/`ready` need two sides (else `lobby`). Old rounds: `lobbyState` = null, nothing changes.
+
+## P2.3 · Pure additions in `js/lobby.js` (all tested)
+
+- `STAGES` + `'carts'`; `lobbyOf` keeps `hostId`; `lobbyState` → `paired`, `hostId`.
+- `pairedRoster(roster, order)`: `order` = player ids, pairs in order → carts `C1`…`C8` (name "A + B"), `teamId` set,
+  `groupId` null, sides/groups empty. Refuses (null) unless exactly 16 known, distinct ids.
+- `cartOrder(roster)`: the player ids in cart order (C1's pair, C2's…), or roster order when unpaired: what the carts
+  and draft steps start from.
+- `toCartsStage(settings)`: stage `carts`, opensAt null, teeTimes [].
+- `nextHostStep`: `lobby` → `pair` (16) / `need16`; `carts` → `draft`.
+- `maySaveStep`: `carts` mode in `lobby`|`carts`; `draft` mode in `carts` only; `tee` in `teams`|`ready`.
+- `myCart(event, pid)`: `{ id, names, mate }` for the player's cart at any stage with carts (C or real).
+- `hcpOf(roster, pid)` → `{ strokes, rank, tied, of, min, max }` (rank = 1 + number strictly lower, among players with a
+  handicap; null when the player has none). `ordinal(n)`.
+- `revealFrame(strokes, elapsedMs, reduced)` → `{ value, blur, opacity, done, fade: [kicker, rank, note, button] }`:
+  1.2 s ease-out roll through ~4 values ending on the real one (last 300 ms settled), then four 200 ms fade-ins.
+  Reduced motion = the final frame at once.
+- `lobbyView(state, ctx)`: ctx gains `invite`, `guide`, `standalone`, `revealing`, `seenHcp`, `hasHcp`; drops
+  `seenWelcome`. Order: open → gameday · removed · off · not joined: picking → who, watching → watch, standalone → who,
+  guide → guide, invite (and the roster has handicaps) → invite, else landing · joined: revealing or (hasHcp and not
+  seenHcp) → reveal · ready → ready · day → dayWait · teams → drafted · lobby/carts → early.
+- `homeCard` at `carts`: “Riding with Mitch · teams after Andrew’s draft”.
+- `inviteText(ev, day, hcp)`: the share line (reveal wording only when the roster has handicaps; else Part 1's).
+
+## P2.4 · Screens
+
+- **Setup (`setup.js`)**: after create, Host opens the carts step in lobby mode with `fromSetup` (kicker “New round ·
+  NAME · carts”, top link **Skip**, primary **Open the lobby**). Skip or save → Host lobby → the invite share sheet
+  (`host.mount` waits until no lobby step is open). `ryCartsView` shows each handicap beside the name (also in the
+  normal Setup flow: `swapBtn` extra, mono muted).
+- **Lobby edit mode** (`startLobbyEdit(app, mode, opts)`): `carts` (screen `teams`, players in `cartOrder`), `draft`
+  (screen `draft`, players in cart order: captains = carts 1 and 2 as today), `tee` (screen `tee`). Draft done →
+  **Next: start times** saves the draft (stage `teams`) and opens the tee step on the fresh round (`chain`: kicker
+  “draft · 2 of 2”); its top link “Back to Host” leaves start times for later. The Host’s own Set start times = kicker
+  “start times”. Headlines say “Start times” (organizer screens) in lobby mode.
+- **Host lobby (`hostlobby.js`)**: primaries `pair` (“Pair the carts”) and `draft` (“Enter the draft”); row **Carts ·
+  8 paired / not paired** in lobby/carts (hidden after the draft and when off); Remove at `carts` = confirm “Removing
+  him unpairs the carts. Replacing him keeps his cart.” (primary Replace … instead, alt Remove); Replace blurb at
+  `carts` = “with his cart”. Invite/person/sub share messages use `#/e/CODE/hcp` + the reveal line.
+- **Player lobby (`screens/lobby.js`)**: new views `invite`, `guide`, `reveal`; `landing` reworded; `who` kicker
+  “Step 2 of 2 · reveal your handicap” (handicap flow) / “NAME · in Golf Board” (app) / “NAME” (Safari); `early` = handicap
+  card, Your cart (stage carts) or Coming up, Who's playing · handicap (numbers right, “organizer” tag via `hostId`);
+  `lobby-all` sheet shows handicaps; `dayWait` says “drafting” at lobby/carts. `welcome` (3) is removed.
+- **Reveal motion**: drawn from `revealFrame(now − t0)` every render (redraw-safe, like `data-t0`), and while it runs a
+  rAF loop in `mount` updates only the number/blur/opacity nodes (no full redraws). `t0` in `app.ui.reveal`;
+  `glb.seen.CODE.hcp` is written on the first frame, so a reload never replays it.
+- **Guide pointer** (new pattern, flagged): “Start here ↓”, fixed bottom-right above Safari's toolbar, existing label
+  type + `icon('down')`-style arrow, no new colour or size.
+- **Engine**: `ryderView` returns the safe empty view when there are carts but no two sides (stage `carts`).
+
+## P2.5 · Tests (`tests/lobby025.test.mjs`, extended; one file)
+
+`pairedRoster` (ids/personIds kept, C1…C8, refuses 15/dupes) · `lobbyState` at carts, carts without carts → lobby,
+lobby with C-carts stays lobby · `nextHostStep` pair/need16/draft · `maySaveStep` per mode × stage · draft from carts
+keeps every player id and gives real cart ids (claims survive) · `compute` + `ryderState` + headlines on a carts roster
+don't throw, no matches · mock gate: carts = not_open, admin ok · `hcpOf` ranks with ties, nobody set, me unset ·
+`revealFrame` (start blurred, ends exact at 1.2 s, fades in order, reduced motion) · `lobbyView` order incl. invite
+without handicaps → landing, standalone → who, reveal once · `homeCard` carts line · `withWhen`/callOff/bringBack keep
+`carts` · old rounds (`lobby: null`) unchanged.
+
+## P2.6 · Decided overnight (Part 2)
+
+- No SQL: the gate already treats `carts` as not open, and `update_event` takes any roster. So nothing to apply to
+  the live database this time (no migration, no rollback file).
+- The invite link is `#/e/CODE/hcp`; Host's invite / person / sub messages use it. The teams / tell / co-host
+  messages keep the plain link (those people already joined).
+- The handicap screens show only when the roster has at least one handicap; otherwise the plain landing (1) and the
+  Part 1 wording. A player with no handicap skips the reveal (SPEC).
+- Not iPhone Safari (Android, desktop): “Reveal my handicap” goes straight to the A–Z list (the guide is iOS Safari steps).
+- The home screen app with no claim on a lobby round shows the A–Z list at once (whoapp), never the Safari landing.
+- “See you Saturday” (3) is removed from every path: after joining, the reveal (or the lobby).
+- After the draft, carts are fixed: the Carts row disappears (Remove and redraft is the way back).
+- Enter the draft's step 2 has no “later” button: “Back to Host” at the top leaves start times for later (Host then
+  offers Share the teams, as in Part 1).
+- `settings.lobby.hostId` added (optional) for the “organizer” tag; Part 1 rounds simply don't show the tag.
+
+## P2.7 · Council scores (Part 2)
+
+| Round | Architect | Database | Frontend | Tests | Product QA | Red team | What changed |
+|---|---|---|---|---|---|---|---|
