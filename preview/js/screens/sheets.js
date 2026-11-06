@@ -12,6 +12,7 @@ import { seasonSheets } from './season.js';
 import { geoFor } from '../geo.js';
 import { GEO_ATTRIBUTION } from '../geoload.js';
 import { ryderMatchSheet } from './ryder.js';
+import { startTimeName } from '../lobby.js';
 import { enterSheets } from './enter.js';
 import { owner as phoneOwner } from '../db.js';
 import { fullName } from '../names.js';
@@ -165,7 +166,12 @@ const BODIES = {
     const p = players.find((x) => x.id === pid);
     if (!p) return head('Who are you?');
     const mate = p.teamId ? players.find((x) => x.teamId === p.teamId && x.id !== p.id) : null;
-    const line = [teeTimeName(app.snapshot?.settings || app.event.settings, groupIndex(p.groupId)),
+    // 025: before scoring opens players never see "tee time" (and there's no group before start times).
+    const lst = app.lobby?.();
+    const when = lst && !lst.open
+      ? (lst.stage === 'ready' && p.groupId ? startTimeName((app.event.settings.teeTimes || [])[groupIndex(p.groupId)]) : '')
+      : teeTimeName(app.snapshot?.settings || app.event.settings, groupIndex(p.groupId));
+    const line = [when,
       mate ? `with ${mate.firstName || String(mate.name || '').split(' ')[0]}` : ''].filter(Boolean).join(' · ');
     return `${head(`You’re ${fullName(p) || p.name}?`, line)}
       <div class="stack">

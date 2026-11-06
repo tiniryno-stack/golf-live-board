@@ -53,16 +53,23 @@ export { saveLobby };
 function share(app, kind, extra = {}) {
   const ev = app.event, st = app.lobby();
   const day = L.dayName(st.date, app.now(), st.tz);
-  const link = roundLink(app.code);
+  // 025 rev: joiners get the invite link (#/e/CODE/hcp → "Andrew set your handicap" when the round has handicaps).
+  const hcp = L.hasHandicaps(ev.roster);
+  const invite = ['invite', 'person', 'sub'].includes(kind);
+  const link = roundLink(app.code, invite ? '/hcp' : '');
   const T = {
-    invite: { title: 'Invite the group', kicker: `${ev.name} · created`, text: `You’re on the list for ${ev.name} on ${day}. Tap to join.`, mark: null },
+    invite: { title: 'Invite the group', kicker: `${ev.name} · created`, text: L.inviteText(ev.name, day, hcp), mark: null },
     teams: { title: 'Share the teams', kicker: `${ev.name} · teams are set`, text: `Teams are set for ${ev.name}. Open Golf Board to see yours.`, mark: 'teamsShared' },
     tell: { title: 'Tell the group', kicker: ev.name, text: st.notice ? `${st.notice.text} ${ev.name}.` : `${ev.name}: an update.`, mark: 'told' },
-    person: { title: `Send ${extra.name} the link`, kicker: ev.name, text: `${extra.name}, you’re on the list for ${ev.name} on ${day}. Tap to join.`, mark: null },
-    sub: { title: `Send ${extra.name} the link`, kicker: `${ev.name} · ${extra.name} added`, text: `${extra.name}, you’re in for ${ev.name} on ${day}. Tap to join.`, mark: null, undo: extra.undo },
+    person: { title: `Send ${extra.name} the link`, kicker: ev.name, text: L.inviteText(ev.name, day, hcp, extra.name), mark: null },
+    sub: { title: `Send ${extra.name} the link`, kicker: `${ev.name} · ${extra.name} added`, text: hcp ? `${extra.name}, you’re in for ${ev.name} on ${day}. Tap this to reveal your handicap.` : `${extra.name}, you’re in for ${ev.name} on ${day}. Tap to join.`, mark: null, undo: extra.undo },
     cohost: { title: `Send ${extra.name} the PIN`, kicker: `${ev.name} · co-host`, text: `You’re co-host for ${ev.name}. Host PIN: ${app.adminPin} (Golf Board → ⋯ → Host settings).`, mark: null },
   }[kind];
-  app.openSheet('lobby-share', { ...T, link, kind, at: st.notice?.at || null });
+  // Andrew sees when the invite falls back to the plain wording (somebody's handicap is blank).
+  const missing = (ev.roster?.players || []).length - L.handicapCount(ev.roster);
+  const noHcp = invite && !hcp && missing > 0 && missing < (ev.roster?.players || []).length
+    ? `${missing} ${missing === 1 ? 'player has' : 'players have'} no handicap, so this invite won’t show the reveal. Set them in Players.` : '';
+  app.openSheet('lobby-share', { ...T, link, kind, noHcp, at: st.notice?.at || null });
 }
 
 // ───────────────────────────────────────────── the view
@@ -75,6 +82,7 @@ function checklist(app, st, c) {
   const times = (app.snapshot?.settings?.teeTimes || []).filter(Boolean).map(L.clock12).join(' · ');
   return `<div class="card lb-card lb-rows">
     ${check('Invite', c ? (c.inApp === c.total ? 'Everyone’s in' : `${c.inApp} of ${c.total} have Golf Board`) : '…', c && c.inApp === c.total)}
+    ${check('Carts', st.hasTeams || st.paired ? '8 carts of 2' : 'Next', st.hasTeams || st.paired)}
     ${check('Draft', st.hasTeams ? sides.map((s) => s.name).join(' vs ') : 'Next', st.hasTeams)}
     ${check('Start times', st.stage === 'ready' ? times : st.hasTeams ? 'Next' : 'After the draft', st.stage === 'ready')}
   </div>`;
@@ -100,11 +108,14 @@ export function hostLobbyView(app) {
   } else if (step === 'off') {
     title = 'Called off';
     sub = 'Every phone shows it’s off and scores can’t be entered. Bring it back from Round.';
-  } else if (step === 'draft' || step === 'need16') {
+  } else if (step === 'pair' || step === 'draft' || step === 'need16') {
     title = esc(inApp);
     sub = esc(where);
     if (step === 'need16') footNote = `Team Ryder Cup needs 16 players. You have ${n}: add one in Players.`;
-    primary = `<button class="btn primary nr-cta" data-act="lh-draft"${step === 'need16' ? ' disabled' : ''}>Start the draft</button>`;
+    else if (step === 'draft') footNote = 'Drafting in person? Tap each pick in after, then set start times.';
+    primary = step === 'draft'
+      ? '<button class="btn primary nr-cta" data-act="lh-draft">Enter the draft</button>'
+      : `<button class="btn primary nr-cta" data-act="lh-carts"${step === 'need16' ? ' disabled' : ''}>Pair the carts</button>`;
   } else if (step === 'shareTeams' || (step === 'setTimes' && !st.day)) {
     title = 'Teams are set';
     sub = `${esc((ev.roster.sides || []).map((s) => s.name).join(' vs '))} · ${esc(inApp)}`;
@@ -137,7 +148,10 @@ export function hostLobbyView(app) {
       <div class="card lb-card lb-rows">${notYet.map((p) => `<div class="row lb-row"><span class="body"><b class="lb-rt">${esc(p.name)}</b><span class="detail">${p.why === 'safari' ? 'picked a name in Safari' : 'not yet'}</span></span>
         <button class="btn small" data-act="lh-share-person" data-v="${esc(p.id)}">Share</button></div>`).join('')}</div>` : ''}
     <div class="card lb-card lb-rows">
+      ${st.stage === 'lobby' || st.stage === 'carts' ? row('Carts', st.paired ? '8 paired' : 'not paired yet', 'lh-carts') : ''}
+      ${st.stage === 'teams' ? row('Teams', 'redo the draft', 'lh-draft') : ''}
       ${row('Players', st.stage === 'off' ? `${n} players` : 'replace a player', 'lh-players')}
+      ${st.stage === 'off' ? '' : row('Handicaps', L.handicapCount(ev.roster) < n ? `${L.handicapCount(ev.roster)} of ${n} set · invite needs all ${n}` : `all ${n} set`, 'lh-players')}
       ${row('Co-host', esc(cohost), 'lh-cohost')}
       ${row('Round', st.stage === 'off' ? 'bring it back, date' : 'date, course, call it off', 'lh-options')}
     </div>
@@ -169,6 +183,7 @@ export const lobbySheets = {
   'lobby-share'(app, p) {
     return `<div class="ts-label lb-sk">${esc(p.kicker || '')}</div>${head(p.title)}
       <p class="soft lb-sp">Ready to send: “${esc(p.text)}”</p>
+      ${p.noHcp ? `<p class="meta lb-note">${esc(p.noHcp)}</p>` : ''}
       <div class="stack"><button class="btn primary big block" data-act="lh-send">${icon('share', 18)} ${esc(p.kind === 'sub' || p.kind === 'person' ? `Share with ${p.title.replace(/^Send (.+) the (link|PIN)$/, '$1')}` : 'Share')}</button>
       ${p.undo ? '<button class="btn block" data-act="lh-undo">Undo</button>' : '<button class="btn ghost block" data-act="lh-copy">Copy link</button>'}</div>`;
   },
@@ -186,6 +201,7 @@ export const lobbySheets = {
     return `${head(p.name, statusOf(app, pid))}
       <div class="stack">
         <button class="btn primary big block" data-act="lh-replace" data-v="${esc(pid)}">Replace ${esc(first(p))}</button>
+        <button class="btn block" data-act="lh-hcp" data-v="${esc(pid)}">Handicap · ${p.strokes == null || p.strokes === '' ? 'not set' : esc(p.strokes)}</button>
         ${claimed ? `<button class="btn block" data-act="lh-free" data-v="${esc(pid)}">Free up ${esc(first(p))}’s name</button>` : ''}
         <button class="btn danger block" data-act="lh-remove" data-v="${esc(pid)}">Remove ${esc(first(p))}</button>
       </div>
@@ -197,6 +213,7 @@ export const lobbySheets = {
     const fn = first(p);
     const blurb = !p ? 'They join the list. Send them the link next.' : st.hasTeams
       ? `The sub takes ${esc(fn)}’s spot, with his team and cart. ${esc(fn)}’s phone is told.`
+      : st.paired ? `The sub takes ${esc(fn)}’s spot, with his cart. ${esc(fn)}’s phone is told.`
       : `The sub takes ${esc(fn)}’s spot. ${esc(fn)}’s phone is told.`;
     const picks = crewPicks(app, q);
     const typed = names.splitName(q);
@@ -205,8 +222,20 @@ export const lobbySheets = {
       <div class="field"><label for="lr-name">${p ? 'Sub’s first and last name' : 'First and last name'}</label>
         <input class="input" id="lr-name" maxlength="40" autocapitalize="words" autocomplete="off" value="${esc(q)}" data-input="lh-rq" data-enter="lh-rgo"></div>
       ${nick ? `<div class="field"><label for="lr-nick">Nickname (someone else is called ${esc(q)})</label><input class="input" id="lr-nick" maxlength="24" placeholder="e.g. Tini Ryno" autocomplete="off" data-enter="lh-rgo"></div>` : ''}
+      <div class="field"><label for="lr-hcp">Handicap (blank = not set)</label><input class="input mono" id="lr-hcp" inputmode="numeric" pattern="[0-9]*" maxlength="2" autocomplete="off" data-enter="lh-rgo">
+        ${L.hasHandicaps(app.event.roster) ? '<p class="meta nr-hint">Leave it blank and the invite stops showing the reveal.</p>' : ''}</div>
       <div id="lr-picks">${picks}</div>
       <div class="stack" style="margin-top:14px"><button class="btn primary big block" data-act="lh-rgo">${typed.first ? `${p ? 'Replace' : 'Add'} with ${esc(typed.first)}` : p ? 'Replace' : 'Add'}</button>
+      <button class="btn ghost block" data-act="sheet-close">Cancel</button></div>`;
+  },
+  'lobby-hcp'(app, { pid }) {
+    const p = (app.event.roster?.players || []).find((x) => x.id === pid);
+    if (!p) return head('Handicap');
+    const v = p.strokes == null || p.strokes === '' ? '' : Number(p.strokes);
+    return `${head(`${first(p)}’s handicap`, 'Strokes over 18 holes. Players see their own in the lobby.')}
+      <div class="field"><label for="lh-hcp-n">Handicap (blank = not set)</label>
+        <input class="input mono" id="lh-hcp-n" inputmode="numeric" pattern="[0-9]*" maxlength="2" value="${esc(v)}" autocomplete="off" data-enter="lh-hcp-save" data-v="${esc(pid)}"></div>
+      <div class="stack"><button class="btn primary big block" data-act="lh-hcp-save" data-v="${esc(pid)}">Save</button>
       <button class="btn ghost block" data-act="sheet-close">Cancel</button></div>`;
   },
   'lobby-cohost'(app) {
@@ -240,8 +269,12 @@ export const lobbySheets = {
   'lobby-all'(app) {
     const ps = L.joinList(app.event.roster, app.claimed, '', app.me);
     const c = app.lobbyCounts?.code === app.code ? app.lobbyCounts : null;
+    const st = app.lobby();
+    const roster = app.event.roster;
+    const hcp = (pid) => L.hcpOf(roster, pid)?.strokes;
+    const tag = (pid) => (pid === app.me ? 'you' : st?.hostId === pid ? 'organizer' : '');
     return `${head('Who’s playing', c?.total != null ? `${c.claimed} of ${c.total} joined · ${c.in_app} have Golf Board` : `${ps.length} players`)}
-      <div class="card lb-card lb-rows">${ps.map((p) => `<div class="row lb-row"><span class="body"><b class="lb-rt${p.id === app.me ? ' you' : ''}">${esc(p.name)}</b></span>${p.id === app.me ? '<span class="detail">you</span>' : ''}</div>`).join('')}</div>`;
+      <div class="card lb-card lb-rows">${ps.map((p) => `<div class="row lb-row"><span class="body"><b class="lb-rt${p.id === app.me ? ' you' : ''}">${esc(p.name)}</b>${tag(p.id) ? `<span class="detail">${tag(p.id)}</span>` : ''}</span>${hcp(p.id) != null ? `<span class="detail lb-d mono">${esc(hcp(p.id))}</span>` : ''}</div>`).join('')}</div>`;
   },
   'lobby-how'() {
     return `${head('How Team Ryder Cup works')}
@@ -278,7 +311,7 @@ function crewPicks(app, q) {
 function relabel(roster) {
   const shown = names.displayNames(roster.players);
   roster.players.forEach((p, i) => { p.name = shown[i]; });
-  return roster;
+  return L.renameCarts(roster); // C-cart names follow who's in them
 }
 
 /** Replace (or Add): the slot keeps its id, team, cart and start time; the name and the person change. */
@@ -289,12 +322,13 @@ async function doReplace(app, pid, person) {
   const ok = await saveLobby(app, ({ roster }) => {
     const slot = pid ? roster.players.find((x) => x.id === pid) : null;
     if (pid && !slot) return null;
-    const fields = { personId: person.personId, firstName: person.first, lastName: person.last, ...(person.nickname ? { nickname: person.nickname } : {}) };
+    // The sub's own handicap (or none): never the old player's number, or his reveal would show it (025 rev).
+    const fields = { personId: person.personId, firstName: person.first, lastName: person.last, strokes: person.strokes ?? null, ...(person.nickname ? { nickname: person.nickname } : {}) };
     if (slot) { delete slot.nickname; Object.assign(slot, fields, { name: names.fullName({ firstName: person.first, lastName: person.last }) }); }
     else {
       if (roster.players.length >= L.RYDER_PLAYERS) return null;
       newId = L.nextPlayerId(roster);
-      roster.players.push({ id: newId, ...fields, name: person.first, strokes: null, teamId: null, groupId: null });
+      roster.players.push({ id: newId, ...fields, name: person.first, teamId: null, groupId: null });
     }
     return { roster: relabel(roster) };
   });
@@ -303,6 +337,12 @@ async function doReplace(app, pid, person) {
   // (its owner isn't on the roster any more). Scoring isn't open, so the moment in between can't write scores.
   if (pid) await releaseSlot(app, pid);
   share(app, pid ? 'sub' : 'person', { name: person.first, undo: pid ? { pid, prev: old } : null });
+}
+
+/** The handicap typed in the Replace / Add sheet (blank = not set). */
+function typedHcp() {
+  const raw = (document.getElementById('lr-hcp')?.value || '').trim();
+  return /^\d{1,2}$/.test(raw) ? Math.min(54, Number(raw)) : null;
 }
 
 /** release_player, tried twice; says so if it still didn't work (Free up in Players fixes it). */
@@ -322,8 +362,8 @@ async function undoReplace(app, { pid, prev }) {
     const i = roster.players.findIndex((x) => x.id === pid);
     if (i < 0) return null;
     // Only who the slot is: its cart and start time stay what they are now (a redraft may have happened since).
-    const { personId, firstName, lastName, nickname, name } = prev;
-    roster.players[i] = { ...roster.players[i], personId, firstName, lastName, name };
+    const { personId, firstName, lastName, nickname, name, strokes } = prev;
+    roster.players[i] = { ...roster.players[i], personId, firstName, lastName, name, strokes: strokes ?? null };
     if (nickname) roster.players[i].nickname = nickname; else delete roster.players[i].nickname;
     return { roster: relabel(roster) };
   });
@@ -341,18 +381,20 @@ async function removePlayer(app, pid) {
     roster.players = roster.players.filter((x) => x.id !== pid);
     // Decided on the fresh roster (a co-host may have drafted meanwhile): once there are carts, removing someone
     // clears the teams and the draft starts over (no carts, sides or start times). A called-off round stays off.
+    // Carts paired (stage 'carts') or drafted: removing someone clears them and the round goes back to names only.
     if (!(roster.teams || []).length) return { roster: relabel(roster) };
     roster.players.forEach((x) => { x.teamId = null; x.groupId = null; });
     Object.assign(roster, { teams: [], sides: [], groups: [] });
     return { roster: relabel(roster), settings: L.toLobbyStage(settings) };
   });
   app.closeSheet();
-  if (ok) app.toast({ title: `${first(p)} is off the list`, sub: 'Team Ryder Cup needs 16 to draft: add someone in Players.' });
+  if (ok) app.toast({ title: `${first(p)} is off the list`, sub: 'Team Ryder Cup needs 16: add someone in Players, then pair the carts again.' });
 }
 
 export const lobbyActions = {
   'lh-invite': (el, ev, app) => share(app, 'invite'),
   'lh-draft': (el, ev, app) => startLobbyEdit(app, 'draft'),
+  'lh-carts': (el, ev, app) => startLobbyEdit(app, 'carts'),
   'lh-times': (el, ev, app) => startLobbyEdit(app, 'tee'),
   'lh-share-teams': (el, ev, app) => share(app, 'teams'),
   'lh-tell': (el, ev, app) => share(app, 'tell'),
@@ -403,7 +445,7 @@ export const lobbyActions = {
   'lh-rpick': (el, ev, app) => {
     const c = (app.crewPeople?.list || []).find((x) => x.id === el.dataset.v);
     if (!c) return;
-    doReplace(app, app.sheet.props.pid, { personId: c.id, first: c.firstName, last: c.lastName || '', nickname: c.nickname || '' });
+    doReplace(app, app.sheet.props.pid, { personId: c.id, first: c.firstName, last: c.lastName || '', nickname: c.nickname || '', strokes: typedHcp() });
   },
   'lh-rgo': async (el, ev, app) => {
     const props = app.sheet?.props || {};
@@ -424,7 +466,21 @@ export const lobbyActions = {
         else { app.openSheet('lobby-replace', { ...props, q: raw, nick: true }); return; }
       }
     } catch { /* offline: the server keeps names unique when it syncs the crew */ }
-    doReplace(app, props.pid, { personId, first: f, last, nickname: nick });
+    doReplace(app, props.pid, { personId, first: f, last, nickname: nick, strokes: typedHcp() });
+  },
+  'lh-hcp': (el, ev, app) => app.openSheet('lobby-hcp', { pid: el.dataset.v }),
+  'lh-hcp-save': async (el, ev, app) => {
+    const pid = el.dataset.v;
+    const raw = (document.getElementById('lh-hcp-n')?.value || '').trim();
+    if (raw && !/^\d{1,2}$/.test(raw)) { app.toast({ title: 'A whole number, 0 to 54', error: true }); return; }
+    const v = raw === '' ? null : Math.min(54, Number(raw));
+    const ok = await saveLobby(app, ({ roster }) => {
+      const p = roster.players.find((x) => x.id === pid);
+      if (!p) return null;
+      p.strokes = v;
+      return { roster };
+    });
+    if (ok) app.closeSheet();
   },
   'lh-free': (el, ev, app) => {
     const p = (app.event.roster.players || []).find((x) => x.id === el.dataset.v);
@@ -437,7 +493,13 @@ export const lobbyActions = {
     const pid = el.dataset.v;
     const p = (app.event.roster.players || []).find((x) => x.id === pid);
     const st = app.lobby();
-    if (st.hasTeams) {
+    if (st.paired) {
+      app.openSheet('confirm', {
+        title: `Remove ${first(p)}?`, body: 'Removing him unpairs the carts: you pair them again after adding someone. Replacing him keeps his cart.',
+        ok: `Replace ${first(p)} instead`, onOk: () => app.openSheet('lobby-replace', { pid, q: '' }),
+        alt: 'Remove and unpair', onAlt: () => removePlayer(app, pid), danger: false,
+      });
+    } else if (st.hasTeams) {
       app.openSheet('confirm', {
         title: `Remove ${first(p)}?`, body: 'After the draft, removing a player clears the teams and the draft starts over. Replacing him keeps the teams.',
         ok: `Replace ${first(p)} instead`, onOk: () => app.openSheet('lobby-replace', { pid, q: '' }),

@@ -10,6 +10,7 @@ import * as db from '../db.js';
 import { teeTimeName, ryderMatchupsAt, normalizeSettings, playOrder, sideOf } from '../scoring.js';
 import { sideColor } from '../teams.js';
 import { hostLobbyView, lobbyActions, openedLine } from './hostlobby.js';
+import { startLobbyEdit } from './setup.js';
 
 const clone = (x) => JSON.parse(JSON.stringify(x));
 const TEAM_IDS = ['A', 'B', 'C', 'D'];
@@ -270,7 +271,18 @@ export default {
 
   mount(root, app) {
     // 025: right after "Invite now, draft later" creates the round, the invite share sheet opens once.
-    if (app.ui.lobbyShare === app.code && app.adminPin && app.lobby() && !app.sheet) {
+    // 025 rev: Who rides together? comes first (Skip allowed); the share sheet waits until that step is closed.
+    if (app.ui.lobbyCarts === app.code && app.adminPin && app.lobby()?.stage === 'lobby' && !app.setup?.lobby) {
+      app.ui.lobbyCarts = null;
+      setTimeout(() => startLobbyEdit(app, 'carts', { fromSetup: true }), 0);
+      return;
+    }
+    if (app.ui.lobbyShareTeams === app.code && app.adminPin && app.lobby() && !app.sheet && !app.setup?.lobby) {
+      app.ui.lobbyShareTeams = null;
+      lobbyActions['lh-share-teams'](null, null, app);
+      return;
+    }
+    if (app.ui.lobbyShare === app.code && app.adminPin && app.lobby() && !app.sheet && !app.setup?.lobby) {
       app.ui.lobbyShare = null;
       lobbyActions['lh-invite'](null, null, app);
     }
