@@ -41,6 +41,7 @@ create table if not exists public.claims (          -- which phone is which play
   primary key (event_id, player_id),
   unique (event_id, device_id)
 );
+alter table public.claims add column if not exists in_app boolean not null default false;  -- 025: opened from the home screen app
 
 create table if not exists public.join_requests (   -- "let them in" asks; readable
   id          uuid primary key default gen_random_uuid(),
@@ -236,6 +237,7 @@ returns text language sql immutable set search_path = public as $$
     when 'gps'              then 'GPS yardages'
     when 'ryder'            then 'Team Ryder Cup'
     when 'lineups'          then 'Lineup'
+    when 'lobby'            then 'Round plan'
     else p_key end
 $$;
 
@@ -306,7 +308,7 @@ begin
   e := public._event(p_code);
   if e.id is null then return jsonb_build_object('ok', false, 'error', 'not_found'); end if;
   select player_id into v_pid from public.claims where event_id = e.id and device_id = p_device_id;
-  return jsonb_build_object('ok', true, 'player_id', v_pid);
+  return jsonb_build_object('ok', true, 'player_id', v_pid, 'now', now());  -- 025: phones learn the server's clock
 end $$;
 
 create or replace function public.claim_player(p_code text, p_player_id text, p_device_id uuid)
@@ -492,10 +494,12 @@ end $$;
 
 create or replace function public.upsert_score(p_code text, p_device_id uuid, p_player_id text, p_hole int, p_strokes int)
 returns jsonb language plpgsql security definer set search_path = public as $$
-declare e public.events; v_actor text; v_old smallint; v_by text;
+declare e public.events; v_actor text; v_old smallint; v_by text; v_gate jsonb;
 begin
   e := public._event(p_code);
   if e.id is null then return jsonb_build_object('ok', false, 'error', 'not_found'); end if;
+  v_gate := public._lobby_gate(e);  -- 025: a lobby round takes scores only once it's open
+  if v_gate is not null then return v_gate; end if;
   select player_id into v_actor from public.claims where event_id = e.id and device_id = p_device_id;
   if v_actor is null then return jsonb_build_object('ok', false, 'error', 'not_claimed'); end if;
   if not public._same_foursome(e.roster, e.settings, v_actor, p_player_id, p_hole) then
@@ -552,6 +556,9 @@ begin
     if (e.settings->k) is distinct from (p_settings->k) then
       if k = 'rotation' then
         perform public._log(e.id, 'Organizer', 'Rules · matchups reshuffled');
+      elsif k = 'lobby' then  -- 025: one short line, not the whole object
+        perform public._log(e.id, 'Organizer', 'Round plan · ' || coalesce(e.settings->'lobby'->>'stage', 'none')
+          || ' → ' || coalesce(p_settings->'lobby'->>'stage', 'none'));
       else
         perform public._log(e.id, 'Organizer', 'Rules · ' || public._setting_label(k) || ' ' ||
           public._fmt(coalesce(e.settings->>k, 'null')) || ' → ' || public._fmt(coalesce(p_settings->>k, 'null')));
@@ -720,10 +727,12 @@ end $$;
 -- phone entered a moment earlier; returns what the cell holds either way.
 create or replace function public.fill_score(p_code text, p_device_id uuid, p_player_id text, p_hole int, p_strokes int)
 returns jsonb language plpgsql security definer set search_path = public as $$
-declare e public.events; v_actor text; v_by text; v_at timestamptz; v_cur smallint;
+declare e public.events; v_actor text; v_by text; v_at timestamptz; v_cur smallint; v_gate jsonb;
 begin
   e := public._event(p_code);
   if e.id is null then return jsonb_build_object('ok', false, 'error', 'not_found'); end if;
+  v_gate := public._lobby_gate(e);  -- 025: same gate as upsert_score
+  if v_gate is not null then return v_gate; end if;
   select player_id into v_actor from public.claims where event_id = e.id and device_id = p_device_id;
   if v_actor is null then return jsonb_build_object('ok', false, 'error', 'not_claimed'); end if;
   if not public._same_foursome(e.roster, e.settings, v_actor, p_player_id, p_hole) then
@@ -747,6 +756,104 @@ begin
   perform public._log(e.id, v_by, 'Hole ' || p_hole || ' · ' || public._player_name(e.roster, p_player_id) || ' ' || p_strokes || ' (left at par)');
   return jsonb_build_object('ok', true, 'filled', true, 'strokes', p_strokes, 'updated_at', v_at, 'updated_by', v_by);
 end $$;
+
+-- ─────────────────────────────────────────────────────────────── Team Ryder Cup lobby (handoff 025, Nov 6)
+-- A round made with "Invite now, draft later" carries settings.lobby (a JSON object) until scoring opens.
+-- Old rounds have no settings.lobby (or null): _lobby_gate returns null and nothing changes for them.
+
+-- null = scores may be written; else the refusal { ok:false, error:'not_open', opens_at, now, stage }.
+-- Open = stage 'ready' and (openedEarly or now() >= opensAt). Called by upsert_score and fill_score right after
+-- the round is found. admin_upsert_score is deliberately NOT gated (the organizer can always fix a score).
+create or replace function public._lobby_gate(e public.events)
+returns jsonb language plpgsql stable security definer set search_path = public as $$
+declare l jsonb := e.settings->'lobby'; v_at timestamptz;
+begin
+  if l is null or jsonb_typeof(l) <> 'object' or coalesce(e.settings->>'ryder', 'false') <> 'true' then return null; end if;
+  begin
+    v_at := nullif(l->>'opensAt', '')::timestamptz;
+  exception when others then
+    v_at := null;  -- a bad timestamp keeps the round closed rather than erroring
+  end;
+  if coalesce(l->>'stage', '') = 'ready' and v_at is not null
+     and (coalesce(l->>'openedEarly', 'false') = 'true' or now() >= v_at) then
+    return null;
+  end if;
+  return jsonb_build_object('ok', false, 'error', 'not_open', 'opens_at', v_at, 'now', now(),
+                            'stage', coalesce(l->>'stage', 'lobby'));
+end $$;
+
+-- The home screen app opened this round on this device: Host counts "N of 16 have Golf Board".
+create or replace function public.mark_in_app(p_code text, p_device_id uuid)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare e public.events; v_n int := 0;
+begin
+  e := public._event(p_code);
+  if e.id is null then return jsonb_build_object('ok', false, 'error', 'not_found'); end if;
+  update public.claims set in_app = true where event_id = e.id and device_id = p_device_id and not in_app;
+  get diagnostics v_n = row_count;
+  return jsonb_build_object('ok', true, 'marked', v_n > 0, 'now', now());
+end $$;
+
+-- Organizer only: for every roster player, whether a phone claimed them and whether it's the home screen app.
+-- No device ids leave the database; claims stay unreadable to anon.
+create or replace function public.lobby_status(p_code text, p_admin_pin text)
+returns jsonb language plpgsql stable security definer set search_path = public as $$
+declare e public.events;
+begin
+  e := public._event(p_code);
+  if e.id is null then return jsonb_build_object('ok', false, 'error', 'not_found'); end if;
+  if not public._admin_ok(e.id, p_admin_pin) then return jsonb_build_object('ok', false, 'error', 'bad_pin'); end if;
+  return jsonb_build_object('ok', true, 'now', now(), 'players', coalesce((
+    select jsonb_agg(jsonb_build_object('player_id', p->>'id', 'claimed', c.player_id is not null,
+                                        'in_app', coalesce(c.in_app, false)) order by ord)
+      from jsonb_array_elements(coalesce(e.roster->'players', '[]'::jsonb)) with ordinality as r(p, ord)
+      left join public.claims c on c.event_id = e.id and c.player_id = p->>'id'), '[]'::jsonb));
+end $$;
+
+-- Anyone with the code: how many of the roster joined and how many use the home screen app. Numbers only, no ids,
+-- so claims stay unreadable ("12 more · 3 haven't added Golf Board").
+create or replace function public.lobby_counts(p_code text)
+returns jsonb language plpgsql stable security definer set search_path = public as $$
+declare e public.events; v_total int; v_claimed int; v_app int;
+begin
+  e := public._event(p_code);
+  if e.id is null then return jsonb_build_object('ok', false, 'error', 'not_found'); end if;
+  v_total := coalesce(jsonb_array_length(e.roster->'players'), 0);
+  select count(*), count(*) filter (where in_app) into v_claimed, v_app
+    from public.claims c
+   where c.event_id = e.id
+     and exists (select 1 from jsonb_array_elements(coalesce(e.roster->'players', '[]'::jsonb)) p where p->>'id' = c.player_id);
+  return jsonb_build_object('ok', true, 'total', v_total, 'claimed', v_claimed, 'in_app', v_app);
+end $$;
+
+-- Organizer only: move the round to another date (update_event has no date parameter). For a lobby round at
+-- 'ready', the app passes the new opensAt so the date and the opening time change in one statement.
+create or replace function public.set_round_date(p_code text, p_admin_pin text, p_date date, p_opens_at timestamptz default null)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare e public.events;
+begin
+  e := public._event(p_code);
+  if e.id is null then return jsonb_build_object('ok', false, 'error', 'not_found'); end if;
+  if not public._admin_ok(e.id, p_admin_pin) then return jsonb_build_object('ok', false, 'error', 'bad_pin'); end if;
+  if p_date is null or p_date < current_date - 1 or p_date > current_date + 400 then
+    return jsonb_build_object('ok', false, 'error', 'bad_date');
+  end if;
+  update public.events
+     set played_on = p_date, updated_at = now(),
+         settings = case when p_opens_at is not null and jsonb_typeof(settings->'lobby') = 'object'
+                         then jsonb_set(settings, '{lobby,opensAt}', to_jsonb(p_opens_at)) else settings end
+   where id = e.id;
+  if e.played_on is distinct from p_date then
+    perform public._log(e.id, 'Organizer', 'Date · ' || coalesce(to_char(e.played_on, 'Dy Mon FMDD'), 'none') || ' → ' || to_char(p_date, 'Dy Mon FMDD'));
+  end if;
+  return jsonb_build_object('ok', true, 'played_on', p_date);
+end $$;
+
+revoke all on function public._lobby_gate(public.events) from public, anon, authenticated;
+grant execute on function public.mark_in_app(text, uuid) to anon, authenticated;
+grant execute on function public.lobby_status(text, text) to anon, authenticated;
+grant execute on function public.lobby_counts(text) to anon, authenticated;
+grant execute on function public.set_round_date(text, text, date, timestamptz) to anon, authenticated;
 
 -- ─────────────────────────────────────────────────────────────── function permissions
 

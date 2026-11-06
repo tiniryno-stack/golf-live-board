@@ -21,6 +21,7 @@ import { FLAGS } from '../flags.js';
 import { loadGeo } from '../geoload.js';
 import { TEAM_NAME_PICKS, isDefaultTeamName } from '../teams.js';
 import { initials } from '../ui.js';
+import { countsAsPlayed, draftedRoster, newLobby, toTeamsStage, withStartTimes, keepNames, rosterKey, allTimesSet, addMinutes, lobbyOf, lobbyState, maySaveStep } from '../lobby.js';
 
 const TEAM_IDS = ['A', 'B', 'C', 'D'];
 const DRAFT_KEY = 'glb.setupDraft';
@@ -85,6 +86,7 @@ function ensureCarts(s) {
 }
 
 function persist(s) {
+  if (s.lobby) return; // 025: a lobby edit (draft / start times) lives in memory only, never in glb.setupDraft
   // Search results and the phone's location stay in memory only.
   if (!s.saved) {
     db.local.set(DRAFT_KEY, {
@@ -103,7 +105,7 @@ async function loadPast(app, crewId) {
     const plays = new Map(); // course id → rounds your group played there
     const lastHcp = {}; // person → strokes in the latest round they played (rounds come oldest first)
     const freq = {}; // person → rounds in the crew's last 12 (Quick players order, feature 007)
-    const live = rounds.filter(({ event }) => String(event.settings?.practice) !== 'true');
+    const live = rounds.filter(({ event, scores }) => String(event.settings?.practice) !== 'true' && countsAsPlayed(event, scores)); // 025: not a lobby that never opened
     for (const { event } of live.slice(-12)) for (const p of event.roster?.players || []) if (p.personId) freq[p.personId] = (freq[p.personId] || 0) + 1;
     // Last groups: the crew's 4 most recent rounds, newest first ("All 8 from Friday", "Sat 2v2 · 4").
     const groups = live.slice(-4).reverse().map(({ event }) => ({
@@ -180,7 +182,7 @@ async function loadFrom(app, code) {
     s.teams = TEAM_IDS.map((id) => ({ id, name: (ev.roster.teams || []).find((t) => t.id === id)?.name || '' }));
     if (ryder) Object.assign(s, { rySkip: true, ryPicks: [], ryTee: null }); // run it back: same sides, same tee times
     s.sideNames = ryder ? ['1', '2'].map((id) => (ev.roster.sides || []).find((x) => x.id === id)?.name || '') : ['', ''];
-    const { rotation, lineups, ryder: _r, ...settings } = ev.settings || {};
+    const { rotation, lineups, ryder: _r, lobby: _l, ...settings } = ev.settings || {}; // 025: never the lobby
     s.settings = { ...s.settings, ...settings };
     // The same game as last time (the course isn't copied).
     const nCarts = (ev.roster.teams || []).length;
@@ -463,11 +465,12 @@ function buildRyder(s, c, shown) {
   const d = rySides(s), tee = ryTee(s);
   const order = [...d.A, ...tee].flatMap((k) => [2 * k, 2 * k + 1]);
   const players = order.map((k) => s.players[k]).map((p, i) => ({
-    id: `p${i + 1}`, personId: p.personId || db.uuid(), name: shown[i],
+    id: p.lobbyId || `p${i + 1}`, personId: p.personId || db.uuid(), name: shown[i],
     firstName: p.firstName, lastName: p.lastName || '', ...(p.nickname ? { nickname: p.nickname } : {}),
     strokes: p.strokes === '' || p.strokes == null || Number.isNaN(Number(p.strokes)) ? null : Math.max(0, Math.round(Number(p.strokes))),
   }));
-  const { roster, settings } = ryderSetup(players.map((p, i) => ({ ...p, id: `p${i + 1}`, name: shown[order[i]] })), ['', '']);
+  // 025: draftedRoster keeps a lobby round's player ids (claims point at them); new rounds get p1…p16 as before.
+  const { roster, settings } = draftedRoster(players.map((p, i) => ({ ...p, name: shown[order[i]] })), ['', '']);
   return {
     name: s.name.trim() || `${c.shortName || cd.shortCourseName(c.name)} · ${prettyDate(todayISO())}`,
     course: courseOf(s, c),
@@ -504,14 +507,15 @@ export function handicapSheet(app, { i }) {
 // ───────────────────────────────────────────── screens (designspec §6)
 
 /** Back target for each screen. */
-const BACK = { which: 'course', players: 'course', check: 'players', game: 'players', teams: 'game', matchups: 'tee', draft: 'teams', tee: 'draft' };
+const BACK = { which: 'course', players: 'course', check: 'players', game: 'players', teams: 'game', matchups: 'tee', draft: 'teams', tee: 'draft', invite: 'game', when: 'invite' };
 // Partner “Rider” Cup (018): Carts → Tee times (no draft); matchups is an optional screen off Tee times.
-const backOf = (s) => (s.game === 'carts' && s.screen === 'tee' ? 'teams' : BACK[s.screen]);
-const BACK_LABEL = { course: 'Course', players: 'Players', game: 'Game', teams: s => (s.game === 'carts' ? 'Carts' : s.game === 'ryder' ? 'Carts' : 'Partners'), draft: 'Draft', tee: 'Tee times' };
+// Team Ryder Cup (025): Game → Invite now? → (When | Carts → Draft → Tee times).
+const backOf = (s) => (s.game === 'carts' && s.screen === 'tee' ? 'teams' : s.game === 'ryder' && s.screen === 'teams' ? 'invite' : BACK[s.screen]);
+const BACK_LABEL = { course: 'Course', players: 'Players', game: 'Game', invite: 'Invite', when: 'When', teams: s => (s.game === 'carts' ? 'Carts' : s.game === 'ryder' ? 'Carts' : 'Partners'), draft: 'Draft', tee: 'Tee times' };
 
 /** Progress bars: how far along the flow this screen is (2–4 bars depending on the game). */
 function progress(s) {
-  const flow = ['course', 'players', 'game', ...(s.game === 'ryder' ? ['teams', 'draft', 'tee'] : s.game === '2v2' ? ['teams'] : s.game === 'carts' ? ['teams', 'tee'] : [])];
+  const flow = ['course', 'players', 'game', ...(s.game === 'ryder' ? ['invite', ...(s.screen === 'when' ? ['when'] : ['teams', 'draft', 'tee'])] : s.game === '2v2' ? ['teams'] : s.game === 'carts' ? ['teams', 'tee'] : [])];
   const at = Math.max(0, flow.indexOf(s.screen === 'which' ? 'course' : s.screen === 'check' ? 'players' : s.screen));
   return `<div class="nr-bars">${flow.map((_, i) => `<i class="${i <= at ? 'on' : ''}"></i>`).join('')}</div>`;
 }
@@ -726,7 +730,7 @@ function gameView(s) {
     ${pick === 'match' ? '<p class="meta nr-hint">Match play: everyone plays their own ball. Each hole is worth 1 point; low net score takes it, a tie for low splits it.</p>' : ''}
     <div class="nr-foot">
       ${next ? '' : '<p class="meta" style="text-align:center;margin:0 0 8px">2v2, Partner “Rider” Cup and Team Ryder Cup go to one more screen to set teams.</p>'}
-      <button class="btn primary nr-cta" data-act="${next ? 'setup-go' : 'setup-save'}" ${next ? 'data-v="teams"' : ''} ${s.saving ? 'aria-busy="true"' : ''}>${s.saving ? 'Starting…' : next ? `Next: ${pick === '2v2' ? 'pick partners' : pick === 'ryder' ? 'carts' : 'carts'}` : `Start round · ${n} player${n === 1 ? '' : 's'}`}${next ? icon('fwd', 18) : ''}</button>
+      <button class="btn primary nr-cta" data-act="${next ? 'setup-go' : 'setup-save'}" ${next ? `data-v="${pick === 'ryder' ? 'invite' : 'teams'}"` : ''} ${s.saving ? 'aria-busy="true"' : ''}>${s.saving ? 'Starting…' : next ? `Next: ${pick === '2v2' ? 'pick partners' : pick === 'ryder' ? 'carts' : 'carts'}` : `Start round · ${n} player${n === 1 ? '' : 's'}`}${next ? icon('fwd', 18) : ''}</button>
     </div>`;
 }
 
@@ -837,7 +841,7 @@ function ryDraftView(s) {
     <div class="nr-line"><span class="meta">${d.done ? '' : `Snake order: ${RY_SNAKE.map((x) => esc(fn(x === 'A' ? capA : capJ))).join(', ')}`}</span><button class="btn small" data-act="setup-ry-reset">Start over</button></div>
     ${pool.length ? `<div class="lbl ry-pool-k">Still on the board</div><div class="ry-pool">${pool.map((k) => `<button class="ry-pick" data-act="setup-ry-pick" data-i="${k}"><span class="ellipsis">${esc(ryCartName(s, k))}</span></button>`).join('')}</div>` : ''}
     <div class="ry-cols">${col('A')}${col('J')}</div>
-    ${d.done ? bottom('Next: tee times', 'setup-go', { v: 'tee', arrow: true })
+    ${d.done ? s.lobby ? bottom(s.saving ? 'Saving…' : 'Save the teams', 'setup-lobby-save', { busy: s.saving }) : bottom('Next: tee times', 'setup-go', { v: 'tee', arrow: true })
       : `<div class="nr-foot"><button class="btn nr-cta" data-act="setup-ry-skip">Skip the draft · split in cart order</button></div>`}`;
 }
 
@@ -859,8 +863,166 @@ function ryTeeView(s) {
     ${rows}
     <div class="lbl ry-pool-k">Your three matches · ${esc(ryCartName(s, d.A[0]))}</div>
     ${mine}
-    ${rulesBlock(s)}
-    ${bottom(s.saving ? 'Starting…' : 'Start round · 16 players', 'setup-save', { busy: s.saving })}`;
+    ${s.lobby ? '' : rulesBlock(s)}
+    ${s.lobby ? bottom(s.saving ? 'Saving…' : 'Save start times', 'setup-lobby-save', { busy: s.saving }) : bottom(s.saving ? 'Starting…' : 'Start round · 16 players', 'setup-save', { busy: s.saving })}`;
+}
+
+// ───────────────────────────────────────────── 025 · Invite now, draft later (Team Ryder Cup)
+
+/** 15 · Invite them now? (Team Ryder Cup with 16): the lobby path or today's Carts → Draft → Tee times. */
+function inviteView(s) {
+  const n = s.players.length;
+  return `${headline(`New round${s.name.trim() ? ` · ${esc(s.name.trim())}` : ''}`, `${n} players added. Invite them now?`, 'Everyone can join today. You draft and set start times later.')}
+    <div class="nr-foot"><button class="btn primary nr-cta" data-act="setup-go" data-v="when">Invite now, draft later</button>
+      <button class="btn block nr-second" data-act="setup-go" data-v="teams">Draft and start times first</button></div>`;
+}
+
+/** The phone's zone, said the way people say it ("Central Time"); the round's times are in it. */
+function zoneName() {
+  try {
+    const p = new Intl.DateTimeFormat('en-US', { timeZoneName: 'long' }).formatToParts(new Date()).find((x) => x.type === 'timeZoneName')?.value || '';
+    return p.replace(/ (Standard|Daylight)/, '');
+  } catch { return ''; }
+}
+/** Next Saturday (or today if it is one): the default date for a lobby round. */
+function nextSaturday() {
+  const d = new Date();
+  d.setDate(d.getDate() + ((6 - d.getDay() + 7) % 7));
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+/** When (new pattern, flagged: TextField + native date / time inputs): the date and the first start time. */
+function whenView(s) {
+  const w = s.when || (s.when = { date: nextSaturday(), time: '08:00' });
+  const zone = zoneName();
+  return `${headline('Step 5 · When', 'When do you play?', 'Players see it as soon as they join.')}
+    <div class="field"><label for="when-date">Date</label><input class="input" id="when-date" type="date" value="${esc(w.date)}" min="${esc(todayISO())}" data-input="setup-when" data-k="date"></div>
+    <div class="field"><label for="when-time">First start time${zone ? ` · ${esc(zone)}` : ''}</label><input class="input" id="when-time" type="time" value="${esc(w.time)}" data-input="setup-when" data-k="time"></div>
+    <div class="field"><label for="round-name">Round name (optional)</label>
+      <input class="input" id="round-name" maxlength="60" value="${esc(s.name)}" placeholder="e.g. Chuck’s Bday" data-input="setup-name"></div>
+    <p class="meta nr-hint">Scoring opens by itself 30 minutes before the first start time, once you’ve set start times.</p>
+    ${bottom(s.saving ? 'Creating…' : 'Create and invite', 'setup-save', { busy: s.saving })}`;
+}
+
+/** The lobby round: 16 players p1…p16 with their people, no carts or sides yet, settings.lobby at 'lobby'. */
+function buildLobby(s) {
+  const c = course(s);
+  const shown = names.displayNames(s.players);
+  const w = s.when || { date: nextSaturday(), time: '08:00' };
+  const players = s.players.map((p, i) => ({
+    id: `p${i + 1}`, personId: p.personId || db.uuid(), name: shown[i],
+    firstName: p.firstName, lastName: p.lastName || '', ...(p.nickname ? { nickname: p.nickname } : {}),
+    teamId: null, groupId: null,
+    strokes: p.strokes === '' || p.strokes == null || Number.isNaN(Number(p.strokes)) ? null : Math.max(0, Math.round(Number(p.strokes))),
+  }));
+  const o = db.owner.get();
+  const me = o?.personId ? s.players.find((p) => p.personId === o.personId) : null;
+  let tz = 'UTC';
+  try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'; } catch { /* UTC */ }
+  return {
+    name: s.name.trim() || `${c.shortName || cd.shortCourseName(c.name)} · ${prettyDate(w.date)}`,
+    course: courseOf(s, c),
+    roster: { groups: [], teams: [], sides: [], players },
+    settings: { ...s.settings, ...ryderSetup(players).settings, teeTimes: [], lobby: newLobby({ startTime: w.time, tz, hostName: me?.firstName || (o?.name ? String(o.name).split(' ')[0] : '') }) },
+    playedOn: w.date,
+    crewId: s.crewId,
+  };
+}
+
+// ───────────────────────────────────────────── 025 · lobby edit mode: the draft / start times on an existing round
+// Host's Start the draft / Set start times run these same steps on the event's players (ids kept), inside the round
+// route (the round stays loaded). Nothing is written to glb.setupDraft (persist() skips s.lobby).
+
+const RULE_KEYS = ['teamScore', 'maxHoleScore', 'halvedHolePoints', 'par3NoMax', 'handicapMode', 'allowancePct'];
+
+export function startLobbyEdit(app, mode) {
+  const ev = app.event;
+  const r = ev.roster || {};
+  const toSetup = (p) => withName({
+    key: p.id, lobbyId: p.id, personId: p.personId, firstName: p.firstName || names.splitName(p.name || '').first,
+    lastName: p.lastName || '', nickname: p.nickname || '', strokes: p.strokes ?? '', teamId: null, groupId: 'g1',
+  });
+  const s = { ...blank(null), lobby: { code: app.code, mode, key: rosterKey(r), roster: clone(r) }, game: 'ryder', course: clone(ev.course), courseId: ev.course?.id, courseStatus: 'ready', name: ev.name, settings: { ...s0settings(ev.settings) } };
+  if (mode === 'tee') {
+    // Side 1's carts by start time, then side 2's: what buildRyder reads with rySkip (the current pairing).
+    const ordered = [];
+    for (const sd of r.sides || []) {
+      const carts = [...(sd.teamIds || [])].sort((a, b) => {
+        const g = (tid) => Number(String((r.players || []).find((p) => p.teamId === tid)?.groupId || 'g9').slice(1));
+        return g(a) - g(b);
+      });
+      for (const tid of carts) ordered.push(...(r.players || []).filter((p) => p.teamId === tid));
+    }
+    s.players = ordered.map(toSetup);
+    Object.assign(s, { rySkip: true, ryPicks: [], ryTee: null, screen: 'tee' });
+    const l = lobbyOf(ev.settings);
+    const t = Array.isArray(ev.settings.teeTimes) ? [...ev.settings.teeTimes] : [];
+    const start = l?.startTime || '08:00';
+    s.settings.teeTimes = [0, 1, 2, 3].map((k) => t[k] || addMinutes(start, 10 * k)); // 8:00, 8:10, 8:20, 8:30
+  } else {
+    s.players = (r.players || []).map(toSetup);
+    Object.assign(s, { rySkip: false, ryPicks: [], ryTee: null, screen: 'teams' });
+  }
+  app.setup = s;
+  app.render();
+  document.getElementById('content').scrollTop = 0;
+}
+function s0settings(st) { return clone(st || {}); }
+
+/** Host draws the current lobby step with Setup's own views, plus a way back to Host. */
+export function lobbyStepView(app) {
+  const s = app.setup;
+  relabel(s);
+  curState = s;
+  const first = s.lobby.mode === 'tee' ? 'tee' : 'teams';
+  const back = s.screen === first
+    ? '<button class="link-btn lb-back" data-act="setup-lobby-cancel">Back to Host</button>'
+    : `<button class="link-btn lb-back" data-act="setup-go" data-v="${esc(backOf(s))}">${icon('back', 20)} Back</button>`;
+  return `<div class="plain nr-setup">${back}${(VIEWS[s.screen] || ryCartsView)(s, app)}</div>`;
+}
+
+/** Save the lobby step: the draft (stage 'teams') or the start times (stage 'ready', opensAt set). */
+async function saveLobbyStep(app) {
+  const s = app.setup;
+  if (!s?.lobby || s.saving) return;
+  let fresh;
+  try { fresh = await db.fetchEvent(s.lobby.code); } catch { fresh = null; }
+  if (!fresh) { app.toast({ title: 'No signal', sub: 'Not saved. Try again.', error: true }); return; }
+  if (rosterKey(fresh.roster) !== s.lobby.key || !maySaveStep(s.lobby.mode, lobbyState(fresh, app.now()))) {
+    // Someone (a co-host, a Replace) changed the players since this step opened: never overwrite them.
+    app.setup = null;
+    app.event = { ...app.event, ...fresh };
+    app.render();
+    app.toast({ title: 'The round changed meanwhile', sub: 'Nothing saved (players, a call-off or scoring opened). Open the step again.', error: true });
+    return;
+  }
+  const times = (s.settings.teeTimes || []).slice(0, 4);
+  if (s.lobby.mode === 'tee' && !allTimesSet(times, 4)) { app.toast({ title: 'Add all four start times', error: true }); return; }
+  let roster;
+  try {
+    ({ roster } = buildRyder(s, course(s), names.displayNames(s.players)));
+  } catch (e) {
+    app.toast({ title: 'Couldn’t save', sub: e?.message || 'Go back a step and try again.', error: true });
+    return;
+  }
+  if (s.lobby.mode === 'tee') roster = keepNames(roster, fresh.roster);
+  const rules = Object.fromEntries(RULE_KEYS.filter((k) => k in s.settings).map((k) => [k, s.settings[k]]));
+  const base = { ...fresh.settings, ...rules };
+  const settings = s.lobby.mode === 'tee' ? withStartTimes(base, fresh.played_on, times, app.now()) : { ...toTeamsStage(base), teeTimes: [] };
+  s.saving = true;
+  app.render();
+  app.event = { ...app.event, ...fresh };
+  const ok = await app.saveEvent({ course: fresh.course, roster, settings, name: fresh.name });
+  s.saving = false;
+  if (!ok) { app.render(); return; }
+  if (s.lobby.mode !== 'tee') db.local.set(`glb.lobbyhost.${s.lobby.code}`, { ...(db.local.get(`glb.lobbyhost.${s.lobby.code}`) || {}), teamsShared: false });
+  app.setup = null;
+  app.render();
+  document.getElementById('content').scrollTop = 0;
+  app.toast(s.lobby.mode === 'tee'
+    ? { title: 'Start times saved', sub: app.lobby()?.open ? 'Scoring is open.' : `Scoring opens by itself at ${app.lobby()?.opensLabel || ''}.` }
+    : { title: 'Teams saved', sub: 'Every phone shows them next time it opens.' });
 }
 
 /** The share text for a Team Ryder Cup round (RULES §7). */
@@ -1117,7 +1279,7 @@ function savedView(s) {
     ${ry ? `<div class="nr-foot"><button class="btn primary nr-cta" data-act="setup-copy" data-v="share">${icon('share', 18)} Text the group</button><button class="link-btn" style="margin-top:8px" data-act="setup-open">Open the round</button></div>` : bottom('Open the round', 'setup-open')}`;
 }
 
-const VIEWS = { course: courseView, which: whichView, players: playersView, check: checkView, game: gameView, teams: (s) => (s.game === 'carts' ? cartsView(s) : s.game === 'ryder' ? ryCartsView(s) : pairsView(s)), matchups: matchupsView, draft: ryDraftView, tee: (s) => (s.game === 'carts' ? riderTeeView(s) : ryTeeView(s)) };
+const VIEWS = { course: courseView, which: whichView, players: playersView, check: checkView, game: gameView, invite: inviteView, when: whenView, teams: (s) => (s.game === 'carts' ? cartsView(s) : s.game === 'ryder' ? ryCartsView(s) : pairsView(s)), matchups: matchupsView, draft: ryDraftView, tee: (s) => (s.game === 'carts' ? riderTeeView(s) : ryTeeView(s)) };
 
 
 // ───────────────────────────────────────────── course search actions
@@ -1209,6 +1371,7 @@ function scoreCell(app, el, key, lo, hi) {
 
 export default {
   enter(app) {
+    if (app.setup?.lobby) app.setup = null; // 025: a lobby edit belongs to its round, never to New round
     const from = app.route.from || null;
     if (app.setup && app.setup.from === from && !app.setup.saved) return;
     const draft = db.local.get(DRAFT_KEY);
@@ -1541,7 +1704,7 @@ export default {
     },
     'setup-ry-skip': (el, ev, app) => {
       const s = app.setup;
-      Object.assign(s, { ryPicks: [], rySkip: true, ryTee: null, rySel: null, screen: 'tee' });
+      Object.assign(s, { ryPicks: [], rySkip: true, ryTee: null, rySel: null, screen: s.lobby ? 'draft' : 'tee' });
       persist(s);
       app.render();
     },
@@ -1567,6 +1730,13 @@ export default {
       s.settings.teeTimes = t;
       persist(s);
       app.render();
+    },
+    'setup-lobby-save': (el, ev, app) => saveLobbyStep(app),
+    'setup-lobby-cancel': (el, ev, app) => { app.setup = null; app.render(); },
+    'setup-when': (el, ev, app) => {
+      const s = app.setup;
+      s.when = { ...(s.when || { date: nextSaturday(), time: '08:00' }), [el.dataset.k]: el.value };
+      persist(s);
     },
     'setup-sidename': (el, ev, app) => {
       const s = app.setup;
@@ -1638,8 +1808,10 @@ export default {
         }
       } catch { /* keep going */ }
       let res, round;
+      const lobby = s.screen === 'when' && gameOf(s) === 'ryder'; // 025: Invite now, draft later
       try {
-        round = buildRound(s);
+        if (lobby && !(/^\d{4}-\d{2}-\d{2}$/.test(s.when?.date || '') && /^\d{1,2}:\d{2}$/.test(s.when?.time || ''))) throw new Error('Pick a date and a start time.');
+        round = lobby ? buildLobby(s) : buildRound(s);
       } catch (e) {
         // A bug building the round is not a signal problem: say so instead of "No signal" (Nov 4).
         s.saving = false;
@@ -1659,6 +1831,16 @@ export default {
       if (!res.ok) {
         app.render();
         app.toast({ title: 'Couldn’t save', sub: res.error, error: true });
+        return;
+      }
+      if (lobby) {
+        // Straight to Host's lobby view with the invite share sheet open (the organizer joins as himself there).
+        db.admin.set(res.code, res.admin_pin);
+        db.local.del(DRAFT_KEY);
+        db.recent.remember({ code: res.code, name: round.name, played_on: round.playedOn, crew_id: res.crew_id, course: round.course, settings: round.settings });
+        app.setup = null;
+        app.ui.lobbyShare = res.code;
+        app.go(`#/e/${res.code}/host`);
         return;
       }
       s.saved = res;

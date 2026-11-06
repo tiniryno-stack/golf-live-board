@@ -782,6 +782,39 @@ Still open: nothing blocking. Design direction (section 9) is final.
 
 - **Who you are: phone owner, auto-join, “I’m not Baker” (024, Nov 6, branch `claude/beautiful-hopper-pruav7`):** no engine change; one new additive RPC. Words: person (the human, `personId`), device (one browser storage), claim (device = player in a round, unchanged), **owner** (the one person a device belongs to), playing as (this round's claim). **Owner** = `db.owner` → `glb.owner = { personId, name }` (moved by Add to Home Screen): set on the first real pick after a one-time confirm (“You’re Sean Smith? · 8:40 tee time · with Andrew” → Yes, that’s me / Pick again), or by a crew “Which one are you?” on a phone with no owner; never from a practice round or a player without a `personId`; never changed by playing as someone else; cleared (stored `{ personId: null }`) only by “I’m not X” when X is the owner. One-time migration (key never written): the first crew `me`, else the first `glb.people`. Crew `me`, `glb.people` and `syncMyRounds` follow the owner only. **Joining** (`maybeAskWho`, once per device per round, never on a redraw): pure `joinPlan({ owner, roster, claims, deviceClaim, practice })` in `js/identity.js` → `open` (this device has a claim) / `auto` (owner on the roster by `personId`, spot free: `claim_player`, toast “Playing as Andrew · Not you? Tap your name.”) / `ask` (owner taken: the taken sheet, one tap to Ask to join) / `pick` (no owner, owner not on the roster, or a practice round: Who are you?). A failed auto-join falls to a sheet and never loops. Who are you? is grouped by tee time (header only when tee times are set) → cart (`whoGroups`). **Undo:** `not_me(p_code, p_device_id)` (schema.sql + `supabase/migrations/2026-11-06-not-me.sql`, **applied to the live DB Nov 6** and verified with a rolled-back anon test, + mock; claims now carry `claimed_at` in the mock) deletes this device's claim and relabels that player's rows whose `updated_by` is still their name and `updated_at` ≥ `claimed_at` to `'<name> (picked by mistake)'`, so the own-entry rule stops locking them; logged. You sheet: “Playing as Sean · Not you?” (or “Playing as Sam this round · this phone stays Andrew’s · Not you?”), plus **I’m not Sean**; Switch to watching unchanged; the Leave sheet no longer suggests it for wrong names. **App-only gate (logic only):** `app.mustUseApp()` = `FLAGS.appOnly` (off) && not standalone && `db.isPhone()` && no claim here; it opens the Add to Home Screen sheet for that round, whose move link carries the round code (`moveLink(code)`; `db.moved` opens `#/e/CODE`); `glb.hasApp` is set when Add to Home Screen is tapped. Tests: `tests/identity024.test.mjs`. **Decided:** a practice round never auto-joins; the taken case opens the taken sheet directly (one tap to ask) rather than the list with the name pre-selected; closing the confirm without answering leaves the phone with no owner (it asks again next first pick).
 
+- **Team Ryder Cup lobby: join days ahead, play on Saturday (025, Nov 6, branch `claude/vigilant-hopper-wlls0o`):** a
+  Team Ryder Cup round can be opened as soon as the organizer has the 16 names ("Invite now, draft later"), before carts,
+  the draft and start times. `settings.lobby = { stage: 'lobby'|'teams'|'ready'|'off', startTime 'HH:MM', tz (IANA),
+  opensAt ISO|null, openedEarly, notice {text, at, until}|null, cohost playerId|null, hostName, prevStage }`; absent / null on
+  every other round. **Pure `js/lobby.js` decides everything** (`lobbyState(event, nowMs)`, `opensAtFor` across zones +
+  DST, `nextHostStep`, `lobbyCounts`, `joinList`, `myLobby`, `lobbyView`, `homeCard`, writers, `draftedRoster` (the one
+  place Ryder player ids are set: kept for a lobby, `p1…` for a new round), `keepNames`, `keepQueued`, `countsAsPlayed`);
+  tests in `tests/lobby025.test.mjs`. Stage is checked against the roster (teams without carts → lobby; ready without
+  opensAt → teams); `open` = ready and (openedEarly or now ≥ opensAt = first start − 30 min, on `played_on`, in `tz`).
+  **Server (migration `2026-11-06-ryder-lobby.sql`, revoke in `-revoke.sql`, one-paste `-rollback.sql`):** `_lobby_gate`
+  refuses `upsert_score` / `fill_score` with `{ error: 'not_open', opens_at, now, stage }` right after the round is found
+  (only for Ryder rounds whose `settings.lobby` is an object); `admin_upsert_score` is not gated. `claims.in_app` +
+  `mark_in_app` (home screen app), `lobby_status` (organizer: claimed / in_app per player, no device ids), `lobby_counts`
+  (anyone: numbers only), `set_round_date(…, p_opens_at)` (date + opensAt in one statement), `whoami` returns `now`
+  (phones keep `db.clock.skew`), `update_event` logs "Round plan · lobby → teams". **App:** while gated (`app.gated()`)
+  the round shows `js/screens/lobby.js` instead of the tabs (no tab bar; landing → A–Z Which one are you? → 024 confirm →
+  See you Saturday; early / drafted / ready / on-the-day / called off / spot given to a sub / Scoring is open once,
+  `glb.seen.CODE.welcome|open`), no cart-name picker, no Today's game on join; the owner auto-joins on every open.
+  A one-shot timer wakes at opensAt (+ 30 s ticks under an hour), refetches and redraws. The queue keeps a `not_open`
+  score only when the round opens within 2 h (fast phone clock) and drops every other refusal. **Host** (organizer PIN)
+  shows `js/screens/hostlobby.js` until it opens: counts + not-yet rows with Share, Waiting to be let in, Players
+  (Replace = `release_player` then `update_event` keeping id / cart / time, Undo; Free up; Remove (after the draft:
+  Replace instead / Remove and redraft); Add a player), Co-host (shares the PIN), Round (date + start time with a notice,
+  call it off, bring it back up to 30 days after), and one primary from `nextHostStep` (Start the draft / Share the teams
+  / Set start times / Tell the group / Open scoring now on the day). Start the draft and Set start times run Setup's own
+  Carts → Draft and Tee times views on the event (setup.js lobby edit mode, inside the round, never `glb.setupDraft`);
+  every lobby write fetches the event first; the draft and start times refuse when the players changed meanwhile.
+  Setup: Game → **Invite now?** (15) → **When** (date + first start time; new pattern, flagged) → create → Host with the
+  invite share open. Home: **Coming up** cards (`recent.lobby`, refreshed by `db.refreshLobbies()`). Run it back strips
+  `lobby`; Season / crew / Setup's last groups skip lobby rounds that never opened (`_sync_crew` still counts them in
+  `crew_members.rounds`; harmless, noted). Not built: Play without him, the app-only Safari gate, captains drafting,
+  the example round, changing the course in a lobby. Open questions: BUILD-PLAN.md §10.
+
 ## 13. V2 backlog (running list)
 
 - **Carryovers (skins-style):** a tied point rolls onto the next hole instead of halving, so the next hole can be worth 3–4 points. Open design question: does an unresolved carry die at the end of a 6-hole rotation, or roll into the next opponent?

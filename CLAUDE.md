@@ -118,7 +118,7 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
 - RPCs: `create_event, verify_admin, claimed_players, whoami, claim_player, leave_round,
   request_join, approve_join, deny_join, upsert_score, admin_upsert_score, fill_score,
   update_event, release_player, get_audit_log, reset_round, finalize_round, delete_round, pick_team_name,
-  crew_people, person_name_check`.
+  crew_people, person_name_check`, (025) `mark_in_app, lobby_status, lobby_counts, set_round_date`.
   Helpers `_same_foursome`, `_play_pos`, `_hole_at`, `_join_approver`, `_write_score`, … are not
   executable by anon.
 - **Finalize:** `events.finalized_at` (set/cleared by `finalize_round` with the organizer PIN). While
@@ -189,6 +189,11 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
   Crew `me` and `glb.people` follow the owner only. RPC `not_me` frees this device's claim and relabels the scores it
   entered as that player (`updated_by` → `'<name> (picked by mistake)'`, so the own-entry rule no longer locks them).
   App-only gate = `app.mustUseApp()` behind `FLAGS.appOnly` (off; screens in 025). Tests: `tests/identity024.test.mjs`.
+- **Team Ryder Cup lobby (handoff 025, Nov 6, branch `claude/vigilant-hopper-wlls0o`):** `settings.lobby` (absent / null on
+  every other round) = invite now, draft later. Read it only through pure `js/lobby.js` (`lobbyState`, never the raw
+  settings). Server gate `_lobby_gate` in `upsert_score` / `fill_score` (`not_open`), plus `mark_in_app`, `lobby_status`,
+  `lobby_counts`, `set_round_date`, `claims.in_app`, `whoami.now` (migration `supabase/migrations/2026-11-06-ryder-lobby.sql`,
+  rollback next to it). Screens: `js/screens/lobby.js` (players), `js/screens/hostlobby.js` (organizer). ARCHITECTURE.md 13a.
 - **Small groups:** any roster that isn't 4 carts of 2 is a scorecard round (no teams).
   With 2–6 players, `settings.solo` = **split point** (`game.type 'splitPoint'`): 1 point a hole to the
   low net score, ties for low split it 1/k; level after 18 → **most outright wins** (`rankStandings`), still level = shared. Teams A–D are made in `soloView`, so Host can switch it on
@@ -265,6 +270,9 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
   `glb.who.CODE`, `glb.cardOpen.CODE`, `glb.coach.{tile5,oppcart3,prov2,pad1}`, `glb.setupDraft`,
   `glb.theme`, `glb.people`, `glb.crews`, `glb.crew`, (024) `glb.owner` (`{ personId, name }` = the one person this
   device belongs to; `{ personId: null }` = cleared by "I'm not X"), `glb.hasApp` (Add to Home Screen was tapped).
+  (025) `glb.seen.CODE.welcome` / `glb.seen.CODE.open` (lobby screens shown once), `glb.inapp.CODE` (= the player id
+  `mark_in_app` was sent for; not moved), `glb.lobbyhost.CODE` (`{ teamsShared, told }`, the organizer's one-time
+  primaries; moved). `glb.recent` entries can carry `lobby` (Home's Coming up card) and `lobbyPid`.
   Bump a coach key's suffix when its text changes so people see the new tip.
   `glb.recent` entries also carry Home's summary for each round (`recent.note`, from
   `home.roundSummary`: game, your name, live hole / place / points, or how it went).

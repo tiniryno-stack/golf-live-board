@@ -2120,3 +2120,40 @@ html.light .ce-mine.ce-card, [data-theme="light"] .ce-mine.ce-card { box-shadow:
   .ce-up.anim .ce-roll { transform: translateY(-20px); }
   .ce-up.anim .ce-roll.dn { transform: none; }
 }
+
+/* ───────────────────────────────────────────── 025 · Team Ryder Cup lobby (layout only: existing tokens, type sizes
+   and components: .card + .row, .lbl, .nr-head / .nr-foot, .btn, .home-row). Green = your cart only; amber = the
+   notice dot only. */
+.lb .nr-head { margin-bottom: var(--space-4); }
+.lb-card { display: flex; flex-direction: column; gap: 2px; margin: 0 0 var(--space-3); }
+.lb-card.lb-rows { padding-top: 0; padding-bottom: 0; gap: 0; }
+.lb-row { min-height: var(--tap-min); gap: var(--space-3); }
+.lb-row.taken { opacity: .6; }
+.lb-row .detail { margin-top: 0; }
+.lb-rt { display: block; font-size: 17px; font-weight: 600; line-height: 22px; }
+.lb-rt.plain, .lb-rt.muted { font-weight: 500; }
+.lb-rt.muted { color: var(--text-muted); }
+.lb-rt.you { color: var(--cart-you-text); }
+.lb-row .lb-d { flex: none; max-width: 50%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lb-name { font-size: 17px; line-height: 24px; font-weight: 600; }
+.lb-line { font-size: 15px; line-height: 21px; }
+.lb-k { margin: var(--space-4) 0 var(--space-2); }
+.lb-note { margin: 0 0 var(--space-3); line-height: 18px; }
+.nr-foot .lb-note { text-align: center; }
+.lb-notice { flex-direction: row; align-items: center; gap: var(--space-3); font-size: 15px; line-height: 21px; }
+.lb-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--warn); flex: none; display: inline-block; }
+.lb-offk { display: flex; align-items: center; gap: var(--space-2); }
+.lb-how { padding-left: 0; margin: 0 0 var(--space-3); }
+.lb-back { padding-left: 0; margin: 0 0 var(--space-2); display: inline-flex; align-items: center; gap: 4px; }
+.lb-quiet { margin-top: var(--space-2); color: var(--text-muted); box-shadow: none; }
+.lb-second, .nr-second { margin-top: var(--space-2); min-height: 56px; }
+.lb-search { width: 100%; margin: 0 0 var(--space-3); }
+.lb-empty { margin: var(--space-3) 0; }
+.lb-gap { height: var(--space-2); }
+.lb-wrap { white-space: normal; }
+.lb-add { margin: var(--space-2) 0; }
+.lb-check { color: var(--text-muted); flex: none; display: inline-flex; }
+.lb-home { margin-bottom: var(--space-3); }
+.lb-cbtn { margin-top: var(--space-3); }
+.lb-sk { color: var(--text-muted); margin: 0 0 var(--space-1); }
+.lb-sp { margin: 0 0 var(--space-4); }
