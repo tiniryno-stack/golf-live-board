@@ -279,7 +279,7 @@ export function ryderMatchSheet(app, { id, hole }) {
   const h = m.holes.find((x) => x.hole === Number(hole)) || m.holes.find((x) => x.hole === defaultHole(m));
   return `<div class="ry-sheet rm rs${mine ? '' : ' plain'}">
       ${rsCard(m, app.snapshot, mine)}
-      ${rmStrip(m, h.hole, 'ry-sheet-hole')}
+      ${rmStrip(m, h.hole, 'ry-sheet-hole', null, { split: !mine })}
       ${rmDetail(app, m, h, { mine })}
     </div>`;
 }
@@ -419,12 +419,14 @@ function rmCard(m, snap, { mine = true } = {}) {
 }
 
 /** Six hole tiles with your points (023 §1.4). `motion` = the new-since rings + pop (Matches only). */
-function rmStrip(m, selHole, act, motion = null) {
+function rmStrip(m, selHole, act, motion = null, { split = false } = {}) {
   const { newHoles = [], popHoles = [], t0 = 0 } = motion || {};
+  // Someone else's match (Board sheet): "your points" means nothing, so a counted tile shows the split, left–right.
+  const val = (h) => (split && h.points ? `<i class="split">${fmtPts(h.points.us) || '0'}–${fmtPts(h.points.them) || '0'}</i>` : rmTileVal(h));
   return `<div class="rm-strip">${m.holes.map((h) => {
     const isNew = newHoles.includes(h.hole);
     const pop = popHoles.indexOf(h.hole);
-    return `<button class="rm-tile${h.hole === selHole ? ' on' : ''}${isNew ? ' rm-new' : ''}"${isNew ? ` data-t0="${t0}"` : ''} data-act="${act}" data-m="${esc(m.id)}" data-v="${h.hole}" aria-pressed="${h.hole === selHole}"><b>${h.hole}</b><span class="rm-tv${pop >= 0 ? ' rm-pop' : ''}"${pop >= 0 ? ` style="--d:${pop * 120}ms"` : ''}>${rmTileVal(h)}</span></button>`;
+    return `<button class="rm-tile${h.hole === selHole ? ' on' : ''}${isNew ? ' rm-new' : ''}"${isNew ? ` data-t0="${t0}"` : ''} data-act="${act}" data-m="${esc(m.id)}" data-v="${h.hole}" aria-pressed="${h.hole === selHole}"><b>${h.hole}</b><span class="rm-tv${pop >= 0 ? ' rm-pop' : ''}"${pop >= 0 ? ` style="--d:${pop * 120}ms"` : ''}>${val(h)}</span></button>`;
   }).join('')}</div>`;
 
 }
