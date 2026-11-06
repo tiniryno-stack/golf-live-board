@@ -1810,12 +1810,12 @@ html.light .rm-t, [data-theme="light"] .rm-t { opacity: .55; }
 .rs .rm-sides { align-items: flex-start; margin-top: 0; }
 .rs-slot { height: 16px; color: var(--text-muted); }
 .rs .rs-slot.up { color: var(--cart-you-text); } /* your margin is green only when you're up */
-.rs.plain .rm-side .rs-slot { color: var(--text); }
-.rs.plain .rm-side.them .rs-slot { color: var(--text-muted); }
+.ry-sheet.rs.plain .rm-side .rs-slot { color: var(--text); }
+.ry-sheet.rs.plain .rm-side.them .rs-slot { color: var(--text-muted); }
 .rm-tile i.sp-us { color: var(--text); } .rm-tile i.sp-them, .rm-tile i.sp-as { color: var(--text-muted); }
-.rm.plain .rm-k.up, .rm.plain .rm-side.us .rm-cn, .rm.plain .rm-side.us .rm-pts, .rm.plain .rm-tile i.win,
-.rm.plain .rm-cnm.me, .rm.plain .rm-rw.me, .rm.plain .rm-rp.me { color: var(--text); }
-.rm.plain .rm-u { background: var(--text); }
+.ry-sheet.plain .rm-k.up, .ry-sheet.plain .rm-side.us .rm-cn, .ry-sheet.plain .rm-side.us .rm-pts, .ry-sheet.plain .rm-tile i.win,
+.ry-sheet.plain .rm-cnm.me, .ry-sheet.plain .rm-rw.me, .ry-sheet.plain .rm-rp.me { color: var(--text); }
+.ry-sheet.plain .rm-u { background: var(--text); }
 .rm-rp.them, .rm-rp.tie { color: var(--text-muted); }
 
 /* Team Ryder Cup: Enter header dot (014 §5) + Today's game sides (014 §8) */
