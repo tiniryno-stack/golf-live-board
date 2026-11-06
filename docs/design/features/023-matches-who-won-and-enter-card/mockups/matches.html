@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Matches mock v2</title>
+<link rel="stylesheet" href="../../../design-system/tokens.css">
+<style>
+@font-face{font-family:Geist;src:url(../../../../../node_modules/geist/dist/fonts/geist-sans/Geist-Variable.woff2) format('woff2');font-weight:100 900}
+@font-face{font-family:"Geist Mono";src:url(../../../../../node_modules/geist/dist/fonts/geist-mono/GeistMono-Variable.woff2) format('woff2');font-weight:100 900}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font-sans)}
+.phone{width:393px;height:659px;position:relative;overflow:hidden;background:var(--bg)}
+button{font:inherit;color:inherit;background:none;border:0;padding:0}
+.muted{color:var(--text-muted)}
+.lbl{font-family:var(--font-mono);font-size:12px;line-height:16px;font-weight:600;letter-spacing:1px;text-transform:uppercase}
+.top{height:56px;display:flex;align-items:center;gap:12px;padding:0 8px 0 12px}
+.av{width:32px;height:32px;border-radius:16px;background:var(--surface-2);display:grid;place-items:center;font-size:13px;font-weight:700}
+.top b{font-size:17px;font-weight:600;flex:1}
+.top .rn{font-size:15px;color:var(--text-muted)}
+.ib{width:44px;height:44px;display:grid;place-items:center;color:var(--text-muted)}
+.body{padding:0 16px}
+.head{display:flex;flex-direction:column;gap:2px;margin-top:2px}
+.head h1{margin:0;font-size:24px;line-height:28px;font-weight:700;letter-spacing:-.5px}
+.head span{font-size:13px;color:var(--text-muted)}
+.seg{margin-top:12px;height:44px;border-radius:var(--radius-md);background:var(--surface-1);display:grid;grid-template-columns:repeat(3,1fr);padding:3px;gap:3px}
+.seg div{border-radius:9px;display:flex;align-items:center;justify-content:center;gap:7px;font-size:15px;font-weight:600;color:var(--text-muted);position:relative}
+.seg div.on{background:var(--surface-3);color:var(--text)}
+html.light .seg div.on{background:var(--surface-3);box-shadow:var(--shadow-card)}
+.seg i{font-style:normal;font-family:var(--font-mono);font-size:12px;font-weight:700;letter-spacing:.5px}
+.seg i.w{color:var(--cart-you-text)} .seg i.l{color:var(--text-muted)}
+.seg i.lv{color:var(--cart-you-text)}
+.back{color:var(--text);font-weight:600;display:inline-block;padding:14px 0;margin:-14px 0}
+.live{width:8px;height:8px;border-radius:4px;position:relative}
+.live.red{background:var(--double)} .live.white{background:var(--text)} .live.green{background:var(--cart-you)}
+.live.pulse::after{content:'';position:absolute;inset:-4px;border-radius:8px;box-shadow:0 0 0 2px currentColor;opacity:.35}
+.live.red.pulse{color:var(--double)} .live.white.pulse{color:var(--text)} .live.green.pulse{color:var(--cart-you)}
+.card{margin-top:12px;border-radius:var(--radius-xl);background:var(--surface-1);padding:14px 16px;box-shadow:var(--shadow-card)}
+.card .k{color:var(--text-muted)} .card .k.up{color:var(--cart-you-text)}
+.sides{display:flex;justify-content:space-between;align-items:flex-end;margin-top:8px}
+.side{display:flex;flex-direction:column;gap:2px}
+.side .nm{font-size:15px;font-weight:600}
+.side .pts{font-family:var(--font-mono);font-size:40px;line-height:44px;font-weight:700;letter-spacing:-1.5px}
+.side.us .nm,.side.us .pts{color:var(--cart-you-text)}
+.side.them{text-align:right} .side.them .nm,.side.them .pts{color:var(--text-muted)}
+.bar{position:relative;margin-top:12px;height:10px;border-radius:5px;background:var(--surface-2);overflow:hidden}
+.bar .u{position:absolute;left:0;top:0;bottom:0;background:var(--cart-you);border-radius:5px}
+.bar .t{position:absolute;right:0;top:0;bottom:0;background:var(--text-muted);opacity:.7;border-radius:5px}
+html.light .bar .t{background:var(--text-muted);opacity:.55}
+.tick{position:absolute;left:54.17%;top:-3px;bottom:-3px;width:2px;background:var(--text-muted)}
+.foot{display:flex;justify-content:space-between;margin-top:8px;font-size:13px;color:var(--text-muted);position:relative}
+.foot .cl{position:absolute;left:54.17%;transform:translateX(-50%);font-size:13px;font-weight:600;color:var(--text-muted);white-space:nowrap}
+.strip{margin-top:14px;display:grid;grid-template-columns:repeat(6,1fr);gap:4px}
+.tile{height:56px;border-radius:var(--radius-md);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;position:relative}
+.tile b{font-size:15px;font-weight:600;color:var(--text-muted)}
+.tile i{font-style:normal;font-family:var(--font-mono);font-size:15px;font-weight:700;height:18px;line-height:18px}
+.tile i.win{color:var(--cart-you-text)} .tile i.half{color:var(--text)} .tile i.lose,.tile i.wait{color:var(--text-muted)}
+.tile.on{background:var(--surface-2)} .tile.on b{color:var(--text)}
+.tile.new::after{content:'';position:absolute;inset:0;border-radius:var(--radius-md);border:1px dashed var(--text-muted)}
+/* two-part point chip: [low ball | low total] */
+.chip{display:inline-grid;grid-template-columns:1fr 1fr;gap:2px;width:30px;height:8px}
+.chip s{display:block;border-radius:2px;background:var(--surface-3)}
+.chip s.you{background:var(--cart-you)} .chip s.them{background:var(--text-muted)}
+.chip s.tie{background:linear-gradient(90deg,var(--cart-you) 50%,var(--text-muted) 50%)}
+.chip s.wait{background:none;box-shadow:inset 0 0 0 1px var(--line)}
+.chip.big{width:56px;height:10px;gap:3px}
+.detail{margin-top:6px;border-top:1px solid rgba(255,255,255,.05);padding-top:10px}
+html.light .detail{border-top-color:rgba(11,13,16,.08)}
+.four{display:grid;grid-template-columns:repeat(4,1fr);text-align:center;position:relative}
+.four .n{font-size:15px;font-weight:600;color:var(--text-muted)} .four .n.me{color:var(--cart-you-text)}
+.four .s{height:40px;display:grid;place-items:center;margin-top:4px}
+.mk{font-family:var(--font-mono);font-weight:700;font-size:20px;width:34px;height:34px;display:grid;place-items:center;position:relative}
+.mk.c{border-radius:50%;box-shadow:inset 0 0 0 1.5px var(--text)}
+.mk.dim{color:var(--text-muted)}
+.mk.dim.s,.mk.dim.c{box-shadow:inset 0 0 0 1.5px var(--line)}
+.mk.dim.d{color:var(--text-muted)}
+.mk.s{border-radius:4px;box-shadow:inset 0 0 0 1.5px var(--text-muted)}
+.mk.d{border-radius:4px;color:var(--double);box-shadow:inset 0 0 0 1.5px var(--double),inset 0 0 0 4px var(--bg),inset 0 0 0 5.5px var(--double)}
+.lb-you::after,.lb-them::after{content:'';position:absolute;left:6px;right:6px;bottom:-7px;height:3px;border-radius:2px}
+.lb-you::after{background:var(--cart-you)} .lb-them::after{background:var(--text-muted)}
+.tot{display:grid;grid-template-columns:1fr 1fr;text-align:center;margin-top:8px;font-family:var(--font-mono);font-size:13px;font-weight:600;color:var(--text-muted)}
+.tot span.w{color:var(--text)}
+.tot span.w.me{color:var(--cart-you-text)}
+.dash{font-family:var(--font-mono);font-size:20px;color:var(--text-muted)}
+.need{margin-top:18px;font-size:17px;line-height:23px} .need .m{color:var(--text-muted)}
+.res{margin-top:18px;display:flex;flex-direction:column;gap:6px}
+.res .r{display:flex;align-items:center;gap:10px;font-size:15px}
+.res .r .k{width:86px;color:var(--text-muted);font-size:15px}
+.res .r b{font-weight:600}
+.res .r b.me{color:var(--cart-you-text)} .res .r b.them{color:var(--text)}
+.res .r .p{margin-left:auto;font-family:var(--font-mono);font-weight:700;font-size:15px}
+.res .r .p.me{color:var(--cart-you-text)} .res .r .p.them,.res .r .p.tie{color:var(--text-muted)}
+.res .r .sw{width:10px;height:10px;border-radius:3px}
+.tabs{position:absolute;left:16px;right:16px;bottom:24px;height:64px;border-radius:var(--radius-2xl);background:var(--glass);box-shadow:var(--shadow-dock),inset 0 0 0 1px var(--glass-line);display:grid;grid-template-columns:repeat(4,1fr);padding:6px}
+.tabs div{display:grid;place-items:center;border-radius:20px;color:var(--text-muted)}
+.tabs div.cur{background:var(--surface-3);color:var(--text)}
+html.light .tabs div.cur{background:var(--surface-2)}
+svg{display:block}
+</style></head>
+<body><div class="phone" id="ph"></div>
+<script>
+const S=JSON.parse(decodeURIComponent(location.hash.slice(1)||'{}'));
+if(S.light) document.documentElement.classList.add('light');
+const sv=(w,d)=>`<svg width="${w}" height="${w}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+const ic={dots:'<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>',
+flag:sv(24,'<path d="M6 21V4h11l-2 4 2 4H6"/>'),rings:sv(24,'<circle cx="8" cy="12" r="4"/><circle cx="16" cy="12" r="4"/>'),list:sv(24,'<path d="M4 7h16M4 12h11M4 17h7"/>'),grid:sv(24,'<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 10h16M4 15h16M10 4v16M15 4v16"/>')};
+const V=S.v||'text';            // how hole results read: text | chips | marks
+const LIVE=S.live||'white';     // live tab dot: red | white | green
+const st=S.state||'counted';
+// [hole, low ball, low total] winners: 'you' | 'them' | 'tie' | 'wait' | null
+const R7=[['7','you','you'],['8','them','them'],['9','tie','them'],['10','tie','you'],['11',null,null],['12',null,null]];
+const D={
+ live:{rot:1,thru:3,us:2.5,them:3.5,left:6,res:[...R7.slice(0,3),['10','wait','wait'],R7[4],R7[5]],sel:3,
+   four:[['Andrew',4,1],['Alex',5,1],['Josh',null],['Brandon',null]],need:'Your scores are in. <span class="m">Josh + Brandon haven’t posted yet.</span>'},
+ theirs:{rot:1,thru:3,us:2.5,them:3.5,left:6,res:[...R7.slice(0,3),['10','wait','wait'],R7[4],R7[5]],sel:3,
+   four:[['Andrew',null,1],['Alex',null,1],['Josh',4],['Brandon',5]],need:'Josh made 4, Brandon 5. <span class="m">A 4 halves low ball. 8 or better between you takes low total.</span>'},
+ counted:{rot:1,thru:4,us:4,them:4,left:4,res:R7,sel:3,four:[['Andrew',4,1],['Alex',5,1],['Josh',4],['Brandon',6]],lb:'tie',lbw:'Andrew + Josh',lt:'you',ltw:'Andrew + Alex',tot:[9,10]},
+ lostlb:{rot:1,thru:4,us:3,them:5,left:4,res:[...R7.slice(0,3),['10','them','you'],R7[4],R7[5]],sel:3,four:[['Andrew',5,1],['Alex',4,1],['Josh',3],['Brandon',7]],lb:'them',lbw:'Josh',lt:'you',ltw:'Andrew + Alex',tot:[9,10]},
+ other:{rot:0,final:true,us:7,them:5,left:0,res:[['1','you','you'],['2','you','tie'],['3','you','you'],['4','them','them'],['5','you','tie'],['6','tie','them']],sel:4,
+   four:[['Andrew',3,1],['Alex',5,1],['Ant',4],['Steve',4]],lb:'you',lbw:'Andrew',lt:'tie',ltw:'',tot:[8,8],vs:'Ant + Steve'},
+ newsince:{rot:1,thru:4,us:4,them:4,left:4,res:R7,sel:3,four:[['Andrew',4,1],['Alex',5,1],['Josh',4],['Brandon',6]],lb:'tie',lbw:'Andrew + Josh',lt:'you',ltw:'Andrew + Alex',tot:[9,10],newTiles:[2,3]},
+}[st];
+const par=st==='other'?3:4;
+const cls=s=>{const d=s-par;return d<=-1?'c':d===0?'':d===1?'s':'d'};
+const ptsOf=(lb,lt)=>{const v=w=>w==='you'?1:w==='tie'?.5:0;return v(lb)+v(lt)};
+const fmt=x=>{const w=Math.floor(x),h=x-w>0;return ((w?String(w):'')+(h?'½':''))||'0'};
+const diff=D.us-D.them, up=diff>0;
+const kick=D.final?`FINAL · YOU WON ${fmt(D.us)}–${fmt(D.them)}`:`THRU ${D.thru} · ${diff>0?fmt(diff)+' UP':diff<0?fmt(-diff)+' DN':'ALL SQUARE'}`;
+const vs=D.vs||'Josh + Brandon';
+const chip=(lb,lt,big)=>`<span class="chip ${big?'big':''}"><s class="${lb||''}"></s><s class="${lt||''}"></s></span>`;
+const tileVal=(lb,lt)=>{ if(!lb) return '<i></i>'; if(lb==='wait') return '<i class="wait">–</i>';
+  if(V==='chips') return `<i style="display:grid;place-items:center">${chip(lb,lt)}</i>`;
+  const p=ptsOf(lb,lt); return `<i class="${p>0?'win':'lose'}">${p?'+'+fmt(p):'0'}</i>`; };
+const liveDot=D.rot!==1?'<i class="lv">LIVE</i>':'';
+const seg=`<div class="seg"><div class="${D.rot===0?'on':''}">1–6 <i class="w">W</i></div><div class="${D.rot===1?'on':''}">7–12 ${liveDot}</div><div>13–18</div></div>`;
+const counts=(()=>{const f=D.four; if(!D.lb||f.some(x=>!x[1])) return f.map(()=>true);
+  const us=[f[0][1],f[1][1]], th=[f[2][1],f[3][1]]; const keep=f.map(()=>false);
+  const lu=Math.min(...us), lt=Math.min(...th);
+  if(lu<=lt) us.forEach((s,i)=>{if(s===lu) keep[i]=true}); if(lt<=lu) th.forEach((s,i)=>{if(s===lt) keep[i+2]=true});
+  const su=us[0]+us[1], stt=th[0]+th[1]; if(su<=stt){keep[0]=keep[1]=true} if(stt<=su){keep[2]=keep[3]=true}
+  return keep;})();
+const sc=D.four.map(([n,s,me],i)=>{let extra=counts[i]?'':' dim';
+  if(false){const low=Math.min(...D.four.map(f=>f[1]));if(s===low) extra=me?' lb-you':' lb-them';}
+  return `<div><div class="n ${me?'me':''}">${n}</div><div class="s">${s?`<span class="mk ${cls(s)}${extra}">${s}</span>`:'<span class="dash">–</span>'}</div></div>`}).join('');
+const who=(w,names)=>w==='you'?`<b class="me">${names}</b>`:w==='them'?`<b class="them">${names}</b>`:`<b class="them">Tied</b>`;
+const pt=w=>w==='you'?'<span class="p me">+1</span>':w==='them'?'<span class="p them">+1</span>':'<span class="p tie">½ each</span>';
+let resHtml='';
+if(D.lb){
+  if(V==='chips') resHtml=`<div class="res"><div class="r"><span class="k">Low ball</span>${who(D.lb,D.lbw)}${pt(D.lb)}</div><div class="r"><span class="k">Low total</span>${who(D.lt,D.ltw)}${pt(D.lt)}</div></div>`;
+  else if(V==='marks') resHtml=`<div class="tot"><span class="${D.tot[0]<D.tot[1]?'w me':D.tot[0]===D.tot[1]?'w':''}">= ${D.tot[0]}</span><span class="${D.tot[1]<D.tot[0]?'w':D.tot[0]===D.tot[1]?'w':''}">= ${D.tot[1]}</span></div><div class="res"><div class="r"><span class="k">Low ball</span>${who(D.lb,D.lbw)}${pt(D.lb)}</div><div class="r"><span class="k">Low total</span>${who(D.lt,D.ltw)}${pt(D.lt)}</div></div>`;
+  else resHtml=`<div class="res"><div class="r"><span class="k">Low ball</span>${who(D.lb,D.lbw)}${pt(D.lb)}</div><div class="r"><span class="k">Low total</span>${who(D.lt,D.ltw)}${pt(D.lt)}</div></div>`;
+}
+const holeNo=D.res[D.sel][0];
+document.getElementById('ph').innerHTML=`
+<div class="top"><div class="av">A</div><b>Andrew</b><span class="rn">Ryder · Sat</span><button class="ib" aria-label="Round menu">${ic.dots}</button></div>
+<div class="body">
+ <div class="head"><h1>vs ${vs}</h1><span>${D.final?'Holes 1–6 · final · <span class="back">Back to live ›</span>':st==='live'?'Holes 7–12':'they’re on 10 · you’re on 11'}</span></div>
+ ${seg}
+ <section class="card">
+  <div class="lbl k ${up?'up':''}">${kick}</div>
+  <div class="sides"><div class="side us"><span class="nm">Andrew + Alex</span><span class="pts">${fmt(D.us)}</span></div><div class="side them"><span class="nm">${vs}</span><span class="pts">${fmt(D.them)}</span></div></div>
+  <div class="bar"><span class="u" style="width:${100*D.us/12}%"></span><span class="t" style="width:${100*D.them/12}%"></span><span class="tick"></span></div>
+  <div class="foot"><span>${D.final?'Match over':D.left+' pts left'}</span><span class="cl">6½ wins</span><span></span></div>
+ </section>
+ <div class="strip">${D.res.map((r,i)=>`<div class="tile ${i===D.sel?'on':''} ${(D.newTiles||[]).includes(i)?'new':''}"><b>${r[0]}</b>${tileVal(r[1],r[2])}</div>`).join('')}</div>
+ <div class="detail">
+  <div class="four">${sc}</div>
+  ${D.need?`<div class="need">${D.need}</div>`:''}
+  ${resHtml}
+ </div>
+</div>
+<nav class="tabs"><div>${ic.flag}</div><div class="cur">${ic.rings}</div><div>${ic.list}</div><div>${ic.grid}</div></nav>`;
+</script></body></html>

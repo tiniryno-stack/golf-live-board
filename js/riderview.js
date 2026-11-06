@@ -93,6 +93,51 @@ function riderMatch(snap, m, myTeam, carts, g) {
   };
 }
 
+/**
+ * 023 §2: the dimming rule + every word for one hole's detail on Matches, read from the engine's hole
+ * entry (never re-scored). A score counts, once all four are in, only if it wins or ties low ball or
+ * low total on **net**; everything else is dimmed, and nothing is dimmed until all four are in.
+ * `strokes` (optional) = [us0, us1, them0, them1] "gets a stroke on this hole" flags, so the not-counted
+ * line can read "a net 4". Returns { counts:[bool×4], lowBall, lowTotal, need }, each of lowBall/lowTotal
+ * being { who:'us'|'them'|'tie', text, pts } once counted (null before), and need being
+ * { lead, rest } or null.
+ */
+export function holeLines(hole, usNames, themNames, strokes = null) {
+  const u = hole.net.us, t = hole.net.them;
+  const allIn = hole.whoIsIn === 'both';
+  // Which of the four scores count (lit); the rest dim. Judged on net.
+  const counts = [true, true, true, true];
+  if (allIn) {
+    counts.fill(false);
+    const lu = Math.min(u[0], u[1]), lt = Math.min(t[0], t[1]);
+    if (lu <= lt) { if (u[0] === lu) counts[0] = true; if (u[1] === lu) counts[1] = true; }
+    if (lt <= lu) { if (t[0] === lt) counts[2] = true; if (t[1] === lt) counts[3] = true; }
+    const su = u[0] + u[1], st = t[0] + t[1];
+    if (su <= st) counts[0] = counts[1] = true;
+    if (st <= su) counts[2] = counts[3] = true;
+  }
+  // Low-ball winner names = the player(s) who made the counting low; low-total names = the pair.
+  const lowNames = (side) => {
+    const arr = side === 'us' ? u : t, nm = side === 'us' ? usNames : themNames;
+    const lo = Math.min(arr[0], arr[1]);
+    return nm.filter((_, i) => arr[i] === lo).join(' + ');
+  };
+  const win = (res, names) => res === 'halved'
+    ? { who: 'tie', text: 'Tied', pts: '½ each', mine: false }
+    : { who: res, text: names, pts: '+1', mine: res === 'us' };
+  const lowBall = allIn ? win(hole.lowBall, lowNames(hole.lowBall)) : null;
+  const lowTotal = allIn ? win(hole.lowTotal, (hole.lowTotal === 'us' ? usNames : themNames).join(' + ')) : null;
+  // The "not counted yet" line (one or the other side in, never both).
+  let need = null;
+  if (hole.whoIsIn === 'us') {
+    need = { lead: 'Your scores are in.', rest: `${themNames.join(' + ')} haven’t posted yet.` };
+  } else if (hole.whoIsIn === 'them') {
+    const net = (i) => `${strokes && strokes[2 + i] ? 'a net ' : ''}${t[i]}`;
+    need = { lead: `${themNames[0]} made ${net(0)}, ${themNames[1]} ${net(1)}.`, rest: `A ${Math.min(t[0], t[1])} halves low ball. ${t[0] + t[1] - 1} or better between you takes low total.` };
+  }
+  return { counts, lowBall, lowTotal, need };
+}
+
 /** The Team Ryder Cup screens' state for a Partner “Rider” Cup round, from the viewer's cart. */
 export function riderState(snap, myTeam = null) {
   if (!isRider(snap)) return null;

@@ -6,7 +6,7 @@
 
 import { esc, icon, seg, seg2, mark, copyText } from '../ui.js';
 import { fmtPts, fmtToPar, playerLeaderboard, projectedGross, ryderState, ryderNeedLine, ryderHoleLine, teeTimeName, holeAt } from '../scoring.js';
-import { riderState } from '../riderview.js';
+import { riderState, holeLines } from '../riderview.js';
 
 export const ryState = (app) => ryderState(app.snapshot, app.myTeam()) || riderState(app.snapshot, app.myTeam());
 const tint = (cart) => (cart.color ? ` style="color:${cart.color}"` : '');
@@ -261,7 +261,8 @@ export function ryderMatchSheet(app, { id, hole }) {
 
 // ───────────────────────────────────────────── Matches (my match)
 
-export function ryderMatches(app) {
+// Pre-023 Matches, kept for Plus/Minus (handoff 023 §1.5 leaves it out of scope: "keep today's detail").
+function ryderMatchesLegacy(app) {
   const st = ryState(app);
   const myCart = app.myTeam();
   if (!st) return '';
@@ -309,6 +310,129 @@ export function ryderMatches(app) {
       <div class="ry-hd"><div class="ry-hd-h"><b>Hole ${h.hole}</b><span class="meta"> · par ${h.par}</span>${ptsLine}</div>
         <div class="ry-marks">${marks(app, m.us, h.hole, h.par, { you: true })}${marks(app, m.them, h.hole, h.par)}</div>
         ${lines}</div>
+    </div>`;
+}
+
+// ───────────────────────────────────────────── Matches (handoff 023 §1)
+
+const ptClass = (who) => (who === 'us' ? 'me' : who === 'them' ? 'them' : 'tie');
+
+/** One segment of the rotation picker: holes label + W / L / ½ / LIVE (023 §1.2). */
+function rmSeg(m, selId, liveId) {
+  const on = m.id === selId;
+  const holes = m.label.replace(/^Holes /, '');
+  let tag = '';
+  if (m.status === 'done') tag = m.result === 'won' ? '<i class="w">W</i>' : m.result === 'lost' ? '<i class="l">L</i>' : '<i class="h">½</i>';
+  else if (m.id === liveId && !on) tag = '<i class="lv">LIVE</i>';
+  return `<button class="rm-sgm${on ? ' on' : ''}" data-act="ry-rot" data-v="${esc(m.id)}" aria-pressed="${on}">${esc(holes)} ${tag}</button>`;
+}
+
+/** The value a hole tile shows: your points (green > 0, muted 0), "–" scores-in-not-counted, blank. */
+function rmTileVal(h) {
+  if (h.points) { const p = h.points.us; return `<i class="${p > 0 ? 'win' : 'lose'}">${p > 0 ? `+${fmtPts(p)}` : '0'}</i>`; }
+  return h.whoIsIn === 'none' ? '<i></i>' : '<i class="lose">–</i>';
+}
+
+/** One Low ball / Low total result row. */
+function rmRes(label, line) {
+  return `<div class="rm-r"><span class="rm-rk">${label}</span><b class="rm-rw ${line.who === 'us' ? 'me' : 'them'}">${esc(line.text)}</b><span class="rm-rp ${ptClass(line.who)}">${esc(line.pts)}</span></div>`;
+}
+
+export function ryderMatches(app) {
+  const st = ryState(app);
+  const myCart = app.myTeam();
+  if (!st) return '';
+  if (!myCart) {
+    return `<div class="plain ry-matches rm"><h1 class="rm-vs">You’re watching</h1>
+      <p class="rm-sub">Matches shows your own cart’s match. The Board has every match: tap one to see it.</p></div>`;
+  }
+  const snap = app.snapshot;
+  const mine = st.matches.filter((x) => x.us.id === myCart);
+  const current = mine.find((x) => x.status === 'live') || mine.find((x) => x.status === 'notStarted') || mine[mine.length - 1];
+  const m = mine.find((x) => x.id === app.ui.ryMatch) || (app.ui.ryRot != null ? mine.find((x) => x.rotation === Number(app.ui.ryRot)) : null) || current;
+  if (!m) return '';
+  if (m.pm) return ryderMatchesLegacy(app); // Plus/Minus: out of 023's scope, keep today's screen.
+
+  const ncomp = snap.game?.ncomp || 2;
+  const live = mine.find((x) => x.status === 'live');
+  const sameHoles = new Set(mine.map((x) => x.label)).size < mine.length; // 3-cart Rider: both matches are holes 1–18
+
+  // Head: title + subline (where the groups are / final + Back to live).
+  const wu = m.where.us, wt = m.where.them;
+  let sub;
+  if (m.status === 'done') {
+    sub = `${esc(m.label)} · final`;
+    if (live) sub += ` · <button class="rm-back" data-act="ry-rot" data-v="${esc(live.id)}">Back to live ›</button>`;
+  } else if (m.status === 'live' && wu && wt && wu !== wt) {
+    sub = `they’re on ${wt} · you’re on ${wu}`;
+  } else sub = esc(m.label);
+
+  // Rotation picker: one-line holes segments (023 §1.2), or today's "vs X" picker for a 3-cart Rider round.
+  const picker = sameHoles
+    ? seg2('ry-rot', mine.map((x) => [x.id, `vs ${x.them.name}`, x.status === 'live' ? 'live' : x.status === 'notStarted' ? 'up next' : `${x.result === 'won' ? 'won' : x.result === 'lost' ? 'lost' : 'halved'} ${fmtPts(Math.max(...x.holePts))}–${fmtPts(Math.min(...x.holePts))}`, { live: x.status === 'live' }]), m.id)
+    : `<div class="rm-seg" role="group">${mine.map((x) => rmSeg(x, m.id, live?.id)).join('')}</div>`;
+
+  // Score card.
+  const [u, t] = m.holePts;
+  const max = m.maxPts || m.total * ncomp;
+  const halves = Number(snap.settings.halvedHolePoints) || 0;
+  const clinch = m.clinchAt ?? (halves ? max / 2 + 0.5 : Math.floor(max / 2) + 1);
+  const tickPct = (clinch / max) * 100;
+  const leftPts = (m.total - m.thru) * ncomp;
+  const up = (m.status === 'live' && m.leader === 'us') || m.result === 'won';
+  const margin = fmtPts(Math.abs(u - t));
+  const kicker = m.status === 'notStarted' ? 'NOTHING COUNTS YET'
+    : m.status === 'done' ? `FINAL · ${m.result === 'won' ? 'YOU WON' : m.result === 'lost' ? 'LOST' : 'HALVED'}${m.result === 'halved' ? '' : ` ${fmtPts(u)}–${fmtPts(t)}`}`
+    : `THRU ${m.thru} · ${m.leader === 'us' ? `${margin} UP` : m.leader === 'them' ? `${margin} DN` : 'ALL SQUARE'}`;
+  const card = `<section class="rm-card">
+      <div class="rm-k lbl${up ? ' up' : ''}">${esc(kicker)}</div>
+      <div class="rm-sides">
+        <div class="rm-side us"><span class="rm-cn ellipsis">${esc(cartTitle(m.us))}</span><span class="rm-pts mono">${fmtPts(u)}</span></div>
+        <div class="rm-side them"><span class="rm-cn ellipsis">${esc(cartTitle(m.them))}</span><span class="rm-pts mono">${fmtPts(t)}</span></div>
+      </div>
+      <div class="rm-bar"><span class="rm-u" style="width:${Math.min(100, (u / max) * 100)}%"></span><span class="rm-t" style="width:${Math.min(100, (t / max) * 100)}%"></span><span class="rm-tick" style="left:${tickPct}%"></span></div>
+      <div class="rm-foot"><span>${m.status === 'done' ? 'Match over' : `${fmtPts(leftPts)} pts left`}</span><span class="rm-cl" style="left:${tickPct}%">${fmtPts(clinch)} wins</span></div>
+    </section>`;
+
+  // Hole strip.
+  const selHole = Number(app.ui.ryHole?.[m.id]) || defaultHole(m);
+  const strip = `<div class="rm-strip">${m.holes.map((h) => `<button class="rm-tile${h.hole === selHole ? ' on' : ''}" data-act="ry-hole" data-m="${esc(m.id)}" data-v="${h.hole}" aria-pressed="${h.hole === selHole}"><b>${h.hole}</b>${rmTileVal(h)}</button>`).join('')}</div>`;
+
+  // Hole detail: four score columns (dimmed where they didn't count), then the result rows / need line.
+  const h = m.holes.find((x) => x.hole === selHole) || m.holes[0];
+  const par = h.par;
+  const usNames = m.us.names, themNames = m.them.names;
+  const strokes = [...m.us.playerIds, ...m.them.playerIds].map((pid) => (snap.playerById.get(pid)?.dots[h.hole - 1] || 0) > 0);
+  const hl = holeLines(h, usNames, themNames, strokes);
+  const col = (name, pid, i, mineSide) => {
+    const g = grossOf(app, pid, h.hole);
+    const dim = !hl.counts[i];
+    return `<div class="rm-col"><span class="rm-cnm ellipsis${mineSide ? ' me' : ''}">${esc(name)}</span>
+      <span class="rm-cm">${g == null ? '<span class="rm-dash">–</span>' : mark(g, par, 34, { cls: dim ? 'rm-dim' : '' })}</span></div>`;
+  };
+  const cols = [
+    col(usNames[0], m.us.playerIds[0], 0, true), col(usNames[1], m.us.playerIds[1], 1, true),
+    col(themNames[0], m.them.playerIds[0], 2, false), col(themNames[1], m.them.playerIds[1], 3, false),
+  ].join('');
+  let lines = '';
+  if (hl.lowBall) {
+    lines = `<div class="rm-res">${rmRes('Low ball', hl.lowBall)}${ncomp > 1 && hl.lowTotal ? rmRes('Low total', hl.lowTotal) : ''}</div>`;
+  } else if (hl.need) {
+    lines = `<div class="rm-need">${esc(hl.need.lead)} <span class="m">${esc(hl.need.rest)}</span></div>`;
+  }
+
+  return `<div class="plain ry-matches rm">
+      <div class="rm-head">
+        <h1 class="rm-vs ellipsis">vs <span${tint(m.them)}>${esc(cartTitle(m.them))}</span></h1>
+        <div class="rm-sub">${sub}</div>
+      </div>
+      ${picker}
+      ${card}
+      ${strip}
+      <div class="rm-detail">
+        <div class="rm-four">${cols}</div>
+        ${lines}
+      </div>
     </div>`;
 }
 
