@@ -1,0 +1,308 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link rel="stylesheet" href="../../../design-system/tokens.css">
+<style>
+@font-face{font-family:Geist;src:url(../../../../../node_modules/geist/dist/fonts/geist-sans/Geist-Variable.woff2) format('woff2');font-weight:100 900}
+@font-face{font-family:"Geist Mono";src:url(../../../../../node_modules/geist/dist/fonts/geist-mono/GeistMono-Variable.woff2) format('woff2');font-weight:100 900}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font-sans)}
+button{font:inherit;color:inherit;background:none;border:0;padding:0}
+.ph{width:393px;height:852px;position:relative;overflow:hidden;background:var(--bg);display:flex;flex-direction:column}
+.pg{flex:1;display:flex;flex-direction:column;padding:62px 16px 16px;min-height:0}
+.top{display:flex;align-items:center;justify-content:space-between;height:40px}
+.lbl{font-family:var(--font-mono);font-size:12px;line-height:16px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted)}
+.h1{font-size:32px;line-height:36px;font-weight:700;letter-spacing:-.8px;margin:0;text-wrap:balance}
+.p{font-size:17px;line-height:24px;color:var(--text-muted);margin:0}
+.s{font-size:15px;line-height:21px}
+.m{color:var(--text-muted)}
+.card{background:var(--surface-1);border-radius:var(--radius-xl);padding:16px;box-shadow:var(--shadow-card)}
+.pri{height:56px;border-radius:var(--radius-lg);background:var(--button);color:var(--on-button);font-size:17px;font-weight:600;width:100%;display:flex;align-items:center;justify-content:center;gap:8px}
+.gho{min-height:48px;font-size:15px;font-weight:600;width:100%;color:var(--text)}
+.flex{flex:1}
+.pg > *{flex-shrink:0}
+.pg > .flex{flex-shrink:1}
+.warn-dot{width:8px;height:8px;border-radius:4px;background:var(--warn);flex:none}
+.pill{min-height:44px;padding:0 16px;border-radius:var(--radius-md);background:var(--surface-2);font-size:15px;font-weight:600}
+.row{display:flex;align-items:center;gap:12px;min-height:52px;border-top:1px solid var(--ce-line,rgba(255,255,255,.06))}
+html.light .row{--ce-line:rgba(11,13,16,.07)}
+.row:first-child{border-top:0}
+.row b{font-size:17px;font-weight:600;flex:1}
+.row .t{font-size:13px;color:var(--text-muted)}
+.row.off b{color:var(--text-muted);font-weight:500}
+.step{display:flex;gap:12px;align-items:center;min-height:44px}
+.step .n{flex:none;width:28px;height:28px;border-radius:14px;background:var(--surface-2);display:grid;place-items:center;font-family:var(--font-mono);font-size:13px;font-weight:700}
+.step .st{font-size:17px;font-weight:600;line-height:22px}
+.step .ss{font-size:13px;line-height:18px;color:var(--text-muted)}
+.chip{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:14px;background:var(--surface-2);font-size:13px;font-weight:600}
+.you{color:var(--cart-you-text)}
+.search{height:44px;box-sizing:border-box;border-radius:var(--radius-md);background:var(--surface-2);display:flex;align-items:center;gap:8px;padding:0 12px;color:var(--text-muted);font-size:17px}
+.safari{flex:none;height:86px;background:var(--surface-1);display:flex;align-items:flex-start;gap:10px;padding:10px 14px 0;box-shadow:0 -1px 0 var(--line)}
+.safari .sb{width:44px;height:44px;border-radius:22px;background:var(--surface-2);display:grid;place-items:center;color:var(--text-muted);font-size:20px}
+.safari .addr{flex:1;height:44px;border-radius:22px;background:var(--surface-2);display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--text-muted)}
+.safari .sb.hot{box-shadow:0 0 0 2px var(--text);color:var(--text)}
+.point{position:absolute;right:18px;bottom:94px;display:flex;flex-direction:column;align-items:flex-end;gap:2px;color:var(--text);font-size:13px;font-weight:600}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:var(--surface-2);border-radius:var(--radius-sheet) var(--radius-sheet) 0 0;padding:10px 16px 34px;box-shadow:var(--shadow-sheet)}
+.scrim{position:absolute;inset:0;background:var(--scrim)}
+.grab{width:36px;height:5px;border-radius:3px;background:var(--line);margin:0 auto 14px}
+.mini{border-radius:12px;background:var(--surface-2);padding:6px;display:flex;flex-direction:column;gap:2px;flex:1}
+.mini i{font-style:normal;font-size:12px;line-height:16px;padding:6px 8px;border-radius:8px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mini i.on{background:var(--surface-3);color:var(--text);font-weight:600;box-shadow:0 0 0 1.5px var(--text)}
+.tabs{flex:none;margin:0 16px 24px;height:64px;border-radius:var(--radius-2xl);background:var(--glass);box-shadow:var(--shadow-dock),inset 0 0 0 1px var(--glass-line);display:grid;grid-template-columns:repeat(4,1fr);padding:6px}
+.tabs div{display:grid;place-items:center;border-radius:20px;color:var(--text-muted)}
+.tabs div.cur{background:var(--surface-3);color:var(--text)}
+.qr{width:200px;height:200px;border-radius:16px;background:#fff;display:grid;grid-template-columns:repeat(11,1fr);gap:3px;padding:14px;box-sizing:border-box;position:relative}
+.qr i{background:#0a0b0d;border-radius:2px}.qr i.o{background:transparent}
+.qr .c{position:absolute;inset:0;margin:auto;width:52px;height:52px;border-radius:12px;background:#0a0b0d;display:grid;place-items:center;color:#f4f5f7}
+.sec{height:56px;border-radius:var(--radius-lg);background:var(--surface-2);color:var(--text);font-size:17px;font-weight:600;width:100%}
+html.light .search{box-shadow:inset 0 0 0 1px var(--line)}
+.mini.pic{opacity:.75}
+.sheet .sec{background:var(--surface-3)}
+html.light .sheet .sec{background:var(--surface-1);box-shadow:inset 0 0 0 1px var(--line)}
+.row.tall{min-height:60px}
+.pill.sm{min-height:36px;margin:4px 0}
+.pg{overflow:auto}
+.pg > .pri:last-child{position:sticky;bottom:0;box-shadow:0 -12px 16px var(--bg)}
+.code{font-family:var(--font-mono);font-size:17px;font-weight:700;letter-spacing:2px}
+.bar{height:6px;border-radius:3px;background:var(--surface-2);overflow:hidden}.bar b{display:block;height:100%;background:var(--text);border-radius:3px}
+</style></head><body><div class="ph" id="ph"></div>
+<script>
+const S = JSON.parse(decodeURIComponent(location.hash.slice(1) || '{}'));
+if (S.light) document.documentElement.classList.add('light');
+if (S.big) document.addEventListener('DOMContentLoaded', () => {});
+const s = S.s || 'landing';
+const MARK = (n = 40) => `<svg width="${n}" height="${n}" viewBox="0 0 100 100" aria-hidden="true" style="display:block;color:var(--text)"><circle cx="42" cy="58" r="30" fill="none" stroke="currentColor" stroke-width="13"/><circle cx="82" cy="20" r="11" fill="var(--cart-you)"/></svg>`;
+const ICON = (n = 60) => `<span style="width:${n}px;height:${n}px;border-radius:${n * .23}px;background:#0a0b0d;display:grid;place-items:center;box-shadow:0 0 0 1px var(--line);flex:none;color:#f4f5f7">${MARK(n * .62).replace('color:var(--text)', 'color:#f4f5f7')}</span>`;
+const hdr = (right = '') => `<div class="top">${MARK(40)}${right}</div>`;
+const safari = (hot) => `<div class="safari"><span class="sb">‹</span><span class="addr">golfboard · Chuck’s Bday</span><span class="sb${hot ? ' hot' : ''}">⋯</span></div>`;
+const roundCard = (line2 = 'Twin Creeks · Team Ryder Cup · 16 players') => `<div class="card" style="display:flex;flex-direction:column;gap:2px">
+  <span class="lbl">Sat Nov 9 · first tee 8:00</span>
+  <span style="font-size:17px;line-height:24px;font-weight:600">Chuck’s Bday</span>
+  <span class="s m">${line2}</span></div>`;
+const sv=(d)=>`<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const IC={flag:sv('<path d="M6 21V4h11l-2 4 2 4H6"/>'),rings:sv('<circle cx="8" cy="12" r="4"/><circle cx="16" cy="12" r="4"/>'),list:sv('<path d="M4 7h16M4 12h11M4 17h7"/>'),grid:sv('<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 10h16M4 15h16M10 4v16M15 4v16"/>'),l:sv('<path d="M15 6l-6 6 6 6"/>'),r:sv('<path d="M9 6l6 6-6 6"/>'),dots:'<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>'};
+const tabs = `<nav class="tabs"><div class="cur">${IC.flag}</div><div>${IC.rings}</div><div>${IC.list}</div><div>${IC.grid}</div></nav>`;
+const NAMES = [['8:00 start time', ['Andrew', 'Alex', 'Josh', 'Brandon']], ['8:10 start time', ['Ant', 'Steve', 'Joseph', 'Jay']], ['8:20 start time', ['Sean', 'Baker', 'Mitch', 'Peter']]];
+const enterBar = `<div style="display:flex;align-items:center;height:54px"><b style="font-size:32px;letter-spacing:-.8px;flex:1">Hole 4 <span class="m" style="font-size:17px;font-weight:500">Par 4</span></b><span style="width:44px;height:44px;display:grid;place-items:center">${IC.l}</span><span style="width:44px;height:44px;display:grid;place-items:center">${IC.r}</span><span class="m" style="width:44px;height:44px;display:grid;place-items:center">${IC.dots}</span></div>`;
+const lobbyCard = () => `<div class="card" style="display:flex;flex-direction:column;gap:2px">
+  <span class="lbl">Sat Nov 9 · Twin Creeks</span>
+  <span style="font-size:17px;line-height:24px;font-weight:600">Chuck’s Bday</span>
+  <span class="s m">Team Ryder Cup · 16 players · first tee around 8:00</span></div>`;
+const PEOPLE = ['Alex', 'Andrew', 'Ant', 'Baker', 'Brandon', 'Chuck', 'Elijah', 'Jay', 'Josh', 'Joseph', 'Justin', 'Marcus', 'Mitch', 'Peter', 'Sean', 'Steve'];
+const roundLine = (extra = '') => `<p class="s m" style="margin-top:6px">Twin Creeks · Team Ryder Cup · 16 players${extra}</p>`;
+const stat = (t, sub, done) => `<div class="row tall"><div style="flex:1"><b style="display:block">${t}</b><span class="t">${sub}</span></div>${done ? '<span class="m" style="font-size:15px">✓</span>' : ''}</div>`;
+const how = `<button class="gho" style="text-align:left;width:auto;margin-top:2px">How Team Ryder Cup works ›</button>`;
+const players = (mark = {}) => `<div class="card" style="padding:0 16px">${['Andrew', 'Baker', 'Alex', 'Ant'].map((n) => `<div class="row"><b${n === 'Baker' ? ' class="you"' : ''}>${n}${n === 'Andrew' ? ' <span class="t" style="font-weight:500">organizer</span>' : ''}${n === 'Baker' ? ' <span class="t" style="font-weight:500">you</span>' : ''}</b></div>`).join('')}<div class="row"><b class="m" style="font-weight:500">12 more · 3 haven’t added Golf Board</b><span class="t">›</span></div></div>`;
+const phdr = (right = IC.dots) => `<div class="top"><span class="lbl">Chuck’s Bday</span><span class="m">${right}</span></div>`;
+const team = (name, carts, mine) => `<div class="card" style="padding:0 16px${mine ? ';box-shadow:inset 0 0 0 1.5px var(--cart-you)' : ''}"><div class="row"><b${mine ? ' class="you"' : ''}>${name}</b><span class="t">${mine ? 'your team' : ''}</span></div>${carts.map((c) => `<div class="row"><b style="font-weight:500${c.includes('Baker') ? ';color:var(--cart-you-text)' : ''}">${c}</b></div>`).join('')}</div>`;
+const field = (t) => `<div class="search" style="background:var(--surface-3)">${t}</div>`;
+const person = (n, sub, pill = 'Share') => `<div class="row tall"><div style="flex:1"><b style="display:block">${n}</b><span class="t">${sub}</span></div>${pill ? `<button class="pill sm">${pill}</button>` : ''}</div>`;
+const warnRow = (t, sub, pill) => `<div class="row tall"><span class="warn-dot"></span><div style="flex:1"><b style="display:block">${t}</b><span class="t">${sub}</span></div>${pill ? `<button class="pill sm">${pill}</button>` : ''}</div>`;
+const sheet = (body) => `<div class="scrim"></div><div class="sheet"><div class="grab"></div>${body}</div>`;
+const hhdr = (t = 'host') => `<div class="top"><span class="lbl">Chuck’s Bday · ${t}</span><span class="m">Done</span></div>`;
+const V = {
+  landing: () => `<div class="pg">${hdr()}
+    <p class="lbl" style="margin:24px 0 8px">Chuck’s Bday · Andrew invited you</p>
+    <h1 class="h1">You’re on the list for Saturday</h1>
+    <p class="p" style="margin-top:10px">Join now. Teams and start times come later and show up on your phone.</p>
+    <div style="margin-top:22px">${lobbyCard()}</div>
+    <div class="flex"></div>
+    <p class="s m" style="margin:0 0 12px">No account. About a minute: pick your name, then add Golf Board to your home screen.</p>
+    <button class="pri">Find my name</button>
+    <button class="gho" style="margin-top:4px;color:var(--text-muted);font-weight:500">Not playing? Follow along</button>
+  </div>${safari(false)}`,
+  who: () => `<div class="pg" style="padding-top:56px">
+    <p class="lbl">Chuck’s Bday · step 1 of 3</p>
+    <h1 class="h1" style="margin-top:6px">Which one are you?</h1>
+    <div class="search" style="margin-top:16px">⌕ <span>Search 16 names</span></div>
+    <div class="card" style="padding:0 16px;margin-top:14px">${PEOPLE.slice(0, 9).map((n) => n === 'Brandon' ? `<div class="row off"><b>${n}</b><span class="t">on another phone</span></div>` : `<div class="row"><b>${n}</b></div>`).join('')}</div>
+  </div>
+  <div style="flex:none;padding:10px 16px 0;background:var(--bg);box-shadow:0 -1px 0 var(--line)"><button class="gho">I’m not on the list</button></div>${safari(false)}`,
+  welcome: () => `<div class="pg">${hdr()}
+    <p class="lbl you" style="margin:24px 0 8px">Chuck’s Bday · you’re in</p>
+    <h1 class="h1">See you Saturday, Baker</h1>
+    <p class="p" style="margin-top:10px">Andrew drafts the teams and sets start times before then. Open Golf Board any time to see them.</p>
+    <div class="flex"></div>
+    <p class="s m" style="margin:0 0 12px">On Saturday, just tap Golf Board on your home screen. No link needed.</p>
+    <button class="pri">See who’s playing</button>
+    <button class="gho" style="margin-top:4px">Show me an example round</button>
+  </div>`,
+  early: () => `<div class="pg" style="padding-top:62px">${phdr()}
+    <h1 class="h1" style="margin-top:12px">Saturday · 8:00 at Twin Creeks</h1>
+    <p class="s m" style="margin-top:6px">Team Ryder Cup · 16 players</p>
+    ${how}
+    <p class="lbl" style="margin:16px 0 6px">Coming up</p>
+    <div class="card" style="padding:0 16px">${stat('Teams', 'After Andrew’s draft')}${stat('Your start time and matches', 'After the draft')}</div>
+    <p class="lbl" style="margin:20px 0 6px">Who’s playing</p>
+    ${players()}
+    <div class="flex"></div>
+  </div>`,
+  drafted: () => `<div class="pg" style="padding-top:62px">
+    <div class="top"><span class="lbl">Chuck’s Bday · teams set Thu</span><span class="m">${IC.dots}</span></div>
+    <h1 class="h1" style="margin-top:12px">You’re on Team Josh</h1>
+    <p class="s m" style="margin-top:6px">Saturday 8:00 · Twin Creeks</p>
+    <div class="card" style="padding:0 16px;margin-top:16px">
+      <div class="row"><b>Team Josh</b><span class="t">8 players</span></div>
+      <div class="row"><b class="you">Mitch + Baker</b><span class="t you">your cart</span></div>
+      <div class="row"><b style="font-weight:500">Josh + Brandon</b></div>
+      <div class="row"><b style="font-weight:500">Sean + Peter</b></div>
+      <div class="row"><b style="font-weight:500">Kyle + Chuck</b></div>
+    </div>
+    <div class="card" style="padding:0 16px;margin-top:12px"><div class="row"><b>Team Andrew</b><span class="t">8 players ›</span></div></div>
+    <p class="s m" style="margin:24px 0 0">Start times next. Your group and matches show up here.</p>
+    <div class="flex"></div>
+  </div>`,
+  teetimes: () => `<div class="pg" style="padding-top:62px">
+    <div class="top"><span class="lbl">Chuck’s Bday · Team Josh</span><span class="m">${IC.dots}</span></div>
+    <h1 class="h1" style="margin-top:12px">Saturday · 8:20 with Mitch</h1>
+    <p class="s m" style="margin-top:6px">Twin Creeks · Team Ryder Cup</p>
+    <div class="card" style="margin-top:16px;padding:0 16px">
+      <div class="row"><b>Holes 1–6</b><span class="t">vs Sean + Peter</span></div>
+      <div class="row"><b>Holes 7–12</b><span class="t">vs Kyle + Chuck</span></div>
+      <div class="row"><b>Holes 13–18</b><span class="t">vs Ant + Steve</span></div>
+    </div>
+    <p class="s m" style="margin-top:16px">Scoring opens by itself at 7:30 on Saturday. Just tap Golf Board.</p>
+    ${how}
+    <div class="flex"></div>
+  </div>`,
+  satwait: () => `<div class="pg" style="padding-top:62px">${phdr()}
+    <p class="lbl" style="margin:12px 0 6px">Saturday · 7:40 · Team Josh</p>
+    <h1 class="h1">Andrew or Josh is setting start times</h1>
+    <p class="p" style="margin-top:10px">Teams are set. Keep this open: scoring opens the moment start times are in.</p>
+    <div class="flex"></div>
+    <p class="s m" style="margin:0 0 8px">Running late? Give them a nudge.</p>
+    <button class="sec">Text Andrew</button>
+  </div>`,
+  changed: () => `<div class="pg" style="padding-top:62px">${phdr()}
+    <h1 class="h1" style="margin-top:12px">Saturday · 9:10 at Twin Creeks</h1>
+    <p class="s m" style="margin-top:6px">Team Ryder Cup · 16 players</p>
+    <div class="card" style="margin-top:14px;display:flex;align-items:center;gap:10px;padding:12px 16px"><span class="warn-dot"></span><span class="s">Andrew moved the start to 9:10 (was 8:00).</span></div>
+    <p class="lbl" style="margin:16px 0 6px">Coming up</p>
+    <div class="card" style="padding:0 16px">${stat('Teams', 'After Andrew’s draft')}${stat('Your start time and matches', 'After the draft')}</div>
+    <div class="flex"></div>
+  </div>`,
+  home: () => `<div class="pg" style="padding-top:62px">
+    <div style="display:flex;align-items:center;gap:12px;height:40px"><span style="width:32px;height:32px;border-radius:16px;background:var(--surface-2);display:grid;place-items:center;font-size:13px;font-weight:700">B</span><b style="font-size:17px;flex:1">Baker</b><span class="m">${IC.dots}</span></div>
+    <p class="lbl" style="margin:24px 0 8px">Coming up</p>
+    <div class="card" style="display:flex;flex-direction:column;gap:2px">
+      <span class="lbl">Sat Nov 9 · Twin Creeks</span>
+      <span style="font-size:17px;line-height:24px;font-weight:600">Chuck’s Bday</span>
+      <span class="s m">You’re on Team Josh · start times not set yet</span>
+      <button class="sec" style="margin-top:14px">Open</button>
+    </div>
+    <p class="lbl" style="margin:24px 0 6px">Recent rounds</p>
+    <div class="card" style="padding:0 16px"><div class="row"><b>Bridlewood</b><span class="t">Oct 20 · 2nd</span></div><div class="row"><b>Twin Creeks</b><span class="t">Oct 16 · won</span></div></div>
+    <div class="flex"></div>
+  </div>`,
+  removed: () => V.home().replace('Baker</b>', 'Justin</b>').replace('>B<', '>J<').replace('You’re on Team Josh · start times not set yet', 'Andrew gave your spot to Kyle.').replace('<button class="sec" style="margin-top:14px">Open</button>', '<button class="sec" style="margin-top:14px">Text Andrew</button>'),
+  calledoff: () => V.home().replace('You’re on Team Josh · start times not set yet', 'Andrew called this off. Rain check?').replace('<span class="lbl">Sat Nov 9 · Twin Creeks</span>', '<span class="lbl" style="display:flex;align-items:center;gap:8px"><span class="warn-dot"></span>Called off · was Sat Nov 9</span>').replace('<button class="sec" style="margin-top:14px">Open</button>', '<button class="sec" style="margin-top:14px">Text Andrew</button>'),
+  preview: () => `<div class="pg" style="padding-top:62px">
+    <div class="top"><span class="lbl">Example round · 1 of 3</span><span class="m">Done</span></div>
+    <h1 class="h1" style="margin-top:12px">After each hole, tap your scores</h1>
+    <p class="p" style="margin-top:10px">Yours and your cart-mate’s. This is an example: nothing here is saved.</p>
+    <div class="card" style="margin-top:22px;padding:6px 16px;opacity:.6">
+      ${['Sam', 'Jordan'].map((n, i) => `<div style="padding:8px 0 4px;${i ? 'border-top:1px solid rgba(255,255,255,.06)' : ''}"><b style="font-size:17px">${n}</b><div style="display:grid;grid-template-columns:repeat(4,1fr) 56px;gap:6px;margin-top:4px">${[3, 4, 5, 6].map((v) => `<span style="height:56px;border-radius:12px;display:grid;place-items:center;font-family:var(--font-mono);font-size:20px;font-weight:700;${v === 4 && !i ? 'background:var(--text);color:var(--bg)' : ''}">${v}</span>`).join('')}<span class="m" style="display:grid;place-items:center">${IC.dots}</span></div></div>`).join('')}
+    </div>
+    <div class="flex"></div>
+    <button class="pri">Next: your match</button>
+  </div>`,
+  gameday: () => `<div class="pg">${hdr()}
+    <p class="lbl you" style="margin:24px 0 8px">Chuck’s Bday · scoring is open</p>
+    <h1 class="h1">Team Josh · 8:20 with Mitch</h1>
+    <p class="p" style="margin-top:10px">First up, holes 1–6 against Sean + Peter.</p>
+    <div class="flex"></div>
+    <button class="pri">Go to hole 1</button>
+    <button class="gho" style="margin-top:4px">How today’s game works</button>
+  </div>`,
+  cohost: () => V.early().replace('<span class="lbl">Chuck’s Bday</span>', '<span class="lbl">Chuck’s Bday · you’re co-host</span>').replace('${how}', '') .replace('<p class="lbl" style="margin:16px 0 6px">Coming up</p>', '<div class="card" style="margin-top:14px;padding:0 16px"><div class="row"><b>Host</b><span class="t">draft, start times, players ›</span></div></div><p class="lbl" style="margin:16px 0 6px">Coming up</p>'),
+  // ── organizer ──
+  setupchoice: () => `<div class="pg" style="padding-top:56px">
+    <p class="lbl">New round · Chuck’s Bday</p>
+    <h1 class="h1" style="margin-top:6px">16 players added. Invite them now?</h1>
+    <p class="p" style="margin-top:10px">Everyone can join today. You draft and set start times later.</p>
+    <div class="flex"></div>
+    <button class="pri">Invite now, draft later</button>
+    <button class="sec" style="margin-top:8px">Draft and start times first</button>
+  </div>`,
+  hostearly: () => `<div class="pg" style="padding-top:62px">${hhdr()}
+    <h1 class="h1" style="margin-top:12px">10 of 16 have Golf Board</h1>
+    <p class="s m" style="margin-top:6px">Saturday 8:00 · Twin Creeks · Team Ryder Cup</p>
+    <p class="lbl" style="margin:16px 0 6px">Not in the app yet · 6 people</p>
+    <div class="card" style="padding:0 16px">${person('Peter', 'picked a name in Safari')}${person('Jay', 'picked a name in Safari')}${person('Chuck', 'not yet')}${person('Elijah', 'not yet')}${person('Marcus', 'not yet')}${person('Steve', 'not yet')}</div>
+    <div class="card" style="padding:0 16px;margin-top:12px"><div class="row"><b>Players</b><span class="t">replace a player ›</span></div><div class="row"><b>Co-host</b><span class="t">Josh ›</span></div></div>
+    <div class="flex"></div>
+    <button class="pri">Start the draft</button>
+  </div>`,
+  hostreplace: () => V.hostearly() + sheet(`<h2 class="h1">Replace Justin</h2>
+      <p class="s m" style="margin:8px 0 14px">The sub takes Justin’s spot, with his team and cart. Justin’s phone is told.</p>
+      ${field('Sub’s first and last name')}
+      <div class="card" style="padding:0 16px;margin-top:10px;background:var(--surface-3)"><div class="row"><b>Kyle Test</b><span class="t">played Oct 16</span></div></div>
+      <button class="pri" style="margin-top:16px">Replace with Kyle</button>
+      <button class="sec" style="margin-top:8px">Cancel</button>`),
+  replaceshare: () => V.hostearly() + sheet(`<p class="lbl">Chuck’s Bday · Kyle added</p>
+      <h2 class="h1" style="margin-top:6px">Send Kyle the link</h2>
+      <p class="s m" style="margin:8px 0 20px">Kyle takes Justin’s spot. Ready to send: “Kyle, you’re in for Chuck’s Bday on Saturday. Tap to join.”</p>
+      <button class="pri">Share with Kyle</button>
+      <button class="sec" style="margin-top:8px">Undo</button>`),
+  hostdrafted: () => `<div class="pg" style="padding-top:62px">${hhdr()}
+    <h1 class="h1" style="margin-top:12px">Teams are set</h1>
+    <p class="s m" style="margin-top:6px">Team Josh vs Team Andrew · 16 of 16 have Golf Board</p>
+    <div class="card" style="padding:0 16px;margin-top:16px">${stat('Invite', 'Everyone’s in', true)}${stat('Draft', 'Done Thu', true)}${stat('Start times', 'Next')}</div>
+    <div class="card" style="padding:0 16px;margin-top:12px"><div class="row"><b>Co-host</b><span class="t">Josh ›</span></div><div class="row"><b>Round</b><span class="t">date, course, call it off ›</span></div></div>
+    <div class="flex"></div>
+    <p class="s m" style="margin:0 0 8px">Phones show the teams when they open Golf Board. Tell the group now.</p>
+    <button class="pri">Share the teams</button>
+    <button class="sec" style="margin-top:8px">Set start times</button>
+  </div>`,
+  hostoptions: () => V.hostdrafted() + sheet(`<h2 class="h1">Round</h2>
+      <div class="card" style="padding:0 16px;margin-top:14px;background:var(--surface-3)">
+        <div class="row"><b>Date and start time</b><span class="t">Sat 8:00 ›</span></div>
+        <div class="row"><b>Course</b><span class="t">Twin Creeks ›</span></div>
+        <div class="row"><b>Co-host</b><span class="t">Josh ›</span></div>
+      </div>
+      <button class="gho" style="margin-top:10px;text-align:left">Call it off ›</button>`),
+  calloff: () => V.hostdrafted() + sheet(`<h2 class="h1">Call off Chuck’s Bday?</h2>
+      <p class="s m" style="margin:8px 0 20px">Every phone shows it’s off. Scores can’t be entered. You’ll tell the group next.</p>
+      <button class="pri">Call it off</button>
+      <button class="sec" style="margin-top:8px">Keep the round</button>`),
+  removeconfirm: () => V.hostdrafted() + sheet(`<h2 class="h1">Remove Justin?</h2>
+      <p class="s m" style="margin:8px 0 20px">After the draft, removing a player clears the teams and the draft starts over. Replacing him keeps the teams.</p>
+      <button class="pri">Replace Justin instead</button>
+      <button class="sec" style="margin-top:8px">Remove and redraft</button>`),
+  hostchanged: () => `<div class="pg" style="padding-top:62px">${hhdr()}
+    <h1 class="h1" style="margin-top:12px">Start moved to 9:10</h1>
+    <p class="p" style="margin-top:10px">Phones show it next time they open Golf Board, with a note until Saturday. Tell everyone so nobody turns up at 8:00.</p>
+    <div class="flex"></div>
+    <p class="s m" style="margin:0 0 8px">Ready to send: “Chuck’s Bday now starts at 9:10.”</p>
+    <button class="pri">Tell the group</button>
+  </div>`,
+  hostday: () => `<div class="pg" style="padding-top:62px">${hhdr('host · Sat 7:55')}
+    <h1 class="h1" style="margin-top:12px">Scoring is open</h1>
+    <p class="s m" style="margin-top:6px">Opened by itself at 7:30 · first tee 8:00</p>
+    <p class="lbl" style="margin:16px 0 6px">Needs you</p>
+    <div class="card" style="padding:0 16px">${warnRow('Justin isn’t here', 'Marked 7:52', 'Replace')}</div>
+    <div class="card" style="padding:0 16px;margin-top:16px">${stat('Invite', '16 of 16 have Golf Board', true)}${stat('Draft', 'Team Josh vs Team Andrew', true)}${stat('Start times', '8:00 · 8:10 · 8:20 · 8:30', true)}</div>
+    <div class="flex"></div>
+  </div>`,
+  noshow: () => V.hostday() + sheet(`<h2 class="h1">Justin isn’t here</h2>
+      <p class="s m" style="margin:8px 0 20px">A sub can take his spot: Team Andrew, 8:20 with Marcus. You pick who next. Or Marcus plays the round alone and his ball counts for the cart. His opponents are told once; Undo for a minute.</p>
+      <button class="pri">Replace with a sub</button>
+      <button class="sec" style="margin-top:8px">Play without him</button>`),
+  hostnotimes: () => `<div class="pg" style="padding-top:62px">${hhdr('host · Sat 7:30')}
+    <h1 class="h1" style="margin-top:12px">Scoring is waiting on start times</h1>
+    <p class="p" style="margin-top:10px">Teams are set. 9 players have the app open now. Scoring opens the moment you save start times.</p>
+    <div class="flex"></div>
+    <button class="pri">Set start times</button>
+  </div>`,
+  hostearlyday: () => `<div class="pg" style="padding-top:62px">${hhdr('host · Sat 7:10')}
+    <h1 class="h1" style="margin-top:12px">Scoring opens at 7:30</h1>
+    <p class="p" style="margin-top:10px">By itself, 30 minutes before the 8:00 start time.</p>
+    <div class="card" style="padding:0 16px;margin-top:16px">${stat('Draft', 'Team Josh vs Team Andrew', true)}${stat('Start times', '8:00 · 8:10 · 8:20 · 8:30', true)}</div>
+    <div class="flex"></div>
+    <button class="sec">Open scoring now</button>
+  </div>`,
+  openconfirm: () => V.hostearlyday() + sheet(`<h2 class="h1">Open scoring now?</h2>
+      <p class="s m" style="margin:8px 0 20px">Every phone can enter scores from now on, 20 minutes early. Only on the day of the round.</p>
+      <button class="pri">Open scoring</button>
+      <button class="sec" style="margin-top:8px">Cancel</button>`),
+};
+document.getElementById('ph').innerHTML = V[s]();
+if (S.big) document.querySelectorAll('.pg').forEach((g) => { g.style.zoom = '1.2'; });
+</script></body></html>
