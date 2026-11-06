@@ -385,6 +385,11 @@ test('rev · pairedRoster / isPaired / cartOrder / undraft / renameCarts: C1…C
   assert.ok(L.isPaired(u));
   const pairs = (ro) => new Set(ro.teams.map((t) => ro.players.filter((p) => p.teamId === t.id).map((p) => p.id).sort().join('+')));
   assert.deepEqual(pairs(u), pairs(d.roster));
+  const pairOf = (ro, tid) => ro.players.filter((p) => p.teamId === tid).map((p) => p.id).sort().join('+');
+  assert.deepEqual([pairOf(u, 'C1'), pairOf(u, 'C2')], [pairOf(d.roster, '1A'), pairOf(d.roster, '2A')], 'redo: carts 1 and 2 = one cart from each side (the captains)');
+  assert.equal(L.pairedRoster(base, ['p1', 'p2', ...ORDER.filter((x) => x !== 'p1' && x !== 'p2')]).teams.length, 8);
+  const longName = structuredClone(r); longName.players.find((p) => p.id === 'p10').firstName = 'Bartholomew-Maximilian';
+  assert.equal(L.renameCarts(longName).teams[0].name.length, 20, 'cart names stay within 20 characters');
   // Cart names follow a Replace.
   const sub = structuredClone(r); sub.players.find((p) => p.id === 'p10').firstName = 'Kyle';
   assert.equal(L.renameCarts(sub).teams[0].name, 'Kyle + Mitch');
@@ -437,6 +442,12 @@ test('rev · the draft from paired carts: mates stay together, real cart ids, id
   const mates = (ro) => new Set(ro.teams.map((t) => ro.players.filter((p) => p.teamId === t.id).map((p) => p.id).sort().join('+')));
   assert.deepEqual(mates(roster), mates(ev.roster), 'every C pair lands in one real cart');
   assert.deepEqual(roster.players.map((p) => `${p.id}:${p.personId}:${p.strokes}`).sort(), ev.roster.players.map((p) => `${p.id}:${p.personId}:${p.strokes}`).sort());
+  // A Handicap edit made while the draft step was open survives its save (only carts / groups come from the step).
+  const fresh = structuredClone(ev.roster); fresh.players.find((p) => p.id === 'p10').strokes = 3; fresh.players.find((p) => p.id === 'p11').name = 'Mitchell';
+  const merged = L.mergeStep(roster, fresh);
+  assert.deepEqual([merged.players.find((p) => p.id === 'p10').strokes, merged.players.find((p) => p.id === 'p11').name], [3, 'Mitchell']);
+  assert.deepEqual(merged.players.map((p) => `${p.id}:${p.teamId}:${p.groupId}`), roster.players.map((p) => `${p.id}:${p.teamId}:${p.groupId}`));
+  assert.equal(merged.teams, roster.teams);
   // Engine: a carts roster scores nothing and never throws; season and crew skip it.
   const snap = compute(ev, [{ player_id: 'p10', hole: 1, strokes: 4, updated_at: '2026-11-07T14:00:00Z', updated_by: 'Baker' }]);
   assert.equal(snap.game ?? null, null);
@@ -461,7 +472,9 @@ test('rev · the mock at carts: not_open, admin ok; a cart-mate can approve an a
   assert.deepEqual([res.error, res.stage], ['not_open', 'carts']);
   assert.equal(rpc.fill_score({ p_code: code, p_device_id: 'dev-baker', p_player_id: 'p11', p_hole: 1, p_strokes: 4 }).error, 'not_open');
   assert.equal(rpc.admin_upsert_score({ p_code: code, p_admin_pin: pin, p_player_id: 'p10', p_hole: 1, p_strokes: 5 }).ok, true);
-  assert.equal(rpc.pick_team_name({ p_code: code, p_device_id: 'dev-baker', p_name: 'X' }).ok !== undefined, true, 'never throws on C carts');
+  // pick_team_name isn't gated (SQL and mock alike): it would rename C1, but the lobby never offers it, and the draft
+  // names every cart afresh, so the temporary name never carries over.
+  assert.deepEqual(rpc.pick_team_name({ p_code: code, p_device_id: 'dev-baker', p_name: 'Fore Play' }), { ok: true, team: 'C1', name: 'Fore Play' });
   // Mitch (p11, Baker's cart-mate) is taken on another phone; his new phone asks; Baker's phone may let him in.
   rpc.claim_player({ p_code: code, p_player_id: 'p11', p_device_id: 'dev-mitch-old' });
   const ask = rpc.request_join({ p_code: code, p_player_id: 'p11', p_device_id: 'dev-mitch-new' });
@@ -506,7 +519,8 @@ test('rev · revealFrame: deterministic, blurred → exact by 900 ms, fades in o
   assert.deepEqual(f(0, true), f(99999), 'reduced motion = the final frame at once');
   for (const bad of [NaN, -500, undefined]) assert.deepEqual(L.revealFrame(12, bad), f(0), `elapsed ${bad} → the first frame`);
   for (let e = 0; e < 900; e += 50) assert.ok(L.revealFrame(0, e).value >= 0, 'never below zero');
-  assert.ok(L.revealFrame(50, 0).value <= 54, 'never above 54');
+  for (let e = 0; e < 900; e += 50) assert.ok(L.revealFrame(50, e).value <= 54, 'never above 54');
+  assert.equal(L.hcpOf({ players: [{ id: 'x', strokes: -2 }] }, 'x').strokes, 0, 'never below zero, like the reveal');
 });
 
 test('rev · lobbyView precedence (table) and Home at carts', () => {
@@ -528,6 +542,7 @@ test('rev · lobbyView precedence (table) and Home at carts', () => {
     [lob, { ...me, seenHcp: true, revealing: true }, 'reveal', 'seen is written on the first frame: still revealing'],
     [lob, { ...me, safariPhone: true }, 'guide', 'joined in Safari (024 auto-join): the steps before the reveal'],
     [lob, { ...me, safariPhone: true, revealHere: true }, 'reveal', 'Can’t add it? Reveal it here'],
+    [lob, { ...me, safariPhone: true, revealHere: true, picking: false }, 'reveal', 'Join in Safari for now sets revealHere too (lb-find)'],
     [lob, { me: 'p10', hasHcp: false }, 'early', 'no handicap: no reveal'],
     [car, { ...me, seenHcp: true }, 'early'],
     [car, { ...me, seenHcp: true }, 'dayWait', at('2026-11-07T13:00:00Z')],
@@ -543,6 +558,13 @@ test('rev · lobbyView precedence (table) and Home at carts', () => {
   assert.deepEqual(L.myCart(car, 'p11'), { id: 'C1', names: 'Mitch + Baker', mate: 'Baker' }, 'you first');
   assert.equal(L.myCart(lob, 'p11'), null);
   assert.equal(L.myCart(drafted(), 'p10').id.length, 2);
+  // The reveal's inputs (app.lobbyView): none for the organizer; the seen key is per player.
+  const hst = L.lobbyState(withHcp(lobbyEvent({ hostId: 'p1' })), wed), hro = withHcp(lobbyEvent()).roster;
+  assert.deepEqual(L.revealCtx(hst, hro, { me: 'p1' }), { hasHcp: false, seenHcp: false }, 'the organizer set them: no reveal');
+  assert.deepEqual(L.revealCtx(hst, hro, { me: 'p10', seenPid: 'p9' }), { hasHcp: true, seenHcp: false }, 'shown to someone else (I’m not Sean): still yours to see');
+  assert.deepEqual(L.revealCtx(hst, hro, { me: 'p10', seenPid: 'p10' }), { hasHcp: true, seenHcp: true });
+  assert.deepEqual(L.revealCtx(hst, lobbyEvent().roster, { me: 'p10' }), { hasHcp: false, seenHcp: false }, 'no handicap');
+  assert.deepEqual(L.revealCtx(hst, hro, {}), { hasHcp: false, seenHcp: false });
   // Old rounds: no lobby → no view, whatever the phone says.
   const old = { ...lob, settings: { ...lob.settings, lobby: null } };
   assert.equal(L.lobbyView(L.lobbyState(old, wed), { ...me, invite: true, hcpFlow: true }), null);

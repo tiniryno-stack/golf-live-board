@@ -2166,3 +2166,5 @@ html.light .ce-mine.ce-card, [data-theme="light"] .ce-mine.ce-card { box-shadow:
 .lb-point svg { transform: rotate(90deg); }
 .lb-reveal { padding-top: calc(var(--space-6) * 2); }
 .lb-hcp { font-family: var(--font-mono); font-size: 64px; line-height: 64px; font-weight: 700; letter-spacing: -2px; margin: var(--space-6) 0 var(--space-4); }
+.lb .lbl.you { color: var(--cart-you-text); }
+.lb-hcp.rolling { color: var(--text-muted); }

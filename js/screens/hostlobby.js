@@ -65,7 +65,11 @@ function share(app, kind, extra = {}) {
     sub: { title: `Send ${extra.name} the link`, kicker: `${ev.name} · ${extra.name} added`, text: hcp ? `${extra.name}, you’re in for ${ev.name} on ${day}. Tap this to reveal your handicap.` : `${extra.name}, you’re in for ${ev.name} on ${day}. Tap to join.`, mark: null, undo: extra.undo },
     cohost: { title: `Send ${extra.name} the PIN`, kicker: `${ev.name} · co-host`, text: `You’re co-host for ${ev.name}. Host PIN: ${app.adminPin} (Golf Board → ⋯ → Host settings).`, mark: null },
   }[kind];
-  app.openSheet('lobby-share', { ...T, link, kind, at: st.notice?.at || null });
+  // Andrew sees when the invite falls back to the plain wording (somebody's handicap is blank).
+  const missing = (ev.roster?.players || []).length - L.handicapCount(ev.roster);
+  const noHcp = invite && !hcp && missing > 0 && missing < (ev.roster?.players || []).length
+    ? `${missing} ${missing === 1 ? 'player has' : 'players have'} no handicap, so this invite won’t show the reveal. Set them in Players.` : '';
+  app.openSheet('lobby-share', { ...T, link, kind, noHcp, at: st.notice?.at || null });
 }
 
 // ───────────────────────────────────────────── the view
@@ -147,6 +151,7 @@ export function hostLobbyView(app) {
       ${st.stage === 'lobby' || st.stage === 'carts' ? row('Carts', st.paired ? '8 paired' : 'not paired yet', 'lh-carts') : ''}
       ${st.stage === 'teams' ? row('Teams', 'redo the draft', 'lh-draft') : ''}
       ${row('Players', st.stage === 'off' ? `${n} players` : 'replace a player', 'lh-players')}
+      ${st.stage === 'off' ? '' : row('Handicaps', `${L.handicapCount(ev.roster)} of ${n} set`, 'lh-players')}
       ${row('Co-host', esc(cohost), 'lh-cohost')}
       ${row('Round', st.stage === 'off' ? 'bring it back, date' : 'date, course, call it off', 'lh-options')}
     </div>
@@ -178,6 +183,7 @@ export const lobbySheets = {
   'lobby-share'(app, p) {
     return `<div class="ts-label lb-sk">${esc(p.kicker || '')}</div>${head(p.title)}
       <p class="soft lb-sp">Ready to send: “${esc(p.text)}”</p>
+      ${p.noHcp ? `<p class="meta lb-note">${esc(p.noHcp)}</p>` : ''}
       <div class="stack"><button class="btn primary big block" data-act="lh-send">${icon('share', 18)} ${esc(p.kind === 'sub' || p.kind === 'person' ? `Share with ${p.title.replace(/^Send (.+) the (link|PIN)$/, '$1')}` : 'Share')}</button>
       ${p.undo ? '<button class="btn block" data-act="lh-undo">Undo</button>' : '<button class="btn ghost block" data-act="lh-copy">Copy link</button>'}</div>`;
   },
@@ -216,7 +222,7 @@ export const lobbySheets = {
       <div class="field"><label for="lr-name">${p ? 'Sub’s first and last name' : 'First and last name'}</label>
         <input class="input" id="lr-name" maxlength="40" autocapitalize="words" autocomplete="off" value="${esc(q)}" data-input="lh-rq" data-enter="lh-rgo"></div>
       ${nick ? `<div class="field"><label for="lr-nick">Nickname (someone else is called ${esc(q)})</label><input class="input" id="lr-nick" maxlength="24" placeholder="e.g. Tini Ryno" autocomplete="off" data-enter="lh-rgo"></div>` : ''}
-      <div class="field"><label for="lr-hcp">Handicap (blank = not set)</label><input class="input mono" id="lr-hcp" inputmode="numeric" pattern="[0-9]*" maxlength="2" autocomplete="off" data-enter="lh-rgo"></div>
+      <div class="field"><label for="lr-hcp">Handicap (blank = not set)${L.hasHandicaps(app.event.roster) ? '. Blank turns the handicap invite off for everyone not in yet.' : ''}</label><input class="input mono" id="lr-hcp" inputmode="numeric" pattern="[0-9]*" maxlength="2" autocomplete="off" data-enter="lh-rgo"></div>
       <div id="lr-picks">${picks}</div>
       <div class="stack" style="margin-top:14px"><button class="btn primary big block" data-act="lh-rgo">${typed.first ? `${p ? 'Replace' : 'Add'} with ${esc(typed.first)}` : p ? 'Replace' : 'Add'}</button>
       <button class="btn ghost block" data-act="sheet-close">Cancel</button></div>`;

@@ -101,7 +101,13 @@ const fromB64 = (s) => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/
  *  `round` (024 §6) = a round code: the home screen app then opens straight into that round. */
 export function moveLink(round = null) {
   const keys = {};
-  for (const k of local.keys()) if (MOVE_KEYS.test(k)) keys[k] = local.get(k);
+  for (const k of local.keys()) {
+    if (!MOVE_KEYS.test(k)) continue;
+    // 025 rev: a link made for one round (the lobby's Add to Home Screen steps show it in the address bar) carries no
+    // organizer PIN for any other round.
+    if (round && k.startsWith('glb.admin.') && k !== `glb.admin.${round}`) continue;
+    keys[k] = local.get(k);
+  }
   return `#move=${toB64(JSON.stringify({ v: 1, keys, ...(round ? { round } : {}) }))}`;
 }
 

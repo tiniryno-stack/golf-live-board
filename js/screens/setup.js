@@ -21,7 +21,7 @@ import { FLAGS } from '../flags.js';
 import { loadGeo } from '../geoload.js';
 import { TEAM_NAME_PICKS, isDefaultTeamName } from '../teams.js';
 import { initials } from '../ui.js';
-import { countsAsPlayed, draftedRoster, newLobby, toTeamsStage, toCartsStage, withStartTimes, keepNames, rosterKey, allTimesSet, addMinutes, lobbyOf, lobbyState, maySaveStep, pairedRoster, cartOrder, opensAtFor, wallClock, clock12, dayName } from '../lobby.js';
+import { countsAsPlayed, draftedRoster, newLobby, toTeamsStage, toCartsStage, withStartTimes, keepNames, rosterKey, allTimesSet, addMinutes, lobbyOf, lobbyState, maySaveStep, pairedRoster, cartOrder, mergeStep, opensAtFor, wallClock, clock12, dayName } from '../lobby.js';
 
 const TEAM_IDS = ['A', 'B', 'C', 'D'];
 const DRAFT_KEY = 'glb.setupDraft';
@@ -847,7 +847,8 @@ function ryDraftView(s) {
   const col = (side) => `<div class="ry-col"><div class="ry-col-h${side === 'A' ? ' you' : ''}"><span class="ellipsis">${esc(ryTeamName(s, side))}</span>${!d.done && d.turn === side ? '<span class="ry-tag mono">PICKING</span>' : ''}</div>
       ${d[side].map((k, i) => `<div class="ry-slot${i === 0 ? ' cap' : ''}${i === 0 && side === 'A' ? ' you' : ''}"><span class="ellipsis">${esc(ryCartName(s, k))}</span></div>`).join('')}</div>`;
   const head = s.lobby
-    ? headline(`${esc(s.name)} · draft · 1 of 2`, title, d.done ? 'Two sides of 4 carts. Start times next.' : 'Drafting in person? Tap each cart as it’s picked.')
+    ? headline(`${esc(s.name)} · draft · 1 of 2`, title, d.done ? 'Two sides of 4 carts. Start times next.'
+      : `Drafting in person? Tap each cart as it’s picked. Captains: ${esc(capA?.firstName || capA?.name || '')} (cart 1) and ${esc(capJ?.firstName || capJ?.name || '')} (cart 2). Wrong? Back to Host → Carts.`)
     : headline('Step 5 · Draft', title, d.done ? 'Two sides of 4 carts. Tee times next.' : 'Tap a cart to take it.');
   return `${topBar(s)}${head}
     <div class="nr-line"><span class="meta">${d.done ? '' : `Snake order: ${RY_SNAKE.map((x) => esc(fn(x === 'A' ? capA : capJ))).join(', ')}`}</span><button class="btn small" data-act="setup-ry-reset">Start over</button></div>
@@ -1019,7 +1020,8 @@ function lobbyStepRoster(s, fresh) {
     return roster;
   }
   const { roster } = buildRyder(s, course(s), names.displayNames(s.players));
-  return s.lobby.mode === 'tee' ? keepNames(roster, fresh.roster) : roster;
+  const merged = mergeStep(roster, fresh.roster); // names and handicaps as they are now
+  return s.lobby.mode === 'tee' ? keepNames(merged, fresh.roster) : merged;
 }
 
 /** Save the lobby step: the draft (stage 'teams') or the start times (stage 'ready', opensAt set). */
@@ -1781,7 +1783,15 @@ export default {
       app.render();
     },
     'setup-lobby-save': (el, ev, app) => saveLobbyStep(app),
-    'setup-lobby-cancel': (el, ev, app) => { app.setup = null; app.render(); },
+    'setup-lobby-cancel': (el, ev, app) => {
+      const s = app.setup;
+      const leave = () => { app.setup = null; app.render(); };
+      if (s?.lobby?.mode === 'draft' && (s.ryPicks || []).length && !s.rySkip) {
+        app.openSheet('confirm', { title: 'Leave the draft?', body: 'The picks so far aren’t saved.', ok: 'Leave', cancel: 'Keep drafting', onOk: leave });
+        return;
+      }
+      leave();
+    },
     'setup-when': (el, ev, app) => {
       const s = app.setup;
       s.when = { ...(s.when || { date: nextSaturday(), time: '08:00' }), [el.dataset.k]: el.value };

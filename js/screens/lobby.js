@@ -31,8 +31,8 @@ function head(kicker, title, sub = '') {
 }
 const foot = (inner) => `<div class="nr-foot">${inner}</div>`;
 const note = (t) => `<p class="meta lb-note">${t}</p>`;
-const row = (title, detail = '', { act = '', v = '', cls = '', chev = false } = {}) => {
-  const body = `<span class="body"><b class="lb-rt${cls ? ` ${cls}` : ''}">${title}</b>${detail ? `<span class="detail">${detail}</span>` : ''}</span>${chev ? `<span class="hr-chev">${icon('fwd', 20)}</span>` : ''}`;
+const row = (title, detail = '', { act = '', v = '', cls = '', chev = false, right = '' } = {}) => {
+  const body = `<span class="body"><b class="lb-rt${cls ? ` ${cls}` : ''}">${title}</b>${detail ? `<span class="detail">${detail}</span>` : ''}</span>${right ? `<span class="detail lb-d${right.mono ? ' mono' : ''}">${esc(right.text)}</span>` : ''}${chev ? `<span class="hr-chev">${icon('fwd', 20)}</span>` : ''}`;
   return act ? `<button class="row lb-row" data-act="${act}"${v ? ` data-v="${esc(v)}"` : ''}>${body}</button>` : `<div class="row lb-row">${body}</div>`;
 };
 
@@ -64,14 +64,16 @@ function hostRow(app, st) {
 
 function whoPlaying(app, st) {
   const ps = joinList(app.event.roster, app.claimed, '', app.me);
-  const meFirst = [...ps.filter((p) => p.id === app.me), ...ps.filter((p) => p.id !== app.me)];
+  // The organizer, then you, then A–Z (screenshot 4).
+  const top = [st.hostId, app.me].filter(Boolean);
+  const meFirst = [...top.map((id) => ps.find((p) => p.id === id)).filter(Boolean), ...ps.filter((p) => !top.includes(p.id))];
   const c = counts(app);
   const missing = c ? Math.max(0, c.total - c.in_app) : null;
   const more = ps.length - 4;
   const hcp = hasHandicaps(app.event.roster) || (app.event.roster?.players || []).some((p) => hcpOf(app.event.roster, p.id));
-  const right = (id) => { const h = hcpOf(app.event.roster, id); return h ? `<span class="detail lb-d mono">${esc(h.strokes)}</span>` : ''; };
+  const right = (id) => { const h = hcpOf(app.event.roster, id); return h ? { text: h.strokes, mono: true } : ''; };
   const tag = (id) => (id === app.me ? 'you' : id === st.hostId ? 'organizer' : '');
-  const rows = meFirst.slice(0, 4).map((p) => row(esc(p.name), tag(p.id), { cls: p.id === app.me ? 'you' : '' }).replace(/<\/span>(<\/(?:div|button)>)$/, `</span>${right(p.id)}$1`)).join('');
+  const rows = meFirst.slice(0, 4).map((p) => row(esc(p.name), tag(p.id), { cls: p.id === app.me ? 'you' : '', right: right(p.id) })).join('');
   return `<div class="lbl lb-k">Who’s playing${hcp ? ' · handicap' : ''}</div>
     <div class="card lb-card lb-rows">${rows}${more > 0 ? row(`${more} more${missing ? ` · ${missing} haven’t added Golf Board` : ''}`, '', { act: 'lb-all', chev: true, cls: 'muted' }) : ''}</div>`;
 }
@@ -83,14 +85,15 @@ const comingUp = (st) => `<div class="lbl lb-k">Coming up</div>
 function landing(app, st) {
   const ev = app.event;
   const ios = safariPhone();
-  return `${head(`${esc(ev.name)} · ${esc(st.hostName)} invited you`, `You’re on the list for ${esc(dayName(st.date, app.now(), st.tz))}`,
-      ios ? 'Add Golf Board to your home screen, then pick your name to see your team, your start time and your handicap.' : 'Pick your name to see your team, your start time and your handicap.')}
+  const day = dayName(st.date, app.now(), st.tz);
+  const see = hasHandicaps(ev.roster) ? 'your team, your start time and your handicap' : 'your team and your start time';
+  return `${head(`${esc(ev.name)} · ${esc(st.hostName)} invited you`, `You’re on the list for ${esc(day)}`,
+      ios ? `Add Golf Board to your home screen, then pick your name to see ${see}.` : `Pick your name to see ${see}.`)}
     ${roundCard(app, st)}
     ${noticeCard(st)}
-    ${foot(`${note(`No account. About a minute. ${esc(dayName(st.date, app.now(), st.tz))} you just tap the icon.`)}
+    ${foot(`${note(ios ? `No account. About a minute. On ${esc(day)}, just tap the icon.` : 'No account. About a minute.')}
       ${ios ? '<button class="btn primary nr-cta" data-act="lb-guide">Add Golf Board to my home screen</button>' : '<button class="btn primary nr-cta" data-act="lb-find">Find my name</button>'}
-      ${ios ? '<button class="btn ghost block lb-quiet" data-act="lb-find">Join in Safari for now</button>' : ''}
-      <button class="btn ghost block lb-quiet" data-act="lb-follow">Not playing? Follow along</button>`)}`;
+      ${ios ? '<button class="btn ghost block lb-quiet" data-act="lb-find">Join in Safari for now</button>' : '<button class="btn ghost block lb-quiet" data-act="lb-follow">Not playing? Follow along</button>'}`)}`;
 }
 
 /** The handicap invite (#/e/CODE/hcp, every player has a handicap): one line, one primary. */
@@ -115,6 +118,7 @@ function guide(app, st) {
       <li><span class="hs-n">4</span><span>Tap the new <b>Golf Board</b> icon</span></li>
     </ol>
     <p class="meta lb-note">Already have Golf Board on your home screen? Open it, tap <b>Join with code</b> and type <b class="mono">${esc(app.code)}</b>.</p>
+    <p class="meta lb-note">Opened inside Partiful or another app? Tap <b>•••</b> → <b>Open in Safari</b> first.</p>
     <p class="meta lb-note">This link signs in as you: use Add to Home Screen only, don’t send it.</p>
     ${foot(`<button class="btn ghost block lb-quiet lb-left" data-act="lb-here">${hcp ? 'Can’t add it? Reveal it here' : 'Can’t add it? Join here'}</button>`)}
     <div class="lb-point" aria-hidden="true"><span class="lbl">Start here</span>${icon('fwd', 22)}</div>`;
@@ -132,14 +136,16 @@ function whoRows(app, q) {
 function who(app) {
   const q = app.ui.lobbyQ || '';
   const n = (app.event.roster?.players || []).length;
-  const kicker = hasHandicaps(app.event.roster) ? 'Step 2 of 2 · reveal your handicap' : db.STANDALONE ? `${esc(app.event.name)} · in Golf Board` : esc(app.event.name);
+  // "Step 2 of 2" only for someone who came the handicap way (the app from the steps, the invite, Can't add it).
+  const stepped = hasHandicaps(app.event.roster) && (db.STANDALONE || app.ui.lobbyInvite === app.code || app.ui.revealHere === app.code);
+  const kicker = stepped ? 'Step 2 of 2 · reveal your handicap' : db.STANDALONE ? `${esc(app.event.name)} · in Golf Board` : esc(app.event.name);
   // The home screen app opens straight on this list: no Back to loop to (2b).
   const back = db.STANDALONE && app.ui.lobbyPick !== app.code ? '' : `<button class="link-btn lb-back" data-act="lb-back">${icon('back', 20)} Back</button>`;
   return `${back}
     ${head(kicker, 'Which one are you?')}
     <input class="input lb-search" type="search" placeholder="Search ${n} names" aria-label="Search names" value="${esc(q)}" autocomplete="off" data-input="lb-q">
     <div id="lb-who">${whoRows(app, q)}</div>
-    ${foot('<button class="btn ghost block" data-act="lb-notlisted">I’m not on the list</button>')}`;
+    ${foot(`<button class="btn ghost block" data-act="lb-notlisted">I’m not on the list</button>${db.STANDALONE ? '<button class="btn ghost block lb-quiet" data-act="lb-follow">Not playing? Follow along</button>' : ''}`)}`;
 }
 
 /** The reveal (once per phone per round): blurred, rolling, then the number; the rest fades in. Drawn from
@@ -154,7 +160,7 @@ function reveal(app, st) {
   return `<div class="lb-reveal">
     <div class="nr-head"><div class="nr-k"><span class="lbl${f.fade[0] >= 1 ? ' you' : ''}" id="lbr-k">${esc(app.event.name)} · ${esc(first(app.myPlayer()))}</span></div>
       <h1 class="nr-title">${esc(st.hostName)} has you at</h1></div>
-    <div class="lb-hcp mono" id="lbr-n" style="filter:blur(${f.blur}px);opacity:${f.settled ? 1 : 0.6}">${esc(f.value)}</div>
+    <div class="lb-hcp mono${f.settled ? '' : ' rolling'}" id="lbr-n" style="filter:blur(${f.blur}px)">${esc(f.value)}</div>
     ${rank ? `<p class="nr-sub lb-fade" id="lbr-1" ${fade(1)}>${esc(rank)}</p>` : ''}
     <p class="meta lb-fade" id="lbr-2" ${fade(2)}>Think it’s off? Text ${esc(st.hostName)}.</p>
     ${foot(`<button class="btn primary nr-cta lb-fade" id="lbr-3" data-act="lb-revealed" ${fade(3)}>See who you’re up against</button>`)}
@@ -175,7 +181,7 @@ function cartCard(app) {
   const c = myCart(app.event, app.me);
   if (!c) return '';
   return `<div class="lbl lb-k">Your cart</div>
-    <div class="card lb-card lb-rows">${row(esc(c.names), '', { cls: 'you' }).replace('</span></div>', '</span><span class="detail lb-d">team after the draft</span></div>')}</div>`;
+    <div class="card lb-card lb-rows">${row(esc(c.names), '', { cls: 'you', right: { text: 'team after the draft' } })}</div>`;
 }
 
 /** 4 / 14 / watching · before the draft. */
@@ -305,7 +311,7 @@ function runReveal(app) {
     const f = revealFrame(h.strokes, Date.now() - r.t0, reduced());
     n.textContent = String(f.value);
     n.style.filter = `blur(${f.blur}px)`;
-    n.style.opacity = f.settled ? '1' : '0.6';
+    n.classList.toggle('rolling', !f.settled);
     document.getElementById('lbr-k')?.classList.toggle('you', f.fade[0] >= 1);
     [1, 2, 3].forEach((i) => { const el = document.getElementById(`lbr-${i}`); if (el) el.style.opacity = String(f.fade[i]); });
     if (!f.done) revealRaf = requestAnimationFrame(tick);
@@ -319,7 +325,6 @@ export default {
     if (v === 'guide' && !/^#move=/.test(location.hash)) {
       // The steps work from the move link with the round in it (024): the icon opens straight into this round.
       history.replaceState(null, '', `${location.pathname}${location.search}${db.moveLink(app.code)}`);
-      db.local.set('glb.hasApp', true);
     }
     if (v !== 'reveal') { cancelAnimationFrame(revealRaf); return; }
     if (app.ui.reveal?.code === app.code && app.ui.reveal.pid === app.me) { runReveal(app); return; }
@@ -341,6 +346,7 @@ export default {
   },
   actions: {
     'lb-find': (el, ev, app) => {
+      app.ui.revealHere = app.code; // chose Safari (Join in Safari for now): after the pick, the reveal, not the steps
       app.ui.lobbyPick = app.code;
       app.ui.lobbyWatch = null;
       app.ui.lobbyQ = '';

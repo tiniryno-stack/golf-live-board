@@ -24,7 +24,7 @@ import { loadGeo } from './geoload.js';
 import { FLAGS } from './flags.js';
 import { initLoader, showLoader, updateLoader, loaderReady, hideLoaderNow } from './loader.js';
 import { joinPlan } from './identity.js';
-import { lobbyState, lobbyView as pickLobbyView, spotGiven, clock12, wallClock, parseTime, hasHandicaps, hcpOf } from './lobby.js';
+import { lobbyState, lobbyView as pickLobbyView, spotGiven, clock12, wallClock, parseTime, hasHandicaps, revealCtx } from './lobby.js';
 import lobbyScreen from './screens/lobby.js';
 
 const SCREENS = { home, setup, season, enter, matches, board, card, host, crew };
@@ -109,10 +109,7 @@ app.lobbyView = () => {
     guide: app.ui.lobbyGuide === app.code, invite: app.ui.lobbyInvite === app.code, standalone: db.STANDALONE,
     safariPhone: !db.STANDALONE && db.isIOS(), revealHere: app.ui.revealHere === app.code,
     hcpFlow: hasHandicaps(roster),
-    // The organizer set the numbers: no reveal for him. The seen key holds the player it was shown to, so after
-    // "I'm not Baker" the right person still gets theirs.
-    hasHcp: !!app.me && app.me !== st.hostId && !!hcpOf(roster, app.me),
-    seenHcp: !!app.me && db.local.get(seenKey025('hcp')) === app.me,
+    ...revealCtx(st, roster, { me: app.me, seenPid: db.local.get(seenKey025('hcp')) }),
     revealing: !!app.me && app.ui.reveal?.code === app.code && app.ui.reveal.pid === app.me,
     seenOpen: app.seenLobby('open'), removed: !!app.lobbyRemoved(),
   });
@@ -474,6 +471,7 @@ app.confirmMe = () => {
   if (p?.personId && !isPractice()) db.owner.set(p.personId, p.name);
   rememberCrewMe();
   app.closeSheet();
+  render(); // 025 rev: the reveal waits for this sheet; it starts on this redraw
   app.toast({ title: `You’re in as ${app.myName()}` });
   setTimeout(afterJoin, 300);
 };
@@ -1241,6 +1239,8 @@ function parseHash() {
     if ((parts[1] === 'rename' || parts[1] === 'which') && parts[2]) return { name: 'crew', mode: parts[1], id: parts[2] };
     if (parts[1]) return { name: 'crew', mode: 'join', code: parts[1].toUpperCase().replace(/[^A-Z0-9]/g, '') };
   }
+  // (A '#move=…' hash is never parsed here: it's only in the address bar while the lobby guide or the Add to Home
+  // Screen sheet shows, and nothing fires a hashchange then. db.moved handles it on load.)
   if (parts[0] === 'e' && parts[1]) {
     const tab = ['enter', 'matches', 'board', 'card', 'host'].includes(parts[2]) ? parts[2] : 'enter';
     // 025 rev: #/e/CODE/hcp = the handicap invite link (opens the round; this load shows the invite screen).

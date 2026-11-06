@@ -235,6 +235,7 @@ call off. 6. Countdown + Scoring is open. Then: live DB (rollback test → apply
 | Round | Architect | Database | Frontend | Tests | Product QA | Red team | What changed |
 |---|---|---|---|---|---|---|---|
 | 0 · plan | 7.5 | 8 | 7 | 7 | 6.5 | 7 | Plan reviewed; every point in P2.8 folded in (QA's 6.5 items were built before code review). |
+| 1 · code | 8 | 8.5 | 7.5 | 8 | 8 | 8 | Code reviewed (fb1e670); fixes in P2.10. |
 | 0 · plan | 6.5 | 7 | 6.5 | 7 | 7 | 6 | Plan reviewed; every point below folded into §12 before code. |
 | 1 · code | 8 | 8 | 8 | 8 | 8 | 7 | Code reviewed after the build; every confirmed bug fixed the same night (§14). Owner asked for two rounds, so no third round. |
 
@@ -444,6 +445,7 @@ without handicaps → landing, standalone → who, reveal once · `homeCard` car
 | Round | Architect | Database | Frontend | Tests | Product QA | Red team | What changed |
 |---|---|---|---|---|---|---|---|
 | 0 · plan | 7.5 | 8 | 7 | 7 | 6.5 | 7 | Plan reviewed; every point in P2.8 folded in (QA's 6.5 items were built before code review). |
+| 1 · code | 8 | 8.5 | 7.5 | 8 | 8 | 8 | Code reviewed (fb1e670); fixes in P2.10. |
 
 ## P2.8 · Round 0 changes (what the council asked for, as built)
 
@@ -490,6 +492,32 @@ without handicaps → landing, standalone → who, reveal once · `homeCard` car
   different order from the carts/draft steps (`cartOrder`); unifying them would change which carts are captains.
 - Handicaps are public roster data (anyone with the code can read `events`); the reveal is a display rule, not access
   control (database).
+
+## P2.10 · Round 1 fixes (code council)
+
+- **Redo the draft captains** (tests, architect): `cartOrder` puts drafted carts side by side (1A, 2A, 1B, 2B…), so
+  carts 1 and 2 are one from each side; tested on `undraft`.
+- **Steps keep edits made meanwhile** (red team): `mergeStep` takes only carts / groups from the draft or start-times
+  step; names and handicaps come from the round as it is now (tested).
+- **Join in Safari for now** no longer loops back to the steps after the pick (red team); "Step 2 of 2" shows only to
+  people who came the handicap way (frontend).
+- **Reveal**: its inputs are pure (`revealCtx`, tested: none for the organizer, seen key per player); the "You're
+  Baker?" close redraws so it starts at once; the rolling number is `--text-muted` (class), the kicker turns green
+  (`.lb .lbl.you`, an existing token).
+- **Andrew sees the handicap invite's state** (QA): Host row **Handicaps · 14 of 16 set**; the invite / person / sub
+  share sheet says when a blank handicap turns the reveal off; Replace / Add warn that a blank turns it off.
+- **Home screen app, not playing** (QA): Follow along on the A–Z list. **Partiful** (QA): one line on the guide, “Opened
+  inside Partiful or another app? Tap ••• → Open in Safari first.”
+- **Captains** (QA): the draft's sub-line names them (“Captains: Baker (cart 1) and Josh (cart 2). Wrong? Back to Host →
+  Carts.”). Leaving a draft with picks asks first (frontend).
+- **Landing words** follow the handicap rule; iPhone gets one ghost (Join in Safari for now), other phones Follow along
+  (frontend). Who's playing = organizer, you, then A–Z. `row()` takes a `right` value (no markup patching).
+- **Move link** (database, red team): a link made for one round carries no organizer PIN for any other round; the
+  guide no longer marks `glb.hasApp` (architect). `parseHash` notes that `#move=` is never parsed there.
+- **Mock** `pick_team_name` with a cart missing from `teams` returns ok like the SQL; the carts test asserts its
+  actual result. `hcpOf` clamps at 0 like the reveal.
+- **Known limits (noted, not changed):** `pick_team_name` is client-gated in a lobby (cosmetic: the next save renames
+  the cart); `update_event` has no version check, so two organizers saving in the same second: last write wins (V2).
 
 ## P2.9 · Open questions for the owner (Part 2)
 

@@ -379,6 +379,7 @@ export function createBackend() {
       const other = (e.roster.teams || []).find((x) => x.id !== team && x.name.trim().toLowerCase() === name.toLowerCase());
       if (other) return no('taken', { team: other.id });
       const t = (e.roster.teams || []).find((x) => x.id === team);
+      if (!t) return { ok: true, team, name }; // as the SQL: a cart that isn't in teams changes nothing
       if (t.name === name) return { ok: true, team, name, unchanged: true };
       const was = t.name;
       e.roster = { ...e.roster, teams: e.roster.teams.map((x) => (x.id === team ? { ...x, name } : x)) };

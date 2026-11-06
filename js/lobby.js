@@ -468,6 +468,16 @@ export function maySaveStep(mode, state) {
   return mode === 'draft' && (state.stage === 'carts' || state.stage === 'teams'); // teams = Redo the draft
 }
 
+/**
+ * A lobby step (draft / start times) decides only who rides where: teams, sides, groups and each player's teamId /
+ * groupId. Everything else about a player (name, handicap, nickname) comes from the round as it is now, so a co-host's
+ * Handicap edit made while the step was open isn't undone. Players keep the step's order (ryderSetup reads it).
+ */
+export function mergeStep(built, fresh) {
+  const now = new Map((fresh?.players || []).map((p) => [p.id, p]));
+  return { ...built, players: (built.players || []).map((p) => (now.has(p.id) ? { ...now.get(p.id), teamId: p.teamId, groupId: p.groupId } : p)) };
+}
+
 /** Same players (ids and people) as when a step opened? Otherwise someone else changed the roster meanwhile. */
 export const rosterKey = (roster) => (roster?.players || []).map((p) => `${p.id}:${p.personId || ''}:${p.teamId || ''}`).sort().join(',');
 
@@ -517,8 +527,8 @@ export function pairedRoster(roster, order) {
 }
 
 /**
- * Redo the draft: the drafted carts go back to C1…C8 with the same pairs (in the roster's cart order, so carts 1 and 2
- * are 1A and 2A: the captains' carts the draft starts from). Ids, people and handicaps are kept.
+ * The drafted carts as C1…C8 with the same pairs, in cartOrder (carts 1 and 2 = 1A and 2A). Redo the draft starts from
+ * this order; the pure version is what the tests pin. Ids, people and handicaps are kept.
  */
 export function undraft(roster) {
   return pairedRoster(roster, cartOrder(roster));
@@ -531,11 +541,16 @@ export function renameCarts(roster) {
   return { ...roster, teams: roster.teams.map((t) => ({ ...t, name: byCart(t.id) })) };
 }
 
-/** Player ids in cart order (C1's pair, C2's, … or the real carts side by side), else roster order. */
+/**
+ * Player ids in cart order: C1's pair, C2's, …; real carts side by side (1A, 2A, 1B, 2B, …: carts 1 and 2 = one cart
+ * from each side, what the draft starts from); else roster order.
+ */
 export function cartOrder(roster) {
   const players = roster?.players || [];
-  const teams = roster?.teams || [];
+  let teams = roster?.teams || [];
   if (!teams.length) return players.map((p) => p.id);
+  const real = /^[12][A-D]$/;
+  if (teams.every((t) => real.test(String(t.id)))) teams = [...teams].sort((a, b) => a.id[1].localeCompare(b.id[1]) || a.id[0].localeCompare(b.id[0]));
   const out = teams.flatMap((t) => players.filter((p) => p.teamId === t.id).map((p) => p.id));
   for (const p of players) if (!out.includes(p.id)) out.push(p.id); // never lose anyone
   return out;
@@ -552,7 +567,17 @@ export function myCart(event, pid) {
 
 // ───────────────────────────────────────────── handicaps (roster `strokes`, set by the organizer)
 
-const strokesOf = (p) => (p?.strokes === '' || p?.strokes == null || !Number.isFinite(Number(p.strokes)) ? null : Number(p.strokes));
+// Handicaps are whole strokes ≥ 0 (Setup and Host clamp them; so does this).
+const strokesOf = (p) => (p?.strokes === '' || p?.strokes == null || !Number.isFinite(Number(p.strokes)) ? null : Math.max(0, Math.round(Number(p.strokes))));
+
+/**
+ * The reveal's two inputs for lobbyView: hasHcp (this player has a handicap and isn't the organizer, who set them) and
+ * seenHcp (the reveal was shown to THIS player on this phone: the seen key holds a player id, so after "I'm not
+ * Baker" the right person still gets theirs).
+ */
+export function revealCtx(state, roster, { me = null, seenPid = null } = {}) {
+  return { hasHcp: !!me && me !== state?.hostId && !!hcpOf(roster, me), seenHcp: !!me && seenPid === me };
+}
 
 /** Every player has a handicap? Only then does the invite say "Andrew set your handicap" (no promise left unkept). */
 export const hasHandicaps = (roster) => (roster?.players || []).length > 0 && (roster.players || []).every((p) => strokesOf(p) != null);
