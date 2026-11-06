@@ -88,8 +88,32 @@ function checklist(app, st, c) {
   </div>`;
 }
 
+/**
+ * Everyone's handicap (owner, Nov 6): set before the invite goes out. Right after Who rides together? (fromSetup:
+ * required, all 16), and from Host → Handicaps any time before scoring opens. Typed values live in app.ui.hcpStep.vals
+ * until Save (the render loop never wipes a field being typed in).
+ */
+function hcpStepView(app) {
+  const step = app.ui.hcpStep;
+  const roster = app.event.roster;
+  const ps = L.joinList(roster, [], '');
+  const val = (p) => (p.id in step.vals ? step.vals[p.id] : (p.strokes == null || p.strokes === '' ? '' : String(p.strokes)));
+  const left = ps.filter((p) => !/^\d{1,2}$/.test(val(p))).length;
+  return `<div class="plain nr-setup lb">
+    ${step.fromSetup ? '' : '<button class="link-btn lb-back" data-act="lh-hstep-cancel">Back to Host</button>'}
+    <div class="nr-head"><div class="nr-k"><span class="lbl">${step.fromSetup ? 'New round · ' : ''}${esc(app.event.name)} · handicaps</span></div>
+      <h1 class="nr-title">Everyone’s handicap</h1>
+      <div class="nr-sub">Strokes over 18 holes. Each player sees theirs when they join, so set them before you send the invite.</div></div>
+    <div class="card lb-card lb-rows">${ps.map((p) => `<label class="row lb-row" for="hs-${esc(p.id)}"><span class="body"><b class="lb-rt">${esc(p.name)}</b></span>
+      <input class="input num" id="hs-${esc(p.id)}" inputmode="numeric" pattern="[0-9]*" maxlength="2" autocomplete="off" value="${esc(val(p))}" aria-label="${esc(p.name)} handicap" data-input="lh-hstep-in" data-v="${esc(p.id)}"></label>`).join('')}</div>
+    <div class="nr-foot"><p class="meta lb-note" id="hs-left">${left ? `${left} still to set` : 'All set'}</p>
+      <button class="btn primary nr-cta" data-act="lh-hstep-save" id="hs-save"${step.fromSetup && left ? ' disabled' : ''}>${step.fromSetup ? 'Open the lobby' : 'Save handicaps'}</button></div>
+  </div>`;
+}
+
 export function hostLobbyView(app) {
   if (app.setup?.lobby?.code === app.code) return lobbyStepView(app); // Start the draft / Set start times
+  if (app.ui.hcpStep?.code === app.code) return hcpStepView(app);
   const ev = app.event, st = app.lobby();
   const rows = status(app);
   const c = rows ? L.lobbyCounts(ev.roster, rows) : null;
@@ -151,7 +175,7 @@ export function hostLobbyView(app) {
       ${st.stage === 'lobby' || st.stage === 'carts' ? row('Carts', st.paired ? '8 paired' : 'not paired yet', 'lh-carts') : ''}
       ${st.stage === 'teams' ? row('Teams', 'redo the draft', 'lh-draft') : ''}
       ${row('Players', st.stage === 'off' ? `${n} players` : 'replace a player', 'lh-players')}
-      ${st.stage === 'off' ? '' : row('Handicaps', L.handicapCount(ev.roster) < n ? `${L.handicapCount(ev.roster)} of ${n} set · invite needs all ${n}` : `all ${n} set`, 'lh-players')}
+      ${st.stage === 'off' ? '' : row('Handicaps', L.handicapCount(ev.roster) < n ? `${L.handicapCount(ev.roster)} of ${n} set · invite needs all ${n}` : `all ${n} set`, 'lh-hstep')}
       ${row('Co-host', esc(cohost), 'lh-cohost')}
       ${row('Round', st.stage === 'off' ? 'bring it back, date' : 'date, course, call it off', 'lh-options')}
     </div>
@@ -267,7 +291,7 @@ export const lobbySheets = {
       <button class="btn ghost block" data-act="sheet-close">Cancel</button></div>`;
   },
   'lobby-all'(app) {
-    const ps = L.joinList(app.event.roster, app.claimed, '', app.me);
+    const ps = L.byHandicap(app.event.roster, L.joinList(app.event.roster, app.claimed, '', app.me));
     const c = app.lobbyCounts?.code === app.code ? app.lobbyCounts : null;
     const st = app.lobby();
     const roster = app.event.roster;
@@ -469,6 +493,33 @@ export const lobbyActions = {
     doReplace(app, props.pid, { personId, first: f, last, nickname: nick, strokes: typedHcp() });
   },
   'lh-hcp': (el, ev, app) => app.openSheet('lobby-hcp', { pid: el.dataset.v }),
+  'lh-hstep': (el, ev, app) => { app.ui.hcpStep = { code: app.code, fromSetup: false, vals: {} }; app.render(); document.getElementById('content').scrollTop = 0; },
+  'lh-hstep-cancel': (el, ev, app) => { app.ui.hcpStep = null; app.render(); },
+  // Typing in the list: keep the value, update the count and the button in place (no redraw while typing).
+  'lh-hstep-in': (el, ev, app) => {
+    const step = app.ui.hcpStep;
+    if (!step) return;
+    step.vals[el.dataset.v] = el.value.replace(/\D/g, '').slice(0, 2);
+    if (el.value !== step.vals[el.dataset.v]) el.value = step.vals[el.dataset.v];
+    const ps = app.event.roster.players || [];
+    const left = ps.filter((p) => !/^\d{1,2}$/.test(p.id in step.vals ? step.vals[p.id] : String(p.strokes ?? ''))).length;
+    const t = document.getElementById('hs-left'); if (t) t.textContent = left ? `${left} still to set` : 'All set';
+    const b = document.getElementById('hs-save'); if (b && step.fromSetup) b.disabled = left > 0;
+  },
+  'lh-hstep-save': async (el, ev, app) => {
+    const step = app.ui.hcpStep;
+    if (!step) return;
+    const vals = { ...step.vals };
+    const ok = await saveLobby(app, ({ roster }) => {
+      for (const p of roster.players) if (p.id in vals) p.strokes = /^\d{1,2}$/.test(vals[p.id]) ? Math.min(54, Number(vals[p.id])) : null;
+      if (step.fromSetup && L.handicapCount(roster) < roster.players.length) return null; // all 16 before the invite
+      return { roster };
+    });
+    if (!ok) { if (step.fromSetup) app.toast({ title: 'Set every handicap first', sub: 'The invite shows each player theirs.', error: true }); return; }
+    app.ui.hcpStep = null;
+    app.render(); // fromSetup: Host's mount opens the invite share sheet next
+    document.getElementById('content').scrollTop = 0;
+  },
   'lh-hcp-save': async (el, ev, app) => {
     const pid = el.dataset.v;
     const raw = (document.getElementById('lh-hcp-n')?.value || '').trim();

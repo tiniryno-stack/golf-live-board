@@ -566,6 +566,14 @@ test('rev · lobbyView precedence (table) and Home at carts', () => {
   assert.deepEqual(L.revealCtx(hst, hro, { me: 'p10', seenPid: 'p10' }), { hasHcp: true, seenHcp: true });
   assert.deepEqual(L.revealCtx(hst, lobbyEvent().roster, { me: 'p10' }), { hasHcp: false, seenHcp: false }, 'no handicap');
   assert.deepEqual(L.revealCtx(hst, hro, {}), { hasHcp: false, seenHcp: false });
+  // Who's playing: lowest handicap first, no handicap last, ties keep A–Z; the guide's escape after 3 minutes.
+  const sorted = withHcp(lobbyEvent(), [8, 15, 4, 10, 6, 12, 11, 9, 5, 12, 7, 20, null, 18, 14, 13]).roster;
+  const order = L.byHandicap(sorted, L.joinList(sorted)).map((p) => p.name);
+  assert.deepEqual([order[0], order[1], order.at(-1)], ['Josh', 'Sean', 'Kyle']);
+  assert.ok(order.indexOf('Baker') < order.indexOf('Steve'), 'ties (12) stay A–Z');
+  assert.deepEqual([L.guideEscape(0, 179999), L.guideEscape(0, 180000), L.guideEscape(undefined, 1e12)], [false, true, false]);
+  assert.equal(v(lob, { me: 'p10', guide: true, safariPhone: true, seenHcp: true, hasHcp: true }), 'guide', 'the lobby’s Add row opens the same steps');
+  assert.equal(v(lob, { me: 'p10', guide: true, standalone: true, seenHcp: true }), 'early', 'never in the app');
   // The guide's "Open in Safari first" line: only off Safari.
   const SAFARI = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1';
   assert.equal(L.notSafari(SAFARI), false);

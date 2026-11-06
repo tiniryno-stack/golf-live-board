@@ -550,3 +550,18 @@ without handicaps → landing, standalone → who, reveal once · `homeCard` car
 could use `cartOrder`; refuse `pick_team_name` before the draft and give `update_event` a version check in the next SQL
 pass; show the move link only on the Add to Home Screen step itself; a practice walk on a real iPhone (Partiful → Safari
 → Add to Home Screen → icon → reveal; the “Start here” arrow against iOS 26's ⋯).
+
+## P2.12 · Owner's preview notes (Nov 6, evening) — built
+
+- **Handicaps before the invite:** a required **Everyone's handicap** step right after Who rides together? (or its
+  Skip): 16 rows with a number field each, "N still to set", **Open the lobby** stays off until all 16 are set; then
+  the invite share sheet. Host → **Handicaps** opens the same list any time before scoring opens (Save, partial allowed).
+- **When:** the native date / time fields are held inside the field (iPhone gives them an intrinsic width).
+- **"Join in Safari"** is a small muted text link ("or join in Safari") under the primary.
+- **"Can't add it?"** shows only after 3 minutes on the steps (`GUIDE_ESCAPE_MS`), as a small text link that leaves
+  room for the badge. From the lobby's Add row, Back is the way out instead.
+- **Who's playing** (lobby and the full list) is lowest handicap first (`byHandicap`).
+- **The later "Add Golf Board to your home screen"** (the lobby row) opens the same full-screen steps with the badge;
+  the Home / app-only sheet uses the same four steps (••• → Share → Add to Home Screen → the icon).
+- **"Start here"** is now a bold inverse badge, **Tap ••• here**, with a gently bobbing arrow (still with reduced
+  motion: no bob), bottom-right over Safari's •••.
