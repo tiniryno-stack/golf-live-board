@@ -2,7 +2,7 @@
 // leave round, player detail, edit a past score, hole detail, headline feed, confirm,
 // organizer PIN (unlock a finalized round).
 
-import { esc, icon, scoreClass, clock, mark, seg } from '../ui.js';
+import { esc, icon, scoreClass, clock, mark, seg, syncMotion } from '../ui.js';
 import { fmtToPar, fmtPts, fmtSigned, maxHoleScore, componentNames, posOf, holeAt, holesLabel, matchesFor, playOrder, teeTimeName, groupIndex } from '../scoring.js';
 import { teamColor, headlineColor, shortTeam } from '../teams.js';
 import { codeField } from './home.js';
@@ -12,6 +12,7 @@ import { seasonSheets } from './season.js';
 import { geoFor } from '../geo.js';
 import { GEO_ATTRIBUTION } from '../geoload.js';
 import { ryderMatchSheet } from './ryder.js';
+import { enterSheets } from './enter.js';
 
 let lastHtml = '';
 let closeTimer = null;
@@ -39,6 +40,7 @@ export function render(root, app) {
   const panelScroll = root.querySelector('.panel')?.scrollTop || 0;
   root.innerHTML = html;
   lastHtml = html;
+  syncMotion(root); // 021: a pick's motion inside a sheet survives the sheet redrawing
   if (wasOpen) {
     root.querySelector('.panel').scrollTop = panelScroll;
   } else {
@@ -157,6 +159,7 @@ function playersByCart(app) {
 }
 
 const BODIES = {
+  ...enterSheets, // 021/022: ⋯ More and the other cart's scores
   'ryder-match': (app, p) => ryderMatchSheet(app, p), // read-only: no X (015 §1)
   who(app) {
     if (!app.snapshot) return head('Who are you?');

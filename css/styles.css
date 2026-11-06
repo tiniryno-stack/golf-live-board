@@ -1883,3 +1883,133 @@ details.fold summary::-webkit-details-marker { display: none; }
 .ry-rec .you { color: var(--cart-you-text); }
 .ry-rec-r { color: var(--text-muted); font-size: 13px; }
 .ry-rec-p { font-size: 17px; font-weight: 700; text-align: right; }
+
+/* ───────── 021 + 022 · the calm team Enter (Partner “Rider” Cup + Team Ryder Cup) ─────────
+   Under the app's hole header: card · match line · your rows (rail) · their quiet row · space · status + Next.
+   Two values the design system doesn't have yet (flagged in 021 §8; proposed tokens in brackets):
+   the 5% divider [line-faint] and the dark red on the white pill [double-on-light = light theme's --double]. */
+.ce { --ce-line: rgba(255,255,255,.05); --ce-dbl-pill: #b42318; min-height: 100%; }
+html.light .ce, [data-theme="light"] .ce { --ce-line: rgba(11,13,16,.06); --ce-dbl-pill: #ff6b6b; } /* light: the pill is dark, so the dark theme's red */
+.ce-flex { flex: 1; min-height: 8px; }
+.ce-match { height: 36px; flex: none; display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); font-size: 15px; font-weight: 500; color: var(--text-muted); min-width: 0; }
+.ce-us { color: var(--text); font-weight: 600; min-width: 0; flex: 0 1 auto; }
+.ce-end { display: flex; align-items: center; gap: 12px; flex: none; }
+.ce-st { font-family: var(--font-mono); font-weight: 700; color: var(--text-muted); }
+.ce-st.you { color: var(--cart-you-text); }
+.ce-edit { height: 48px; padding: 0 0 0 var(--space-3); margin-right: -2px; font-size: 15px; font-weight: 600; color: var(--text); flex: none; }
+.ce-row { padding: 8px 0 4px; border-top: 1px solid var(--ce-line); }
+.ce-nm { height: 24px; display: flex; align-items: center; gap: 8px; margin-bottom: 2px; min-width: 0; white-space: nowrap; }
+.ce-nm > b { font-size: 17px; font-weight: 600; min-width: 0; flex: 0 1 auto; }
+.ce-stk { font-size: 13px; font-weight: 500; color: var(--text-muted); min-width: 0; flex: 0 100 auto; overflow: hidden; text-overflow: ellipsis; }
+.ce-pads { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) 56px; gap: 6px; }
+.ce-pad { height: 64px; border-radius: var(--radius-lg); display: grid; place-items: center; position: relative; padding: 0; background: transparent; color: var(--text); -webkit-tap-highlight-color: transparent; }
+.ce-pad.sel { background: var(--text); color: var(--bg); }
+.ce-pad svg.ce-m { position: absolute; inset: 0; margin: auto; overflow: visible; }
+.ce-n { font-family: var(--font-mono); font-weight: 700; font-size: calc(var(--mk, 40px) * .55); position: relative; } /* a score mark's numeral is sized off its box, like .mk (40px → 22px, the prototype's) */
+.ce-pad[aria-disabled="true"]:not(.sel) { opacity: .5; }
+.ce-mine { position: relative; }
+.ce-mine.rail::before { content: ''; position: absolute; left: -10px; top: 12px; bottom: 8px; width: 3px; border-radius: 2px; background: var(--cart-you); pointer-events: none; } /* 022 §1: in the gutter beside flat rows, not a card edge */
+.ce-row.nudge .ce-pad { animation: nudge .45s ease-in-out 2; }
+@media (prefers-reduced-motion: reduce) { .ce-row.nudge .ce-pad { animation: none; } }
+/* the other cart: one quiet row; read-only small marks */
+.ce-line { height: 60px; flex: none; width: 100%; border-top: 1px solid var(--ce-line); display: flex; align-items: center; gap: 14px; text-align: left; padding: 0; background: transparent; color: var(--text); }
+.ce-who { flex: 1; min-width: 0; display: flex; gap: 18px; align-items: center; font-size: 17px; font-weight: 600; }
+.ce-who-p { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+.ce-go { font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 2px; flex: none; }
+.ce-dash { font-family: var(--font-mono); color: var(--text-muted); font-weight: 600; width: 26px; text-align: center; flex: none; }
+.ce-sm { position: relative; width: var(--sm); height: var(--sm); flex: none; display: inline-grid; place-items: center; font-family: var(--font-mono); font-weight: 700; font-size: calc(var(--sm) * .5); color: var(--text); }
+.ce-sm svg { position: absolute; inset: 0; }
+.ce-sm .ce-ln { fill: none; stroke: var(--text); stroke-width: 1.5; }
+.ce-sm .ce-ln.draw { display: none; }
+.ce-sm.s .ce-ln { stroke: var(--text-muted); }
+.ce-sm.d { color: var(--double); } .ce-sm.d .ce-ln { stroke: var(--double); }
+/* preview / locked holes: read-only rows */
+.ce-ro { height: 68px; border-top: 1px solid var(--ce-line); display: flex; align-items: center; gap: var(--space-3); }
+.ce-ro-n { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+.ce-ro-n b { font-size: 17px; font-weight: 600; min-width: 0; }
+.ce-ro.them .ce-ro-n b { color: var(--text-muted); }
+.ce-ro .ce-sm { margin-right: 2px; font-size: calc(var(--sm) * .55); }
+/* status + Next, pinned 16px above the tab bar */
+.ce-foot { flex: none; margin-bottom: var(--space-4); }
+.ce-status { font-size: 13px; font-weight: 500; line-height: 18px; margin-bottom: var(--space-3); display: flex; align-items: center; gap: 6px; }
+.ce-status.warn { color: var(--warn); }
+.ce-status.muted { color: var(--text-muted); }
+.ce-status .relock { margin-left: 4px; }
+.ce-next { height: var(--button-primary); border-radius: var(--radius-lg); width: 100%; font-size: 17px; font-weight: 600; background: var(--surface-1); color: var(--text-muted); }
+.ce-next.go { background: var(--button); color: var(--on-button); }
+/* sheets: ⋯ More and the other cart */
+.ce-sheet { padding-top: var(--space-1); }
+.ce-sh-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); min-height: 48px; margin-bottom: var(--space-2); }
+.ce-sh-title { margin: 0; font-size: 17px; line-height: 22px; font-weight: 600; min-width: 0; } /* BottomSheet title (= ts-row); the mockup draws ~24px, flagged */
+.ce-done { height: 48px; padding: 0 0 0 var(--space-3); font-size: 15px; font-weight: 600; color: var(--text); flex: none; }
+.ce-sheet .ce-row:first-of-type, .ce-sheet .ce-own:first-of-type { border-top: 0; }
+.ce-grid { row-gap: 6px; margin-bottom: var(--space-3); }
+.ce-sh-row { width: 100%; height: 56px; display: flex; align-items: center; text-align: left; border-top: 1px solid var(--line); font-size: 17px; font-weight: 600; color: var(--text); background: transparent; padding: 0; }
+.ce-sh-row .muted { font-size: 15px; font-weight: 500; }
+.ce-sh-row.muted, .ce-sh-row .muted { color: var(--text-muted); }
+.ce-sh-row:disabled { opacity: .5; }
+.ce-own { height: 64px; display: flex; align-items: center; gap: 10px; border-top: 1px solid var(--ce-line); }
+.ce-own b { font-size: 17px; font-weight: 600; min-width: 0; }
+.ce-own-src { margin-left: auto; font-size: 15px; color: var(--text-muted); flex: none; }
+/* short phones: pads give a little so Next stays clear of the tab bar */
+@media (max-height: 640px) { .ce-pad { height: 56px; } .ce-line { height: 52px; } }
+
+/* ── 022 motion.css, as approved (class names mapped: .pad → .ce-pad, .ln → .ce-ln, .word → .ce-word,
+   .match .up/.roll/.swap/.vs/.won → .ce-up/.ce-roll/.ce-swap/.ce-vs/.ce-won, .next → .ce-next, .ripple → .ce-ripple).
+   `.anim` is only ever on the render right after a tap; ui.syncMotion keeps it running across redraws. */
+.ce-pad .ce-ln { fill: none; stroke: var(--text-muted); stroke-width: 1.5; }
+.ce-pad.sel .ce-ln { stroke: var(--bg); stroke-width: 1.75; }
+.ce-pad.sel.dbl .ce-ln { stroke: var(--ce-dbl-pill); stroke-width: 2; }
+.ce-pad.sel.dbl .ce-n { color: var(--ce-dbl-pill); }
+.ce-pad .ce-ln.draw { opacity: 0; }
+.ce-pad.sel .ce-ln.draw { opacity: 1; }
+.ce-ripple { position: absolute; inset: 0; margin: auto; width: 56px; height: 56px; border-radius: 50%; box-shadow: 0 0 0 2px var(--text); opacity: 0; pointer-events: none; }
+.ce-word { font-size: 15px; font-weight: 700; opacity: 0; color: var(--text); flex: none; }
+.ce-word.quiet { color: var(--text-muted); }
+.ce-word.dbl { color: var(--double); }
+.ce-word.big { font-size: 17px; }
+.ce-up { display: inline-flex; overflow: hidden; height: 20px; font-family: var(--font-mono); font-weight: 700; color: var(--cart-you-text); }
+.ce-up.muted { color: var(--text-muted); }
+.ce-roll { display: flex; flex-direction: column; line-height: 20px; }
+.ce-swap { display: grid; }
+.ce-swap > * { grid-area: 1 / 1; text-align: left; white-space: nowrap; }
+.ce-won { font-size: 15px; font-weight: 600; opacity: 0; color: var(--text); }
+.ce-won.muted { color: var(--text-muted); }
+
+@keyframes ce-bump   { 0% { transform: scale(.92) } 55% { transform: scale(1.06) } 100% { transform: scale(1) } }
+@keyframes ce-draw   { from { stroke-dashoffset: var(--len) } to { stroke-dashoffset: 0 } }
+@keyframes ce-word   { 0% { opacity: 0; transform: translateY(6px) } 15% { opacity: 1; transform: none } 75% { opacity: 1 } 100% { opacity: 0 } }
+@keyframes ce-tilt   { 0% { transform: rotate(-4deg) translateY(4px) } 100% { transform: none } }
+@keyframes ce-ripple { 0% { opacity: .55; transform: scale(.7) } 100% { opacity: 0; transform: scale(1.35) } }
+@keyframes ce-stamp  { 0% { transform: scale(1.45) rotate(-4deg); opacity: .35 } 60% { transform: scale(.95) rotate(1deg); opacity: 1 } 100% { transform: none; opacity: 1 } }
+@keyframes ce-thud   { 0%, 100% { transform: none } 40% { transform: translateY(2px) scale(.98) } }
+@keyframes ce-roll   { from { transform: translateY(0) } to { transform: translateY(-20px) } }
+@keyframes ce-wonin  { 0% { opacity: 0; transform: translateX(8px) } 20% { opacity: 1; transform: none } 80% { opacity: 1 } 100% { opacity: 0 } }
+@keyframes ce-vsout  { 0% { opacity: 1 } 12% { opacity: 0 } 85% { opacity: 0 } 100% { opacity: 1 } }
+@keyframes ce-fadeonly { 0% { opacity: 0 } 15% { opacity: 1 } 75% { opacity: 1 } 100% { opacity: 0 } }
+
+.ce-pad.sel.anim { animation: ce-bump .22s cubic-bezier(.2,.8,.2,1); }
+.ce-pad.sel.anim .ce-ln.base { opacity: .3; animation: none; stroke-dasharray: none; }
+.ce-pad.sel.anim .ce-ln.draw { stroke-dasharray: var(--len); animation: ce-draw .32s .06s cubic-bezier(.3,.7,.2,1) both; }
+.ce-ripple.anim { animation: ce-ripple .45s .1s ease-out both; }
+.ce-ripple.anim.r2 { animation-delay: .25s; }
+.ce-pad.sel.anim.dbl:not(.stamp) .ce-ln.draw { stroke-dasharray: var(--len); animation: ce-draw .32s .06s cubic-bezier(.3,.7,.2,1) both; }
+.ce-pad.sel.anim.dbl.stamp { animation: ce-thud .22s .14s ease-out; }
+.ce-pad.sel.anim.dbl.stamp svg.ce-m { animation: ce-stamp .16s cubic-bezier(.2,.8,.2,1) both; }
+.ce-pad.sel.anim.dbl.stamp .ce-ln.draw { animation: none; stroke-dasharray: none; }
+.ce-word.anim { animation: ce-word 1.6s ease-out both; }
+.ce-word.big.anim { animation-duration: 3s; }
+.ce-word.dbl.anim { animation: ce-word 1.6s ease-out both, ce-tilt .3s .05s cubic-bezier(.2,.8,.2,1) both; }
+.ce-next.go.anim { animation: ce-bump .22s .05s cubic-bezier(.2,.8,.2,1); }
+.ce-up.anim .ce-roll { animation: ce-roll .3s .2s cubic-bezier(.3,.7,.2,1) both; }
+.ce-up.anim .ce-roll.dn { animation-direction: reverse; } /* 021 §7.5: rolls down when it goes down */
+.ce-vs.anim { animation: ce-vsout 2.6s .45s ease-out both; }
+.ce-won.anim { animation: ce-wonin 2.4s .5s ease-out both; }
+@media (prefers-reduced-motion: reduce) {
+  .ce-pad.sel.anim, .ce-pad.sel.anim *, .ce-ripple.anim, .ce-next.go.anim, .ce-up.anim .ce-roll, .ce-vs.anim, .ce-won.anim { animation: none !important; }
+  .ce-word.anim { animation: ce-fadeonly 1.6s linear both !important; }
+  .ce-won.anim { opacity: 1; }
+  .ce-vs.anim { opacity: 0; }
+  .ce-up.anim .ce-roll { transform: translateY(-20px); }
+  .ce-up.anim .ce-roll.dn { transform: none; }
+}

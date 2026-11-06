@@ -1,4 +1,7 @@
 // ui.js — small shared helpers for screens: escaping, icons, controls, formatting.
+import { markKind, markPaths } from './reward.js';
+
+export { reward, markKind, markPaths, pointsLine, standing } from './reward.js';
 
 export const esc = (s) =>
   String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -169,4 +172,40 @@ export function padLabel(v, par, cap) {
   const d = v - par;
   const name = v === 1 ? 'ACE' : d <= -3 ? 'ALBATROSS' : d === -2 ? 'EAGLE' : d === -1 ? 'BIRDIE' : d === 0 ? 'PAR' : d === 1 ? 'BOGEY' : d === 2 ? 'DOUBLE' : d === 3 ? 'TRIPLE' : `+${d}`;
   return { text: `${name}${v === cap ? ' · MAX' : ''}`, tone: d < 0 ? 'under' : d >= 2 ? 'dbl' : 'even' };
+}
+
+// ───────────────────────────────────────────── 021/022 Enter: SVG marks that draw, motion that survives redraws
+
+/**
+ * A score mark as SVG outlines (021 §7.1 / 022 §4), for the calm team Enter only (`mark` above stays the
+ * CSS mark everywhere else). One faint `.ce-ln.base` + one `.ce-ln.draw` per outline, each with --len =
+ * its length; the second outline draws 120 ms after the first. Par has no outline ('').
+ */
+export function markSvg(strokes, par, size = 40) {
+  const ps = markPaths(strokes, par, size);
+  if (!ps.length) return '';
+  return `<svg class="ce-m" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" aria-hidden="true">${ps.map((p) => `<path class="ce-ln base" d="${p.d}"/>`).join('')}${ps.map((p, i) => `<path class="ce-ln draw" d="${p.d}" style="--len:${p.len.toFixed(1)};animation-delay:${(0.06 + i * 0.12).toFixed(2)}s"/>`).join('')}</svg>`;
+}
+
+/** A small read-only score: the number in its SVG mark ('–' when there's no score). */
+export function smallMark(strokes, par, size = 30) {
+  if (strokes == null) return '<span class="ce-dash">–</span>';
+  return `<span class="ce-sm ${markKind(strokes, par) || 'p'}" style="--sm:${size}px">${markSvg(strokes, par, size)}${esc(strokes)}</span>`;
+}
+
+/**
+ * The render loop redraws Enter often (GPS fixes, realtime), and every redraw would restart a CSS
+ * animation. Each animated element carries data-t0 (ms timestamp its motion starts at); after a redraw
+ * this puts every animation under it back where it was, so a redraw can't cut motion short or replay it.
+ */
+export function syncMotion(root) {
+  const els = root?.querySelectorAll?.('[data-t0]');
+  if (!els?.length || !els[0].getAnimations) return;
+  const now = Date.now();
+  for (const el of els) {
+    const t = now - Number(el.dataset.t0);
+    for (const a of el.getAnimations({ subtree: true })) {
+      try { a.currentTime = t; } catch { /* older engines: let it run */ }
+    }
+  }
 }
