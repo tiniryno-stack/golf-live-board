@@ -79,7 +79,7 @@ const roundCard = (line2 = 'Twin Creeks · Team Ryder Cup · 16 players') => `<d
 const sv=(d)=>`<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 const IC={flag:sv('<path d="M6 21V4h11l-2 4 2 4H6"/>'),rings:sv('<circle cx="8" cy="12" r="4"/><circle cx="16" cy="12" r="4"/>'),list:sv('<path d="M4 7h16M4 12h11M4 17h7"/>'),grid:sv('<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 10h16M4 15h16M10 4v16M15 4v16"/>'),l:sv('<path d="M15 6l-6 6 6 6"/>'),r:sv('<path d="M9 6l6 6-6 6"/>'),dots:'<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>'};
 const tabs = `<nav class="tabs"><div class="cur">${IC.flag}</div><div>${IC.rings}</div><div>${IC.list}</div><div>${IC.grid}</div></nav>`;
-const NAMES = [['8:00 tee time', ['Andrew', 'Alex', 'Josh', 'Brandon']], ['8:10 tee time', ['Ant', 'Steve', 'Joseph', 'Jay']], ['8:20 tee time', ['Sean', 'Baker', 'Mitch', 'Peter']]];
+const NAMES = [['8:00 start time', ['Andrew', 'Alex', 'Josh', 'Brandon']], ['8:10 start time', ['Ant', 'Steve', 'Joseph', 'Jay']], ['8:20 start time', ['Sean', 'Baker', 'Mitch', 'Peter']]];
 const enterBar = `<div style="display:flex;align-items:center;height:54px"><b style="font-size:32px;letter-spacing:-.8px;flex:1">Hole 4 <span class="m" style="font-size:17px;font-weight:500">Par 4</span></b><span style="width:44px;height:44px;display:grid;place-items:center">${IC.l}</span><span style="width:44px;height:44px;display:grid;place-items:center">${IC.r}</span><span class="m" style="width:44px;height:44px;display:grid;place-items:center">${IC.dots}</span></div>`;
 const lobbyCard = () => `<div class="card" style="display:flex;flex-direction:column;gap:2px">
   <span class="lbl">Sat Nov 9 · Twin Creeks</span>
@@ -101,7 +101,7 @@ const V = {
   landing: () => `<div class="pg">${hdr()}
     <p class="lbl" style="margin:24px 0 8px">Chuck’s Bday · Andrew invited you</p>
     <h1 class="h1">You’re on the list for Saturday</h1>
-    <p class="p" style="margin-top:10px">Join now. Teams and tee times come later and show up on your phone.</p>
+    <p class="p" style="margin-top:10px">Join now. Teams and start times come later and show up on your phone.</p>
     <div style="margin-top:22px">${lobbyCard()}</div>
     <div class="flex"></div>
     <p class="s m" style="margin:0 0 12px">No account. About a minute: pick your name, then add Golf Board to your home screen.</p>
@@ -118,7 +118,7 @@ const V = {
   welcome: () => `<div class="pg">${hdr()}
     <p class="lbl you" style="margin:24px 0 8px">Chuck’s Bday · you’re in</p>
     <h1 class="h1">See you Saturday, Baker</h1>
-    <p class="p" style="margin-top:10px">Andrew drafts the teams and sets tee times before then. Open Golf Board any time to see them.</p>
+    <p class="p" style="margin-top:10px">Andrew drafts the teams and sets start times before then. Open Golf Board any time to see them.</p>
     <div class="flex"></div>
     <p class="s m" style="margin:0 0 12px">On Saturday, just tap Golf Board on your home screen. No link needed.</p>
     <button class="pri">See who’s playing</button>
@@ -129,7 +129,7 @@ const V = {
     <p class="s m" style="margin-top:6px">Team Ryder Cup · 16 players</p>
     ${how}
     <p class="lbl" style="margin:16px 0 6px">Coming up</p>
-    <div class="card" style="padding:0 16px">${stat('Teams', 'After Andrew’s draft')}${stat('Your tee time and matches', 'After the draft')}</div>
+    <div class="card" style="padding:0 16px">${stat('Teams', 'After Andrew’s draft')}${stat('Your start time and matches', 'After the draft')}</div>
     <p class="lbl" style="margin:20px 0 6px">Who’s playing</p>
     ${players()}
     <div class="flex"></div>
@@ -146,7 +146,7 @@ const V = {
       <div class="row"><b style="font-weight:500">Kyle + Chuck</b></div>
     </div>
     <div class="card" style="padding:0 16px;margin-top:12px"><div class="row"><b>Team Andrew</b><span class="t">8 players ›</span></div></div>
-    <p class="s m" style="margin:24px 0 0">Tee times next. Your group and matches show up here.</p>
+    <p class="s m" style="margin:24px 0 0">Start times next. Your group and matches show up here.</p>
     <div class="flex"></div>
   </div>`,
   teetimes: () => `<div class="pg" style="padding-top:62px">
@@ -164,8 +164,8 @@ const V = {
   </div>`,
   satwait: () => `<div class="pg" style="padding-top:62px">${phdr()}
     <p class="lbl" style="margin:12px 0 6px">Saturday · 7:40 · Team Josh</p>
-    <h1 class="h1">Andrew or Josh is setting tee times</h1>
-    <p class="p" style="margin-top:10px">Teams are set. Keep this open: scoring opens the moment tee times are in.</p>
+    <h1 class="h1">Andrew or Josh is setting start times</h1>
+    <p class="p" style="margin-top:10px">Teams are set. Keep this open: scoring opens the moment start times are in.</p>
     <div class="flex"></div>
     <p class="s m" style="margin:0 0 8px">Running late? Give them a nudge.</p>
     <button class="sec">Text Andrew</button>
@@ -175,7 +175,7 @@ const V = {
     <p class="s m" style="margin-top:6px">Team Ryder Cup · 16 players</p>
     <div class="card" style="margin-top:14px;display:flex;align-items:center;gap:10px;padding:12px 16px"><span class="warn-dot"></span><span class="s">Andrew moved the start to 9:10 (was 8:00).</span></div>
     <p class="lbl" style="margin:16px 0 6px">Coming up</p>
-    <div class="card" style="padding:0 16px">${stat('Teams', 'After Andrew’s draft')}${stat('Your tee time and matches', 'After the draft')}</div>
+    <div class="card" style="padding:0 16px">${stat('Teams', 'After Andrew’s draft')}${stat('Your start time and matches', 'After the draft')}</div>
     <div class="flex"></div>
   </div>`,
   home: () => `<div class="pg" style="padding-top:62px">
@@ -184,25 +184,15 @@ const V = {
     <div class="card" style="display:flex;flex-direction:column;gap:2px">
       <span class="lbl">Sat Nov 9 · Twin Creeks</span>
       <span style="font-size:17px;line-height:24px;font-weight:600">Chuck’s Bday</span>
-      <span class="s m">You’re on Team Josh · tee times not set yet</span>
+      <span class="s m">You’re on Team Josh · start times not set yet</span>
       <button class="sec" style="margin-top:14px">Open</button>
     </div>
     <p class="lbl" style="margin:24px 0 6px">Recent rounds</p>
     <div class="card" style="padding:0 16px"><div class="row"><b>Bridlewood</b><span class="t">Oct 20 · 2nd</span></div><div class="row"><b>Twin Creeks</b><span class="t">Oct 16 · won</span></div></div>
     <div class="flex"></div>
   </div>`,
-  removed: () => V.home().replace('Baker</b>', 'Justin</b>').replace('>B<', '>J<').replace('You’re on Team Josh · tee times not set yet', 'Andrew gave your spot to Kyle.').replace('<button class="sec" style="margin-top:14px">Open</button>', '<button class="sec" style="margin-top:14px">Text Andrew</button>'),
-  calledoff: () => V.home().replace('You’re on Team Josh · tee times not set yet', 'Andrew called this off. Rain check?').replace('<span class="lbl">Sat Nov 9 · Twin Creeks</span>', '<span class="lbl" style="display:flex;align-items:center;gap:8px"><span class="warn-dot"></span>Called off · was Sat Nov 9</span>').replace('<button class="sec" style="margin-top:14px">Open</button>', '<button class="sec" style="margin-top:14px">Text Andrew</button>'),
-  cantmake: () => V.drafted() + sheet(`<h2 class="h1">Can’t make it Saturday?</h2>
-      <p class="s m" style="margin:8px 0 20px">Andrew gets a note to find a sub. Until he does, Team Josh is a player short. You can take it back until then.</p>
-      <button class="pri">I can’t make it</button>
-      <button class="sec" style="margin-top:8px">Cancel</button>`),
-  cantmade: () => `<div class="pg" style="padding-top:62px">${phdr()}
-    <h1 class="h1" style="margin-top:12px">Saturday · 8:00 at Twin Creeks</h1>
-    <p class="s m" style="margin-top:6px">Team Josh · Team Ryder Cup</p>
-    <div class="card" style="margin-top:14px;display:flex;flex-direction:column;gap:10px"><span class="s">You told Andrew you can’t make it. He hasn’t found a sub yet.</span><button class="sec">I can make it after all</button></div>
-    <div class="flex"></div>
-  </div>`,
+  removed: () => V.home().replace('Baker</b>', 'Justin</b>').replace('>B<', '>J<').replace('You’re on Team Josh · start times not set yet', 'Andrew gave your spot to Kyle.').replace('<button class="sec" style="margin-top:14px">Open</button>', '<button class="sec" style="margin-top:14px">Text Andrew</button>'),
+  calledoff: () => V.home().replace('You’re on Team Josh · start times not set yet', 'Andrew called this off. Rain check?').replace('<span class="lbl">Sat Nov 9 · Twin Creeks</span>', '<span class="lbl" style="display:flex;align-items:center;gap:8px"><span class="warn-dot"></span>Called off · was Sat Nov 9</span>').replace('<button class="sec" style="margin-top:14px">Open</button>', '<button class="sec" style="margin-top:14px">Text Andrew</button>'),
   preview: () => `<div class="pg" style="padding-top:62px">
     <div class="top"><span class="lbl">Example round · 1 of 3</span><span class="m">Done</span></div>
     <h1 class="h1" style="margin-top:12px">After each hole, tap your scores</h1>
@@ -221,30 +211,27 @@ const V = {
     <button class="pri">Go to hole 1</button>
     <button class="gho" style="margin-top:4px">How today’s game works</button>
   </div>`,
-  cohost: () => V.early().replace('<span class="lbl">Chuck’s Bday</span>', '<span class="lbl">Chuck’s Bday · you’re co-host</span>').replace('${how}', '') .replace('<p class="lbl" style="margin:16px 0 6px">Coming up</p>', '<div class="card" style="margin-top:14px;padding:0 16px"><div class="row"><b>Host</b><span class="t">draft, tee times, players ›</span></div></div><p class="lbl" style="margin:16px 0 6px">Coming up</p>'),
+  cohost: () => V.early().replace('<span class="lbl">Chuck’s Bday</span>', '<span class="lbl">Chuck’s Bday · you’re co-host</span>').replace('${how}', '') .replace('<p class="lbl" style="margin:16px 0 6px">Coming up</p>', '<div class="card" style="margin-top:14px;padding:0 16px"><div class="row"><b>Host</b><span class="t">draft, start times, players ›</span></div></div><p class="lbl" style="margin:16px 0 6px">Coming up</p>'),
   // ── organizer ──
   setupchoice: () => `<div class="pg" style="padding-top:56px">
     <p class="lbl">New round · Chuck’s Bday</p>
     <h1 class="h1" style="margin-top:6px">16 players added. Invite them now?</h1>
-    <p class="p" style="margin-top:10px">Everyone can join today. You draft and set tee times later.</p>
+    <p class="p" style="margin-top:10px">Everyone can join today. You draft and set start times later.</p>
     <div class="flex"></div>
     <button class="pri">Invite now, draft later</button>
-    <button class="sec" style="margin-top:8px">Draft and tee times first</button>
+    <button class="sec" style="margin-top:8px">Draft and start times first</button>
   </div>`,
   hostearly: () => `<div class="pg" style="padding-top:62px">${hhdr()}
-    <h1 class="h1" style="margin-top:12px">9 of 15 have Golf Board</h1>
-    <p class="s m" style="margin-top:6px">1 out · Team Ryder Cup needs 16</p>
-    <p class="lbl" style="margin:16px 0 6px">Needs you</p>
-    <div class="card" style="padding:0 16px">${warnRow('Justin’s out', 'Replace, or draft with an open spot', 'Replace')}</div>
+    <h1 class="h1" style="margin-top:12px">10 of 16 have Golf Board</h1>
+    <p class="s m" style="margin-top:6px">Saturday 8:00 · Twin Creeks · Team Ryder Cup</p>
     <p class="lbl" style="margin:16px 0 6px">Not in the app yet · 6 people</p>
     <div class="card" style="padding:0 16px">${person('Peter', 'picked a name in Safari')}${person('Jay', 'picked a name in Safari')}${person('Chuck', 'not yet')}${person('Elijah', 'not yet')}${person('Marcus', 'not yet')}${person('Steve', 'not yet')}</div>
-    <div class="card" style="padding:0 16px;margin-top:12px"><div class="row"><b>Co-host</b><span class="t">Josh ›</span></div></div>
+    <div class="card" style="padding:0 16px;margin-top:12px"><div class="row"><b>Players</b><span class="t">replace a player ›</span></div><div class="row"><b>Co-host</b><span class="t">Josh ›</span></div></div>
     <div class="flex"></div>
-    <p class="s m" style="margin:0 0 8px">No sub yet? Draft anyway: “Justin’s spot (open)” goes in a cart, and a sub takes it later.</p>
     <button class="pri">Start the draft</button>
   </div>`,
   hostreplace: () => V.hostearly() + sheet(`<h2 class="h1">Replace Justin</h2>
-      <p class="s m" style="margin:8px 0 14px">The sub takes Justin’s spot. Justin’s phone is told.</p>
+      <p class="s m" style="margin:8px 0 14px">The sub takes Justin’s spot, with his team and cart. Justin’s phone is told.</p>
       ${field('Sub’s first and last name')}
       <div class="card" style="padding:0 16px;margin-top:10px;background:var(--surface-3)"><div class="row"><b>Kyle Test</b><span class="t">played Oct 16</span></div></div>
       <button class="pri" style="margin-top:16px">Replace with Kyle</button>
@@ -257,12 +244,12 @@ const V = {
   hostdrafted: () => `<div class="pg" style="padding-top:62px">${hhdr()}
     <h1 class="h1" style="margin-top:12px">Teams are set</h1>
     <p class="s m" style="margin-top:6px">Team Josh vs Team Andrew · 16 of 16 have Golf Board</p>
-    <div class="card" style="padding:0 16px;margin-top:16px">${stat('Invite', 'Everyone’s in', true)}${stat('Draft', 'Done Thu', true)}${stat('Tee times', 'Next')}</div>
+    <div class="card" style="padding:0 16px;margin-top:16px">${stat('Invite', 'Everyone’s in', true)}${stat('Draft', 'Done Thu', true)}${stat('Start times', 'Next')}</div>
     <div class="card" style="padding:0 16px;margin-top:12px"><div class="row"><b>Co-host</b><span class="t">Josh ›</span></div><div class="row"><b>Round</b><span class="t">date, course, call it off ›</span></div></div>
     <div class="flex"></div>
     <p class="s m" style="margin:0 0 8px">Phones show the teams when they open Golf Board. Tell the group now.</p>
     <button class="pri">Share the teams</button>
-    <button class="sec" style="margin-top:8px">Set tee times</button>
+    <button class="sec" style="margin-top:8px">Set start times</button>
   </div>`,
   hostoptions: () => V.hostdrafted() + sheet(`<h2 class="h1">Round</h2>
       <div class="card" style="padding:0 16px;margin-top:14px;background:var(--surface-3)">
@@ -290,8 +277,8 @@ const V = {
     <h1 class="h1" style="margin-top:12px">Scoring is open</h1>
     <p class="s m" style="margin-top:6px">Opened by itself at 7:30 · first tee 8:00</p>
     <p class="lbl" style="margin:16px 0 6px">Needs you</p>
-    <div class="card" style="padding:0 16px">${warnRow('Justin isn’t here', 'Marked 7:52', 'Replace')}${warnRow('Open spot', 'Kyle + Chuck’s cart', 'Fill')}</div>
-    <div class="card" style="padding:0 16px;margin-top:16px">${stat('Invite', '16 of 16 have Golf Board', true)}${stat('Draft', 'Team Josh vs Team Andrew', true)}${stat('Tee times', '8:00 · 8:10 · 8:20 · 8:30', true)}</div>
+    <div class="card" style="padding:0 16px">${warnRow('Justin isn’t here', 'Marked 7:52', 'Replace')}</div>
+    <div class="card" style="padding:0 16px;margin-top:16px">${stat('Invite', '16 of 16 have Golf Board', true)}${stat('Draft', 'Team Josh vs Team Andrew', true)}${stat('Start times', '8:00 · 8:10 · 8:20 · 8:30', true)}</div>
     <div class="flex"></div>
   </div>`,
   noshow: () => V.hostday() + sheet(`<h2 class="h1">Justin isn’t here</h2>
@@ -299,15 +286,15 @@ const V = {
       <button class="pri">Replace with a sub</button>
       <button class="sec" style="margin-top:8px">Play without him</button>`),
   hostnotimes: () => `<div class="pg" style="padding-top:62px">${hhdr('host · Sat 7:30')}
-    <h1 class="h1" style="margin-top:12px">Scoring is waiting on tee times</h1>
-    <p class="p" style="margin-top:10px">Teams are set. 9 players have the app open now. Scoring opens the moment you save tee times.</p>
+    <h1 class="h1" style="margin-top:12px">Scoring is waiting on start times</h1>
+    <p class="p" style="margin-top:10px">Teams are set. 9 players have the app open now. Scoring opens the moment you save start times.</p>
     <div class="flex"></div>
-    <button class="pri">Set tee times</button>
+    <button class="pri">Set start times</button>
   </div>`,
   hostearlyday: () => `<div class="pg" style="padding-top:62px">${hhdr('host · Sat 7:10')}
     <h1 class="h1" style="margin-top:12px">Scoring opens at 7:30</h1>
-    <p class="p" style="margin-top:10px">By itself, 30 minutes before the 8:00 tee time.</p>
-    <div class="card" style="padding:0 16px;margin-top:16px">${stat('Draft', 'Team Josh vs Team Andrew', true)}${stat('Tee times', '8:00 · 8:10 · 8:20 · 8:30', true)}</div>
+    <p class="p" style="margin-top:10px">By itself, 30 minutes before the 8:00 start time.</p>
+    <div class="card" style="padding:0 16px;margin-top:16px">${stat('Draft', 'Team Josh vs Team Andrew', true)}${stat('Start times', '8:00 · 8:10 · 8:20 · 8:30', true)}</div>
     <div class="flex"></div>
     <button class="sec">Open scoring now</button>
   </div>`,

@@ -4,7 +4,7 @@ The organizer opens a round as soon as he has the names ("Invite now, draft late
 
 Four council rounds (Interaction · Visual · Product · Red): 6.5 · 7 · 7 · 6 → 8 · 8 · 8.5 · 7.5 → 9 · 8.5 · 9 · 8.5 → **9 · 9 · 9.5 · 8.5**.
 
-- `screens/`: the 30 final screens (`NN-name.png`), reused onboarding screens (`o-*.png`), light (`L-*`) and 120% text (`B-*`), `flow.png` (17 journeys).
+- `screens/`: the 28 final screens (Nov 6 owner edit: no “Can’t make it”; players see “start time”, never “tee time”) (`NN-name.png`), reused onboarding screens (`o-*.png`), light (`L-*`) and 120% text (`B-*`), `flow.png` (17 journeys).
 - `lobby-screens.html`: the mockup (`#{"s":"early"}` etc.; `"light":true`, `"big":true`).
 - `briefs/round1–4.md`: every decision, round by round.
 - On the App Screens canvas: page **Lobby · join days ahead (Nov 6)**.
