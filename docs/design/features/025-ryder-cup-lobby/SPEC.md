@@ -20,10 +20,10 @@ Mockups are reference only. Rebuild them with the app's components and tokens: n
 
 | # | key | screen | # | key | screen |
 |---|---|---|---|---|---|
-| 1 | landing | Lobby landing (Safari) | 15 | setupchoice | Setup: Invite now? |
-| 2 | who | Which one are you? (A–Z) | 16 | hostearly | Host · before the draft |
+| 1 | landing | Lobby landing (Safari): **Add to home screen first** | 15 | setupchoice | Setup: Invite now? |
+| 2 / 2b | who / whoapp | Which one are you? (A–Z): Safari fallback / **in the app** | 16 | hostearly | Host · before the draft |
 | 3 | welcome | See you Saturday (first open) | 17 | hostreplace | Replace a player |
-| 4 | early | Lobby · before the draft | 18 | replaceshare | Send the sub the link |
+| 4 | early | Lobby · before the draft (with **your handicap**) | 18 | replaceshare | Send the sub the link |
 | 5 | drafted | Lobby · teams are set | 19 | hostdrafted | Host · teams set |
 | 6 | teetimes | Lobby · start times set | 20 | hostoptions | Round options |
 | 7 | satwait | Saturday · start times coming | 21 | calloff | Call it off? |
@@ -115,11 +115,21 @@ Round options → **Co-host** → pick a player (**cohost** = playerId) → the 
 
 ## 6 · Players
 
-- **Join (1 → 2 → 024 confirm → guide → 3):** a lobby round's landing (**1**) replaces the join intro: “You're on the list for Saturday”, the round card (date, course, game, players, “first start around 8:00”) and **Find my name**. The quiet “Not playing? Follow along” opens today's watching view.
-  - Name list (**2**): A–Z with search (no tee-time groups exist yet); a claimed name shows “on another phone”.
-  - Then 024's “You're Baker?” confirm, and the existing Add to Home Screen path on Home (move link).
+- **Join, home screen first (owner, Nov 6). The path is 1 → Add to Home Screen → the app → 2b → 024 confirm → 3.** See `screenshots/this-weekend-flow.png`.
+  - **The landing (1)** replaces the join intro for a lobby round: “You're on the list for Saturday”, “Add Golf Board to your home screen, then pick your name to see your team, your start time and your handicap”, the round card, and “No account. About a minute. Saturday you just tap the icon.” The primary is **Add Golf Board to my home screen**. It opens the existing Add to Home Screen sheet/guide (Home's, `db.moveLink()`), with **the round code in the move link** (024 supports this), so the home screen app opens straight into this round.
+  - **The quiet secondary, “Join in Safari for now”,** keeps today's in-Safari join (2 → confirm → lobby in Safari). Home keeps offering Add to Home Screen.
+  - **In the app, first open:**
+    - A phone whose owner is on the roster is joined automatically (024 `joinPlan` 'auto'). The owner moves along with the move link.
+    - Anyone else gets **2b**: A–Z with search, no Safari bar, and “on another phone” for a claimed name.
+    - Then 024's “You're Baker?” confirm.
   - **No cart-name picker** in a lobby.
-  - First open (**3**): “See you Saturday, Baker” → **See who's playing**; an optional **Show me an example round** (**12**, three static pages, made-up names, nothing saved). The example round is a stretch goal; leave the link out if it isn't built.
+  - Then **3**: “See you Saturday, Baker” → **See who's playing**; optional **Show me an example round** (**12**, three static pages, made-up names, nothing saved). The example round is a stretch goal; leave the link out if it isn't built.
+  - The quiet “Not playing? Follow along” (spectators) can stay as a text link under the secondary, or move to the lobby's ⋯. Your call; keep one primary.
+  - **Handicaps (owner, Nov 6):**
+    - The lobby (4) shows **Your handicap · 12**, from the roster player's `strokes`, with “Andrew sets these. Think it's off?” and a **Text Andrew** pill (share sheet: “Andrew, my handicap in Chuck's Bday says 12…”).
+    - **Who's playing** shows each player's handicap on the right (mono).
+    - Changes go through Host's existing strokes field, and players see the new number on their next open. No database change.
+  - **Host's share message** (Setup → Invite now and Host's Share): “You're on the list for Chuck's Bday on Saturday. Tap this, add Golf Board to your home screen, and check your handicap.”
 - **Lobby screen (4–8, 14):** when and where as the headline. Its content depends on the stage:
   - **Before the draft (4):** “Coming up · Teams · Your start time and matches”, then **Who's playing** (the first four names, then “12 more · 3 haven't added Golf Board ›” → the full list).
   - **Teams set (5):** your team; only **your cart** in green; the other team collapsed to one row.

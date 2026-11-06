@@ -85,11 +85,12 @@ const lobbyCard = () => `<div class="card" style="display:flex;flex-direction:co
   <span class="lbl">Sat Nov 9 · Twin Creeks</span>
   <span style="font-size:17px;line-height:24px;font-weight:600">Chuck’s Bday</span>
   <span class="s m">Team Ryder Cup · 16 players · first tee around 8:00</span></div>`;
+const HCP = {"Andrew": 8, "Baker": 12, "Alex": 15, "Ant": 6, "Brandon": 10, "Chuck": 18, "Elijah": 14, "Jay": 9, "Josh": 4, "Joseph": 11, "Justin": 16, "Marcus": 13, "Mitch": 7, "Peter": 20, "Sean": 5, "Steve": 12};
 const PEOPLE = ['Alex', 'Andrew', 'Ant', 'Baker', 'Brandon', 'Chuck', 'Elijah', 'Jay', 'Josh', 'Joseph', 'Justin', 'Marcus', 'Mitch', 'Peter', 'Sean', 'Steve'];
 const roundLine = (extra = '') => `<p class="s m" style="margin-top:6px">Twin Creeks · Team Ryder Cup · 16 players${extra}</p>`;
 const stat = (t, sub, done) => `<div class="row tall"><div style="flex:1"><b style="display:block">${t}</b><span class="t">${sub}</span></div>${done ? '<span class="m" style="font-size:15px">✓</span>' : ''}</div>`;
 const how = `<button class="gho" style="text-align:left;width:auto;margin-top:2px">How Team Ryder Cup works ›</button>`;
-const players = (mark = {}) => `<div class="card" style="padding:0 16px">${['Andrew', 'Baker', 'Alex', 'Ant'].map((n) => `<div class="row"><b${n === 'Baker' ? ' class="you"' : ''}>${n}${n === 'Andrew' ? ' <span class="t" style="font-weight:500">organizer</span>' : ''}${n === 'Baker' ? ' <span class="t" style="font-weight:500">you</span>' : ''}</b></div>`).join('')}<div class="row"><b class="m" style="font-weight:500">12 more · 3 haven’t added Golf Board</b><span class="t">›</span></div></div>`;
+const players = (mark = {}) => `<div class="card" style="padding:0 16px">${['Andrew', 'Baker', 'Alex'].map((n) => `<div class="row"><b${n === 'Baker' ? ' class="you"' : ''}>${n}${n === 'Andrew' ? ' <span class="t" style="font-weight:500">organizer</span>' : ''}${n === 'Baker' ? ' <span class="t" style="font-weight:500">you</span>' : ''}</b><span class="t mono">${HCP[n]}</span></div>`).join('')}<div class="row"><b class="m" style="font-weight:500">13 more · 3 haven’t added Golf Board</b><span class="t">›</span></div></div>`;
 const phdr = (right = IC.dots) => `<div class="top"><span class="lbl">Chuck’s Bday</span><span class="m">${right}</span></div>`;
 const team = (name, carts, mine) => `<div class="card" style="padding:0 16px${mine ? ';box-shadow:inset 0 0 0 1.5px var(--cart-you)' : ''}"><div class="row"><b${mine ? ' class="you"' : ''}>${name}</b><span class="t">${mine ? 'your team' : ''}</span></div>${carts.map((c) => `<div class="row"><b style="font-weight:500${c.includes('Baker') ? ';color:var(--cart-you-text)' : ''}">${c}</b></div>`).join('')}</div>`;
 const field = (t) => `<div class="search" style="background:var(--surface-3)">${t}</div>`;
@@ -101,13 +102,14 @@ const V = {
   landing: () => `<div class="pg">${hdr()}
     <p class="lbl" style="margin:24px 0 8px">Chuck’s Bday · Andrew invited you</p>
     <h1 class="h1">You’re on the list for Saturday</h1>
-    <p class="p" style="margin-top:10px">Join now. Teams and start times come later and show up on your phone.</p>
+    <p class="p" style="margin-top:10px">Add Golf Board to your home screen, then pick your name to see your team, your start time and your handicap.</p>
     <div style="margin-top:22px">${lobbyCard()}</div>
     <div class="flex"></div>
-    <p class="s m" style="margin:0 0 12px">No account. About a minute: pick your name, then add Golf Board to your home screen.</p>
-    <button class="pri">Find my name</button>
-    <button class="gho" style="margin-top:4px;color:var(--text-muted);font-weight:500">Not playing? Follow along</button>
+    <p class="s m" style="margin:0 0 12px">No account. About a minute. Saturday you just tap the icon.</p>
+    <button class="pri">Add Golf Board to my home screen</button>
+    <button class="gho" style="margin-top:4px;color:var(--text-muted);font-weight:500">Join in Safari for now</button>
   </div>${safari(false)}`,
+  whoapp: () => V.who().replace(/<div class="safari">[\s\S]*$/, '').replace('Chuck’s Bday · step 1 of 3', 'Chuck’s Bday · in Golf Board'),
   who: () => `<div class="pg" style="padding-top:56px">
     <p class="lbl">Chuck’s Bday · step 1 of 3</p>
     <h1 class="h1" style="margin-top:6px">Which one are you?</h1>
@@ -128,9 +130,10 @@ const V = {
     <h1 class="h1" style="margin-top:12px">Saturday · 8:00 at Twin Creeks</h1>
     <p class="s m" style="margin-top:6px">Team Ryder Cup · 16 players</p>
     ${how}
-    <p class="lbl" style="margin:16px 0 6px">Coming up</p>
+    <div class="card" style="margin-top:12px;padding:0 16px"><div class="row tall"><div style="flex:1"><b style="display:block">Your handicap · <span class="mono">12</span></b><span class="t">Andrew sets these. Think it’s off?</span></div><button class="pill sm">Text Andrew</button></div></div>
+    <p class="lbl" style="margin:14px 0 6px">Coming up</p>
     <div class="card" style="padding:0 16px">${stat('Teams', 'After Andrew’s draft')}${stat('Your start time and matches', 'After the draft')}</div>
-    <p class="lbl" style="margin:20px 0 6px">Who’s playing</p>
+    <p class="lbl" style="margin:20px 0 6px">Who’s playing · handicap</p>
     ${players()}
     <div class="flex"></div>
   </div>`,
@@ -174,7 +177,7 @@ const V = {
     <h1 class="h1" style="margin-top:12px">Saturday · 9:10 at Twin Creeks</h1>
     <p class="s m" style="margin-top:6px">Team Ryder Cup · 16 players</p>
     <div class="card" style="margin-top:14px;display:flex;align-items:center;gap:10px;padding:12px 16px"><span class="warn-dot"></span><span class="s">Andrew moved the start to 9:10 (was 8:00).</span></div>
-    <p class="lbl" style="margin:16px 0 6px">Coming up</p>
+    <p class="lbl" style="margin:14px 0 6px">Coming up</p>
     <div class="card" style="padding:0 16px">${stat('Teams', 'After Andrew’s draft')}${stat('Your start time and matches', 'After the draft')}</div>
     <div class="flex"></div>
   </div>`,
@@ -211,7 +214,7 @@ const V = {
     <button class="pri">Go to hole 1</button>
     <button class="gho" style="margin-top:4px">How today’s game works</button>
   </div>`,
-  cohost: () => V.early().replace('<span class="lbl">Chuck’s Bday</span>', '<span class="lbl">Chuck’s Bday · you’re co-host</span>').replace('${how}', '') .replace('<p class="lbl" style="margin:16px 0 6px">Coming up</p>', '<div class="card" style="margin-top:14px;padding:0 16px"><div class="row"><b>Host</b><span class="t">draft, start times, players ›</span></div></div><p class="lbl" style="margin:16px 0 6px">Coming up</p>'),
+  cohost: () => V.early().replace('<span class="lbl">Chuck’s Bday</span>', '<span class="lbl">Chuck’s Bday · you’re co-host</span>').replace('${how}', '') .replace('<p class="lbl" style="margin:14px 0 6px">Coming up</p>', '<div class="card" style="margin-top:14px;padding:0 16px"><div class="row"><b>Host</b><span class="t">draft, start times, players ›</span></div></div><p class="lbl" style="margin:14px 0 6px">Coming up</p>'),
   // ── organizer ──
   setupchoice: () => `<div class="pg" style="padding-top:56px">
     <p class="lbl">New round · Chuck’s Bday</p>
