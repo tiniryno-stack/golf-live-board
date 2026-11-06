@@ -1803,8 +1803,18 @@ html.light .rm-t, [data-theme="light"] .rm-t { opacity: .55; }
 .rm-rp { margin-left: auto; font-family: var(--font-mono); font-weight: 700; font-size: 15px; }
 .rm-rp.me { color: var(--cart-you-text); }
 /* Board → tap a match: the sheet draws the Matches pieces (023). Someone else's match = no green (green is you). */
-.ry-sheet.rm .rm-vs { font-size: 17px; line-height: 22px; font-weight: 600; letter-spacing: 0; } /* BottomSheet title (= .ce-sh-title) */
-.rm-vs .m { color: var(--text-muted); font-weight: 500; }
+/* the sheet's card (council, Nov 6): state on top, names once, one baseline + a reserved label row */
+.rs-top { display: flex; justify-content: space-between; align-items: center; height: 28px; color: var(--text-muted); }
+.rs-top b { font-weight: inherit; color: var(--text); }
+.rs .rm-card { margin-top: 4px; }
+.rs .rm-sides { align-items: flex-start; margin-top: 0; }
+.rs-slot { height: 16px; color: var(--text-muted); }
+.rs .rs-slot.up { color: var(--cart-you-text); } /* your margin is green only when you're up */
+.rs.plain .rm-side .rs-slot { color: var(--text); }
+.rs.plain .rm-side.hi .rm-cn, .rs.plain .rm-side.hi .rm-pts { color: var(--text); }
+.rs.plain .rm-side.lo .rm-cn, .rs.plain .rm-side.lo .rm-pts { color: var(--text-muted); }
+.rs.plain .rm-u.hi, .rs.plain .rm-t.hi { background: var(--text); opacity: 1; }
+.rs.plain .rm-u.lo, .rs.plain .rm-t.lo { background: var(--text-muted); opacity: .7; }
 .rm.plain .rm-k.up, .rm.plain .rm-side.us .rm-cn, .rm.plain .rm-side.us .rm-pts, .rm.plain .rm-tile i.win,
 .rm.plain .rm-cnm.me, .rm.plain .rm-rw.me, .rm.plain .rm-rp.me { color: var(--text); }
 .rm.plain .rm-u { background: var(--text); }

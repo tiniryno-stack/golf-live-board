@@ -233,6 +233,42 @@ export function ryderPlayers(app) {
 
 // ───────────────────────────────────────────── match sheet (read-only, no X)
 
+/**
+ * The sheet's score card (council, Nov 6): the names show once. One top line = state (holes · LIVE / FINAL /
+ * UP NEXT, and THRU n / ALL SQUARE / HALVED on the right); both sides on one baseline, each with a reserved
+ * label row under its points: your margin under your pair on your match (2 UP / 2 DN), else 1 UP under
+ * the leader; WON under the winner. Someone else's match: leader bright, trailer muted, bars included.
+ */
+function rsCard(m, snap, mine) {
+  const ncomp = snap.game?.ncomp || 2;
+  const [u, t] = m.holePts;
+  const max = m.maxPts || m.total * ncomp;
+  const halves = Number(snap.settings.halvedHolePoints) || 0;
+  const clinch = m.clinchAt ?? (halves ? max / 2 + 0.5 : Math.floor(max / 2) + 1);
+  const tickPct = (clinch / max) * 100;
+  const done = m.status === 'done', live = m.status === 'live';
+  const lead = done ? (m.result === 'won' ? 'us' : m.result === 'lost' ? 'them' : null) : live ? (m.leader === 'us' || m.leader === 'them' ? m.leader : null) : null;
+  const margin = fmtPts(Math.abs(u - t));
+  const holes = m.label.replace(/^Holes /, '');
+  const state = done ? 'FINAL' : live ? 'LIVE' : 'UP NEXT';
+  const right = done ? (m.result === 'halved' ? 'HALVED' : '') : live ? `THRU ${m.thru}${lead ? '' : ' · ALL SQUARE'}` : '';
+  const slot = (side) => {
+    if (done) return lead === side ? 'WON' : '';
+    if (!live || !lead) return '';
+    if (mine) return side === 'us' ? `${margin} ${lead === 'us' ? 'UP' : 'DN'}` : '';
+    return lead === side ? `${margin} UP` : '';
+  };
+  const tone = (side) => (mine ? '' : !lead || lead === side ? ' hi' : ' lo');
+  const sideHtml = (side, cart, pts) => `<div class="rm-side ${side}${tone(side)}"><span class="rm-cn ellipsis">${esc(cartTitle(cart))}</span><span class="rm-pts mono">${fmtPts(pts)}</span><span class="rs-slot lbl${mine && side === 'us' && lead === 'us' ? ' up' : ''}">${slot(side)}</span></div>`;
+  const barTone = (side) => (mine ? '' : !lead || lead === side ? ' hi' : ' lo');
+  return `<div class="rs-top"><span class="lbl">HOLES ${esc(holes)} · <b>${state}</b></span><span class="lbl">${right}</span></div>
+    <section class="rm-card">
+      <div class="rm-sides">${sideHtml('us', m.us, u)}${sideHtml('them', m.them, t)}</div>
+      <div class="rm-bar"><span class="rm-u${barTone('us')}" style="width:${Math.min(100, (u / max) * 100)}%"></span><span class="rm-t${barTone('them')}" style="width:${Math.min(100, (t / max) * 100)}%"></span><span class="rm-tick" style="left:${tickPct}%"></span></div>
+      ${done ? '' : `<div class="rm-foot"><span>${fmtPts((m.total - m.thru) * ncomp)} pts left</span><span class="rm-cl" style="left:${tickPct}%">${fmtPts(clinch)} wins</span></div>`}
+    </section>`;
+}
+
 /** Board → tap a match: the same pieces as Matches (023), read-only. Green only when it's your cart's match. */
 export function ryderMatchSheet(app, { id, hole }) {
   const st = ryState(app);
@@ -241,11 +277,8 @@ export function ryderMatchSheet(app, { id, hole }) {
   if (m.pm) return ryderMatchSheetLegacy(app, m, hole); // Plus/Minus: as on Matches, out of 023's scope
   const mine = !!app.myTeam() && m.us.id === app.myTeam();
   const h = m.holes.find((x) => x.hole === Number(hole)) || m.holes.find((x) => x.hole === defaultHole(m));
-  const status = m.status === 'done' ? 'final' : m.status === 'live' ? 'live' : 'up next';
-  const title = mine ? `vs ${esc(cartTitle(m.them))}` : `${esc(cartTitle(m.us))} <span class="m">vs</span> ${esc(cartTitle(m.them))}`;
-  return `<div class="ry-sheet rm${mine ? '' : ' plain'}">
-      <div class="rm-head"><h2 class="rm-vs ellipsis">${title}</h2><div class="rm-sub">${esc(m.label)} · ${status}</div></div>
-      ${rmCard(m, app.snapshot, { mine })}
+  return `<div class="ry-sheet rm rs${mine ? '' : ' plain'}">
+      ${rsCard(m, app.snapshot, mine)}
       ${rmStrip(m, h.hole, 'ry-sheet-hole')}
       ${rmDetail(app, m, h, { mine })}
     </div>`;
