@@ -23,6 +23,7 @@ import { gps } from './gps.js';
 import { loadGeo } from './geoload.js';
 import { FLAGS } from './flags.js';
 import { initLoader, showLoader, updateLoader, loaderReady, hideLoaderNow } from './loader.js';
+import { joinPlan } from './identity.js';
 
 const SCREENS = { home, setup, season, enter, matches, board, card, host, crew };
 const TABS = [
@@ -140,8 +141,9 @@ app.openSheet = (type, props = {}) => {
 app.closeSheet = () => {
   const was = app.sheet?.type;
   app.sheet = null;
-  // Leaving the Add to Home Screen sheet: take this phone's keys back out of the address bar.
-  if (location.hash.startsWith('#move=')) history.replaceState(null, '', `${location.pathname}${location.search}#/`);
+  // Leaving the Add to Home Screen sheet: take this phone's keys back out of the address bar
+  // (back to the round it was opened from, for the 024 app-only gate; else Home).
+  if (location.hash.startsWith('#move=')) history.replaceState(null, '', `${location.pathname}${location.search}${app.code ? app.tabHash(app.route.tab || 'board') : '#/'}`);
   renderSheet();
   // 021: closing an Enter sheet lets a waiting points moment start on the screen underneath.
   if (was?.startsWith('ce-')) { app.ui.ceSheetAt = Date.now(); render(); }
@@ -273,16 +275,20 @@ function onQueueSaved(item, res) {
 
 // ───────────────────────────────────────────── identity
 
-/** The crew learns which person this phone is from the name it plays as (feature 006, "you" across rounds). */
+const isPractice = () => String(app.event?.settings?.practice) === 'true';
+
+/** The crew learns which person this phone is (feature 006) — from the owner (024 §2), never from whoever
+ *  this phone happens to be playing as, so playing as a friend never makes the phone theirs. */
 function rememberCrewMe() {
   const ev = app.event;
-  if (!app.me || String(ev?.settings?.practice) === 'true') return;
-  const pid = (ev.roster?.players || []).find((p) => p.id === app.me)?.personId;
-  if (!pid) return;
-  db.people.add(pid); // so Home can find your other rounds on a new phone (Nov 5)
+  const o = db.owner.get();
+  if (!ev || !o || isPractice()) return;
+  const p = (ev.roster?.players || []).find((x) => x.personId && x.personId === o.personId);
+  if (!p) return;
+  db.owner.name(o.personId, p.name); // a migrated owner only had the personId
   if (!ev.crew_id) return;
   const c = db.crews.get(ev.crew_id);
-  if (!c?.me) db.crews.put({ id: ev.crew_id, me: pid });
+  if (!c?.me) db.crews.put({ id: ev.crew_id, me: o.personId });
 }
 
 function setMe(pid) {
@@ -338,28 +344,44 @@ async function verifyMe() {
   } catch { /* offline: keep what we have */ }
 }
 
-app.claim = async (pid) => {
+/** Does picking this player need "You're Baker Test?" first (024 §5.2)? Only on a device with no owner,
+ *  in a real round, for a player who is a person (old rounds' players have no personId). */
+function needsConfirm(pid) {
+  if (db.owner.get() || isPractice()) return false;
+  return !!(app.event?.roster?.players || []).find((p) => p.id === pid)?.personId;
+}
+
+/** Claim a player. `auto` = the 024 auto-join of the owner (no Who are you?). Returns true when in. */
+app.claim = async (pid, { auto = false } = {}) => {
   let res;
   try {
     res = await db.api.claimPlayer(app.code, pid);
   } catch {
     app.toast({ title: 'No signal', sub: 'Try again in a moment.', error: true });
-    return;
+    return false;
   }
   if (res.ok) {
     app.joining = Date.now(); // name → cart name → Today's game: hold coach tips until it's done
+    const confirm = !auto && needsConfirm(pid);
     setMe(pid);
     app.claimed.add(pid);
-    app.closeSheet();
     channel?.send({ kind: 'join', playerId: pid });
-    app.toast({ title: `You’re in as ${app.myName()}` });
     if (app.route.tab !== app.homeTab()) app.go(app.tabHash(app.homeTab()));
     else {
       app.ui.hole = null;
       render();
     }
+    if (confirm) {
+      // First pick on a phone with no owner: confirm it, then the owner is set (Yes) or undone (Pick again).
+      app.openSheet('me-confirm', { pid, keep: true });
+      return true;
+    }
+    app.closeSheet();
+    app.toast(auto
+      ? { title: `Playing as ${app.myName()}`, sub: 'Not you? Tap your name.' }
+      : { title: `You’re in as ${app.myName()}` });
     setTimeout(afterJoin, 300);
-    return;
+    return true;
   }
   if (res.error === 'taken') {
     app.claimed.add(pid);
@@ -371,6 +393,44 @@ app.claim = async (pid) => {
   } else {
     app.toast({ title: 'Couldn’t join', sub: res.error, error: true });
   }
+  return false;
+};
+
+/** "Yes, that's me" (024 §5.2): this device now belongs to that person. */
+app.confirmMe = () => {
+  const p = app.myPlayer();
+  if (p?.personId && !isPractice()) db.owner.set(p.personId, p.name);
+  rememberCrewMe();
+  app.closeSheet();
+  app.toast({ title: `You’re in as ${app.myName()}` });
+  setTimeout(afterJoin, 300);
+};
+
+/**
+ * "I'm not Baker" (024 §4), from the You sheet, the playing-as line or "Pick again": frees this device's
+ * spot and relabels the scores it entered as Baker (so they stop counting as Baker's own entry). If the
+ * owner is that same person, the owner goes too — a first-pick fat finger or a hand-me-down phone.
+ * Then Who are you? again: the real Baker just picks his name, and your pick sets the new owner.
+ */
+app.notMe = async () => {
+  const was = app.me;
+  const p = app.myPlayer();
+  let res;
+  try {
+    res = await db.api.notMe(app.code);
+    if (!res.ok) throw new Error(res.error);
+  } catch {
+    app.toast({ title: 'No signal', sub: 'Couldn’t undo that yet. Try again.', error: true });
+    return;
+  }
+  const o = db.owner.get();
+  if (o && p?.personId && o.personId === p.personId) db.owner.clear();
+  setMe(null);
+  app.claimed.delete(was);
+  channel?.send({ kind: 'leave', playerId: was });
+  app.toast({ title: `Okay, you’re not ${p?.name || 'them'}`, sub: 'Pick your own name.' });
+  await refreshClaimed();
+  app.openSheet('who', {});
 };
 
 app.requestJoin = async (pid) => {
@@ -1021,11 +1081,36 @@ function processHeadlines(mode) {
   fx.showHeadlines(shown, fresh.length - shown.length, app, markSeen);
 }
 
-function maybeAskWho() {
+/**
+ * 024 §6, logic only (screens come with 025): a phone in Safari with no claim in this round must play in the
+ * home screen app. Off behind FLAGS.appOnly. Anyone already playing in Safari keeps playing.
+ */
+app.mustUseApp = () => !!FLAGS.appOnly && !db.STANDALONE && db.isPhone() && !app.me;
+
+/** The gate's placeholder until 025: the Add to Home Screen sheet for this round, the move link carrying its code. */
+function openAppGate() {
+  history.replaceState(null, '', `${location.pathname}${location.search}${db.moveLink(app.code)}`);
+  db.local.set('glb.hasApp', true); // 025 says "open Golf Board from your home screen" next time
+  app.openSheet('homescreen', { round: app.event?.name || app.code, keep: true });
+}
+
+/**
+ * Who this device is when a round opens (024 §3, lane B). Once per device per round (glb.who.CODE), so it runs
+ * on a real open and never on a redraw or a poll; a failed auto-join falls to the sheet and never loops.
+ */
+async function maybeAskWho() {
   if (!app.event || app.me || app.route.tab === 'host') return;
+  if (app.mustUseApp()) { openAppGate(); return; }
   const skipKey = `glb.who.${app.code}`;
   if (db.local.get(skipKey)) return;
   db.local.set(skipKey, true);
+  const { plan, pid } = joinPlan({ owner: db.owner.get(), roster: app.event.roster, claims: app.claimed, deviceClaim: app.me, practice: isPractice() });
+  if (plan === 'auto') {
+    if (await app.claim(pid, { auto: true })) return;
+    if (!app.sheet && !app.me) app.openSheet('who', {}); // taken meanwhile already opened the taken sheet (= ask)
+    return;
+  }
+  if (plan === 'ask') { app.openSheet('taken', { pid }); return; } // one tap: "That's me — ask my foursome"
   app.openSheet('who', {});
 }
 

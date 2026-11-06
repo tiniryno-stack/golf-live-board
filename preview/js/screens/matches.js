@@ -5,7 +5,8 @@
 // Fore Play"), theirs opens below in an outlined "WATCHING" box in its own colors only. Never a
 // separate screen (people confuse it with their own score). Split point keeps its own view.
 
-import { esc, seg, seg2, icon, foldIn, mark } from '../ui.js';
+import { esc, seg, seg2, icon, foldIn, mark, syncMotion } from '../ui.js';
+import { local } from '../db.js';
 import { ryderMatches, ryderActions } from './ryder.js';
 import { isRider } from '../riderview.js';
 import { raceState, holeShares, holeOutcomes, showStakes } from '../race.js';
@@ -424,6 +425,24 @@ function splitView(app) {
 
 export default {
   hero: true,
+
+  // 023 §4: keep the "new since you last looked" motion in sync across redraws, and record which holes
+  // have now been shown (2s after they appear, or at once on the first visit) so they stop ringing.
+  mount(root, app) {
+    syncMotion(root);
+    const rm = app.ui.rm;
+    if (!rm || !root.querySelector('.rm-strip')) return;
+    const key = `glb.seen.${app.code}.mx`;
+    const commit = () => { const s = local.get(key) || {}; s[rm.matchId] = rm.counted; local.set(key, s); };
+    const prev = (local.get(key) || {})[rm.matchId];
+    const changed = prev === undefined || rm.counted.some((h) => !prev.includes(h)) || prev.some((h) => !rm.counted.includes(h));
+    if (!changed) return;
+    if (!rm.newHoles.length) { commit(); return; } // first visit / nothing new: record the baseline now
+    if (app.ui.rmCommitAt !== rm.t0) {
+      app.ui.rmCommitAt = rm.t0;
+      setTimeout(() => { commit(); app.render(); }, 2200); // after the rings have shown and faded
+    }
+  },
 
   render(app) {
     const snap = app.snapshot;

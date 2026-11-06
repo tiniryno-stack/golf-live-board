@@ -455,13 +455,24 @@ function ownEntry(p, h) {
 
 const names = (ps) => ps.map((p) => p.name).join(' + ');
 
-function ryderEnterView(app, h, { holeRow, gcard, carts, locked, ahead, pos, lastHole, done, cur }) {
+function ryderEnterView(app, h, { gcard, carts, locked, ahead, pos, limitPos, lastHole, done, cur }) {
   const snap = app.snapshot;
   const par = snap.holes[h - 1].par;
   const now = Date.now();
   const live = !locked && !ahead;
   const mine = carts[0];
   const others = carts.slice(1);
+
+  // 023 §3: left-aligned header "Hole 11  Par 3", then ◀ ▶ ⋯ (round menu; organizer's first menu item
+  // is Fix hole N). The team header drops Hcp and the course name; strokes show per row.
+  const head = `<div class="ce-head">
+      <button class="ce-hole" data-act="hole-grid" aria-label="Hole ${h}: all holes"><span class="ce-hn">Hole ${h}</span><span class="ce-hp">Par ${par}</span></button>
+      <div class="ce-nav">
+        <button class="ce-ib" data-act="hole-prev" aria-label="Previous hole"${pos <= 1 ? ' disabled' : ''}>${icon('back')}</button>
+        <button class="ce-ib" data-act="hole-next" aria-label="Next hole"${pos >= limitPos ? ' disabled' : ''}>${icon('fwd')}</button>
+        <button class="ce-ib" data-act="round-menu" aria-label="Round menu">${icon('more', 20)}</button>
+      </div>
+    </div>`;
   const m = ceMatch(app, h, carts);
   if (app.ui.ceReward && now > app.ui.ceReward.end) app.ui.ceReward = null;
   if (app.ui.cePts && now > app.ui.cePts.at + PTS_MS) app.ui.cePts = null;
@@ -488,12 +499,14 @@ function ryderEnterView(app, h, { holeRow, gcard, carts, locked, ahead, pos, las
     matchLine = `<div class="ce-match"><span class="ce-us ellipsis">${esc(names(mine.players))}</span>${right}</div>`;
   }
 
-  // Rows: yours with pads (and the green rail), theirs as one quiet row; read-only rows on preview / locked holes.
+  // Rows: yours with pads in one card (023 §3, the green rail is gone — the card says "your team"),
+  // theirs as one quiet row ("Your group" when that cart isn't your opponent); read-only on preview / locked.
   const rows = live
-    ? `<div class="ce-mine rail">${mine.players.map((p) => ceRow(app, p, h, app.canEdit(p.id, h))).join('')}</div>${others.map((c) => {
+    ? `<div class="ce-mine ce-card">${mine.players.map((p) => ceRow(app, p, h, app.canEdit(p.id, h))).join('')}</div>${others.map((c) => {
       const allIn = c.players.every((p) => p.gross[h - 1] != null);
+      const grp = m && c.teamId && c.teamId !== m.them.id ? '<span class="ce-grp">Your group</span>' : '';
       return `<button class="ce-line" data-act="ce-theirs" data-t="${esc(c.teamId || '')}" aria-label="Enter scores for ${esc(c.players.map((p) => p.name).join(' and '))}">
-        <span class="ce-who">${c.players.map((p) => `<span class="ce-who-p"><span class="ellipsis">${esc(p.name)}</span>${smallMark(p.gross[h - 1], par, 30)}</span>`).join('')}</span>
+        <span class="ce-who">${grp}${c.players.map((p) => `<span class="ce-who-p"><span class="ellipsis">${esc(p.name)}</span>${smallMark(p.gross[h - 1], par, 30)}</span>`).join('')}</span>
         <span class="ce-go">${allIn ? 'Edit' : 'Enter'}${icon('fwd', 18)}</span></button>`;
     }).join('')}`
     : `<div class="ce-mine">${carts.map((c, i) => c.players.map((p) => ceReadRow(app, p, h, i === 0, ahead)).join('')).join('')}</div>`;
@@ -522,7 +535,7 @@ function ryderEnterView(app, h, { holeRow, gcard, carts, locked, ahead, pos, las
 
   const card = live ? gcard : ''; // 021 §1: your hole only (current, or the one you just finished): never on preview / locked holes
   return `<div class="enter nr ry-enter ce${card ? ` gps-card ${app.ui.gpsSize || 'regular'}` : ''}">
-      <div class="hero">${holeRow}${card}</div>
+      <div class="hero">${head}${card}</div>
       ${matchLine}${rows}
       <div class="ce-flex"></div>
       <div class="ce-foot">${status}${next}</div>
@@ -718,7 +731,7 @@ export default {
           ${app.isOrganizer() ? `<button class="hole-more" data-act="fixhole-open" data-v="${h}" aria-label="Hole menu: fix hole ${h}">${icon('more', 20)}</button>` : ''}
         </div>`;
     if (individual(app)) return individualView(app, h, { holeRow, dots, footBtn, gcard, gstate });
-    if ((st.ryder || isRider(snap)) && app.myTeam() && carts.length) return ryderEnterView(app, h, { holeRow, gcard, carts, focus, locked, ahead, pos, lastHole, done, cur });
+    if ((st.ryder || isRider(snap)) && app.myTeam() && carts.length) return ryderEnterView(app, h, { gcard, carts, focus, locked, ahead, pos, limitPos, lastHole, done, cur });
     return `<div class="enter nr${gcard ? ` gps-card ${app.ui.gpsSize || 'regular'}` : ''}">
       <div class="hero">
         ${holeRow}

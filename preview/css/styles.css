@@ -710,6 +710,11 @@ a { color: inherit; }
 @media (prefers-reduced-motion: reduce) { .panel { transition: none; } }
 .panel .card { background: var(--surface-2); }
 .who-group { margin: 0 0 14px; }
+/* 024 §5: Who are you? by tee time (header) → cart; the You sheet's quiet playing-as line. */
+.who-tee-h { margin: 2px 0 8px 2px; color: var(--text-muted); }
+.who-tee + .who-tee { margin-top: 6px; }
+.you-as { margin: -6px 0 14px; }
+.you-not { font: inherit; font-weight: 600; color: var(--text); background: none; border: 0; padding: 14px 0; margin: -14px 0; }
 .who-group .micro { margin: 0 0 6px 2px; display: block; }
 .who-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .who-grid.one { grid-template-columns: 1fr; }
@@ -1733,6 +1738,77 @@ details.fold summary::-webkit-details-marker { display: none; }
 .ry-legend .ry-dot + * { margin-left: 0; }
 .ry-legend .ry-dot:not(:first-child) { margin-left: var(--space-2); }
 
+/* Matches, who won each point (handoff 023 §1). Same layout in every state; only words/fills/dimming change. */
+.rm { --rm-line: rgba(255,255,255,.05); }
+html.light .rm, [data-theme="light"] .rm { --rm-line: rgba(11,13,16,.08); }
+.rm-head { display: flex; flex-direction: column; gap: 2px; margin-top: 2px; }
+/* 023 asks 24/28 for the title and 40/44 for the points; both are off our six type styles, so they
+   map to the 32 display size (flagged). Everything else is on the scale. */
+.rm-vs { margin: 0; font-size: 32px; line-height: 36px; font-weight: 700; letter-spacing: -.5px; }
+.rm-sub { font-size: 13px; color: var(--text-muted); }
+.rm-back { font-weight: 600; color: var(--text); background: none; border: 0; padding: 14px 0; margin: -14px 0; font-size: inherit; }
+.rm-seg { margin-top: 12px; height: 44px; border-radius: var(--radius-md); background: var(--surface-1); display: grid; grid-template-columns: repeat(3, 1fr); padding: 3px; gap: 3px; }
+.rm-sgm { border-radius: 9px; display: flex; align-items: center; justify-content: center; gap: 7px; font-size: 15px; font-weight: 600; color: var(--text-muted); background: none; border: 0; }
+.rm-sgm.on { background: var(--surface-3); color: var(--text); }
+html.light .rm-sgm.on, [data-theme="light"] .rm-sgm.on { box-shadow: var(--shadow-card); }
+.rm-sgm i { font-style: normal; font-family: var(--font-mono); font-size: 12px; font-weight: 700; letter-spacing: .5px; }
+.rm-sgm i.w, .rm-sgm i.lv { color: var(--cart-you-text); }
+.rm-sgm i.l, .rm-sgm i.h { color: var(--text-muted); }
+.rm-card { margin-top: 12px; border-radius: var(--radius-xl); background: var(--surface-1); padding: 14px 16px; box-shadow: var(--shadow-card); }
+.rm-k { color: var(--text-muted); }
+.rm-k.up { color: var(--cart-you-text); }
+.rm-sides { display: flex; justify-content: space-between; align-items: flex-end; gap: var(--space-3); margin-top: 8px; }
+.rm-side { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.rm-side.them { text-align: right; align-items: flex-end; }
+.rm-cn { font-size: 15px; font-weight: 600; max-width: 100%; }
+.rm-pts { font-family: var(--font-mono); font-size: 32px; line-height: 40px; font-weight: 700; letter-spacing: -1.5px; }
+.rm-side.us .rm-cn, .rm-side.us .rm-pts { color: var(--cart-you-text); }
+.rm-side.them .rm-cn, .rm-side.them .rm-pts { color: var(--text-muted); }
+.rm-bar { position: relative; margin-top: 12px; height: 10px; border-radius: 5px; background: var(--surface-2); }
+.rm-u, .rm-t { position: absolute; top: 0; bottom: 0; border-radius: 5px; }
+.rm-u { left: 0; background: var(--cart-you); }
+.rm-t { right: 0; background: var(--text-muted); opacity: .7; }
+html.light .rm-t, [data-theme="light"] .rm-t { opacity: .55; }
+.rm-tick { position: absolute; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; background: var(--text-muted); }
+.rm-foot { position: relative; display: flex; justify-content: space-between; margin-top: 8px; font-size: 13px; color: var(--text-muted); }
+.rm-cl { position: absolute; transform: translateX(-50%); font-weight: 600; white-space: nowrap; }
+.rm-strip { margin-top: 14px; display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
+.rm-tile { position: relative; height: 56px; border-radius: var(--radius-md); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; background: none; border: 0; }
+.rm-tile b { font-size: 15px; font-weight: 600; color: var(--text-muted); }
+.rm-tile i { font-style: normal; font-family: var(--font-mono); font-size: 15px; font-weight: 700; height: 18px; line-height: 18px; }
+.rm-tile i.win { color: var(--cart-you-text); }
+.rm-tile i.lose { color: var(--text-muted); }
+.rm-tile.on { background: var(--surface-2); }
+.rm-tile.on b { color: var(--text); }
+.rm-tv { display: inline-flex; align-items: center; justify-content: center; }
+/* 023 §4: a hole counted here since you last looked — a dashed ring that fades at 2s, and the value pops in. */
+.rm-tile.rm-new::after { content: ''; position: absolute; inset: 0; border-radius: var(--radius-md); border: 1px dashed var(--text-muted); pointer-events: none; animation: rm-ringfade 200ms ease 2000ms forwards; }
+@keyframes rm-ringfade { from { opacity: 1; } to { opacity: 0; } }
+.rm-tv.rm-pop { animation: rm-pop 200ms ease-out both; animation-delay: var(--d, 0ms); }
+@keyframes rm-pop { from { opacity: 0; transform: scale(.9); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .rm-tv.rm-pop { animation: none; } }
+.rm-detail { margin-top: 6px; border-top: 1px solid var(--rm-line); padding-top: 10px; }
+.rm-four { display: grid; grid-template-columns: repeat(4, 1fr); text-align: center; }
+.rm-col { min-width: 0; }
+.rm-cnm { display: block; font-size: 15px; font-weight: 600; color: var(--text-muted); }
+.rm-cnm.me { color: var(--cart-you-text); }
+.rm-cm { height: 40px; display: grid; place-items: center; margin-top: 4px; }
+.rm-cm .mk { --mk: 34px; }
+.rm-dash { font-family: var(--font-mono); font-size: 17px; color: var(--text-muted); }
+.mk.rm-dim { color: var(--text-muted); }
+.mk.rm-dim.mk-u, .mk.rm-dim.mk-e, .mk.rm-dim.mk-b { border-color: var(--line); }
+.rm-need { margin-top: 18px; font-size: 17px; line-height: 23px; }
+.rm-need .m { color: var(--text-muted); }
+.rm-res { margin-top: 18px; display: flex; flex-direction: column; gap: 6px; }
+.rm-r { display: flex; align-items: center; gap: 10px; font-size: 15px; }
+.rm-rk { width: 86px; flex: none; color: var(--text-muted); }
+.rm-rw { font-weight: 600; min-width: 0; }
+.rm-rw.me { color: var(--cart-you-text); }
+.rm-rw.them { color: var(--text); }
+.rm-rp { margin-left: auto; font-family: var(--font-mono); font-weight: 700; font-size: 15px; }
+.rm-rp.me { color: var(--cart-you-text); }
+.rm-rp.them, .rm-rp.tie { color: var(--text-muted); }
+
 /* Team Ryder Cup: Enter header dot (014 §5) + Today's game sides (014 §8) */
 .ry-hdot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); margin-right: 6px; vertical-align: middle; }
 .status .you { color: var(--cart-you-text); }
@@ -1917,6 +1993,23 @@ html.light .ce, [data-theme="light"] .ce { --ce-line: rgba(11,13,16,.06); --ce-d
 .ce-who-p { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
 .ce-go { font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 2px; flex: none; }
 .ce-dash { font-family: var(--font-mono); color: var(--text-muted); font-weight: 600; width: 26px; text-align: center; flex: none; }
+/* 023 §3: left-aligned Enter header (Hole 11 · Par 3 · ◀ ▶ ⋯). "Hole 11" asks 24; mapped to the 32
+   display size (flagged). The team header drops Hcp and the course name. */
+.ce-head { display: flex; align-items: center; gap: var(--space-2); min-height: 54px; padding-top: 6px; }
+.ce-hole { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 8px; background: none; border: 0; padding: 0; text-align: left; color: inherit; -webkit-tap-highlight-color: transparent; }
+.ce-hn { font-size: 32px; font-weight: 700; letter-spacing: -.5px; line-height: 1; }
+.ce-hp { font-size: 17px; font-weight: 500; color: var(--text-muted); }
+.ce-nav { flex: none; display: flex; align-items: center; margin-right: -8px; }
+.ce-ib { width: 44px; height: 44px; display: grid; place-items: center; color: var(--text-muted); background: none; border: 0; }
+.ce-ib:disabled { opacity: .35; }
+/* 023 §3: your cart's rows in one card; the green rail is gone. */
+.ce-mine.ce-card { background: var(--surface-1); border-radius: var(--radius-xl); padding: 2px 16px 6px; margin-top: 2px; }
+.ce-mine.ce-card .ce-row { border-top-color: rgba(255,255,255,.06); }
+html.light .ce-mine.ce-card .ce-row, [data-theme="light"] .ce-mine.ce-card .ce-row { border-top-color: rgba(11,13,16,.06); }
+.ce-mine.ce-card .ce-row:first-child { border-top: 0; }
+html.light .ce-mine.ce-card, [data-theme="light"] .ce-mine.ce-card { box-shadow: var(--shadow-card); }
+.ce-mine.ce-card + .ce-line { border-top: 0; margin-top: 4px; }
+.ce-grp { font-size: 13px; font-weight: 500; color: var(--text-muted); flex: none; margin-right: -6px; }
 .ce-sm { position: relative; width: var(--sm); height: var(--sm); flex: none; display: inline-grid; place-items: center; font-family: var(--font-mono); font-weight: 700; font-size: calc(var(--sm) * .5); color: var(--text); }
 .ce-sm svg { position: absolute; inset: 0; }
 .ce-sm .ce-ln { fill: none; stroke: var(--text); stroke-width: 1.5; }

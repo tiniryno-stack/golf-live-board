@@ -13,6 +13,9 @@ import { geoFor } from '../geo.js';
 import { GEO_ATTRIBUTION } from '../geoload.js';
 import { ryderMatchSheet } from './ryder.js';
 import { enterSheets } from './enter.js';
+import { owner as phoneOwner } from '../db.js';
+import { fullName } from '../names.js';
+import { whoGroups } from '../identity.js';
 
 let lastHtml = '';
 let closeTimer = null;
@@ -131,53 +134,42 @@ const head = (title, sub = '') =>
   `<div class="panel-head"><div class="ph-text"><h2 class="title">${esc(title)}</h2>${sub ? `<div class="ph-sub">${esc(sub)}</div>` : ''}</div>
    <button class="icon-btn" data-act="sheet-close" aria-label="Close">${icon('close')}</button></div>`;
 
-function playersByCart(app) {
-  const snap = app.snapshot;
-  const groups = [];
-  const teams = snap.roster.teams || [];
-  // Carts only in the cart game (Partner "Rider" Cup): solo match play and 2v2 make teams too,
-  // but there the sheet is one plain list of everyone.
-  const carts = teams.length && !snap.settings.solo && !snap.settings.pairs
-    && teams.some((t) => snap.players.filter((p) => p.teamId === t.id).length > 1);
-  if (!carts) return [{ label: '', players: snap.players, list: true }];
-  if (teams.length) {
-    for (const t of teams) {
-      const ps = snap.players.filter((p) => p.teamId === t.id);
-      if (ps.length) groups.push({ label: t.name, players: ps, teamId: t.id });
-    }
-    const loose = snap.players.filter((p) => !p.teamId);
-    if (loose.length) groups.push({ label: 'No cart', players: loose });
-  } else {
-    for (const g of snap.roster.groups || []) {
-      const ps = snap.players.filter((p) => p.groupId === g.id);
-      if (ps.length) groups.push({ label: teeTimeName(snap.settings, groupIndex(g.id)), players: ps });
-    }
-    const loose = snap.players.filter((p) => !snap.roster.groups?.some((g) => g.id === p.groupId));
-    if (loose.length) groups.push({ label: 'Players', players: loose });
-  }
-  return groups;
-}
-
 const BODIES = {
   ...enterSheets, // 021/022: ⋯ More and the other cart's scores
   'ryder-match': (app, p) => ryderMatchSheet(app, p), // read-only: no X (015 §1)
   who(app) {
     if (!app.snapshot) return head('Who are you?');
-    const groups = playersByCart(app)
-      .map(
-        (g) => `<div class="who-group">${g.list ? '' : `<span class="micro">${g.teamId ? `<i class="jdot" style="--jersey:${teamColor(null, g.teamId)};margin-right:6px"></i>` : ''}${esc(g.label)}</span>`}<div class="who-grid${g.list ? ' one' : ''}">${g.players
-          .map((p) => {
-            const taken = app.claimed.has(p.id) && p.id !== app.me;
-            return `<button class="who-btn${taken ? ' taken' : ''}" data-act="who-pick" data-v="${esc(p.id)}">
+    // 024 §5.1: grouped by tee time (header only when tee times are set), then the cart within each.
+    const snap = app.snapshot;
+    const btn = (p) => {
+      const taken = app.claimed.has(p.id) && p.id !== app.me;
+      return `<button class="who-btn${taken ? ' taken' : ''}" data-act="who-pick" data-v="${esc(p.id)}">
               <span class="ellipsis">${esc(p.name)}</span>${taken ? '<span class="tag">in use</span>' : ''}</button>`;
-          })
-          .join('')}</div></div>`
-      )
+    };
+    const groups = whoGroups({ roster: snap.roster, settings: snap.settings, players: snap.players }, (id) => teeTimeName(snap.settings, groupIndex(id)))
+      .map((g) => `<div class="who-tee">${g.label ? `<div class="lbl who-tee-h">${esc(g.label)}</div>` : ''}${g.carts
+        .map((c) => `<div class="who-group">${c.label ? `<span class="micro">${c.teamId ? `<i class="jdot" style="--jersey:${teamColor(null, c.teamId)};margin-right:6px"></i>` : ''}${esc(c.label)}</span>` : ''}<div class="who-grid${c.teamId ? '' : ' one'}">${c.players.map(btn).join('')}</div></div>`)
+        .join('')}</div>`)
       .join('');
     return `${head('Who are you?')}
       <p class="meta" style="margin:-4px 0 14px">Tap your name to enter scores for your matchup. Everyone can watch everything.</p>
       ${groups}
       <button class="btn ghost block" data-act="sheet-close">Just watching</button>`;
+  },
+
+  /** 024 §5.2: the first pick on a device with no owner. Yes sets the owner; Pick again undoes the pick. */
+  'me-confirm'(app, { pid }) {
+    const players = app.event?.roster?.players || [];
+    const p = players.find((x) => x.id === pid);
+    if (!p) return head('Who are you?');
+    const mate = p.teamId ? players.find((x) => x.teamId === p.teamId && x.id !== p.id) : null;
+    const line = [teeTimeName(app.snapshot?.settings || app.event.settings, groupIndex(p.groupId)),
+      mate ? `with ${mate.firstName || String(mate.name || '').split(' ')[0]}` : ''].filter(Boolean).join(' · ');
+    return `${head(`You’re ${fullName(p) || p.name}?`, line)}
+      <div class="stack">
+        <button class="btn primary big block" data-act="me-yes">Yes, that’s me</button>
+        <button class="btn ghost block" data-act="me-again">Pick again</button>
+      </div>`;
   },
 
   taken(app, { pid }) {
@@ -262,8 +254,9 @@ const BODIES = {
       <div class="sheet-join">${codeField()}</div>`;
   },
 
-  homescreen() {
-    return `${head('Add to Home Screen')}
+  homescreen(app, { round } = {}) {
+    // 024 §6: the app-only gate opens this for one round (placeholder until 025's landing screen).
+    return `${head('Add to Home Screen', round ? `To play in ${round}, open it from your home screen` : '')}
       <ol class="hs-steps">
         <li><span class="hs-n">1</span><span>Tap <b>Share</b> ${icon('share', 18)} in Safari’s bar. On newer iPhones it’s under <b>•••</b> first.</span></li>
         <li><span class="hs-n">2</span><span>Scroll down and tap <b>Add to Home Screen</b>, then <b>Add</b>.</span></li>
@@ -278,9 +271,12 @@ const BODIES = {
     const p = app.myPlayer();
     const light = document.documentElement.dataset.theme === 'light';
     const meta = [app.code, app.event?.course?.shortName || app.event?.course?.name].filter(Boolean).join(' · ');
+    // 023 §3: the organizer's round menu leads with Fix hole N (it replaced the Enter header's ⋯).
+    const fixH = app.ui.hole || app.nextHole?.();
     return `${head(app.event?.name || 'Round', meta)}
       <div class="stack">
         ${p ? '' : '<button class="btn primary big block" data-act="menu-pick">Pick my name</button>'}
+        ${app.isOrganizer?.() && app.snapshot && fixH ? `<button class="btn block" data-act="fixhole-open" data-v="${fixH}">Fix hole ${fixH}</button>` : ''}
         ${app.snapshot?.roundComplete ? `<button class="btn primary block" data-act="menu-recap">${icon('trophy', 18)} Round recap &amp; scorecards</button>` : ''}
         ${app.snapshot ? '<button class="btn block" data-act="menu-rules">Rules</button>' : ''}
         ${app.adminPin ? `<button class="btn block" data-act="menu-host">${icon('host', 18)} Host settings · organizer</button>` : ''}
@@ -292,22 +288,29 @@ const BODIES = {
       </div>`;
   },
 
-  /** Avatar → you: your name, Go to Home, Switch to watching. */
+  /** Avatar → you: your name + the playing-as line (024 §5.3), Go to Home, I'm not <name>, Switch to watching. */
   you(app) {
     const p = app.myPlayer();
     if (!p) return head('Watching');
-    return `${head(p.name, 'You on this phone')}
+    const person = (app.event?.roster?.players || []).find((x) => x.id === p.id)?.personId;
+    const o = phoneOwner.get();
+    const as = o && person && o.personId !== person
+      ? `Playing as ${esc(p.name)} this round · this phone stays ${esc(o.name || 'its owner')}’s · `
+      : `Playing as ${esc(p.name)} · `;
+    return `${head(p.name)}
+      <p class="meta you-as">${as}<button class="you-not" data-act="not-me">Not you?</button></p>
       <div class="stack">
         <button class="btn block" data-act="menu-home">${icon('home', 18)} Go to Home</button>
+        <button class="btn block" data-act="not-me">I’m not ${esc(p.name)}</button>
         <button class="btn danger block" data-act="menu-leave">Switch to watching</button>
       </div>
-      <p class="meta" style="margin-top:12px">Go to Home keeps you as ${esc(p.name)}; the round stays in Recent rounds. Switch to watching frees your name so the right person can pick it.</p>`;
+      <p class="meta" style="margin-top:12px">Go to Home keeps you as ${esc(p.name)}. Picked the wrong name? I’m not ${esc(p.name)} opens the spot for the real ${esc(p.name)}, and you pick yours.</p>`;
   },
 
   leave(app) {
     const name = app.myName() || '';
     return `${head('Switch to watching?')}
-      <p class="soft" style="margin:0 0 16px">${esc(name)} becomes open again and this phone watches. Picked the wrong name? This is how you fix it: switch to watching, then pick the right one.</p>
+      <p class="soft" style="margin:0 0 16px">${esc(name)} becomes open again and this phone watches.</p>
       <div class="stack">
         <button class="btn danger big block" data-act="leave-confirm">Switch to watching</button>
         <button class="btn ghost block" data-act="you-menu">Cancel</button>
@@ -605,6 +608,10 @@ export const actions = {
     else app.claim(pid);
   },
   'who-ask': (el, ev, app) => app.requestJoin(el.dataset.v),
+  // 024: the confirm on a device with no owner, and the one identity undo ("Not you?" / "I'm not Baker").
+  'me-yes': (el, ev, app) => app.confirmMe(),
+  'me-again': (el, ev, app) => app.notMe(),
+  'not-me': (el, ev, app) => app.notMe(),
   'who-back': (el, ev, app) => {
     app.waiting = null;
     app.refreshClaimed();
