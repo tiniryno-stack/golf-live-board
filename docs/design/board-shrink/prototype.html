@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ryder Board · shrinking cup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400..800&family=Geist+Mono:wght@500..700&display=swap" rel="stylesheet">
+<style>
+:root{--font-sans:Geist,system-ui,-apple-system,sans-serif;--font-mono:"Geist Mono",ui-monospace,monospace;--bg:#0a0b0d;--surface-1:#15171b;--surface-2:#1f2227;--surface-3:#2a2e35;--text:#f4f5f7;--text-muted:#a7acb4;--line:#2b2f36;--cart-you:#3ddc84;--cart-you-text:#3ddc84;--glass:rgba(21,23,27,.92);--glass-line:rgba(255,255,255,.09);--shadow-float:0 8px 24px rgba(0,0,0,.45);--shadow-dock:inset 0 1px 0 rgba(255,255,255,.10),0 0 28px rgba(255,255,255,.06)}
+html,body{margin:0;background:#050607;color:var(--text);font-family:var(--font-sans)}
+.wrap{display:flex;flex-direction:column;align-items:center;gap:14px;padding:20px 12px}
+.modes{display:flex;gap:6px;background:#15171b;padding:4px;border-radius:12px}
+.modes button{font:inherit;font-size:13px;font-weight:600;color:var(--text-muted);background:none;border:0;padding:9px 12px;border-radius:9px;cursor:pointer}
+.modes button.on{background:var(--surface-3);color:var(--text)}
+.hint{font-size:13px;color:var(--text-muted);text-align:center;max-width:393px}
+.ph{width:393px;height:659px;position:relative;overflow:hidden;background:var(--bg);border-radius:28px;box-shadow:0 0 0 1px #22252b}
+.sc{position:absolute;inset:0;overflow-y:auto;scrollbar-width:none}
+.sc::-webkit-scrollbar{display:none}
+.top{height:56px;display:flex;align-items:center;gap:12px;padding:0 8px 0 12px}
+.av{width:32px;height:32px;border-radius:16px;background:var(--surface-2);display:grid;place-items:center;font-size:13px;font-weight:700}
+.top b{font-size:17px;font-weight:600;flex:1}.top .rn{font-size:15px;color:var(--text-muted)}
+.ib{width:44px;height:44px;display:grid;place-items:center;color:var(--text-muted);border-radius:22px;background:var(--surface-1)}
+/* the cup: one element that interpolates on --p (0 = full, 1 = slim) */
+.cupwrap{position:sticky;top:0;z-index:5;padding:calc(8px - 4px * var(--p)) 16px 0}
+.cup{border-radius:calc(24px - 6px * var(--p));padding:calc(16px - 6px * var(--p)) 16px calc(16px - 6px * var(--p));
+  background:color-mix(in srgb, var(--surface-1) calc(100% - 100% * var(--p)), var(--glass));
+  box-shadow:0 0 0 calc(1px * var(--p)) var(--glass-line), 0 calc(8px * var(--p)) calc(24px * var(--p)) rgba(0,0,0,calc(.45 * var(--p)));
+  backdrop-filter:blur(calc(16px * var(--p)));-webkit-backdrop-filter:blur(calc(16px * var(--p)))}
+.k{font-family:var(--font-mono);font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:center;
+  height:calc(16px * (1 - var(--k)));margin-bottom:calc(8px * (1 - var(--k)));opacity:calc(1 - var(--k));overflow:hidden}
+.sides{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:end}
+.side{display:flex;align-items:baseline;gap:12px;min-width:0}
+.side.r{justify-content:flex-end}
+.sn{font-size:calc(17px - 2px * var(--p));font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tot{font-family:var(--font-mono);font-weight:700;font-size:calc(64px - 44px * var(--p));line-height:1;letter-spacing:calc(-3px + 2.5px * var(--p))}
+.you{color:var(--cart-you-text)}.them{color:var(--text)}
+.bar{display:flex;align-items:center;gap:3px;margin-top:calc(16px - 8px * var(--p))}
+.grp{display:flex;gap:3px;flex:1}.mid{width:2px;height:calc(22px - 12px * var(--p));background:var(--text);border-radius:1px;flex:none}
+.seg{flex:1;height:calc(14px - 8px * var(--p));border-radius:calc(5px - 2px * var(--p));background:var(--surface-2);position:relative;overflow:hidden}
+.seg b{position:absolute;top:0;bottom:0}.seg b.us{left:0;background:var(--cart-you)}.seg b.th{right:0;background:var(--text-muted)}
+.cont{padding:12px 16px 120px}
+.segctl{height:44px;border-radius:16px;background:var(--surface-1);display:grid;grid-template-columns:1fr 1fr;padding:3px;gap:3px;margin-top:8px}
+.segctl div{display:grid;place-items:center;border-radius:12px;font-size:15px;font-weight:600;color:var(--text-muted)}.segctl div.on{background:var(--surface-3);color:var(--text)}
+.rot{margin-top:16px;border-radius:18px;box-shadow:inset 0 0 0 1.5px var(--line);height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;font-family:var(--font-mono);font-size:13px;font-weight:700;letter-spacing:1px}
+.mrow{display:grid;grid-template-columns:1fr 100px 1fr;align-items:center;min-height:76px;border-bottom:1px solid rgba(255,255,255,.05)}
+.mrow .l{font-size:17px;font-weight:600;line-height:21px}.mrow .r{text-align:right;font-size:17px;font-weight:600;line-height:21px;color:var(--text-muted)}
+.flag{justify-self:center;font-family:var(--font-mono);font-size:13px;font-weight:700;background:var(--text);color:var(--bg);border-radius:8px;padding:7px 12px}
+.tabs{position:absolute;left:16px;right:16px;bottom:24px;height:64px;border-radius:24px;background:var(--glass);box-shadow:var(--shadow-dock),inset 0 0 0 1px var(--glass-line);display:grid;grid-template-columns:repeat(4,1fr);padding:6px;z-index:6}
+.tabs div{display:grid;place-items:center;border-radius:20px;color:var(--text-muted)}.tabs div.cur{background:var(--surface-3);color:var(--text)}
+</style></head><body>
+<div class="wrap">
+  <div class="modes"><button data-m="a" class="on">A · follows the scroll</button><button data-m="b">B · shrinks down, grows on any scroll up</button></div>
+  <div class="ph"><div class="sc" id="sc">
+    <div class="top"><span class="av">A</span><b>Andrew</b><span class="rn">Ryder · Sat</span><span class="ib">⇪</span><span class="ib">⋯</span></div>
+    <div class="cupwrap" id="cw"><div class="cup">
+      <div class="k">8 left · 6½ wins</div>
+      <div class="sides"><div class="side"><span class="sn you">Team Andrew</span><span class="tot you">1</span></div><div class="side r"><span class="sn them" style="color:var(--text-muted)">Team Josh</span><span class="tot them">3</span></div></div>
+      <div class="bar"><span class="grp" id="g1"></span><span class="mid"></span><span class="grp" id="g2"></span></div>
+    </div></div>
+    <div class="cont">
+      <div class="segctl"><div class="on">Cup</div><div>Players</div></div>
+      <div id="rows"></div>
+    </div>
+  </div>
+  <nav class="tabs"><div>⚑</div><div>∞</div><div class="cur">≡</div><div>▦</div></nav></div>
+  <p class="hint">Scroll inside the phone. The cup card shrinks into a slim floating bar that stays on top. A: it grows back only at the top. B: any scroll up grows it back.</p>
+</div>
+<script>
+const g1 = document.getElementById('g1'), g2 = document.getElementById('g2');
+g1.innerHTML = '<i class="seg"><b class="us" style="width:100%"></b></i>' + '<i class="seg"></i>'.repeat(5);
+g2.innerHTML = '<i class="seg"></i>'.repeat(3) + '<i class="seg"><b class="th" style="width:100%"></b></i>'.repeat(3);
+const R = [['HOLES 7–12', '0 – 0', 'LIVE', [['Andrew<br>Alex', '2 UP', 'Josh<br>Brandon', 1], ['Ant<br>Steve', '1 UP', 'Joseph<br>Jay', 0], ['Justin<br>Chuck', '3-3', 'Elijah<br>Marcus', 0], ['Mitch<br>Peter', '3-3', 'Sean<br>Baker', 0]]],
+  ['HOLES 1–6', '1 – 3', 'DONE', [['Andrew<br>Alex', '✓ 7-5', 'Sean<br>Baker', 1], ['Ant<br>Steve', '5-7', 'Josh<br>Brandon', 0], ['Justin<br>Chuck', '4-8', 'Joseph<br>Jay', 0], ['Mitch<br>Peter', '5½-6½', 'Elijah<br>Marcus', 0]]],
+  ['HOLES 13–18', '', '›', [['Andrew<br>Alex', '–', 'Joseph<br>Jay', 1], ['Ant<br>Steve', '–', 'Elijah<br>Marcus', 0], ['Justin<br>Chuck', '–', 'Sean<br>Baker', 0], ['Mitch<br>Peter', '–', 'Josh<br>Brandon', 0]]]];
+document.getElementById('rows').innerHTML = R.map(([h, t, st, ms]) => `<div class="rot"><span>${h}</span><span style="color:var(--cart-you-text)">${t}</span><span style="color:${st === 'LIVE' ? 'var(--cart-you-text)' : 'var(--text-muted)'}">${st}</span></div>` + ms.map(([l, f, r, me]) => `<div class="mrow"><span class="l"${me ? ' style="color:var(--cart-you-text)"' : ''}>${l}</span><span class="flag">${f}</span><span class="r">${r}</span></div>`).join('')).join('');
+const sc = document.getElementById('sc'), cw = document.getElementById('cw');
+let mode = 'a', p = 0, last = 0;
+const RANGE = 140; // px of scroll from full to slim
+const set = (v) => { p = Math.max(0, Math.min(1, v)); cw.style.setProperty('--p', p.toFixed(3)); cw.style.setProperty('--k', Math.min(1, p * 2).toFixed(3)); };
+set(0);
+sc.addEventListener('scroll', () => {
+  const y = sc.scrollTop, dy = y - last; last = y;
+  if (mode === 'a') set(y / RANGE);
+  else set(y < 8 ? 0 : p + dy / RANGE);
+}, { passive: true });
+document.querySelectorAll('.modes button').forEach((b) => b.addEventListener('click', () => {
+  document.querySelectorAll('.modes button').forEach((x) => x.classList.toggle('on', x === b));
+  mode = b.dataset.m; set(mode === 'a' ? sc.scrollTop / RANGE : (sc.scrollTop < 8 ? 0 : 1));
+}));
+window.__setP = set; window.__sc = sc;
+</script>
+</body></html>
