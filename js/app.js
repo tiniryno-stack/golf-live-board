@@ -24,7 +24,7 @@ import { loadGeo } from './geoload.js';
 import { FLAGS } from './flags.js';
 import { initLoader, showLoader, updateLoader, loaderReady, hideLoaderNow } from './loader.js';
 import { joinPlan } from './identity.js';
-import { lobbyState, lobbyView as pickLobbyView, spotGiven, clock12, wallClock, parseTime } from './lobby.js';
+import { lobbyState, lobbyView as pickLobbyView, spotGiven, clock12, wallClock, parseTime, hasHandicaps, hcpOf } from './lobby.js';
 import lobbyScreen from './screens/lobby.js';
 
 const SCREENS = { home, setup, season, enter, matches, board, card, host, crew };
@@ -103,11 +103,22 @@ app.lobbyRemoved = () => {
 app.lobbyView = () => {
   const st = app.lobby();
   if (!st) return null;
+  const roster = app.event.roster;
   return pickLobbyView(st, {
     me: app.me, watching: app.ui.lobbyWatch === app.code, picking: app.ui.lobbyPick === app.code,
-    seenWelcome: app.seenLobby('welcome'), seenOpen: app.seenLobby('open'), removed: !!app.lobbyRemoved(),
+    guide: app.ui.lobbyGuide === app.code, invite: app.ui.lobbyInvite === app.code, standalone: db.STANDALONE,
+    safariPhone: !db.STANDALONE && db.isIOS(), revealHere: app.ui.revealHere === app.code,
+    hcpFlow: hasHandicaps(roster),
+    // The organizer set the numbers: no reveal for him. The seen key holds the player it was shown to, so after
+    // "I'm not Baker" the right person still gets theirs.
+    hasHcp: !!app.me && app.me !== st.hostId && !!hcpOf(roster, app.me),
+    seenHcp: !!app.me && db.local.get(seenKey025('hcp')) === app.me,
+    revealing: !!app.me && app.ui.reveal?.code === app.code && app.ui.reveal.pid === app.me,
+    seenOpen: app.seenLobby('open'), removed: !!app.lobbyRemoved(),
   });
 };
+/** The reveal was shown to this player on this phone (once per phone per round, 025 rev). */
+app.markHcpSeen = () => db.local.set(seenKey025('hcp'), app.me);
 app.gated = () => !!app.lobbyView();
 /** "Scoring opens at 7:30" (or by itself once start times are in). */
 app.opensLine = () => {
@@ -1232,7 +1243,8 @@ function parseHash() {
   }
   if (parts[0] === 'e' && parts[1]) {
     const tab = ['enter', 'matches', 'board', 'card', 'host'].includes(parts[2]) ? parts[2] : 'enter';
-    return { name: tab, code: db.normCode(parts[1]), tab, round: true };
+    // 025 rev: #/e/CODE/hcp = the handicap invite link (opens the round; this load shows the invite screen).
+    return { name: tab, code: db.normCode(parts[1]), tab, round: true, invite: parts[2] === 'hcp' };
   }
   return { name: 'home' };
 }
@@ -1244,6 +1256,7 @@ function route() {
   fx.clearCoach();
   if (app.sheet && !app.sheet.props?.keep) app.closeSheet();
   if (app.route.round) {
+    if (app.route.invite) app.ui.lobbyInvite = app.route.code; // in memory, so app.go(tab) can't drop it
     if (app.route.code !== app.code) {
       loadRound(app.route.code);
     } else {

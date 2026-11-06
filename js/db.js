@@ -79,6 +79,12 @@ export const STANDALONE = (() => {
   }
 })();
 
+/** iPhone / iPad (Safari's Add to Home Screen steps). Tests set `__GLB_IOS`. */
+export function isIOS() {
+  if (typeof globalThis.__GLB_IOS === 'boolean') return globalThis.__GLB_IOS;
+  try { return /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); } catch { return false; }
+}
+
 /** An iPhone or Android phone (not an iPad or a computer): the app-only gate's devices (024 §6).
  *  Tests set `__GLB_PHONE` (or `__GLB_IOS`). */
 export function isPhone() {
@@ -105,7 +111,16 @@ export const moved = (() => {
     const m = /^#move=([A-Za-z0-9_-]+)$/.exec(location.hash);
     if (!m) return false;
     history.replaceState(null, '', `${location.pathname}${location.search}#/`);
-    if (!STANDALONE) return false;
+    if (!STANDALONE) {
+      // 025 rev: a reload in Safari while the Add to Home Screen steps show the move link goes back to that round,
+      // but only on the phone that made it (the round is in its own Recent rounds). A mis-sent link still does nothing.
+      try {
+        const r = JSON.parse(fromB64(m[1]))?.round;
+        const mine = (local.get('glb.recent') || []).some((x) => x?.code === r);
+        if (typeof r === 'string' && /^[A-Z0-9]{4,8}$/.test(r) && mine) history.replaceState(null, '', `${location.pathname}${location.search}#/e/${r}`);
+      } catch { /* Home */ }
+      return false;
+    }
     const data = JSON.parse(fromB64(m[1]));
     // 024 §6: a move link made for one round opens the home screen app straight into it.
     const round = typeof data?.round === 'string' && /^[A-Z0-9]{4,8}$/.test(data.round) ? data.round : null;

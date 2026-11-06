@@ -234,6 +234,7 @@ call off. 6. Countdown + Scoring is open. Then: live DB (rollback test → apply
 
 | Round | Architect | Database | Frontend | Tests | Product QA | Red team | What changed |
 |---|---|---|---|---|---|---|---|
+| 0 · plan | 7.5 | 8 | 7 | 7 | 6.5 | 7 | Plan reviewed; every point in P2.8 folded in (QA's 6.5 items were built before code review). |
 | 0 · plan | 6.5 | 7 | 6.5 | 7 | 7 | 6 | Plan reviewed; every point below folded into §12 before code. |
 | 1 · code | 8 | 8 | 8 | 8 | 8 | 7 | Code reviewed after the build; every confirmed bug fixed the same night (§14). Owner asked for two rounds, so no third round. |
 
@@ -442,3 +443,59 @@ without handicaps → landing, standalone → who, reveal once · `homeCard` car
 
 | Round | Architect | Database | Frontend | Tests | Product QA | Red team | What changed |
 |---|---|---|---|---|---|---|---|
+| 0 · plan | 7.5 | 8 | 7 | 7 | 6.5 | 7 | Plan reviewed; every point in P2.8 folded in (QA's 6.5 items were built before code review). |
+
+## P2.8 · Round 0 changes (what the council asked for, as built)
+
+- **Handicaps editable before scoring opens** (QA, red team): lobby Players → a player → **Handicap · 12** (sheet, blank =
+  not set, saved through `saveLobby`). **Replace / Add** ask for the sub's handicap and never keep the old player's
+  number (Undo restores it).
+- **The reveal** (QA, red team, tests): `glb.seen.CODE.hcp` holds the **player id** it was shown to (a wrong pick, then
+  "I'm not Baker", still gives the right person theirs). It starts only once no sheet is open (024's "You're Baker?"
+  opens right after the pick), so the number is never spent behind it. `revealing` beats `seenHcp`, so writing the key
+  on the first frame can't cut it short. No reveal for the organizer (`lobby.hostId`).
+- **iPhone Safari, already joined** (QA): a joined player with an unseen handicap on iPhone Safari (024 auto-join
+  included) gets the Add to Home Screen steps first; **Can't add it? Reveal it here** carries on in Safari.
+- **Move link lifecycle** (frontend, QA, red team): the guide puts `db.moveLink(code)` in the address bar while it
+  shows (and sets `glb.hasApp`), with the "don't send this link" line from 024's sheet; leaving it (Back / Can't add it)
+  puts `#/e/CODE` back. A Safari reload of a move link returns to its round only on the phone that made it (the round is
+  in its own Recent rounds); a mis-sent link still does nothing (`db.moved`).
+- **The handicap wording only when everyone has one** (QA): `hasHandicaps` = all players; otherwise the invite link shows
+  the plain landing and Part 1's share wording. A player with no handicap: no reveal, no card.
+- **Stages** (architect, tests, red team): `isPaired` is strict (8 C-carts × 2, every player in one, 16 players, no
+  sides). A stage the roster doesn't support falls back to the highest one it does, never above the saved stage
+  (`teams`/`ready` with C-carts → `carts`; `carts` without them → `lobby`). `nextHostStep('carts')` needs 16.
+- **Redo the draft** (architect): `maySaveStep('draft')` at `carts` or `teams`; Host at `teams` has **Teams · redo the
+  draft**; the draft step starts from the drafted carts (`cartOrder`). `undraft()` (pure, tested) for the same pairs as
+  C-carts.
+- **Stale steps** (architect, red team): `rosterKey` includes `teamId`, so a re-pair or redraft by a co-host makes an
+  open step refuse to save.
+- **Remove keeps a call-off** (architect, red team): `toLobbyStage` on an `off` round keeps `off` and sets `prevStage:
+  'lobby'` (a Part 1 bug too). Remove at `carts` has its own confirm ("unpairs the carts", Replace … instead).
+- **Cart names follow the players** (architect): `renameCarts` on every lobby roster save; screens build names from
+  the players (`myCart`, you first).
+- **Captains** (architect, QA, red team): the carts step labels **Cart 1 · captain** / **Cart 2 · captain** (also in the
+  normal Setup flow: it was always true there). Choosing captains in the draft is left for the owner (P2.9).
+- **Draft step can't wander** (red team): draft mode's first screen is the draft (Back to Host); `saveLobbyStep`
+  branches carts / draft / tee explicitly.
+- **Share the teams after chained start times** (red team): saving start times straight after the draft opens the
+  Share the teams sheet once.
+- **Engine guard** (red team): `ryderView` returns the empty view when no cart id carries a side (`/^[12][A-D]$/`),
+  not on `sides.length`, so an old roster without `sides` still scores (tested).
+- **Words** (found in the build check): 024's "You're Baker?" sheet said "1st tee time" in a lobby; before scoring opens
+  it now says "with Mitch" (and "8:20 start time" once start times are set).
+- **Mock** `pick_team_name` guards a missing `teams` list. Cart naming isn't offered in a lobby (Part 1's `afterJoin`
+  returns before the cart-name picker), and the draft names carts afresh, so a C-cart name never carries over.
+- **Not changed, on purpose:** start times keep their own cart order (side 1 by start time, then side 2), which is a
+  different order from the carts/draft steps (`cartOrder`); unifying them would change which carts are captains.
+- Handicaps are public roster data (anyone with the code can read `events`); the reveal is a display rule, not access
+  control (database).
+
+## P2.9 · Open questions for the owner (Part 2)
+
+1. **Captains:** carts 1 and 2 are the captains' carts (as in Setup since 015). Want a "Who are the captains?" pick at
+   the start of Enter the draft instead?
+2. **Partiful's in-app browser:** the steps are Safari's. Players who open the link inside Partiful may need an "Open
+   in Safari" screen first (the handoff's flow shows one); not built in this push.
+3. **Players who already have the icon** (o-hasapp, "Open Golf Board from your home screen"): not built; the guide's
+   note ("Already have Golf Board? Open it, tap Join with code …") covers it for now.

@@ -376,9 +376,9 @@ export function createBackend() {
       if (!c) return no('not_claimed');
       const team = player(e, c.player_id)?.teamId;
       if (!team) return no('no_team');
-      const other = e.roster.teams.find((x) => x.id !== team && x.name.trim().toLowerCase() === name.toLowerCase());
+      const other = (e.roster.teams || []).find((x) => x.id !== team && x.name.trim().toLowerCase() === name.toLowerCase());
       if (other) return no('taken', { team: other.id });
-      const t = e.roster.teams.find((x) => x.id === team);
+      const t = (e.roster.teams || []).find((x) => x.id === team);
       if (t.name === name) return { ok: true, team, name, unchanged: true };
       const was = t.name;
       e.roster = { ...e.roster, teams: e.roster.teams.map((x) => (x.id === team ? { ...x, name } : x)) };
