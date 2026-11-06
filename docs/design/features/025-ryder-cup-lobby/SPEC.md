@@ -41,7 +41,7 @@ Mockups are reference only. Rebuild them with the app's components and tokens: n
 
 ```
 settings.lobby = {
-  stage: 'lobby' | 'teams' | 'ready' | 'off',
+  stage: 'lobby' | 'carts' | 'teams' | 'ready' | 'off',
   startTime: 'HH:MM',            // the round's start (first group), organizer's local time
   tz: 'America/Chicago',         // IANA zone of the organizer's phone at creation (Intl.DateTimeFormat().resolvedOptions().timeZone)
   opensAt: ISO-8601 UTC | null,  // when scoring opens; set when stage becomes 'ready' (first start time − 30 min, computed in tz)
@@ -54,6 +54,7 @@ settings.lobby = {
 - The date is `events.played_on`. It's set at creation and changed with the new `set_round_date` RPC (§3).
 - **The stages:**
   - `lobby`: the names are set; there are no carts or sides yet (`roster.teams` and `roster.sides` are empty).
+  - `carts`: carts are paired (owner, Nov 6): `roster.teams` holds 8 carts with **temporary ids `C1`…`C8`**, no `sides`, so every player sees who they ride with. Ryder cart ids carry their side (`1A`…`2D`), so the draft renames each cart to its real id when it lands on a team. Player ids and `teamId` links are updated together, and claims are keyed by player id, so nobody who has joined loses their spot. `ryderState` / `compute` must ignore carts without sides.
   - `teams`: carts and the draft are saved, so `roster.teams` and `sides` are filled.
   - `ready`: start times are saved (`settings.teeTimes`, one per group), and `opensAt` is set.
   - `off`: called off.
@@ -67,10 +68,12 @@ settings.lobby = {
 
 **Setup (Team Ryder Cup only):** course → players (16, as today: crew chips, search, guests) → game = Team Ryder Cup. Then comes the new choice screen **15**: primary **Invite now, draft later**, secondary **Draft and tee times first**. The secondary is exactly today's Carts → Draft → Tee times flow.
 
-**Invite now** adds one small step, **When**: a date picker and a start-time picker, using the existing TextField pattern and native `<input type=date|time>`. It isn't drawn; build it from existing parts and flag it. Then it creates the event:
+**Invite now** adds two small steps. First **When**: a date picker and a start-time picker, using the existing TextField pattern and native `<input type=date|time>`. It isn't drawn; build it from existing parts and flag it. Then it creates the event:
 - `create_event` with `p_played_on` = the date;
 - `roster.players` with their personIds, and no teams or sides;
 - `settings.ryder` as today, and `settings.lobby = { stage: 'lobby', startTime, tz, ... }`.
+
+Then **Who rides together?** (`screenshots/handicap-flow/10-hostcarts.png`): Setup's existing `ryCartsView` (8 carts of 2, tap two names to swap, handicaps beside names). **Skip** is allowed, and carts can be paired later from Host → Carts. Saving sets stage `carts`.
 
 After that it goes straight to Host's lobby view (**16**) with the share sheet open (link + “You're on the list for Chuck's Bday on Saturday. Tap to join.”).
 
@@ -79,7 +82,7 @@ After that it goes straight to Host's lobby view (**16**) with the share sheet o
 - **Not in the app yet · K people:** one row per person (Peter “picked a name in Safari” · Chuck “not yet”), each with a **Share** pill (share sheet, ready message with the link). K plus N must add up to the roster.
 - **Players · replace a player ›** (§4) and **Co-host · Josh ›** (§5).
 - **The primary is always the next step:**
-  - in `lobby`: **Start the draft** runs the three draft steps on the open round. See `screenshots/handicap-flow/10-hostcarts`, `11-hostdraft` and `12-hoststarts`: these are Setup's existing `ryCartsView` → `ryDraftView` → `ryTeeView`, re-labelled “Draft · step n of 3”, with handicaps next to names when pairing carts.
+  - in `lobby` (carts skipped): **Pair the carts** (the same carts step). In `carts`: **Enter the draft** (the draft happens in person; the organizer taps each pick in after). It runs two steps on the open round. See `screenshots/handicap-flow/11-hostdraft` and `12-hoststarts`: these are Setup's existing `ryDraftView` (“Draft · 1 of 2 · Drafting in person? Tap each cart as it's picked.”) and `ryTeeView` (“Draft · 2 of 2”, start times). The carts step only reopens if the organizer picks Host → Carts.
     - Saving the draft writes `roster.teams` / `sides` via `update_event` and sets stage `teams`. Player ids never change, so claims survive.
     - It's reachable from Host's lobby view (16) and from the organizer's own lobby (⋯ → Host).
   - in `teams`: first **Share the teams**, a one-time primary (share sheet: “Teams are set for Chuck's Bday. Open Golf Board to see yours.”). Then **Set start times**, which runs `ryTeeView` and saves `settings.teeTimes`. That sets stage `ready` and `opensAt` = first start time − 30 min on `played_on` in `tz`.
@@ -134,7 +137,7 @@ Round options → **Co-host** → pick a player (**cohost** = playerId) → the 
   - **Handicaps:** the lobby shows **Your handicap · 12** with “Andrew sets these. Think it's off? Text Andrew.” (**text only, no button**, owner Nov 6). Who's playing shows everyone's handicap on the right. It comes from roster `strokes`, which Host already edits. No database change.
   - **Host's share message:** “You're on the list for Chuck's Bday on Saturday. Tap this to reveal your handicap.”
 - **Lobby screen (4–8, 14):** when and where as the headline. Its content depends on the stage:
-  - **Before the draft (4):** “Coming up · Teams · Your start time and matches”, then **Who's playing** (the first four names, then “12 more · 3 haven't added Golf Board ›” → the full list).
+  - **Before the draft (4):** “Your handicap”, then **Your cart · Baker + Mitch** (your cart in green, “team after the draft”) once carts are paired (otherwise “Coming up · Teams · Your start time and matches”), then **Who's playing** (the first four names, then “12 more · 3 haven't added Golf Board ›” → the full list).
   - **Teams set (5):** your team; only **your cart** in green; the other team collapsed to one row.
   - **Ready (6):** “Saturday · 8:20 with Mitch”, your three matches, and “Scoring opens by itself at 7:30.”
   - **Day of, not ready (7):** “Andrew or Josh is setting start times · teams are set” with **Text Andrew**.
