@@ -1,6 +1,6 @@
 # 025 · Team Ryder Cup lobby: join days ahead, play on Saturday
 
-Status: revised Nov 6 (carts stage + handicap reveal): building on claude/new-session-a0hcnv. First version built in 4c7dcb0.
+Status: built in c7842c4 (branch claude/new-session-a0hcnv; preview, not merged to main). First version built in 4c7dcb0.
 
 **The idea (owner, Nov 6).** For Team Ryder Cup, everyone knows days ahead that they're playing. The organizer should be able to **open the round as soon as he has the 16 names**, before carts, the draft and start times exist. He shares one link (Partiful or a group text) on Wednesday. Players tap it, pick their name and add Golf Board to their home screen. From then on they can see who's playing and what's still to come. After the draft they see their team and cart; once start times are set, they see their time and matches. On Saturday they just tap the icon. Scoring opens by itself 30 minutes before the first start time.
 
