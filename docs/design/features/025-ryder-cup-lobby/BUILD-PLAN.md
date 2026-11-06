@@ -275,3 +275,20 @@ call off. 6. Countdown + Scoring is open. Then: live DB (rollback test → apply
 - Tests added to §7: TZ loop (`process.env.TZ` UTC / Tokyo / Los Angeles), mock clock edges (−1 ms / 0), unclaimed →
   not_open, fill_score parity, Postgres timestamp strings, combined `nextHostStep` priorities, `keepQueued`,
   `draftedRoster` ids, Run it back strip, seasons skip.
+
+## 13 · Live database (Nov 6, overnight)
+
+1. **Rollback test on live** (`do $$ … raise exception $$`, the whole migration + revoke, then `set local role anon`):
+   create=true · unclaimed=not_open · claim=true · lobby=not_open/lobby (with `now`) · fill=not_open · admin=true ·
+   whoami.now=true · mark=true · status bad PIN=bad_pin · status 16 rows, p1 claimed + in_app · counts {16,1,1} ·
+   ready in the future=not_open · ready in the past=ok · off=not_open · openedEarly=ok · bad date=bad_date ·
+   set_round_date=ok (played_on moved) · bad PIN=bad_pin · old-style round=ok · anon calling the helper=denied.
+   Everything rolled back.
+2. **Applied** with `apply_migration`: `ryder_lobby_025` (= `supabase/migrations/2026-11-06-ryder-lobby.sql`) and
+   `ryder_lobby_025_revoke` (= `-revoke.sql`).
+3. **Verified** (read-only `pg_proc` / `information_schema`): `upsert_score` and `fill_score` call `_lobby_gate`;
+   `admin_upsert_score` doesn't; `_lobby_gate` is SECURITY DEFINER and not executable by anon; the four new RPCs are
+   SECURITY DEFINER and executable by anon; `whoami`, `mark_in_app`, `lobby_status` return `now`; `claims.in_app` exists.
+4. **Rollback**: `supabase/migrations/2026-11-06-ryder-lobby-rollback.sql` (one paste in the SQL Editor; restores the
+   previous `upsert_score`, `fill_score`, `update_event`, `_setting_label`, `whoami` and drops what 025 added). The live
+   bodies before 025 were checked against it.
