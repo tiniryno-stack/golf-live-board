@@ -79,7 +79,9 @@ After that it goes straight to Host's lobby view (**16**) with the share sheet o
 - **Not in the app yet · K people:** one row per person (Peter “picked a name in Safari” · Chuck “not yet”), each with a **Share** pill (share sheet, ready message with the link). K plus N must add up to the roster.
 - **Players · replace a player ›** (§4) and **Co-host · Josh ›** (§5).
 - **The primary is always the next step:**
-  - in `lobby`: **Start the draft**, which runs Setup's existing `ryCartsView` → `ryDraftView` on this event's roster. Saving writes `roster.teams` / `sides` via `update_event` and sets stage `teams`. Player ids never change, so claims survive.
+  - in `lobby`: **Start the draft** runs the three draft steps on the open round. See `screenshots/handicap-flow/10-hostcarts`, `11-hostdraft` and `12-hoststarts`: these are Setup's existing `ryCartsView` → `ryDraftView` → `ryTeeView`, re-labelled “Draft · step n of 3”, with handicaps next to names when pairing carts.
+    - Saving the draft writes `roster.teams` / `sides` via `update_event` and sets stage `teams`. Player ids never change, so claims survive.
+    - It's reachable from Host's lobby view (16) and from the organizer's own lobby (⋯ → Host).
   - in `teams`: first **Share the teams**, a one-time primary (share sheet: “Teams are set for Chuck's Bday. Open Golf Board to see yours.”). Then **Set start times**, which runs `ryTeeView` and saves `settings.teeTimes`. That sets stage `ready` and `opensAt` = first start time − 30 min on `played_on` in `tz`.
   - in `ready`, on the day before `opensAt` (**24**): “Scoring opens at 7:30”, with a secondary **Open scoring now**. That shows a confirm (**25**) and is allowed only on `played_on` in `tz`. It sets `openedEarly: true` and `opensAt = now`.
   - in `ready` after it opens (**27**): the normal Host, plus the checklist.
@@ -115,21 +117,22 @@ Round options → **Co-host** → pick a player (**cohost** = playerId) → the 
 
 ## 6 · Players
 
-- **Join, home screen first (owner, Nov 6). The path is 1 → Add to Home Screen → the app → 2b → 024 confirm → 3.** See `screenshots/this-weekend-flow.png`.
-  - **The landing (1)** replaces the join intro for a lobby round: “You're on the list for Saturday”, “Add Golf Board to your home screen, then pick your name to see your team, your start time and your handicap”, the round card, and “No account. About a minute. Saturday you just tap the icon.” The primary is **Add Golf Board to my home screen**. It opens the existing Add to Home Screen sheet/guide (Home's, `db.moveLink()`), with **the round code in the move link** (024 supports this), so the home screen app opens straight into this round.
-  - **The quiet secondary, “Join in Safari for now”,** keeps today's in-Safari join (2 → confirm → lobby in Safari). Home keeps offering Add to Home Screen.
-  - **In the app, first open:**
-    - A phone whose owner is on the roster is joined automatically (024 `joinPlan` 'auto'). The owner moves along with the move link.
-    - Anyone else gets **2b**: A–Z with search, no Safari bar, and “on another phone” for a claimed name.
-    - Then 024's “You're Baker?” confirm.
-  - **No cart-name picker** in a lobby.
-  - Then **3**: “See you Saturday, Baker” → **See who's playing**; optional **Show me an example round** (**12**, three static pages, made-up names, nothing saved). The example round is a stretch goal; leave the link out if it isn't built.
-  - The quiet “Not playing? Follow along” (spectators) can stay as a text link under the secondary, or move to the lobby's ⋯. Your call; keep one primary.
-  - **Handicaps (owner, Nov 6):**
-    - The lobby (4) shows **Your handicap · 12**, from the roster player's `strokes`, with “Andrew sets these. Think it's off?” and a **Text Andrew** pill (share sheet: “Andrew, my handicap in Chuck's Bday says 12…”).
-    - **Who's playing** shows each player's handicap on the right (mono).
-    - Changes go through Host's existing strokes field, and players see the new number on their next open. No database change.
-  - **Host's share message** (Setup → Invite now and Host's Share): “You're on the list for Chuck's Bday on Saturday. Tap this, add Golf Board to your home screen, and check your handicap.”
+- **Join: the handicap flow (owner, Nov 6, replaces screens 1–3 for invite links).** See `screenshots/handicap-flow/` (`NN-key.png`, keys in `mockups/lobby-screens.html`) and `screenshots/this-weekend-flow.png`. Every button pulls toward the home screen and the reveal.
+  1. **invite**: kicker “Chuck's Bday · Sat Nov 9”, headline **“Andrew set your handicap”**, one line “16 players. Two teams. One cup.”, primary **Reveal my handicap**, quiet “Not playing? Follow along”. Nothing else.
+  2. **guide2**: “Step 1 of 2 · reveal your handicap”, then “Your handicap opens in the app” (put Golf Board on your home screen, 30 seconds), four steps, the pointer at Safari's ⋯, and the quiet **“Can't add it? Reveal it here”** (Safari fallback: name pick + reveal in Safari).
+     - The steps open from the existing Add to Home Screen move link, with **the round code in it** (024), so the icon opens straight into this round.
+     - The pointer and step pictures will be redrawn from the owner's real iOS 26 Safari screenshots (pending). Until then, use these steps.
+  3. **In the app, first open:** a phone whose owner is on the roster is joined automatically (024 'auto'). Anyone else gets **whoapp2** (“Step 2 of 2 · reveal your handicap”, A–Z + search, “on another phone” for claimed names), then 024's “You're Baker?” confirm.
+  4. **The reveal (reveal1 → reveal2 → reveal3), once per phone per round** (`glb.seen.CODE.hcp`):
+     - “Chuck's Bday · Baker” / **“Andrew has you at”**, then the number at 64 mono.
+     - It starts blurred (`filter: blur(6px)`, `text-muted`) and rolls through a few values to the real one (`strokes`), sharpening as it goes: about **1.2 s** in total, ease-out, with the last 300 ms settling on the number.
+     - Then, fading in at 200 ms each: the kicker turns green (it's you); “7th lowest of 16 · the field runs 4 to 20” (a rank by `strokes`, with ties shared); “Think it's off? Text Andrew.” (plain text, **no button**); and the primary **See who you're up against** → the lobby.
+     - Reduced motion: show the final frame at once.
+     - With no handicap set (`strokes` empty), skip the reveal and go straight to the lobby.
+  5. **The lobby** (4) as below. **No cart-name picker** in a lobby. The “See you Saturday” screen (3) is no longer in this path; the lobby itself says when and where.
+  - The plain landing (1) and Safari name list (2) stay for a lobby link opened without the invite (a Safari fallback / follow-along).
+  - **Handicaps:** the lobby shows **Your handicap · 12** with “Andrew sets these. Think it's off? Text Andrew.” (**text only, no button**, owner Nov 6). Who's playing shows everyone's handicap on the right. It comes from roster `strokes`, which Host already edits. No database change.
+  - **Host's share message:** “You're on the list for Chuck's Bday on Saturday. Tap this to reveal your handicap.”
 - **Lobby screen (4–8, 14):** when and where as the headline. Its content depends on the stage:
   - **Before the draft (4):** “Coming up · Teams · Your start time and matches”, then **Who's playing** (the first four names, then “12 more · 3 haven't added Golf Board ›” → the full list).
   - **Teams set (5):** your team; only **your cart** in green; the other team collapsed to one row.
