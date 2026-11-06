@@ -1,7 +1,7 @@
 -- Handoff 024 · "I'm not Baker": additive (create or replace + grant). Mirrors supabase/schema.sql.
 -- not_me(code, device) frees this device's claim and relabels the scores it entered as that player since the
 -- claim (updated_by = '<name> (picked by mistake)'), so they stop counting as the player's own entry.
--- NOT yet applied to the live DB: Andrew applies it (or OKs apply_migration) before 024 ships.
+-- Applied to the live DB on Nov 6, 2026 with apply_migration (Andrew OK), verified with a rolled-back anon test.
 
 -- "I'm not Baker" (handoff 024 §4): this device picked the wrong name. Frees this device's claim and relabels
 -- the scores it entered as that player since the claim, so they stop counting as the player's own entry
