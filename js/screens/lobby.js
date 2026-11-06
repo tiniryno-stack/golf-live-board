@@ -37,14 +37,6 @@ const row = (title, detail = '', { act = '', v = '', cls = '', chev = false, rig
   return act ? `<button class="row lb-row" data-act="${act}"${v ? ` data-v="${esc(v)}"` : ''}>${body}</button>` : `<div class="row lb-row">${body}</div>`;
 };
 
-/** The round card on the landing: date · course, the round, the game and the first start (never "tee"). */
-function roundCard(app, st) {
-  const ev = app.event;
-  return `<div class="card lb-card"><span class="lbl">${esc(shortDate(st.date))} · ${esc(ev.course?.shortName || ev.course?.name || '')}</span>
-    <b class="lb-name">${esc(ev.name)}</b>
-    <span class="soft lb-line">Team Ryder Cup · ${(ev.roster?.players || []).length} players · first start around ${esc(st.startLabel)}</span></div>`;
-}
-
 /** The amber-dot card for a change (8): the dot is the only amber; the text stays the normal colour. */
 const noticeCard = (st) => (st.notice ? `<div class="card lb-notice" role="status"><span class="lb-dot" aria-hidden="true"></span><span>${esc(st.notice.text)}</span></div>` : '');
 
@@ -81,29 +73,39 @@ function whoPlaying(app, st) {
 const comingUp = (st) => `<div class="lbl lb-k">Coming up</div>
   <div class="card lb-card lb-rows">${row('Teams', `After ${esc(st.hostName)}’s draft`)}${row('Your start time and matches', 'After the draft')}</div>`;
 
-/** 1 · the lobby landing for a plain link: Add to home screen first on iPhone Safari, else Find my name. */
-function landing(app, st) {
+/**
+ * Who invited you, said once (owner: the pre-join screens repeated the course and date four times). A round with no
+ * name of its own is named "Course · date" by Setup, so it adds nothing: then only the organizer is named.
+ */
+function invitedBy(app, st) {
   const ev = app.event;
+  const course = ev.course?.shortName || ev.course?.name || '';
+  const own = ev.name && !(course && String(ev.name).startsWith(course)) ? ev.name : '';
+  const host = st.hostName && st.hostName !== 'The organizer' ? `${st.hostName} invited you` : 'You’re invited';
+  return [own, host].filter(Boolean).map(esc).join(' · ');
+}
+/** The one line about the round: game, players, where, first start (never "tee"). */
+const roundLine = (app, st) => `Team Ryder Cup · ${(app.event.roster?.players || []).length} players · ${esc(app.event.course?.shortName || app.event.course?.name || '')} · first start ${esc(st.startLabel)}`;
+
+/** 1 · the lobby landing for a plain link: one headline, one round line, one primary (owner, Nov 6: less to read). */
+function landing(app, st) {
   const ios = safariPhone();
-  const day = dayName(st.date, app.now(), st.tz);
-  const see = hasHandicaps(ev.roster) ? 'your team, your start time and your handicap' : 'your team and your start time';
-  return `${head(`${esc(ev.name)} · ${esc(st.hostName)} invited you`, `You’re on the list for ${esc(day)}`,
-      ios ? `Add Golf Board to your home screen, then pick your name to see ${see}.` : `Pick your name to see ${see}.`)}
-    ${roundCard(app, st)}
+  return `${head(invitedBy(app, st), `You’re on the list for ${esc(dayName(st.date, app.now(), st.tz))}`, roundLine(app, st))}
     ${noticeCard(st)}
-    ${foot(`${note(ios ? `No account. About a minute. On ${esc(day)}, just tap the icon.` : 'No account. About a minute.')}
+    ${foot(`${note(ios ? 'Add Golf Board to your home screen to see your team, start time and handicap.' : 'Pick your name to see your team, start time and handicap.')}
       ${ios ? '<button class="btn primary nr-cta" data-act="lb-guide">Add Golf Board to my home screen</button>' : '<button class="btn primary nr-cta" data-act="lb-find">Find my name</button>'}
-      ${ios ? '<button class="lb-tiny" data-act="lb-find">or join in Safari</button>' : '<button class="btn ghost block lb-quiet" data-act="lb-follow">Not playing? Follow along</button>'}`)}`;
+      ${ios ? '<button class="lb-tiny" data-act="lb-find">or join in Safari</button>' : '<button class="lb-tiny" data-act="lb-follow">Not playing? Follow along</button>'}`)}`;
 }
 
 /** The handicap invite (#/e/CODE/hcp, every player has a handicap): one line, one primary. */
 function invite(app, st) {
   const ev = app.event;
   const n = (ev.roster?.players || []).length;
-  return `${head(`${esc(ev.name)} · ${esc(shortDate(st.date))}`, `${esc(st.hostName)} set your handicap`, `${n} players. Two teams. One cup.`)}
+  const who = st.hostName && st.hostName !== 'The organizer' ? st.hostName : 'Your organizer';
+  return `${head(invitedBy(app, st), `${esc(who)} set your handicap`, `${n} players. Two teams. One cup. ${esc(dayName(st.date, app.now(), st.tz))}.`)}
     ${noticeCard(st)}
     ${foot(`<button class="btn primary nr-cta" data-act="${safariPhone() ? 'lb-guide' : 'lb-find'}">Reveal my handicap</button>
-      <button class="btn ghost block lb-quiet" data-act="lb-follow">Not playing? Follow along</button>`)}`;
+      <button class="lb-tiny" data-act="lb-follow">Not playing? Follow along</button>`)}`;
 }
 
 /** Add to Home Screen, step 1 of 2 (iPhone Safari). The move link (with the round) is in the address bar while this
@@ -326,6 +328,9 @@ function runReveal(app) {
 }
 
 export default {
+  // Before you've joined (invite, landing, steps, the name list) the round's top bar only repeats what the screen says
+  // ("Watching · Bridlewood · Sat Nov 7"): hide it. Once you're in, the name pill and ⋯ come back.
+  hideTop(app) { return ['invite', 'landing', 'guide', 'who'].includes(app.lobbyView()); },
   mount(root, app) {
     const v = app.lobbyView();
     if (v === 'guide') {

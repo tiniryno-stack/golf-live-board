@@ -569,3 +569,13 @@ pass; show the move link only on the Add to Home Screen step itself; a practice 
 Light check after the owner's notes (red team 9 · frontend 9 · product QA 9, owner asked for one pass): no breaks. Added
 the "Not sure of one? Put your best guess…" hint on the handicap step. Known: the required step and the 3-minute timer
 live in memory, so a reload skips the step (Host → Handicaps still covers it) and restarts the timer.
+
+## P2.13 · Owner's note: the landing was too much to read (Nov 6) — built
+
+- The landing and the invite say the round once: kicker = the round's own name (only when it has one; Setup's default
+  "Course · date" name is left out) + "Andrew invited you" (or "You're invited" when the organizer's name isn't known),
+  headline, one round line ("Team Ryder Cup · 16 players · Bridlewood · first start 8:00"), one note, the primary and
+  the tiny link. The round card is gone.
+- The round's top bar ("Watching · course · date · ⋯") is hidden on the pre-join screens (invite, landing, steps, name
+  list); it comes back once you've joined.
+- Open for the designer (owner): the player side should lean into "you're invited" and use the screen better.
