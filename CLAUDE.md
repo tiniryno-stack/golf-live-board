@@ -60,7 +60,8 @@ after the first playtest; section 13 is the V2 backlog.
 - iPhone gives a home screen app (standalone, no Safari bars) **its own storage**, so it starts as
   a new phone. Home (iPhone Safari only) has **Add to Home Screen** → `db.moveLink()` puts this
   phone's keys in the link (`#move=<base64 JSON>`: `glb.device`, `me.*`, `admin.*`, `recent`,
-  `theme`, `brief.*`, `who.*`, `coach.*`, `seen.*` — not the queue or setup draft), iPhone saves
+  `theme`, `brief.*`, `who.*`, `coach.*`, `seen.*`, `owner`, `hasApp` — not the queue or setup draft; since 024 the
+  link can also carry a round code, so the home screen app opens straight into it), iPhone saves
   that link with the icon, and `db.moved` (runs in db.js before `deviceId`) copies them in on the
   home screen app's first open, then clears the link. Safari ignores `#move=` (a mis-sent link does
   nothing for a friend); a home screen app that already has a `glb.me.*` ignores it too. Closing the
@@ -181,6 +182,13 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
   when `ryderState(...).final` or the round is finalized; `ry-share` = share sheet (recap leaderboard image + result line).
 - **2v2 headlines (fixed Nov 3):** board-level headlines (lead change, comeback, final) rank `game.people`, not the
   six pairings; `h.unit` = 'people' | 'sides' marks it, `headlineColor(mine, h, me)`.
+- **Who you are (handoff 024, Nov 6):** a device has an **owner** (`db.owner`, `glb.owner`): set by the first real pick
+  after the "You're Sean Smith?" confirm (or a crew "Which one are you?"), never from a practice round, never by playing as
+  someone else; only "I'm not X" clears it. Opening a round = pure `joinPlan()` in `js/identity.js` (open / **auto** = claim the
+  owner when on the roster and free / ask = taken → one-tap Ask to join / pick = Who are you?, grouped by tee time → cart).
+  Crew `me` and `glb.people` follow the owner only. RPC `not_me` frees this device's claim and relabels the scores it
+  entered as that player (`updated_by` → `'<name> (picked by mistake)'`, so the own-entry rule no longer locks them).
+  App-only gate = `app.mustUseApp()` behind `FLAGS.appOnly` (off; screens in 025). Tests: `tests/identity024.test.mjs`.
 - **Small groups:** any roster that isn't 4 carts of 2 is a scorecard round (no teams).
   With 2–6 players, `settings.solo` = **split point** (`game.type 'splitPoint'`): 1 point a hole to the
   low net score, ties for low split it 1/k; level after 18 → **most outright wins** (`rankStandings`), still level = shared. Teams A–D are made in `soloView`, so Host can switch it on
@@ -255,7 +263,9 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
   separate. localStorage keys: `glb.device`, `glb.me.CODE`, `glb.admin.CODE`, `glb.recent`,
   `glb.queue.CODE`, `glb.seen.CODE`, `glb.alert.CODE.H`, `glb.switch.CODE.H`, `glb.brief.CODE`,
   `glb.who.CODE`, `glb.cardOpen.CODE`, `glb.coach.{tile5,oppcart3,prov2,pad1}`, `glb.setupDraft`,
-  `glb.theme`. Bump a coach key's suffix when its text changes so people see the new tip.
+  `glb.theme`, `glb.people`, `glb.crews`, `glb.crew`, (024) `glb.owner` (`{ personId, name }` = the one person this
+  device belongs to; `{ personId: null }` = cleared by "I'm not X"), `glb.hasApp` (Add to Home Screen was tapped).
+  Bump a coach key's suffix when its text changes so people see the new tip.
   `glb.recent` entries also carry Home's summary for each round (`recent.note`, from
   `home.roundSummary`: game, your name, live hole / place / points, or how it went).
 

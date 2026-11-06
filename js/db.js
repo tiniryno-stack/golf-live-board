@@ -3,6 +3,7 @@
 // organizer's audit log. No DOM here; app.js decides what to show.
 
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from './config.js';
+import { migratedOwner } from './identity.js';
 
 // ───────────────────────────────────────────── local storage (never throws)
 
@@ -77,15 +78,24 @@ export const STANDALONE = (() => {
   }
 })();
 
-const MOVE_KEYS = /^glb\.(device|recent|people|theme|crews|crew$|me\.|admin\.|brief\.|who\.|coach\.|seen\.)/;
+/** An iPhone or Android phone (not an iPad or a computer): the app-only gate's devices (024 §6).
+ *  Tests set `__GLB_PHONE` (or `__GLB_IOS`). */
+export function isPhone() {
+  if (typeof globalThis.__GLB_PHONE === 'boolean') return globalThis.__GLB_PHONE;
+  if (typeof globalThis.__GLB_IOS === 'boolean') return globalThis.__GLB_IOS;
+  try { return /iPhone|iPod|Android/.test(navigator.userAgent); } catch { return false; }
+}
+
+const MOVE_KEYS =/^glb\.(device|recent|people|theme|crews|crew$|owner$|hasApp$|me\.|admin\.|brief\.|who\.|coach\.|seen\.)/;
 const toB64 = (s) => btoa(String.fromCharCode(...new TextEncoder().encode(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const fromB64 = (s) => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0)));
 
-/** The link that carries this phone over: `#move=…` (device ID, rounds, crew, organizer PINs). */
-export function moveLink() {
+/** The link that carries this phone over: `#move=…` (device ID, owner, rounds, crew, organizer PINs).
+ *  `round` (024 §6) = a round code: the home screen app then opens straight into that round. */
+export function moveLink(round = null) {
   const keys = {};
   for (const k of local.keys()) if (MOVE_KEYS.test(k)) keys[k] = local.get(k);
-  return `#move=${toB64(JSON.stringify({ v: 1, keys }))}`;
+  return `#move=${toB64(JSON.stringify({ v: 1, keys, ...(round ? { round } : {}) }))}`;
 }
 
 /** On load: take a `#move=` link (home screen app only, and only if it isn't set up yet), then clear it. */
@@ -95,8 +105,11 @@ export const moved = (() => {
     if (!m) return false;
     history.replaceState(null, '', `${location.pathname}${location.search}#/`);
     if (!STANDALONE) return false;
-    if (local.keys().some((k) => k.startsWith('glb.me.'))) return false;
     const data = JSON.parse(fromB64(m[1]));
+    // 024 §6: a move link made for one round opens the home screen app straight into it.
+    const round = typeof data?.round === 'string' && /^[A-Z0-9]{4,8}$/.test(data.round) ? data.round : null;
+    if (round) history.replaceState(null, '', `${location.pathname}${location.search}#/e/${round}`);
+    if (local.keys().some((k) => k.startsWith('glb.me.'))) return false;
     if (data?.v !== 1 || !data.keys || typeof data.keys !== 'object') return false;
     let n = 0;
     for (const [k, v] of Object.entries(data.keys)) {
@@ -220,12 +233,53 @@ export const people = {
 };
 
 /**
+ * The owner (024 §2): the one person this device belongs to, glb.owner = { personId, name }.
+ * Set on the first real pick (Yes, that's me), never from a practice round, never by playing as
+ * someone else; only "I'm not <name>" clears it. A cleared owner is stored as { personId: null }
+ * so the one-time migration below never brings it back.
+ */
+export const owner = {
+  get() {
+    const o = local.get('glb.owner');
+    return o?.personId ? o : null;
+  },
+  set(personId, name = null) {
+    if (!personId) return;
+    local.set('glb.owner', { personId, name: name || null });
+    people.add(personId); // Home finds this person's rounds on a new phone
+  },
+  /** Fill in the name the first time a round shows it (a migrated owner only has the personId). */
+  name(personId, name) {
+    const o = owner.get();
+    if (o && o.personId === personId && name && o.name !== name) local.set('glb.owner', { ...o, name });
+  },
+  clear() {
+    const o = owner.get();
+    local.set('glb.owner', { personId: null });
+    if (!o) return;
+    // Forget them everywhere this phone thought they were "me", so nothing puts them back.
+    local.set('glb.people', people.all().filter((id) => id !== o.personId));
+    const list = local.get('glb.crews', []);
+    if (list.some((c) => c.me === o.personId)) crews.save(list.map((c) => (c.me === o.personId ? { ...c, me: null } : c)));
+  },
+};
+
+// First run of 024 on a phone that played before: the owner is the crew `me`, else the first person
+// it played as. Runs only while glb.owner has never been written (after a #move= link is taken in).
+(() => {
+  if (local.get('glb.owner') !== null) return; // missing key → null; a cleared owner is an object
+  const pid = migratedOwner({ crews: local.get('glb.crews', []), people: people.all() });
+  if (pid) local.set('glb.owner', { personId: pid, name: null });
+})();
+
+/**
  * Rounds you're in that this phone has never opened (a new phone, or the home screen app's own storage):
- * every event whose roster has one of your personIds. Added to Recent rounds in date order, newest first.
- * Returns how many were added.
+ * every event whose roster has the owner (024: only the owner; glb.people while there's no owner yet).
+ * Added to Recent rounds in date order, newest first. Returns how many were added.
  */
 export async function syncMyRounds() {
-  const ids = people.all();
+  const o = owner.get();
+  const ids = o ? [o.personId] : people.all();
   if (!ids.length) return 0;
   const found = new Map();
   for (const personId of ids) {
@@ -350,6 +404,7 @@ export const api = {
   whoami: (code) => rpc('whoami', { p_code: code, p_device_id: deviceId }),
   claimPlayer: (code, playerId) => rpc('claim_player', { p_code: code, p_player_id: playerId, p_device_id: deviceId }),
   leaveRound: (code) => rpc('leave_round', { p_code: code, p_device_id: deviceId }),
+  notMe: (code) => rpc('not_me', { p_code: code, p_device_id: deviceId }), // 024 §4: "I'm not Baker"
   requestJoin: (code, playerId) => rpc('request_join', { p_code: code, p_player_id: playerId, p_device_id: deviceId }),
   approveJoin: (code, requestId, adminPin = null) =>
     rpc('approve_join', { p_code: code, p_approver_device_id: deviceId, p_request_id: requestId, p_admin_pin: adminPin }),

@@ -174,7 +174,7 @@ export function createBackend() {
       if (mine?.player_id === p_player_id) return { ok: true, player_id: p_player_id };
       if (mine) return no('already_playing', { player_id: mine.player_id });
       if (t.claims.some((c) => c.event_id === e.id && c.player_id === p_player_id)) return no('taken');
-      t.claims.push({ event_id: e.id, player_id: p_player_id, device_id: p_device_id });
+      t.claims.push({ event_id: e.id, player_id: p_player_id, device_id: p_device_id, claimed_at: now() });
       log(e, p.name, `Joined as ${p.name}`);
       return { ok: true, player_id: p_player_id };
     },
@@ -186,6 +186,25 @@ export function createBackend() {
       t.claims = t.claims.filter((x) => x !== c);
       log(e, pname(e, c.player_id), `${pname(e, c.player_id)}'s phone left the round`);
       return { ok: true, player_id: c.player_id };
+    },
+    // 024 §4 "I'm not Baker" (mirrors not_me in schema.sql): free this device's claim, relabel that player's
+    // own-entry scores entered since the claim so they stop counting as theirs.
+    not_me({ p_code, p_device_id }) {
+      const e = ev(p_code);
+      if (!e) return no('not_found');
+      const c = claimOf(e, p_device_id);
+      if (!c) return { ok: true, player_id: null, relabeled: 0 };
+      t.claims = t.claims.filter((x) => x !== c);
+      const name = pname(e, c.player_id);
+      let n = 0;
+      for (const s of t.scores) {
+        if (s.event_id === e.id && s.player_id === c.player_id && s.updated_by === name && (!c.claimed_at || s.updated_at >= c.claimed_at)) {
+          s.updated_by = `${name} (picked by mistake)`;
+          n++;
+        }
+      }
+      log(e, name, `A phone picked ${name} by mistake and let go${n ? ` (${n} score${n === 1 ? '' : 's'} no longer locked as theirs)` : ''}`);
+      return { ok: true, player_id: c.player_id, relabeled: n };
     },
     request_join({ p_code, p_player_id, p_device_id }) {
       const e = ev(p_code);
@@ -216,7 +235,7 @@ export function createBackend() {
       if (!actor) return no('not_your_foursome');
       const dev = t.jdev.get(r.id);
       t.claims = t.claims.filter((c) => !(c.event_id === e.id && (c.player_id === r.player_id || c.device_id === dev)));
-      t.claims.push({ event_id: e.id, player_id: r.player_id, device_id: dev });
+      t.claims.push({ event_id: e.id, player_id: r.player_id, device_id: dev, claimed_at: now() });
       r.status = 'approved';
       r.approved_by = actor;
       log(e, actor, `Let in ${pname(e, r.player_id)}'s new phone`);
