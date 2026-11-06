@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Enter rewards prototype</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400..800&amp;family=Geist+Mono:wght@500..700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#a7acb4}a:hover{color:#f4f5f7}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.mk{position:relative;width:38px;height:38px;display:grid;place-items:center;font-family:'Geist Mono',monospace;font-weight:700;font-size:22px}
+.ring{position:absolute;inset:0}
+.ring.c{border-radius:50%;box-shadow:inset 0 0 0 1.5px currentColor}
+.ring.cc{border-radius:50%;box-shadow:inset 0 0 0 1.5px currentColor,inset 0 0 0 4px var(--pb),inset 0 0 0 5.5px currentColor}
+.ring.s{border-radius:4px;box-shadow:inset 0 0 0 1.5px currentColor}
+.ring.d{border-radius:4px;box-shadow:inset 0 0 0 1.5px currentColor,inset 0 0 0 4px var(--pb),inset 0 0 0 5.5px currentColor}
+.pad{height:64px;border-radius:16px;display:grid;place-items:center;position:relative;--pb:#0a0b0d;color:#f4f5f7}
+.pad .ring{color:#a7acb4}
+.pad.sel{background:#f4f5f7;color:#0a0b0d;--pb:#f4f5f7}
+.pad.sel .ring{color:#0a0b0d}
+.pad.sel.dbl .mk,.pad.sel.dbl .ring{color:#b42318}
+.ripple{position:absolute;inset:0;margin:auto;width:56px;height:56px;border-radius:50%;box-shadow:0 0 0 2px #f4f5f7;opacity:0;pointer-events:none}
+.word{font-size:15px;font-weight:700;color:#f4f5f7;opacity:0}
+.word.dbl{color:#ff6b6b}
+.word.quiet{color:#a7acb4}
+.cell{height:64px;border-radius:16px;display:grid;place-items:center;--pb:#15171b;color:#f4f5f7}
+.cell .ring{color:#a7acb4}
+.cell.sel{background:#f4f5f7;color:#0a0b0d;--pb:#f4f5f7}
+.cell.sel .ring{color:#0a0b0d}
+.word.big{font-size:17px}
+.word.big.a0,.word.big.a1{animation-duration:3s!important}
+@keyframes bumpA{0%{transform:scale(.92)}55%{transform:scale(1.06)}100%{transform:scale(1)}}
+@keyframes bumpB{0%{transform:scale(.92)}55%{transform:scale(1.06)}100%{transform:scale(1)}}
+@keyframes ringA{from{transform:scale(.6);opacity:0}to{transform:none;opacity:1}}
+@keyframes ringB{from{transform:scale(.6);opacity:0}to{transform:none;opacity:1}}
+@keyframes stampA{0%{transform:scale(1.45) rotate(-4deg);opacity:.35}55%{transform:scale(.94) rotate(1deg);opacity:1}100%{transform:none;opacity:1}}
+@keyframes stampB{0%{transform:scale(1.45) rotate(-4deg);opacity:.35}55%{transform:scale(.94) rotate(1deg);opacity:1}100%{transform:none;opacity:1}}
+@keyframes wordA{0%{opacity:0;transform:translateY(6px)}15%{opacity:1;transform:none}75%{opacity:1}100%{opacity:0}}
+@keyframes wordB{0%{opacity:0;transform:translateY(6px)}15%{opacity:1;transform:none}75%{opacity:1}100%{opacity:0}}
+@keyframes rippleA{0%{opacity:.55;transform:scale(.7)}100%{opacity:0;transform:scale(1.35)}}
+@keyframes rippleB{0%{opacity:.55;transform:scale(.7)}100%{opacity:0;transform:scale(1.35)}}
+@keyframes vsout{0%{opacity:1}12%{opacity:0}85%{opacity:0}100%{opacity:1}}
+.vsout{animation:vsout 2.6s .45s ease-out both}
+@keyframes roll{from{transform:translateY(0)}to{transform:translateY(-20px)}}
+@keyframes wonin{0%{opacity:0;transform:translateX(8px)}20%{opacity:1;transform:none}80%{opacity:1}100%{opacity:0}}
+@keyframes shine{from{transform:translateX(-120%)}to{transform:translateX(260%)}}
+.pad.sel.a0{animation:bumpA .22s cubic-bezier(.2,.8,.2,1)}
+.pad.sel.a1{animation:bumpB .22s cubic-bezier(.2,.8,.2,1)}
+.pad.sel.a0 .ring{animation:ringA .3s .05s cubic-bezier(.2,.8,.2,1) both}
+.pad.sel.a1 .ring{animation:ringB .3s .05s cubic-bezier(.2,.8,.2,1) both}
+.pad.sel.dbl.stamp.a0 .ring{animation:stampA .16s cubic-bezier(.2,.8,.2,1) both}
+.pad.sel.dbl.stamp.a1 .ring{animation:stampB .16s cubic-bezier(.2,.8,.2,1) both}
+.nextbump{animation:bumpA .22s .05s cubic-bezier(.2,.8,.2,1)}
+.word.a0{animation:wordA 1.6s ease-out both}
+.word.a1{animation:wordB 1.6s ease-out both}
+.ripple.a0{animation:rippleA .45s .1s ease-out both}
+.ripple.a1{animation:rippleB .45s .1s ease-out both}
+.ripple.r2{animation-delay:.25s!important}
+.rollon{animation:roll .3s .2s cubic-bezier(.3,.7,.2,1) both}
+.wonon{animation:wonin 2.4s .5s ease-out both}
+.shineon{animation:shine .45s .1s ease-out both}
+@media (prefers-reduced-motion: reduce){*{animation:none!important}.word.a0,.word.a1{opacity:1}}
+</style>
+</helmet>
+<div style="width: 393px; height: 659px; position: relative; overflow: hidden; background: #0a0b0d; color: #f4f5f7; font-family: Geist, system-ui, sans-serif">
+  <div style="padding: 6px 4px 0 16px; display: flex; align-items: center; height: 54px">
+    <h1 style="margin: 0; flex: 1; font-size: 24px; line-height: 28px; font-weight: 700; letter-spacing: -0.5px">Hole {{hole}}<span style="font-size: 17px; font-weight: 500; color: #a7acb4; margin-left: 8px; letter-spacing: 0">Par {{par}}</span></h1>
+    <button aria-label="Previous hole" style="width: 48px; height: 48px; display: grid; place-items: center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></button>
+    <button aria-label="Next hole" style="width: 48px; height: 48px; display: grid; place-items: center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></button>
+    <button aria-label="Round menu" style="width: 48px; height: 48px; display: grid; place-items: center; color: #a7acb4"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2"></circle><circle cx="12" cy="12" r="2"></circle><circle cx="19" cy="12" r="2"></circle></svg></button>
+  </div>
+  <div style="padding: 0 16px">
+    <div role="group" aria-label="{{greenAria}}" style="display: flex; align-items: center; gap: 14px; height: 92px; margin-top: 6px; padding: 0 14px; border-radius: 22px; background: #15171b">
+      <svg width="62" height="64" viewBox="0 0 62 64" aria-hidden="true"><ellipse cx="31" cy="32" rx="27" ry="16" transform="rotate(20 31 32)" fill="#2a2e35" stroke="#a7acb4" stroke-width="1.5"></ellipse><circle cx="31" cy="32" r="3" fill="#f4f5f7"></circle></svg>
+      <div style="flex: 1; display: grid; grid-template-columns: 1fr 1.35fr 1fr; align-items: center; text-align: center; font-family: 'Geist Mono', monospace">
+        <div style="display: flex; flex-direction: column; gap: 2px"><b style="font-size: 17px; font-weight: 600; color: #a7acb4">{{front}}</b><span style="font-size: 12px; font-weight: 600; letter-spacing: 1px; color: #a7acb4">FRONT</span></div>
+        <div style="display: flex; flex-direction: column; gap: 2px"><b style="font-size: 32px; font-weight: 700; letter-spacing: -1.5px">{{mid}}</b><span style="font-size: 12px; font-weight: 600; letter-spacing: 1px">MIDDLE</span></div>
+        <div style="display: flex; flex-direction: column; gap: 2px"><b style="font-size: 17px; font-weight: 600; color: #a7acb4">{{back}}</b><span style="font-size: 12px; font-weight: 600; letter-spacing: 1px; color: #a7acb4">BACK</span></div>
+      </div>
+    </div>
+    <div style="height: 36px; display: flex; align-items: center; justify-content: space-between; font-size: 15px; font-weight: 500; color: #a7acb4">
+      <span style="color: #f4f5f7; font-weight: 600">Andrew + Sean</span>
+      <span style="display: flex; align-items: center; gap: 12px">
+        <span style="display: inline-flex; overflow: hidden; height: 20px; color: {{upInk}}; font-family: 'Geist Mono', monospace; font-weight: 700"><span class="{{rollCls}}" style="display: flex; flex-direction: column; line-height: 20px"><span>{{upNow}}</span><span>{{upNext}}</span></span></span>
+        <span style="display: grid">
+          <span class="{{vsCls}}" style="grid-area: 1 / 1">vs Mike + Justin</span>
+          <sc-if value="{{wonNow}}" hint-placeholder-val="{{false}}"><span class="wonon" style="grid-area: 1 / 1; color: {{ptsInk}}; font-size: 15px; font-weight: 600; opacity: 0">{{ptsTxt}}</span></sc-if>
+        </span>
+      </span>
+    </div>
+    <div style="position: relative">
+    <span aria-hidden="true" style="position: absolute; left: -10px; top: 12px; bottom: 8px; width: 3px; border-radius: 2px; background: #3ddc84"></span>
+    <sc-for list="{{players}}" as="p" hint-placeholder-count="2">
+      <div style="padding: 8px 0 4px; border-top: 1px solid rgba(255,255,255,.05)">
+        <div style="height: 24px; display: flex; align-items: center; gap: 8px; margin-bottom: 2px">
+          <b style="font-size: 17px; font-weight: 600">{{p.name}}</b>
+          <sc-if value="{{p.stroke}}" hint-placeholder-val="{{false}}"><span style="font-size: 13px; font-weight: 500; color: #a7acb4">{{p.strokeText}}</span></sc-if>
+          <sc-if value="{{p.word}}" hint-placeholder-val="{{false}}"><span class="{{p.wordCls}}">{{p.word}}</span></sc-if>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) 56px; gap: 6px">
+          <sc-for list="{{p.pads}}" as="d" hint-placeholder-count="5">
+            <button class="{{d.cls}}" aria-label="{{d.aria}}" onClick="{{d.pick}}">
+              <sc-if value="{{d.isMore}}" hint-placeholder-val="{{false}}"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2"></circle><circle cx="12" cy="12" r="2"></circle><circle cx="19" cy="12" r="2"></circle></svg></sc-if>
+              <sc-if value="{{d.isNum}}" hint-placeholder-val="{{true}}"><span class="mk"><span class="{{d.ringCls}}"></span>{{d.n}}</span></sc-if>
+              <sc-if value="{{d.ripple}}" hint-placeholder-val="{{false}}"><span class="{{d.rippleCls}}"></span><span class="{{d.ripple2Cls}}"></span></sc-if>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+    </sc-for>
+    </div>
+    <button onClick="{{enterThem}}" style="height: 60px; width: 100%; border-top: 1px solid rgba(255,255,255,.05); display: flex; align-items: center; gap: 14px; text-align: left; color: #f4f5f7">
+      <span style="flex: 1; display: flex; gap: 18px; align-items: center; font-size: 17px; font-weight: 600"><span>Mike <span style="font-family: 'Geist Mono', monospace; color: #a7acb4">{{samText}}</span></span><span>Justin <span style="font-family: 'Geist Mono', monospace; color: #a7acb4">{{jakeText}}</span></span></span>
+      <span style="font-size: 15px; font-weight: 600">{{themVerb}} ›</span>
+    </button>
+  </div>
+  <div style="position: absolute; left: 16px; right: 16px; bottom: 104px">
+    <button class="{{nextCls}}" onClick="{{nextHole}}" style="height: 60px; width: 100%; border-radius: 16px; font-size: 17px; font-weight: 600; position: relative; overflow: hidden; background: {{nextBg}}; color: {{nextInk}}">
+      <span style="position: relative">{{nextLabel}}</span>
+    </button>
+  </div>
+  <sc-if value="{{sheetOpen}}" hint-placeholder-val="{{false}}">
+    <div onClick="{{closeSheet}}" style="position: absolute; inset: 0; background: rgba(0,0,0,0.6); z-index: 5"></div>
+    <div role="dialog" aria-label="{{sheetTitle}}" style="position: absolute; left: 0; right: 0; bottom: 0; z-index: 6; background: #15171b; border-radius: 28px 28px 0 0; padding: 10px 16px 20px; box-shadow: 0 -8px 32px rgba(0,0,0,0.5)">
+      <div style="width: 36px; height: 5px; border-radius: 3px; background: #2a2e35; margin: 0 auto 14px"></div>
+      <h2 style="margin: 0 0 14px; font-size: 24px; line-height: 28px; font-weight: 700; letter-spacing: -0.5px">{{sheetTitle}}</h2>
+      <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) 56px; gap: 6px">
+        <sc-for list="{{sheetCells}}" as="c" hint-placeholder-count="6">
+          <button class="{{c.cls}}" aria-label="{{c.aria}}" onClick="{{c.pick}}"><span class="mk"><span class="{{c.ringCls}}"></span>{{c.n}}</span></button>
+        </sc-for>
+      </div>
+      <button onClick="{{pickedUp}}" style="margin-top: 8px; width: 100%; height: 56px; border-top: 1px solid #2a2e35; font-size: 17px; font-weight: 600; text-align: left">Picked up <span style="color: #a7acb4; font-weight: 500; font-size: 15px">· counts as {{maxScore}}</span></button>
+      <button onClick="{{clearScore}}" style="width: 100%; height: 56px; border-top: 1px solid #2a2e35; font-size: 17px; font-weight: 600; text-align: left; color: #a7acb4">Clear score</button>
+    </div>
+  </sc-if>
+  <nav aria-label="Round" style="position: absolute; left: 16px; right: 16px; bottom: 24px; height: 64px; box-sizing: border-box; border-radius: 24px; background: rgba(21,23,27,0.92); box-shadow: inset 0 1px 0 rgba(255,255,255,0.10), 0 0 28px rgba(255,255,255,0.06), inset 0 0 0 1px rgba(255,255,255,0.09); display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 6px">
+    <a href="#enter" aria-label="Enter" style="display: grid; place-items: center; border-radius: 20px; background: #2a2e35; color: #f4f5f7"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 21V4h11l-2 4 2 4H6"></path></svg></a>
+    <a href="#matches" aria-label="Matches" style="display: grid; place-items: center; color: #a7acb4"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="8" cy="12" r="4"></circle><circle cx="16" cy="12" r="4"></circle></svg></a>
+    <a href="#board" aria-label="Board" style="display: grid; place-items: center; color: #a7acb4"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h11M4 17h7"></path></svg></a>
+    <a href="#card" aria-label="Scorecard" style="display: grid; place-items: center; color: #a7acb4"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"></rect><path d="M4 10h16M4 15h16M10 4v16M15 4v16"></path></svg></a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":393,"height":659}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { a: null, b: null, c: null, d: null, last: null, tick: 0, up: 2, hi: 0, sheet: null };
+  }
+  renderVals() {
+    const st = this.state;
+    const HOLES = [
+      { n: 11, par: 3, f: 140, m: 158, b: 176 },
+      { n: 12, par: 4, f: 401, m: 412, b: 424 },
+      { n: 13, par: 5, f: 480, m: 494, b: 508 },
+    ];
+    const H = HOLES[st.hi], par = H.par, max = 2 * par;
+    const kind = (s) => { const d = s - par; return d <= -2 ? 'cc' : d === -1 ? 'c' : d === 0 ? 'p' : d === 1 ? 's' : 'd'; };
+    const ph = 'a' + (st.tick % 2);
+    const reward = (s, stroke) => {
+      const net = stroke ? s - 1 : s, d = net - par;
+      const w = d <= -3 ? (s === 1 ? 'Ace' : 'Albatross') : d === -2 ? (s === 1 ? 'Ace' : 'Eagle') : d === -1 ? 'Birdie' : d === 0 ? 'Par' : d === 1 ? 'Bogey' : d === 2 ? 'Double' : d === 3 ? 'Triple' : d === 4 ? 'Quad' : '+' + d;
+      const isNet = stroke && net !== s;
+      return { txt: isNet ? 'Net ' + w.toLowerCase() : w, cls: d >= 2 ? 'dbl' : d <= -2 ? 'big' : d >= 0 ? 'quiet' : '' };
+    };
+    const strokeOf = { a: false, b: true };
+    const set = (k, s) => this.setState({ [k]: s, last: s == null ? null : k, tick: st.tick + 1, sheet: null });
+    const pick = (k, s) => () => set(k, s);
+    const mkPads = (k, stroke) => {
+      const sel = st[k];
+      const win = [par - 1, par, par + 1, par + 2];
+      const out = sel && win.indexOf(sel) < 0;
+      const cells = win.map((s) => ({ s }));
+      cells.push(out ? { s: sel, reopen: true } : { more: true });
+      return cells.map((c) => {
+        if (c.more) return { isMore: true, isNum: false, ripple: false, cls: 'pad', aria: 'Other scores', pick: () => this.setState({ sheet: k }) };
+        const on = c.s === sel, an = on && st.last === k, kd = kind(c.s);
+        return {
+          isMore: false, isNum: true, n: c.s, aria: String(c.s),
+          cls: 'pad' + (on ? ' sel' : '') + (an ? ' ' + ph : '') + (kd === 'd' ? ' dbl' : '') + (((stroke ? c.s - 1 : c.s) - par) >= 2 ? ' stamp' : ''),
+          ringCls: kd === 'p' ? '' : 'ring ' + kd,
+          ripple: an && kd === 'cc', rippleCls: 'ripple ' + ph, ripple2Cls: 'ripple r2 ' + ph,
+          pick: c.reopen ? () => this.setState({ sheet: k }) : pick(k, c.s),
+        };
+      });
+    };
+    const mkPlayer = (k, name, stroke) => {
+      const s = st[k];
+      const r = s && st.last === k ? reward(s, stroke) : null;
+      return {
+        name, stroke, strokeText: '1 stroke' + (s && !r ? ' · net ' + (s - 1) : ''),
+        word: r ? r.txt : '', wordCls: r ? 'word ' + r.cls + ' ' + ph : 'word',
+        pads: mkPads(k, stroke),
+      };
+    };
+    const left = ['a', 'b', 'c', 'd'].filter((k) => !st[k]).length;
+    const allIn = left === 0, mineIn = st.a && st.b;
+    // Partner Rider Cup hole points: low ball 1 + low total 1, a tie is a half each
+    let pts = null;
+    if (allIn) {
+      const ua = st.a, ub = st.b - 1;
+      const lbU = Math.min(ua, ub), lbT = Math.min(st.c, st.d), tU = ua + ub, tT = st.c + st.d;
+      pts = (lbU < lbT ? 1 : lbU === lbT ? 0.5 : 0) + (tU < tT ? 1 : tU === tT ? 0.5 : 0);
+    }
+    const fmt = (x) => { const w = Math.floor(x), h = x - w > 0; return ((w ? String(w) : '') + (h ? '½' : '')) || '0'; };
+    const lab = (n) => n > 0 ? n + ' UP' : n < 0 ? (-n) + ' DN' : 'AS';
+    const newUp = pts == null ? st.up : st.up + 2 * pts - 2;
+    const moved = allIn && !!st.last && newUp !== st.up;
+    const sk = st.sheet;
+    const sheetCells = [];
+    for (let s = 1; s <= max; s++) {
+      const kd = kind(s);
+      sheetCells.push({ n: s, aria: String(s), cls: 'cell' + (st[sk] === s ? ' sel' : ''), ringCls: kd === 'p' ? '' : 'ring ' + kd, pick: pick(sk, s) });
+    }
+    return {
+      hole: H.n, par, front: H.f, mid: H.m, back: H.b, greenAria: 'Green: front ' + H.f + ', middle ' + H.m + ', back ' + H.b,
+      players: [mkPlayer('a', 'Andrew B.', false), mkPlayer('b', 'Sean', true)],
+      samText: st.c || '–', jakeText: st.d || '–', themVerb: st.c && st.d ? 'Edit' : 'Enter',
+      enterThem: () => this.setState({ c: par + 2, d: par, last: 'c', tick: st.tick + 1 }),
+      allIn, wonNow: allIn && !!st.last,
+      ptsTxt: pts == null ? '' : pts === 0 ? 'No points' : '+' + fmt(pts) + (pts <= 1 ? ' point' : ' points'),
+      ptsInk: pts != null && pts >= 1.5 ? '#f4f5f7' : '#a7acb4',
+      vsCls: allIn && st.last ? 'vsout' : '',
+      upNow: lab(st.up), upNext: lab(newUp), rollCls: moved ? 'rollon' : '', upInk: (moved ? newUp : st.up) > 0 ? '#3ddc84' : '#a7acb4',
+      nextCls: allIn && st.last ? 'nextbump' : '',
+      nextBg: allIn ? '#f4f5f7' : '#15171b', nextInk: allIn ? '#0a0b0d' : '#a7acb4',
+      nextLabel: allIn ? 'Next hole' : mineIn ? 'Waiting on Mike + Justin' : 'Next hole · ' + left + ' to go',
+      nextHole: () => { if (allIn) this.setState({ a: null, b: null, c: null, d: null, last: null, sheet: null, up: newUp, hi: (st.hi + 1) % HOLES.length }); },
+      sheetOpen: !!sk, sheetTitle: (sk === 'a' ? 'Andrew B.' : 'Sean') + ' · Hole ' + H.n, sheetCells, maxScore: max,
+      closeSheet: () => this.setState({ sheet: null }),
+      pickedUp: () => set(sk, max),
+      clearScore: () => set(sk, null),
+    };
+  }
+}
+</script>
+</body>
+</html>
