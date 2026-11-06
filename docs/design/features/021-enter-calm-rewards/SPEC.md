@@ -1,6 +1,6 @@
 # 021 · Enter: the calm screen + rewarding score entry
 
-Status: handed off (not built)
+Status: built in 1becaa2
 
 A redesign of the team Enter screen for the games that use `ryderEnterView` (Partner “Rider” Cup and Team Ryder Cup), done through a design council (three reviewers + a red team, 4 passes, final scores 9 · 9 · 9 and red team 8). Two parts:
 

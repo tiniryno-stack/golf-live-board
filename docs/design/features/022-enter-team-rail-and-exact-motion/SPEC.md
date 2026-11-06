@@ -1,6 +1,6 @@
 # 022 · Enter: team rail, named match line, and the exact motion
 
-Status: handed off (not built)
+Status: built in 1becaa2
 
 **Changes 021** (build 021 and this together; where they differ, this wins). The owner approved the 021 prototype “to a tee” and asked for three things before shipping: a subtle sign of which players are your team, the opponents' names instead of a cart name, and one touch that makes the screen feel a little less bare. A council round compared four versions (`screenshots/explored/team-signal-four-versions.png`); the green rail won (8.5 · 8.5 · 7.5, Product 7). A section label and a two-sided match bar both brought clutter back and were dropped.
 
