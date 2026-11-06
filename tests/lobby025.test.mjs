@@ -566,6 +566,12 @@ test('rev · lobbyView precedence (table) and Home at carts', () => {
   assert.deepEqual(L.revealCtx(hst, hro, { me: 'p10', seenPid: 'p10' }), { hasHcp: true, seenHcp: true });
   assert.deepEqual(L.revealCtx(hst, lobbyEvent().roster, { me: 'p10' }), { hasHcp: false, seenHcp: false }, 'no handicap');
   assert.deepEqual(L.revealCtx(hst, hro, {}), { hasHcp: false, seenHcp: false });
+  // The guide's "Open in Safari first" line: only off Safari.
+  const SAFARI = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1';
+  assert.equal(L.notSafari(SAFARI), false);
+  assert.equal(L.notSafari('Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148'), true, 'an app web view (Partiful)');
+  assert.equal(L.notSafari(SAFARI.replace('Version/18.0', 'CriOS/130.0')), true, 'Chrome on iPhone');
+  assert.equal(L.notSafari(`${SAFARI} Instagram 300.0`), true);
   // Old rounds: no lobby → no view, whatever the phone says.
   const old = { ...lob, settings: { ...lob.settings, lobby: null } };
   assert.equal(L.lobbyView(L.lobbyState(old, wed), { ...me, invite: true, hcpFlow: true }), null);

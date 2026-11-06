@@ -5,12 +5,11 @@
 
 import { esc, icon } from '../ui.js';
 import * as db from '../db.js';
-import { joinList, myLobby, myCart, dayName, shortDate, hostLine, clock12, wallClock, hasHandicaps, hcpOf, rankLine, revealFrame } from '../lobby.js';
+import { notSafari, joinList, myLobby, myCart, dayName, shortDate, hostLine, clock12, wallClock, hasHandicaps, hcpOf, rankLine, revealFrame } from '../lobby.js';
 import { playOrder } from '../scoring.js';
 
 const safariPhone = () => !db.STANDALONE && db.isIOS();
-/** An app's own browser (Partiful, Instagram…), not Safari: iOS web views leave "Safari/" out of the user agent. */
-const inAppBrowser = () => { try { return !/Safari\//.test(navigator.userAgent) || /CriOS|FxiOS|FBAN|FBAV|Instagram/.test(navigator.userAgent); } catch { return false; } };
+const inAppBrowser = () => { try { return notSafari(navigator.userAgent); } catch { return false; } };
 const first = (p) => p?.firstName || String(p?.name || '').split(' ')[0];
 
 /** Players' counts ("3 haven't added Golf Board"): numbers only, refreshed at most once a minute. */
@@ -119,7 +118,7 @@ function guide(app, st) {
       <li><span class="hs-n">3</span><span>Tap <b>Add to Home Screen</b>, then <b>Add</b></span></li>
       <li><span class="hs-n">4</span><span>Tap the new <b>Golf Board</b> icon</span></li>
     </ol>
-    <p class="meta lb-note">${inAppBrowser() ? 'In Partiful or another app? Tap <b>•••</b> → <b>Open in Safari</b> first. ' : ''}Already have Golf Board? Open it and tap <b>Join with code</b> · <b class="mono">${esc(app.code)}</b>.</p>
+    <p class="meta lb-note">${inAppBrowser() ? 'Not in Safari (Partiful, another app)? Tap <b>•••</b> → <b>Open in Safari</b> first. ' : ''}Already have Golf Board? Open it and tap <b>Join with code</b> · <b class="mono">${esc(app.code)}</b>.</p>
     <p class="meta lb-note">This link signs in as you: use Add to Home Screen only, don’t send it.</p>
     ${foot(`<button class="btn ghost block lb-quiet lb-left" data-act="lb-here">${hcp ? 'Can’t add it? Reveal it here' : 'Can’t add it? Join here'}</button>`)}
     <div class="lb-point" aria-hidden="true"><span class="lbl">Start here</span>${icon('fwd', 22)}</div>`;

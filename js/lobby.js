@@ -634,3 +634,7 @@ export function inviteText(name, day, withHcp, who = '') {
   const lead = who ? `${who}, you’re on the list` : 'You’re on the list';
   return withHcp ? `${lead} for ${name} on ${day}. Tap this to reveal your handicap.` : `${lead} for ${name} on ${day}. Tap to join.`;
 }
+
+/** The guide's steps are Safari's: is this iPhone browser something else (an app's own web view such as Partiful's,
+ *  which leaves "Safari/" out of its user agent, or Chrome / Firefox / Facebook / Instagram)? */
+export const notSafari = (ua) => !/Safari\//.test(String(ua || '')) || /CriOS|FxiOS|FBAN|FBAV|Instagram/.test(String(ua || ''));

@@ -151,7 +151,7 @@ export function hostLobbyView(app) {
       ${st.stage === 'lobby' || st.stage === 'carts' ? row('Carts', st.paired ? '8 paired' : 'not paired yet', 'lh-carts') : ''}
       ${st.stage === 'teams' ? row('Teams', 'redo the draft', 'lh-draft') : ''}
       ${row('Players', st.stage === 'off' ? `${n} players` : 'replace a player', 'lh-players')}
-      ${st.stage === 'off' ? '' : row('Handicaps', L.handicapCount(ev.roster) < n ? `${L.handicapCount(ev.roster)} of ${n} set · all ${n} for the handicap invite` : `all ${n} set`, 'lh-players')}
+      ${st.stage === 'off' ? '' : row('Handicaps', L.handicapCount(ev.roster) < n ? `${L.handicapCount(ev.roster)} of ${n} set · invite needs all ${n}` : `all ${n} set`, 'lh-players')}
       ${row('Co-host', esc(cohost), 'lh-cohost')}
       ${row('Round', st.stage === 'off' ? 'bring it back, date' : 'date, course, call it off', 'lh-options')}
     </div>

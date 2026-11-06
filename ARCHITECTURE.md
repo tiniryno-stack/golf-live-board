@@ -828,7 +828,8 @@ Still open: nothing blocking. Design direction (section 9) is final.
   list → confirm → **reveal** (`lobby.revealFrame`, redraw-safe; starts once no sheet is open; `glb.seen.CODE.hcp` =
   the player id; none for the organizer `lobby.hostId`) → the lobby with **Your handicap**, **Your cart** (stage carts)
   and Who's playing · handicap. See you Saturday is gone. `db.moved`: a Safari reload of a move link returns to its
-  round only when it's in this phone's Recent rounds. Plan, council and open questions: BUILD-PLAN.md Part 2.
+  round only when it's in this phone's Recent rounds. `pick_team_name` isn't refused at `carts` (the lobby never offers it
+  and the draft renames every cart), so don't "fix" it by gating anything else. Plan, council, open questions: BUILD-PLAN.md Part 2.
 
 ## 13. V2 backlog (running list)
 

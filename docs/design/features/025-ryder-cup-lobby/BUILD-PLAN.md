@@ -237,6 +237,7 @@ call off. 6. Countdown + Scoring is open. Then: live DB (rollback test → apply
 | 0 · plan | 7.5 | 8 | 7 | 7 | 6.5 | 7 | Plan reviewed; every point in P2.8 folded in (QA's 6.5 items were built before code review). |
 | 1 · code | 8 | 8.5 | 7.5 | 8 | 8 | 8 | Code reviewed (fb1e670); fixes in P2.10. |
 | 2 · code | 9 | 9 | 8.5 | 9 | 9 | 8.5 | Round-1 fixes reviewed (c0ad4f0); P2.11. |
+| 3 · code | 9 | 9 | 9 | 9 | 9 | 9 | Round-2 fixes reviewed (5733931). All six at 9 in the same round: done. Copy nits after it: “invite needs all 16”, “Not in Safari (Partiful, another app)?”; the browser check is pure (`notSafari`, tested). |
 | 0 · plan | 6.5 | 7 | 6.5 | 7 | 7 | 6 | Plan reviewed; every point below folded into §12 before code. |
 | 1 · code | 8 | 8 | 8 | 8 | 8 | 7 | Code reviewed after the build; every confirmed bug fixed the same night (§14). Owner asked for two rounds, so no third round. |
 
@@ -448,6 +449,7 @@ without handicaps → landing, standalone → who, reveal once · `homeCard` car
 | 0 · plan | 7.5 | 8 | 7 | 7 | 6.5 | 7 | Plan reviewed; every point in P2.8 folded in (QA's 6.5 items were built before code review). |
 | 1 · code | 8 | 8.5 | 7.5 | 8 | 8 | 8 | Code reviewed (fb1e670); fixes in P2.10. |
 | 2 · code | 9 | 9 | 8.5 | 9 | 9 | 8.5 | Round-1 fixes reviewed (c0ad4f0); P2.11. |
+| 3 · code | 9 | 9 | 9 | 9 | 9 | 9 | Round-2 fixes reviewed (5733931). All six at 9 in the same round: done. Copy nits after it: “invite needs all 16”, “Not in Safari (Partiful, another app)?”; the browser check is pure (`notSafari`, tested). |
 
 ## P2.8 · Round 0 changes (what the council asked for, as built)
 
@@ -543,3 +545,8 @@ without handicaps → landing, standalone → who, reveal once · `homeCard` car
    in Safari" screen first (the handoff's flow shows one); not built in this push.
 3. **Players who already have the icon** (o-hasapp, "Open Golf Board from your home screen"): not built; the guide's
    note ("Already have Golf Board? Open it, tap Join with code …") covers it for now.
+
+**Follow-ups the council left (not blockers):** a test that Redo the draft keeps both team names; the start-times step
+could use `cartOrder`; refuse `pick_team_name` before the draft and give `update_event` a version check in the next SQL
+pass; show the move link only on the Add to Home Screen step itself; a practice walk on a real iPhone (Partiful → Safari
+→ Add to Home Screen → icon → reveal; the “Start here” arrow against iOS 26's ⋯).
