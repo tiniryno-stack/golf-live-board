@@ -22,7 +22,7 @@ From 025 on, the app is only played as the home screen app. This spec builds tha
 ## 2 · The owner
 
 - **Set** the first time the device claims a player who has a `personId` and the owner is empty. Not from a practice round (`settings.practice`). Not from a round whose player has no `personId` (old rounds).
-- **Never changed** by claiming someone else. Only §4's two actions change it.
+- **Never changed** by claiming someone else. Only “I’m not <name>” (§4) clears it.
 - `db.owner.get()` / `set()` / `clear()` in `js/db.js`, through `db.local` (so `?sim=N` phones stay separate). Add `glb.owner` to `MOVE_KEYS`, so Add to Home Screen carries it.
 - **Migration** (first run of this version, owner empty): the owner is the first crew's `me` (`db.crews`). If there's no crew `me`, use the first entry of `glb.people` (`glb.people` keeps the oldest first, so that's the person this phone played as first). If neither exists, leave it empty. The owner's own phone has Andrew as crew `me`, so it stays Andrew even though `glb.people` also holds Baker.
 - `rememberCrewMe()` stays, but fills a crew's `me` from the owner, not from whoever was just claimed.
@@ -49,8 +49,7 @@ Auto-join runs only on a real open, not on every render or poll. If it fails (`t
   - It **relabels the scores this device entered as that player**, so they stop counting as the player's own entry (the `own_entry` rule in `upsert_score` keys on `updated_by` = the player's name). Set `updated_by = '<name> (picked by mistake)'`, only for that player's rows whose `updated_by` is still the player's name and whose `updated_at` is after the claim's `claimed_at` (the column already exists).
   - It logs the action.
 
-  On the phone: if the owner was set by this pick (store `glb.ownerFrom = CODE` when set), clear the owner. Then show Who are you? again. The real Baker can now just pick his name, with no “taken”.
-- **“This isn’t my phone”** (You sheet, small, at the bottom): clears `glb.owner` only. Live claims stay until you leave them. The next pick sets a new owner, with the confirm.
+  On the phone: **if the owner is that same person, clear the owner too.** That one rule covers both the first-pick fat finger (the mis-tap set the owner) and a hand-me-down phone (“I’m not Andrew” on Andrew's old phone). Then show Who are you? again: the real Baker can just pick his name, with no “taken”, and your pick sets the new owner, with the confirm. There is no separate “This isn’t my phone” button (owner, Nov 6: one action, not two).
 - **Switch to watching** (today): `leave_round`. The owner is unchanged.
 
 Mirror `not_me` in `supabase/schema.sql` **and** `tests/mock-supabase.mjs`. It's additive SQL (`create or replace function` + `grant`), so `apply_migration` works. Write it as `supabase/migrations/2026-11-XX-not-me.sql`.
@@ -60,7 +59,7 @@ Mirror `not_me` in `supabase/schema.sql` **and** `tests/mock-supabase.mjs`. It's
 1. **Who are you?, grouped.** Today's `who` sheet, with the names in groups headed by `teeTimeName()` (“8:40 tee time”), then the cart within each group. Taken names keep today's look. Rounds without tee times fall back to `autoGroups` order with no headers.
 2. **Confirm (first pick on a device without an owner):** a small sheet. Title `You’re Baker Test?` (full name, `fullName()`), one line `8:40 tee time · with Sean` (the cart-mate's first name), primary **Yes, that’s me**, secondary **Pick again**. It shows once per device.
 3. **Playing-as line:** one quiet line (13px, `text-muted`) where the You sheet's name is shown. It reads `Playing as Andrew · Not you?` after an auto-join. When playing as someone other than the owner, it reads `Playing as Baker this round · this phone stays Andrew’s · Not you?`. `Not you?` runs §4's “I’m not Baker”.
-4. **You sheet:** add `I’m not <name>` (the same action) and, at the bottom, `This isn’t my phone`.
+4. **You sheet:** add `I’m not <name>` (the same action). That's the only identity action on the sheet besides today's Switch to watching.
 
 ## 6 · The app-only gate (logic now, screens in 025)
 
@@ -85,6 +84,7 @@ Mirror `not_me` in `supabase/schema.sql` **and** `tests/mock-supabase.mjs`. It's
 | A deleted app, a new phone, cleared data | A new device with no owner → pick + confirm → taken → takeover. The person is the same; never a second account. |
 | Old rounds / players without a `personId` | No auto-join; Who are you? as today. |
 | Two people sharing one phone | One owner; the other plays “as” each round (the line says so). |
+| A hand-me-down phone | The new user taps “I’m not Andrew” once: it frees the spot and clears the owner, because the owner is Andrew. |
 | Computer | Can't add the app; watching is allowed; scoring is not (025 decides the copy). |
 | Trust | The same as today: friends, no passwords. Anyone can still pick any free name; the confirm and the undo cover mistakes, not bad actors. The organizer's Free up is the backstop. |
 | The organizer's phone | The PIN is per device and already moves with Add to Home Screen; a lost phone = type the PIN again. No change. |
@@ -100,4 +100,4 @@ Open for 025 (onboarding screens): the landing copy, the private-tab advice, whe
 - This touches joining and the database (one new RPC). **That is what the smoke suite exists for: ask the owner for a smoke run before pushing** (CLAUDE.md, Testing).
 - Replay check: open the real rounds (V4T3M, Oct 16, and the Bridlewood split-point round, Oct 20) in the mock as a device with an owner. It should auto-join the right player, and the rounds' results should be unchanged.
 
-When built, set the status to “Status: built in <commit>” and add ARCHITECTURE.md §13a + the localStorage key list in CLAUDE.md (`glb.owner`, `glb.ownerFrom`, `glb.hasApp`).
+When built, set the status to “Status: built in <commit>” and add ARCHITECTURE.md §13a + the localStorage key list in CLAUDE.md (`glb.owner`, `glb.hasApp`).
