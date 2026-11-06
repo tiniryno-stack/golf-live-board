@@ -278,9 +278,12 @@ const BODIES = {
     const p = app.myPlayer();
     const light = document.documentElement.dataset.theme === 'light';
     const meta = [app.code, app.event?.course?.shortName || app.event?.course?.name].filter(Boolean).join(' · ');
+    // 023 §3: the organizer's round menu leads with Fix hole N (it replaced the Enter header's ⋯).
+    const fixH = app.ui.hole || app.nextHole?.();
     return `${head(app.event?.name || 'Round', meta)}
       <div class="stack">
         ${p ? '' : '<button class="btn primary big block" data-act="menu-pick">Pick my name</button>'}
+        ${app.isOrganizer?.() && app.snapshot && fixH ? `<button class="btn block" data-act="fixhole-open" data-v="${fixH}">Fix hole ${fixH}</button>` : ''}
         ${app.snapshot?.roundComplete ? `<button class="btn primary block" data-act="menu-recap">${icon('trophy', 18)} Round recap &amp; scorecards</button>` : ''}
         ${app.snapshot ? '<button class="btn block" data-act="menu-rules">Rules</button>' : ''}
         ${app.adminPin ? `<button class="btn block" data-act="menu-host">${icon('host', 18)} Host settings · organizer</button>` : ''}
