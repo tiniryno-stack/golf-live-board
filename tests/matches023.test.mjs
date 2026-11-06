@@ -61,3 +61,8 @@ test('§2 not all in: nothing dims, and the need line reads their scores', () =>
   const net = holeLines(hole([null, null], [4, 5]), US, ['Josh', 'Brandon'], [false, false, true, false]);
   assert.equal(net.need.lead, 'Josh made a net 4, Brandon 5.');
 });
+
+test('holeLines: a match you are not in (Board sheet) words the need line neutrally', () => {
+  const r = holeLines({ whoIsIn: 'them', net: { us: [null, null], them: [4, 5] }, lowBall: 'pending', lowTotal: 'pending' }, ['Andrew', 'Alex'], ['Josh', 'Brandon'], null, { mine: false });
+  assert.deepEqual(r.need, { lead: 'Josh + Brandon are in.', rest: 'Andrew + Alex haven’t posted yet.' });
+});
