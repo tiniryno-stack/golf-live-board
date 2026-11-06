@@ -43,7 +43,7 @@ You're building **handoff 025: the Team Ryder Cup lobby** in Golf Live Board. It
    - `lobby_status` (organizer-only read);
    - `set_round_date`.
    
-   Mirror all of it in `schema.sql`, the mock and a migration file. The offline queue must drop `not_open` refusals rather than retry them forever.
+   Mirror all of it in `schema.sql`, the mock and a migration file, then **apply it to the live database yourself** (see §2). The offline queue must drop `not_open` refusals rather than retry them forever.
 4. **Setup:** for Team Ryder Cup, the choice screen (Invite now, draft later / Draft and tee times first), then a **When** step (date + start time), then create, then Host's lobby view with the share sheet open.
 5. **Host lobby view:**
    - the counts and the per-person rows with Share;
@@ -67,9 +67,16 @@ You're building **handoff 025: the Team Ryder Cup lobby** in Golf Live Board. It
 
 - **Testing:** unit tests and `npm test` only. **Do not run `npm run test:smoke`, `npm run test:fit`, or take screenshots**, unless the owner asks. Write **one focused unit test file**, `tests/lobby025.test.mjs`, for the pure logic, and update any existing tests the change breaks. Keep the mock in sync, so the mock-backed unit tests exercise the gate.
 - **Design system:** no new colors, sizes or type styles. Green means "you" only (only your cart is green). Amber means warnings only. Use existing tokens and components, and flag anything new (the When step is the one known new piece).
-- **Database:** additive SQL only, applied through `apply_migration` **after asking the owner**. Never run destructive SQL. Keep `schema.sql` and `tests/mock-supabase.mjs` in sync with every change.
+- **Database: don't ask, just do it.** This runs overnight with nobody to answer. Apply the additive migration to the live database yourself with `apply_migration` once the council has passed the SQL. Steps:
+  1. Run a `do $$ … raise exception $$` rollback test on live first (CLAUDE.md, Database).
+  2. Apply the migration.
+  3. Verify it with a read-only query.
+  4. Write a rollback file next to it, so the owner can revert in one paste.
+
+  Additive only (`create or replace`, `add column if not exists`). If something truly needs a drop or delete, don't run it: write it in the rollback or notes file and carry on. Keep `schema.sql` and `tests/mock-supabase.mjs` in sync with every change.
 - **Old rounds must behave exactly as before.** `settings.lobby` defaults to `null`, and every new branch keys off `lobbyState`.
-- **Commits:** small commits on your branch. When it's done, run `npm run preview` so the owner can try it (same database as live, so use a practice round). Run `npm run stamp` before any push to `main`, and merge only when the owner says so.
+- **Commits:** small commits on your branch, pushed as you go. When it's done, run `npm run preview` so the owner can try it in the morning (same database as live, so use a practice round). Don't merge to `main`: the owner merges after trying the preview. Run `npm run stamp` before any push to `main`.
+- **Never stop to ask.** You're running unattended overnight. If a decision isn't covered, pick the safest option, write it down in BUILD-PLAN.md under "Decided overnight", and keep going.
 - **Wrap-up:** set the SPEC status to "Status: built in <commit>", and update ARCHITECTURE.md §13a and the CLAUDE.md key/settings lists.
 - **The owner** is not a developer. Finish with a short plain-English summary: what changed for players and for him, how to try it on the preview link, and what you guessed.
 
@@ -125,6 +132,6 @@ If a reviewer and the SPEC disagree, the SPEC wins, unless the reviewer has foun
 
 1. All six at 9 or above, with the table in BUILD-PLAN.md.
 2. `npm test` green.
-3. Migration file ready, and its SQL shown to the owner to apply.
+3. Migration applied to the live database and verified, with the rollback file written.
 4. `npm run preview`, with the link given to the owner.
 5. A short plain-English summary. Don't merge to `main` until the owner says so.

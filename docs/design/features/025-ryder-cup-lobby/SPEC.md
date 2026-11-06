@@ -98,7 +98,7 @@ After that it goes straight to Host's lobby view (**16**) with the share sheet o
 4. **Release on Replace** uses the existing `release_player`.
 5. Grant execute to anon on the three new RPCs. The helpers stay non-executable.
 
-Applying it: `create or replace function` and `add column if not exists` work with `apply_migration`. Ask the owner before applying to the live database.
+Applying it: **apply it to the live database yourself with `apply_migration`, without asking** (owner, Nov 6: this runs overnight unattended). It's all additive (`create or replace function`, `add column if not exists`), so old rounds and the live app keep working. Before applying, check it on the live database with a `do $$ … raise exception $$` rollback test (CLAUDE.md, Database). Also write `supabase/migrations/2026-11-XX-ryder-lobby-rollback.sql`, which restores the previous `upsert_score` / `fill_score` bodies and drops the new functions and column, so it can be reverted in one paste.
 
 ## 4 · Replace a player (before scoring opens)
 
