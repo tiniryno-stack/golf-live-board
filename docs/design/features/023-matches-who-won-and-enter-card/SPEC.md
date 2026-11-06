@@ -1,6 +1,6 @@
 # 023 · Matches: who won each point · Enter: your cart in a card
 
-Status: handed off (not built)
+Status: built in 3bf1229
 
 **Changes 015 §3 (Matches) and 021/022 (team Enter).** Where they differ, this wins. It applies to every game that uses the Ryder screens: Team Ryder Cup and Partner “Rider” Cup (018). Board, the final card (019), the Enter motion (021/022) and the yardage card stay exactly as they are.
 
