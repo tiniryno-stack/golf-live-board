@@ -1775,6 +1775,13 @@ html.light .rm-t, [data-theme="light"] .rm-t { opacity: .55; }
 .rm-tile i.lose { color: var(--text-muted); }
 .rm-tile.on { background: var(--surface-2); }
 .rm-tile.on b { color: var(--text); }
+.rm-tv { display: inline-flex; align-items: center; justify-content: center; }
+/* 023 §4: a hole counted here since you last looked — a dashed ring that fades at 2s, and the value pops in. */
+.rm-tile.rm-new::after { content: ''; position: absolute; inset: 0; border-radius: var(--radius-md); border: 1px dashed var(--text-muted); pointer-events: none; animation: rm-ringfade 200ms ease 2000ms forwards; }
+@keyframes rm-ringfade { from { opacity: 1; } to { opacity: 0; } }
+.rm-tv.rm-pop { animation: rm-pop 200ms ease-out both; animation-delay: var(--d, 0ms); }
+@keyframes rm-pop { from { opacity: 0; transform: scale(.9); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .rm-tv.rm-pop { animation: none; } }
 .rm-detail { margin-top: 6px; border-top: 1px solid var(--rm-line); padding-top: 10px; }
 .rm-four { display: grid; grid-template-columns: repeat(4, 1fr); text-align: center; }
 .rm-col { min-width: 0; }

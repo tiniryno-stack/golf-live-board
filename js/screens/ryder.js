@@ -7,6 +7,7 @@
 import { esc, icon, seg, seg2, mark, copyText } from '../ui.js';
 import { fmtPts, fmtToPar, playerLeaderboard, projectedGross, ryderState, ryderNeedLine, ryderHoleLine, teeTimeName, holeAt } from '../scoring.js';
 import { riderState, holeLines } from '../riderview.js';
+import { local } from '../db.js';
 
 export const ryState = (app) => ryderState(app.snapshot, app.myTeam()) || riderState(app.snapshot, app.myTeam());
 const tint = (cart) => (cart.color ? ` style="color:${cart.color}"` : '');
@@ -394,9 +395,24 @@ export function ryderMatches(app) {
       <div class="rm-foot"><span>${m.status === 'done' ? 'Match over' : `${fmtPts(leftPts)} pts left`}</span><span class="rm-cl" style="left:${tickPct}%">${fmtPts(clinch)} wins</span></div>
     </section>`;
 
-  // Hole strip.
+  // Hole strip, with 023 §4 "new since you last looked": holes counted here since your last visit get
+  // a dashed ring and a staggered pop; the seen set is recorded (in mount) once they've been shown.
+  const now = Date.now();
   const selHole = Number(app.ui.ryHole?.[m.id]) || defaultHole(m);
-  const strip = `<div class="rm-strip">${m.holes.map((h) => `<button class="rm-tile${h.hole === selHole ? ' on' : ''}" data-act="ry-hole" data-m="${esc(m.id)}" data-v="${h.hole}" aria-pressed="${h.hole === selHole}"><b>${h.hole}</b>${rmTileVal(h)}</button>`).join('')}</div>`;
+  const seenMx = local.get(`glb.seen.${app.code}.mx`) || {};
+  const countedNow = m.holes.filter((x) => x.counts).map((x) => x.hole);
+  const prevSeen = seenMx[m.id];
+  const newHoles = prevSeen === undefined ? [] : countedNow.filter((x) => !prevSeen.includes(x)); // first visit: no rings
+  const popHoles = newHoles.slice(-4); // at most 4 animate; older new tiles just show the ring
+  const motionKey = `${m.id}:${countedNow.join(',')}`;
+  if (app.ui.rmKey !== motionKey) { app.ui.rmKey = motionKey; app.ui.rmT0 = now; }
+  const t0 = app.ui.rmT0;
+  app.ui.rm = { matchId: m.id, counted: countedNow, newHoles, t0 }; // mount reads this to record the seen set
+  const strip = `<div class="rm-strip">${m.holes.map((h) => {
+    const isNew = newHoles.includes(h.hole);
+    const pop = popHoles.indexOf(h.hole);
+    return `<button class="rm-tile${h.hole === selHole ? ' on' : ''}${isNew ? ' rm-new' : ''}"${isNew ? ` data-t0="${t0}"` : ''} data-act="ry-hole" data-m="${esc(m.id)}" data-v="${h.hole}" aria-pressed="${h.hole === selHole}"><b>${h.hole}</b><span class="rm-tv${pop >= 0 ? ' rm-pop' : ''}"${pop >= 0 ? ` style="--d:${pop * 120}ms"` : ''}>${rmTileVal(h)}</span></button>`;
+  }).join('')}</div>`;
 
   // Hole detail: four score columns (dimmed where they didn't count), then the result rows / need line.
   const h = m.holes.find((x) => x.hole === selHole) || m.holes[0];
