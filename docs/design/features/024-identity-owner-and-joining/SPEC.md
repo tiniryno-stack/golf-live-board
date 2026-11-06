@@ -1,6 +1,6 @@
 # 024 · Who you are: phone owner, auto-join, “I’m not Baker”
 
-Status: handed off (not built)
+Status: built in ab6445e
 
 The logic and data for identity, built **before** the new onboarding screens (025). The owner's goals are:
 - Friends never sign up and never pick their name twice.

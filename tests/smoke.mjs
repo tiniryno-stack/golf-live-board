@@ -73,6 +73,8 @@ async function join(page, playerName) {
   await page.waitForSelector('.who-btn', { timeout: 8000 });
   await page.locator('.who-btn', { hasText: playerName }).first().tap();
   await page.waitForTimeout(700);
+  // 024: the first pick on a phone with no owner asks "You're <name>?" once; this phone is them.
+  if (await page.$('[data-act="me-yes"]')) { await page.tap('[data-act="me-yes"]'); await page.waitForTimeout(500); }
 }
 
 async function tapTiles(page) {

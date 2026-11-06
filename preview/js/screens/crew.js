@@ -381,6 +381,7 @@ export default {
       }
       (app.crews[id] ||= { id }).info = res.crew;
       db.crews.put({ id, me: w.pick });
+      if (!db.owner.get()) db.owner.set(w.pick); // 024: a phone with no owner is this person's now (name fills in from a round)
       app.toast({ title: `You’re in ${res.crew.name || 'the crew'}` });
       app.go('#/');
     },
