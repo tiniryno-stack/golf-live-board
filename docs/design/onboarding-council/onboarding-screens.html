@@ -1,0 +1,339 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link rel="stylesheet" href="../design-system/tokens.css">
+<style>
+@font-face{font-family:Geist;src:url(../../../node_modules/geist/dist/fonts/geist-sans/Geist-Variable.woff2) format('woff2');font-weight:100 900}
+@font-face{font-family:"Geist Mono";src:url(../../../node_modules/geist/dist/fonts/geist-mono/GeistMono-Variable.woff2) format('woff2');font-weight:100 900}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font-sans)}
+button{font:inherit;color:inherit;background:none;border:0;padding:0}
+.ph{width:393px;height:852px;position:relative;overflow:hidden;background:var(--bg);display:flex;flex-direction:column}
+.pg{flex:1;display:flex;flex-direction:column;padding:62px 16px 16px;min-height:0}
+.top{display:flex;align-items:center;justify-content:space-between;height:40px}
+.lbl{font-family:var(--font-mono);font-size:12px;line-height:16px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted)}
+.h1{font-size:32px;line-height:36px;font-weight:700;letter-spacing:-.8px;margin:0;text-wrap:balance}
+.p{font-size:17px;line-height:24px;color:var(--text-muted);margin:0}
+.s{font-size:15px;line-height:21px}
+.m{color:var(--text-muted)}
+.card{background:var(--surface-1);border-radius:var(--radius-xl);padding:16px;box-shadow:var(--shadow-card)}
+.pri{height:56px;border-radius:var(--radius-lg);background:var(--button);color:var(--on-button);font-size:17px;font-weight:600;width:100%;display:flex;align-items:center;justify-content:center;gap:8px}
+.gho{min-height:48px;font-size:15px;font-weight:600;width:100%;color:var(--text)}
+.flex{flex:1}
+.pg > *{flex-shrink:0}
+.pg > .flex{flex-shrink:1}
+.warn-dot{width:8px;height:8px;border-radius:4px;background:var(--warn);flex:none}
+.pill{min-height:44px;padding:0 16px;border-radius:var(--radius-md);background:var(--surface-2);font-size:15px;font-weight:600}
+.row{display:flex;align-items:center;gap:12px;min-height:52px;border-top:1px solid var(--ce-line,rgba(255,255,255,.06))}
+html.light .row{--ce-line:rgba(11,13,16,.07)}
+.row:first-child{border-top:0}
+.row b{font-size:17px;font-weight:600;flex:1}
+.row .t{font-size:13px;color:var(--text-muted)}
+.row.off b{color:var(--text-muted);font-weight:500}
+.step{display:flex;gap:12px;align-items:center;min-height:44px}
+.step .n{flex:none;width:28px;height:28px;border-radius:14px;background:var(--surface-2);display:grid;place-items:center;font-family:var(--font-mono);font-size:13px;font-weight:700}
+.step .st{font-size:17px;font-weight:600;line-height:22px}
+.step .ss{font-size:13px;line-height:18px;color:var(--text-muted)}
+.chip{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:14px;background:var(--surface-2);font-size:13px;font-weight:600}
+.you{color:var(--cart-you-text)}
+.search{height:44px;box-sizing:border-box;border-radius:var(--radius-md);background:var(--surface-2);display:flex;align-items:center;gap:8px;padding:0 12px;color:var(--text-muted);font-size:17px}
+.safari{flex:none;height:86px;background:var(--surface-1);display:flex;align-items:flex-start;gap:10px;padding:10px 14px 0;box-shadow:0 -1px 0 var(--line)}
+.safari .sb{width:44px;height:44px;border-radius:22px;background:var(--surface-2);display:grid;place-items:center;color:var(--text-muted);font-size:20px}
+.safari .addr{flex:1;height:44px;border-radius:22px;background:var(--surface-2);display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--text-muted)}
+.safari .sb.hot{box-shadow:0 0 0 2px var(--text);color:var(--text)}
+.point{position:absolute;right:18px;bottom:94px;display:flex;flex-direction:column;align-items:flex-end;gap:2px;color:var(--text);font-size:13px;font-weight:600}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:var(--surface-2);border-radius:var(--radius-sheet) var(--radius-sheet) 0 0;padding:10px 16px 34px;box-shadow:var(--shadow-sheet)}
+.scrim{position:absolute;inset:0;background:var(--scrim)}
+.grab{width:36px;height:5px;border-radius:3px;background:var(--line);margin:0 auto 14px}
+.mini{border-radius:12px;background:var(--surface-2);padding:6px;display:flex;flex-direction:column;gap:2px;flex:1}
+.mini i{font-style:normal;font-size:12px;line-height:16px;padding:6px 8px;border-radius:8px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mini i.on{background:var(--surface-3);color:var(--text);font-weight:600;box-shadow:0 0 0 1.5px var(--text)}
+.tabs{flex:none;margin:0 16px 24px;height:64px;border-radius:var(--radius-2xl);background:var(--glass);box-shadow:var(--shadow-dock),inset 0 0 0 1px var(--glass-line);display:grid;grid-template-columns:repeat(4,1fr);padding:6px}
+.tabs div{display:grid;place-items:center;border-radius:20px;color:var(--text-muted)}
+.tabs div.cur{background:var(--surface-3);color:var(--text)}
+.qr{width:200px;height:200px;border-radius:16px;background:#fff;display:grid;grid-template-columns:repeat(11,1fr);gap:3px;padding:14px;box-sizing:border-box;position:relative}
+.qr i{background:#0a0b0d;border-radius:2px}.qr i.o{background:transparent}
+.qr .c{position:absolute;inset:0;margin:auto;width:52px;height:52px;border-radius:12px;background:#0a0b0d;display:grid;place-items:center;color:#f4f5f7}
+.sec{height:56px;border-radius:var(--radius-lg);background:var(--surface-2);color:var(--text);font-size:17px;font-weight:600;width:100%}
+html.light .search{box-shadow:inset 0 0 0 1px var(--line)}
+.mini.pic{opacity:.75}
+.sheet .sec{background:var(--surface-3)}
+html.light .sheet .sec{background:var(--surface-1);box-shadow:inset 0 0 0 1px var(--line)}
+.row.tall{min-height:60px}
+.pill.sm{min-height:36px;margin:4px 0}
+.code{font-family:var(--font-mono);font-size:17px;font-weight:700;letter-spacing:2px}
+.bar{height:6px;border-radius:3px;background:var(--surface-2);overflow:hidden}.bar b{display:block;height:100%;background:var(--text);border-radius:3px}
+</style></head><body><div class="ph" id="ph"></div>
+<script>
+const S = JSON.parse(decodeURIComponent(location.hash.slice(1) || '{}'));
+if (S.light) document.documentElement.classList.add('light');
+if (S.big) document.addEventListener('DOMContentLoaded', () => {});
+const s = S.s || 'landing';
+const MARK = (n = 40) => `<svg width="${n}" height="${n}" viewBox="0 0 100 100" aria-hidden="true" style="display:block;color:var(--text)"><circle cx="42" cy="58" r="30" fill="none" stroke="currentColor" stroke-width="13"/><circle cx="82" cy="20" r="11" fill="var(--cart-you)"/></svg>`;
+const ICON = (n = 60) => `<span style="width:${n}px;height:${n}px;border-radius:${n * .23}px;background:#0a0b0d;display:grid;place-items:center;box-shadow:0 0 0 1px var(--line);flex:none;color:#f4f5f7">${MARK(n * .62).replace('color:var(--text)', 'color:#f4f5f7')}</span>`;
+const hdr = (right = '') => `<div class="top">${MARK(40)}${right}</div>`;
+const safari = (hot) => `<div class="safari"><span class="sb">‹</span><span class="addr">golfboard · Chuck’s Bday</span><span class="sb${hot ? ' hot' : ''}">⋯</span></div>`;
+const roundCard = (line2 = 'Twin Creeks · Team Ryder Cup · 16 players') => `<div class="card" style="display:flex;flex-direction:column;gap:2px">
+  <span class="lbl">Sat Nov 9 · first tee 8:00</span>
+  <span style="font-size:17px;line-height:24px;font-weight:600">Chuck’s Bday</span>
+  <span class="s m">${line2}</span></div>`;
+const sv=(d)=>`<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const IC={flag:sv('<path d="M6 21V4h11l-2 4 2 4H6"/>'),rings:sv('<circle cx="8" cy="12" r="4"/><circle cx="16" cy="12" r="4"/>'),list:sv('<path d="M4 7h16M4 12h11M4 17h7"/>'),grid:sv('<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 10h16M4 15h16M10 4v16M15 4v16"/>'),l:sv('<path d="M15 6l-6 6 6 6"/>'),r:sv('<path d="M9 6l6 6-6 6"/>'),dots:'<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>'};
+const tabs = `<nav class="tabs"><div class="cur">${IC.flag}</div><div>${IC.rings}</div><div>${IC.list}</div><div>${IC.grid}</div></nav>`;
+const NAMES = [['8:00 tee time', ['Andrew', 'Alex', 'Josh', 'Brandon']], ['8:10 tee time', ['Ant', 'Steve', 'Joseph', 'Jay']], ['8:20 tee time', ['Sean', 'Baker', 'Mitch', 'Peter']]];
+const enterBar = `<div style="display:flex;align-items:center;height:54px"><b style="font-size:32px;letter-spacing:-.8px;flex:1">Hole 4 <span class="m" style="font-size:17px;font-weight:500">Par 4</span></b><span style="width:44px;height:44px;display:grid;place-items:center">${IC.l}</span><span style="width:44px;height:44px;display:grid;place-items:center">${IC.r}</span><span class="m" style="width:44px;height:44px;display:grid;place-items:center">${IC.dots}</span></div>`;
+const V = {
+  landing: () => `<div class="pg">${hdr()}
+    <p class="lbl" style="margin:24px 0 8px">Chuck’s Bday · Andrew invited you</p>
+    <h1 class="h1">Chuck’s Bday is live on Golf Board</h1>
+    <p class="p" style="margin-top:10px">Your match and every group on one board, all day.</p>
+    <div style="margin-top:22px">${roundCard()}</div>
+    <p class="s m" style="margin:16px 0 0">No account. About a minute: pick your name, then add Golf Board to your home screen.</p>
+    <div class="flex"></div>
+    <button class="pri">Find my name</button>
+    <button class="gho" style="margin-top:4px;color:var(--text-muted);font-weight:500">Not playing today? Watch the Board</button>
+  </div>${safari(false)}`,
+  landingnight: () => V.landing().replace('Chuck’s Bday is live on Golf Board', 'Chuck’s Bday is tomorrow at Twin Creeks').replace('Your match and every group on one board, all day.', 'Set it up tonight, and in the morning it’s one tap.'),
+  who: () => `<div class="pg" style="padding-top:56px">
+    <p class="lbl">Chuck’s Bday · step 1 of 3</p>
+    <h1 class="h1" style="margin-top:6px">Which one are you?</h1>
+    <div class="search" style="margin-top:16px">⌕ <span>Search 16 names</span></div>
+    ${NAMES.map(([t, ns]) => `<div style="margin-top:14px"><div class="lbl" style="margin-bottom:4px">${t}</div><div class="card" style="padding:0 16px">${ns.map((n) => n === 'Sean' ? `<div class="row off"><b>${n}</b><span class="t">on another phone</span></div>` : `<div class="row"><b>${n}</b></div>`).join('')}</div></div>`).join('')}
+  </div>
+  <div style="flex:none;padding:10px 16px 0;background:var(--bg);box-shadow:0 -1px 0 var(--line)"><button class="gho">I’m not on the list</button></div>${safari(false)}`,
+  confirm: () => `<div class="pg" style="opacity:.3;padding-top:56px"><p class="lbl">Chuck’s Bday · step 1 of 3</p><h1 class="h1" style="margin-top:6px">Which one are you?</h1></div>${safari(false)}
+    <div class="scrim"></div>
+    <div class="sheet"><div class="grab"></div>
+      <h2 class="h1">You’re Baker?</h2>
+      <p class="s m" style="margin:8px 0 20px">Baker Test · 8:20 tee time · in a cart with Mitch</p>
+      <button class="pri">Yes, that’s me</button>
+      <button class="gho" style="margin-top:4px">I’m not Baker</button>
+    </div>`,
+  guide: () => `<div class="pg" style="padding-top:56px">
+    <p class="lbl">Chuck’s Bday · step 2 of 3</p>
+    <h1 class="h1" style="margin-top:6px">Add Golf Board to your home screen</h1>
+    <div style="display:flex;flex-direction:column;gap:6px;margin-top:18px">
+      <div class="step"><span class="n">1</span><div class="st">Tap ⋯ below</div></div>
+      <div class="step"><span class="n">2</span><div class="st">Tap Share</div></div>
+      <div class="step"><span class="n">3</span><div class="st">Tap Add to Home Screen</div></div>
+      <div class="step"><span class="n">4</span><div><div class="st">Tap Add</div><div class="ss">Leave “Open as Web App” on</div></div></div>
+    </div>
+    <p class="lbl" style="margin:18px 0 6px">What you’ll see in Safari</p>
+    <div style="display:flex;gap:8px">
+      <div class="mini pic"><i>Copy</i><i class="on">Share</i><i>Add Bookmark</i></div>
+      <div class="mini pic"><i>Add to Reading List</i><i class="on">Add to Home Screen</i><i>Find on Page</i></div>
+    </div>
+    <p class="s m" style="margin:12px 0 0">Don’t see ⋯? Tap the address bar first.</p>
+    <button class="gho" style="margin-top:4px;text-align:left;width:auto">Having trouble?</button>
+    <div class="flex"></div>
+  </div>
+  <div class="point"><span>Start here</span><span style="font-size:22px;margin-right:12px">↓</span></div>
+  ${safari(true)}`,
+  guidechrome: () => `<div style="flex:none;height:104px;background:var(--surface-1);display:flex;align-items:flex-end;gap:10px;padding:0 14px 10px;box-shadow:0 1px 0 var(--line)"><span class="addr" style="flex:1;height:40px;border-radius:20px;background:var(--surface-2);display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--text-muted)">golfboard</span><span style="width:40px;height:40px;border-radius:20px;box-shadow:0 0 0 2px var(--text);display:grid;place-items:center">⇪</span></div>
+    <div style="position:absolute;right:20px;top:112px;display:flex;flex-direction:column;align-items:flex-end;gap:2px;font-size:13px;font-weight:600"><span style="font-size:22px;margin-right:10px">↑</span><span>Start here</span></div>
+    <div class="pg" style="padding-top:52px">
+    <p class="lbl">Chuck’s Bday · step 2 of 3 · Chrome</p>
+    <h1 class="h1" style="margin-top:6px">Add Golf Board to your home screen</h1>
+    <div style="display:flex;flex-direction:column;gap:6px;margin-top:18px">
+      <div class="step"><span class="n">1</span><div class="st">Tap Share at the top right</div></div>
+      <div class="step"><span class="n">2</span><div class="st">Tap Add to Home Screen</div></div>
+      <div class="step"><span class="n">3</span><div class="st">Tap Add</div></div>
+    </div>
+    <button class="gho" style="margin-top:12px;text-align:left;width:auto">Having trouble?</button>
+    <div class="flex"></div>
+  </div>`,
+  trouble: () => `<div class="pg" style="opacity:.3;padding-top:56px"><p class="lbl">Chuck’s Bday · step 2 of 3</p><h1 class="h1" style="margin-top:6px">Add Golf Board to your home screen</h1></div>${safari(false)}
+    <div class="scrim"></div>
+    <div class="sheet"><div class="grab"></div>
+      <h2 class="h1">Can’t add it right now?</h2>
+      <p class="s m" style="margin:8px 0 20px">Watch the Board instead. Mitch, in your cart, has Golf Board, so he can enter your scores until you add it.</p>
+      <button class="pri">Show me the steps again</button>
+      <button class="gho" style="margin-top:4px">Watch, Mitch scores for me</button>
+    </div>`,
+  guideback: () => `<div class="pg" style="padding-top:56px">
+    <p class="lbl">Chuck’s Bday · step 3 of 3</p>
+    <h1 class="h1" style="margin-top:6px">Added it? Open Golf Board</h1>
+    <div style="display:flex;align-items:center;gap:16px;margin-top:24px">${ICON(80)}<div style="font-size:17px;font-weight:600">Golf Board</div></div>
+    <p class="s" style="margin-top:20px">It lands on your last home screen page.</p>
+    <p class="s m" style="margin-top:6px">Or swipe down on your home screen and type “Golf”.</p>
+    <div class="flex"></div>
+    <button class="sec">I didn’t add it yet</button>
+  </div>${safari(false)}`,
+  welcome: () => `<div class="pg">${hdr()}
+    <p class="lbl you" style="margin:24px 0 8px">Chuck’s Bday · you’re set</p>
+    <h1 class="h1">Welcome, Baker</h1>
+    <p class="p" style="margin-top:10px">8:20 tee time with Mitch, against Sean and Peter.</p>
+    <div class="flex"></div>
+    <p class="s m" style="margin:0 0 12px">From now on, open Golf Board from your home screen. Every round you’re in shows up there.</p>
+    <button class="pri">See today’s game</button>
+  </div>`,
+  welcomenight: () => `<div class="pg">${hdr()}
+    <p class="lbl you" style="margin:24px 0 8px">Chuck’s Bday · you’re set</p>
+    <h1 class="h1">See you tomorrow, Baker</h1>
+    <p class="p" style="margin-top:10px">Sat Nov 9 · 8:20 tee time. Your match shows up in the morning.</p>
+    <div class="flex"></div>
+    <p class="s m" style="margin:0 0 12px">In the morning, just tap Golf Board on your home screen. No link needed.</p>
+    <button class="pri">How tomorrow’s game works</button>
+  </div>`,
+  back: () => `<div class="pg">${hdr()}
+    <p class="lbl" style="margin:24px 0 8px">Chuck’s Bday · welcome back, Baker</p>
+    <h1 class="h1">8:20 tee time, with Mitch</h1>
+    <div style="margin-top:22px">${roundCard('Twin Creeks · with Mitch, against Sean and Peter')}</div>
+    <p class="s m" style="margin:16px 0 0">Golf Board moved to your home screen. Add it once, about a minute, and every round shows up there.</p>
+    <div class="flex"></div>
+    <button class="pri">Show me how</button>
+    <button class="gho" style="margin-top:4px">I’m not Baker</button>
+  </div>${safari(false)}`,
+  hasapp: () => `<div class="pg">${hdr()}
+    <p class="lbl" style="margin:24px 0 8px">Chuck’s Bday · you have the app</p>
+    <h1 class="h1">Open Golf Board from your home screen</h1>
+    <p class="p" style="margin-top:10px">This round is waiting there.</p>
+    <div style="display:flex;align-items:center;gap:16px;margin-top:22px">${ICON(64)}<div style="font-size:17px;font-weight:600">Golf Board</div></div>
+    <div class="card" style="margin-top:22px;display:flex;flex-direction:column;gap:10px"><span class="s m">Round not there? In Golf Board, tap Have a link or code? and paste:</span><div style="display:flex;align-items:center;gap:12px"><span class="code" style="flex:1">V4T3M</span><button class="pill">Copy code</button></div></div>
+    <div class="flex"></div>
+    <p class="s m" style="margin:0 0 8px">Deleted it? Add it again.</p>
+    <button class="sec">Add it again</button>
+  </div>${safari(false)}`,
+  inapp: () => `<div style="flex:none;height:96px;background:var(--surface-1);display:flex;align-items:flex-end;padding:0 14px 10px;gap:12px;box-shadow:0 1px 0 var(--line)"><span class="m" style="font-size:20px">✕</span><span class="s m" style="flex:1;text-align:center">WhatsApp · golfboard</span><span class="m" style="font-size:20px;box-shadow:0 0 0 2px var(--text);border-radius:16px;width:32px;height:32px;display:grid;place-items:center;color:var(--text)">⋯</span></div>
+    <div class="pg" style="padding-top:24px">
+    <p class="lbl">Chuck’s Bday</p>
+    <h1 class="h1" style="margin-top:6px">Open this in Safari</h1>
+    <p class="p" style="margin-top:10px">WhatsApp’s browser can’t add Golf Board to your home screen.</p>
+    <div style="display:flex;flex-direction:column;gap:6px;margin-top:18px">
+      <div class="step"><span class="n">1</span><div class="st">Tap ⋯ at the top right</div></div>
+      <div class="step"><span class="n">2</span><div class="st">Tap Open in Safari</div></div>
+    </div>
+    <div class="flex"></div>
+    <button class="pri">Open in Safari</button>
+    <button class="gho" style="margin-top:4px">Copy link instead</button>
+  </div>`,
+  taken: () => `<div class="pg" style="opacity:.3;padding-top:56px"><p class="lbl">Chuck’s Bday · step 1 of 3</p><h1 class="h1" style="margin-top:6px">Which one are you?</h1></div>${safari(false)}
+    <div class="scrim"></div>
+    <div class="sheet"><div class="grab"></div>
+      <h2 class="h1">Sean is on another phone</h2>
+      <p class="s m" style="margin:8px 0 20px">New phone, or a closed tab? Andrew or anyone in the 8:20 tee time can let you in. Your scores stay.</p>
+      <button class="pri">Ask to be let in</button>
+      <button class="gho" style="margin-top:4px">I’m not Sean</button>
+    </div>`,
+  waiting: () => `<div class="pg">${hdr()}
+    <p class="lbl" style="margin:24px 0 8px">Chuck’s Bday · asked 1 min ago</p>
+    <h1 class="h1">Waiting to be let in</h1>
+    <p class="p" style="margin-top:10px">Andrew, Baker and Mitch will see it when they open Golf Board.</p>
+    <div class="card" style="margin-top:20px;display:flex;flex-direction:column;gap:10px">
+      <span class="s">While you wait, add Golf Board. Being let in carries over to the app.</span>
+      <button class="pri">Add Golf Board</button>
+    </div>
+    <div class="flex"></div>
+    <p class="s m" style="margin:0 0 8px">Nobody in the app yet? Text your group to open it. Not answered in 5 minutes, it asks again.</p>
+    <button class="sec">Text your group to open Golf Board</button>
+    <button class="gho" style="margin-top:4px">Cancel</button>
+  </div>${safari(false)}`,
+  approve: () => V.cartmate().replace('watching · you enter his', '') + `
+    <div class="scrim"></div>
+    <div class="sheet"><div class="grab"></div>
+      <p class="lbl">Chuck’s Bday</p>
+      <h2 class="h1" style="margin-top:6px">Sean’s new phone wants in</h2>
+      <p class="s m" style="margin:8px 0 20px">Is Sean with you? Letting it in signs out his other phone (last used 8:02). His scores stay.</p>
+      <button class="pri">Let Sean in</button>
+      <button class="sec" style="margin-top:8px">Not him</button>
+    </div>`,
+  notme: () => V.apphome() + `
+    <div class="scrim"></div>
+    <div class="sheet"><div class="grab"></div>
+      <h2 class="h1">You’re not Baker?</h2>
+      <p class="s m" style="margin:8px 0 20px">Baker’s spot opens up for the real Baker. The 3 scores you entered stay, unlocked and flagged on his phone to check.</p>
+      <button class="pri">I’m not Baker</button>
+      <button class="sec" style="margin-top:8px">Cancel</button>
+    </div>`,
+  watchingknown: () => V.watching().replace('Playing today? Find my name ›', 'Baker, add Golf Board to score ›'),
+  watching: () => `<div class="pg">${hdr('<span class="chip">Watching</span>')}
+    <p class="lbl" style="margin:24px 0 8px">Chuck’s Bday · live</p>
+    <h1 class="h1">Team Josh leads 4–3</h1>
+    <div class="card" style="margin-top:16px;padding:0 16px">
+      <div class="row"><b>Andrew + Alex</b><span class="t">2 UP thru 6</span></div>
+      <div class="row"><b>Ant + Steve</b><span class="t">AS thru 5</span></div>
+      <div class="row"><b>Sean + Baker</b><span class="t">1 DN thru 4</span></div>
+      <div class="row"><b>Mitch + Peter</b><span class="t">1 UP thru 4</span></div>
+      <div class="row"><b>Justin + Chuck</b><span class="t">AS thru 2</span></div>
+      <div class="row"><b>Joseph + Jay</b><span class="t">2 DN thru 5</span></div>
+    </div>
+    <div class="flex"></div>
+    <button class="gho" style="text-align:left">Playing today? Find my name ›</button>
+  </div>${safari(false)}`,
+  android: () => `<div class="pg">${hdr()}
+    <p class="lbl" style="margin:24px 0 8px">Chuck’s Bday · Andrew invited you</p>
+    <h1 class="h1">Chuck’s Bday is live on Golf Board</h1>
+    <p class="p" style="margin-top:10px">Your match and every group on one board, all day.</p>
+    <div style="margin-top:22px">${roundCard()}</div>
+    <p class="s m" style="margin:16px 0 0">No account, no app store. Chrome asks once.</p>
+    <div class="flex"></div>
+    <button class="pri">Install Golf Board</button>
+    <button class="gho" style="margin-top:4px;color:var(--text-muted);font-weight:500">Not playing today? Watch the Board</button>
+  </div>`,
+  desktop: () => `<div class="pg">${hdr()}
+    <p class="lbl" style="margin:24px 0 8px">Chuck’s Bday</p>
+    <h1 class="h1">Open this on your phone</h1>
+    <p class="p" style="margin-top:10px">Golf Board is for scoring on the course. Point your phone’s camera here.</p>
+    <div class="qr" style="margin-top:24px">${Array.from({ length: 121 }, (_, i) => `<i class="${(i * 7 + (i % 5)) % 3 === 0 ? 'o' : ''}"></i>`).join('')}<span class="c">${MARK(32).replace('color:var(--text)', 'color:#f4f5f7')}</span></div>
+    <div class="flex"></div>
+    <button class="gho">Watch the Board here</button>
+  </div>`,
+  apphome: () => `<div class="pg" style="padding-top:62px">
+    <div style="display:flex;align-items:center;gap:12px;height:40px"><span style="width:32px;height:32px;border-radius:16px;background:var(--surface-2);display:grid;place-items:center;font-size:13px;font-weight:700">B</span><b style="font-size:17px;flex:1">Baker</b><span class="m">⋯</span></div>
+    <p class="lbl" style="margin:24px 0 8px">Today</p>
+    <div class="card" style="display:flex;flex-direction:column;gap:2px">
+      <span class="lbl">New · Sat Nov 9</span>
+      <span style="font-size:17px;line-height:24px;font-weight:600">Chuck’s Bday</span>
+      <span class="s m">8:20 tee time with Mitch</span>
+      <button class="pri" style="margin-top:14px">Open</button>
+    </div>
+    <p class="lbl" style="margin:24px 0 6px">Recent rounds</p>
+    <div class="card" style="padding:0 16px"><div class="row"><b>Bridlewood</b><span class="t">Oct 20 · 2nd</span></div><div class="row"><b>Twin Creeks</b><span class="t">Oct 16 · won</span></div></div>
+    <div class="flex"></div>
+    <button class="gho">Have a link or code?</button>
+  </div>`,
+  organizer: () => `<div class="pg" style="padding-top:62px">
+    <div class="top"><span class="lbl">Chuck’s Bday · host</span><span class="m">Done</span></div>
+    <h1 class="h1" style="margin-top:12px">11 of 16 are in the app</h1>
+    <p class="lbl" style="margin:20px 0 6px">Waiting for you</p>
+    <div class="card" style="padding:0 16px"><div class="row tall"><b>Sean’s new phone</b><button class="pill sm">Let in</button></div></div>
+    <p class="lbl" style="margin:20px 0 6px">Not in the app yet · 5 people</p>
+    <div class="card" style="padding:0 16px">
+      <div class="row tall"><span class="warn-dot"></span><div style="flex:1"><b style="display:block">Justin + Chuck</b><span class="t">nobody in their cart yet</span></div><button class="pill sm">Share</button></div>
+      <div class="row tall"><div style="flex:1"><b style="display:block">Peter</b><span class="t">picked his name in Safari</span></div><button class="pill sm">Share</button></div>
+      <div class="row tall"><div style="flex:1"><b style="display:block">Elijah</b><span class="t">watching · Marcus scores for him</span></div></div>
+      <div class="row tall"><div style="flex:1"><b style="display:block">Jay</b><span class="t">not yet</span></div><button class="pill sm">Share</button></div>
+    </div>
+    <div class="flex"></div>
+    <button class="pri">Share the link with Justin, Chuck, Peter, Jay</button>
+  </div>`,
+  cartmate: () => `<div class="pg" style="padding-top:62px">${enterBar}
+    <div style="display:flex;justify-content:space-between;font-size:15px;margin-top:8px"><b>Mitch + Baker</b><span class="m"><b class="mono" style="color:var(--text-muted)">AS</b> · vs Sean + Peter</span></div>
+    <div class="card" style="margin-top:8px;padding:2px 16px 6px">
+      ${['Mitch', 'Baker'].map((n, i) => `<div style="padding:8px 0 4px;${i ? 'border-top:1px solid rgba(255,255,255,.06)' : ''}"><div style="height:24px;display:flex;align-items:center;gap:8px"><b style="font-size:17px">${n}</b>${i ? '<span style="font-size:13px" class="m">watching · you enter his</span>' : ''}</div><div style="display:grid;grid-template-columns:repeat(4,1fr) 56px;gap:6px">${[3, 4, 5, 6].map((v) => `<span style="height:64px;display:grid;place-items:center;font-family:var(--font-mono);font-size:22px;font-weight:700">${v}</span>`).join('')}<span style="display:grid;place-items:center" class="m">${IC.dots}</span></div></div>`).join('')}
+    </div>
+    <div class="flex"></div>
+  </div>${tabs}`,
+  cartmatesheet: () => V.cartmate() + `<div class="scrim"></div><div class="sheet"><div class="grab"></div>
+      <p class="lbl">Chuck’s Bday</p>
+      <h2 class="h1" style="margin-top:6px">Baker is watching today</h2>
+      <p class="s m" style="margin:8px 0 20px">He couldn’t add Golf Board yet, so you enter his scores. When he adds it, his row goes back to him.</p>
+      <button class="pri">Got it</button></div>`,
+  appdenied: () => `<div class="pg">${hdr()}
+    <p class="lbl" style="margin:24px 0 8px">Chuck’s Bday · not let in</p>
+    <h1 class="h1">Mitch said this isn’t Sean</h1>
+    <p class="p" style="margin-top:10px">If you are Sean, ask Mitch or Andrew again. If not, pick your own name.</p>
+    <div class="flex"></div>
+    <button class="pri">Pick my name</button>
+    <button class="sec" style="margin-top:8px">Ask again</button>
+  </div>`,
+  apppending: () => `<div class="pg">${hdr()}
+    <p class="lbl" style="margin:24px 0 8px">Chuck’s Bday · asked 3 min ago</p>
+    <h1 class="h1">Waiting for the OK, Sean</h1>
+    <p class="p" style="margin-top:10px">Golf Board is on your home screen. Andrew or anyone in the 8:20 tee time just needs to let this phone in. This moves on by itself.</p>
+    <div class="flex"></div>
+    <p class="s m" style="margin:0 0 8px">They see it when they open Golf Board.</p>
+    <button class="sec">Text your group to open Golf Board</button>
+    <button class="gho" style="margin-top:4px">I’m not Sean</button>
+  </div>`,
+};
+document.getElementById('ph').innerHTML = V[s]();
+if (S.big) document.querySelectorAll('.pg').forEach((g) => { g.style.zoom = '1.2'; });
+</script></body></html>

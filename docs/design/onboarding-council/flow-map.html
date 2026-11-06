@@ -1,0 +1,45 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>
+@font-face{font-family:Geist;src:url(../../../node_modules/geist/dist/fonts/geist-sans/Geist-Variable.woff2) format('woff2');font-weight:100 900}
+@font-face{font-family:"Geist Mono";src:url(../../../node_modules/geist/dist/fonts/geist-mono/GeistMono-Variable.woff2) format('woff2');font-weight:100 900}
+body{margin:0;background:#0a0b0d;color:#f4f5f7;font-family:Geist,system-ui,sans-serif}
+.wrap{width:2600px;box-sizing:border-box;padding:56px;display:flex;flex-direction:column;gap:22px}
+.lbl{font-family:"Geist Mono",monospace;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#a7acb4}
+.lane{display:grid;grid-template-columns:280px 1fr;gap:20px;align-items:center;padding:16px 0;border-top:1px solid #1f2227}
+.who b{font-size:17px;display:block}.who span{font-size:13px;color:#a7acb4;line-height:18px;display:block;margin-top:4px}
+.steps{display:flex;align-items:center;gap:10px;flex-wrap:nowrap}
+.node{display:flex;flex-direction:column;gap:6px;align-items:center;width:110px}
+.node img{width:98px;height:213px;border-radius:12px;box-shadow:0 0 0 1px #2b2f36;display:block}
+.node span{font-size:12px;line-height:15px;color:#a7acb4;text-align:center}
+.act{font-size:13px;line-height:17px;color:#f4f5f7;background:#16181c;border-radius:12px;padding:10px 12px;max-width:150px;text-align:center}
+.act.sys{color:#a7acb4;background:transparent;box-shadow:inset 0 0 0 1.5px #2b2f36}
+.go{color:#3ddc84;font-size:13px;font-weight:600;text-align:center;max-width:140px;box-shadow:inset 0 0 0 1.5px #3ddc84;border-radius:12px;padding:10px 12px;background:rgba(61,220,132,.06)}
+.ar{color:#a7acb4;font-size:17px}
+</style></head><body><div class="wrap" id="w"></div>
+<script>
+const R = (new URLSearchParams(location.search).get('r')) || 'r1';
+const N = { landing: '01-landing', landingnight: '02-landingnight', who: '03-who', confirm: '04-confirm', guide: '05-guide', guidechrome: '06-guidechrome', trouble: '07-trouble', guideback: '08-guideback', welcome: '09-welcome', welcomenight: '10-welcomenight', back: '11-back', hasapp: '12-hasapp', inapp: '13-inapp', taken: '14-taken', waiting: '15-waiting', apppending: '16-apppending', appdenied: '17-appdenied', approve: '18-approve', notme: '19-notme', watching: '20-watching', watchingknown: '21-watchingknown', cartmatesheet: '22-cartmatesheet', cartmate: '23-cartmate', android: '24-android', desktop: '25-desktop', apphome: '26-apphome', organizer: '27-organizer' };
+const T = { landing: '1 Landing', landingnight: '2 Landing (night before)', who: '3 Which one are you?', confirm: '4 You’re Baker?', guide: '5 Add to home screen', guidechrome: '6 Chrome guide', trouble: '7 Can’t add it now?', guideback: '8 Added it? Open it', welcome: '9 Welcome (app)', welcomenight: '10 See you tomorrow', back: '11 Welcome back', hasapp: '12 You have the app', inapp: '13 Open in Safari', taken: '14 On another phone', waiting: '15 Waiting (Safari)', apppending: '16 Waiting for the OK (app)', appdenied: '17 Not let in', approve: '18 Let Sean in? (others)', notme: '19 I’m not Baker', watching: '20 Watching', watchingknown: '21 Watching (known)', cartmatesheet: '22 Mitch is told', cartmate: '23 Cart-mate enters', android: '24 Android', desktop: '25 Computer', apphome: '26 App Home', organizer: '27 Who’s in (host)' };
+const scr = (k) => `<div class="node"><img src="screens/${N[k]}.png"><span>${T[k]}</span></div>`;
+const act = (t) => `<div class="act">${t}</div>`, sys = (t) => `<div class="act sys">${t}</div>`, go = (t) => `<div class="go">${t}</div>`;
+const L = [
+  ['New · iPhone · text message', 'The main case: never used it, link in the group text the morning of.', [sys('Taps link → Safari'), scr('landing'), scr('who'), scr('confirm'), scr('guide'), act('Safari’s menu → Add'), sys('Back in Safari'), scr('guideback'), act('Taps the icon'), scr('welcome'), go('Today’s game → Enter')]],
+  ['New · the night before', 'Andrew sends the link the evening before.', [scr('landingnight'), scr('who'), scr('confirm'), scr('guide'), scr('guideback'), scr('welcomenight'), act('Morning: taps the icon'), scr('apphome'), go('Open → Enter')]],
+  ['New · WhatsApp, Instagram, Gmail', 'Built-in browsers can’t add to the home screen; steps picked per app.', [sys('Link opens inside the app'), scr('inapp'), act('Open in Safari (Copy link if it fails)'), scr('landing'), sys('then the iPhone row'), go('Enter')]],
+  ['New · Chrome on iPhone', 'Share is at the top right in Chrome.', [scr('landing'), scr('who'), scr('confirm'), scr('guidechrome'), scr('guideback'), scr('welcome'), go('Enter')]],
+  ['New · private tab', 'Can’t be detected; storage dies with the tab.', [scr('landing'), scr('who'), scr('guide'), act('Adds it before closing: the pick moves into the app'), scr('welcome'), go('Enter'), sys('Closed it first → lost device')]],
+  ['Returning · Safari only', 'Played before in Safari; Safari knows who they are.', [scr('back'), act('Show me how'), scr('guide'), scr('guideback'), scr('welcome'), go('Enter'), sys('I’m not Baker → 2')]],
+  ['Has the app · taps the link', 'Links always open Safari; Safari remembers it added the app once.', [scr('hasapp'), act('Opens the icon'), scr('apphome'), go('Open → Enter'), sys('Round missing → Have a link or code? · V4T3M'), sys('App deleted → Add it again → 3 (name first) → 5')]],
+  ['Has the app · opens the app', 'Home finds the round by who you are (024).', [scr('apphome'), act('Open'), go('Enter')]],
+  ['Lost device', 'New phone, cleared Safari, closed tab: the old phone still holds the name.', [scr('who'), scr('taken'), act('Ask to be let in'), scr('waiting'), act('Adds Golf Board while waiting'), scr('apppending'), scr('approve'), sys('Someone in the 8:20 or Andrew, after their save'), scr('welcome'), go('Enter'), sys('Turned down → 17')]],
+  ['Can’t add it right now', 'Managed phone, no storage, 7:58. Nobody scores in Safari, nobody is stuck.', [scr('guide'), act('Having trouble?'), scr('trouble'), act('Watch, Mitch scores for me'), scr('watchingknown'), scr('cartmatesheet'), scr('cartmate'), act('Later: add Golf Board'), go('→ 5, then Enter')]],
+  ['Not playing (spectator)', 'Chuck’s family, a friend riding along.', [scr('landing'), act('Not playing today? Watch the Board'), scr('watching'), go('Watching')]],
+  ['Wrong name, already in the app', 'Fat finger carried into the app.', [sys('You sheet'), scr('notme'), act('I’m not Baker'), scr('who'), go('Picks the right name')]],
+  ['Not on the list', 'A late add or a misspelling.', [scr('who'), act('I’m not on the list'), sys('Share sheet: “Andrew, add me to Chuck’s Bday”'), sys('Andrew adds the name (Host)'), scr('who')]],
+  ['Organizer (Andrew)', 'Needs to know who isn’t in, and approve new phones.', [sys('Setup → share the link'), scr('organizer'), act('Let in · Share the link again'), go('First tee: 16 of 16')]],
+  ['Android · Chrome', 'One-tap install (manifest served to Android only); prompt dismissed → menu steps.', [scr('android'), act('Install'), sys('App opens'), scr('who'), scr('confirm'), scr('welcome'), go('Enter')]],
+  ['Computer', 'Can’t add the app; can watch.', [scr('desktop'), act('Point the phone’s camera'), sys('→ the iPhone row'), go('or watch the Board')]],
+];
+document.getElementById('w').innerHTML = `<div style="display:flex;flex-direction:column;gap:8px"><span class="lbl">Onboarding · flow map · final (council round 5)</span><span style="font-size:40px;font-weight:800;letter-spacing:-1.2px">Every way into a round, by who’s opening the link</span><span style="font-size:17px;color:#a7acb4">Phones = screens (numbered as in the screen set) · also: joining late (Welcome opens on your current hole), two players on one phone (playing as, 024), onboarding is dark by default like the app · filled boxes = what the person does · outlined = what the system does · green = playing.</span></div>` +
+  L.map(([w, sub, steps]) => `<div class="lane"><div class="who"><b>${w}</b><span>${sub}</span></div><div class="steps">${steps.map((x, i) => (i ? '<span class="ar">→</span>' : '') + x).join('')}</div></div>`).join('');
+</script></body></html>
