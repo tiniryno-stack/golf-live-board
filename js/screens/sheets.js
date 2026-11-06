@@ -16,6 +16,7 @@ import { enterSheets } from './enter.js';
 import { owner as phoneOwner } from '../db.js';
 import { fullName } from '../names.js';
 import { whoGroups } from '../identity.js';
+import { lobbySheets } from './hostlobby.js';
 
 let lastHtml = '';
 let closeTimer = null;
@@ -135,7 +136,8 @@ const head = (title, sub = '') =>
    <button class="icon-btn" data-act="sheet-close" aria-label="Close">${icon('close')}</button></div>`;
 
 const BODIES = {
-  ...enterSheets, // 021/022: ⋯ More and the other cart's scores
+  ...enterSheets,
+  ...lobbySheets, // 025: the Team Ryder Cup lobby (share, players, replace, co-host, round, who's playing) // 021/022: ⋯ More and the other cart's scores
   'ryder-match': (app, p) => ryderMatchSheet(app, p), // read-only: no X (015 §1)
   who(app) {
     if (!app.snapshot) return head('Who are you?');
@@ -172,8 +174,18 @@ const BODIES = {
       </div>`;
   },
 
-  taken(app, { pid }) {
+  taken(app, { pid, lobby = false }) {
     const name = app.snapshot?.playerById.get(pid)?.name || 'That name';
+    const lst = lobby ? app.lobby?.() : null;
+    if (lst && !lst.open) {
+      // 025: before scoring opens there's no foursome to ask: the organizer frees the name or lets you in.
+      return `${head(`${name} is on another phone`)}
+        <p class="soft" style="margin:0 0 16px">If that’s you (your other phone, or Safari), ask ${esc(lst.hostName)} to free up your name in Host → Players, then pick it again here.</p>
+        <div class="stack">
+          <button class="btn primary big block" data-act="who-ask" data-v="${esc(pid)}">That’s me — ask ${esc(lst.hostName)}</button>
+          <button class="btn ghost block" data-act="sheet-close">Pick a different name</button>
+        </div>`;
+    }
     return `${head(`${name} is in use`)}
       <p class="soft" style="margin:0 0 16px">Another phone is playing as ${esc(name)}. If that’s you on a new phone (or you cleared your browser), your foursome can let you in with one tap.</p>
       <div class="stack">
@@ -269,6 +281,20 @@ const BODIES = {
   /** ⋯ → round actions only. Who you are lives on the avatar ("you" sheet). */
   menu(app) {
     const p = app.myPlayer();
+    const lst = app.lobby?.();
+    if (lst && !lst.open) {
+      // 025: before scoring opens there are no rules, holes or recap yet: share, theme, how it works, Host.
+      const light = document.documentElement.dataset.theme === 'light';
+      return `${head(app.event?.name || 'Round', [app.code, app.event?.course?.shortName || app.event?.course?.name].filter(Boolean).join(' · '))}
+        <div class="stack">
+          ${p ? '' : '<button class="btn primary big block" data-act="menu-pick">Find my name</button>'}
+          ${app.adminPin ? `<button class="btn block" data-act="menu-host">${icon('host', 18)} Host settings · organizer</button>` : '<button class="btn block" data-act="menu-host">Host · enter the organizer PIN</button>'}
+          <button class="btn block" data-act="lb-how">${icon('spark', 18)} How Team Ryder Cup works</button>
+          <button class="btn block" data-act="menu-share">${icon('share', 18)} Share round link</button>
+          <button class="btn block" data-act="theme">${icon(light ? 'moon' : 'sun', 18)} ${light ? 'Dark mode' : 'Light mode'}</button>
+          <button class="btn ghost block" data-act="menu-home">${icon('home', 18)} Go to Home</button>
+        </div>`;
+    }
     const light = document.documentElement.dataset.theme === 'light';
     const meta = [app.code, app.event?.course?.shortName || app.event?.course?.name].filter(Boolean).join(' · ');
     // 023 §3: the organizer's round menu leads with Fix hole N (it replaced the Enter header's ⋯).
@@ -517,7 +543,8 @@ const BODIES = {
     return `${head(p.title)}
       <p class="soft" style="margin:0 0 16px">${esc(p.body || '')}</p>
       <div class="stack"><button class="btn ${p.danger ? 'danger' : 'primary'} big block" data-act="confirm-ok">${esc(p.ok || 'OK')}</button>
-      <button class="btn ghost block" data-act="sheet-close">Cancel</button></div>`;
+      ${p.alt ? `<button class="btn block" data-act="confirm-alt">${esc(p.alt)}</button>` : ''}
+      <button class="btn ghost block" data-act="sheet-close">${esc(p.cancel || 'Cancel')}</button></div>`;
   },
 };
 
@@ -650,6 +677,7 @@ export const actions = {
   },
   'menu-pick': (el, ev, app) => {
     app.refreshClaimed();
+    if (app.lobby?.() && !app.lobby().open) { app.closeSheet(); app.ui.lobbyPick = app.code; app.ui.lobbyWatch = null; app.render(); return; } // 025: A–Z list
     app.openSheet('who', {});
   },
   'edit-step': (el, ev, app) => {
@@ -676,6 +704,11 @@ export const actions = {
   },
   'confirm-ok': (el, ev, app) => {
     const fn = app.sheet?.props?.onOk;
+    app.closeSheet();
+    fn?.();
+  },
+  'confirm-alt': (el, ev, app) => {
+    const fn = app.sheet?.props?.onAlt;
     app.closeSheet();
     fn?.();
   },

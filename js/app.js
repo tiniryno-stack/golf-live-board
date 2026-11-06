@@ -24,6 +24,8 @@ import { loadGeo } from './geoload.js';
 import { FLAGS } from './flags.js';
 import { initLoader, showLoader, updateLoader, loaderReady, hideLoaderNow } from './loader.js';
 import { joinPlan } from './identity.js';
+import { lobbyState, lobbyView as pickLobbyView, spotGiven, clock12, wallClock, parseTime } from './lobby.js';
+import lobbyScreen from './screens/lobby.js';
 
 const SCREENS = { home, setup, season, enter, matches, board, card, host, crew };
 const TABS = [
@@ -82,6 +84,36 @@ app.myTeam = (hole) => {
   return p.teamId || null;
 };
 app.isOrganizer = () => !!app.adminPin;
+
+// ───────────────────────────────────────────── 025 · Team Ryder Cup lobby
+// Everything about a lobby round comes from lobbyState (js/lobby.js); old rounds get null and nothing here applies.
+app.now = () => db.clock.now(); // the phone's clock corrected by the server's (whoami / not_open / mark_in_app)
+app.lobby = () => (app.event ? lobbyState(app.event, app.now()) : null);
+const seenKey025 = (k) => `glb.seen.${app.code}.${k}`;
+app.seenLobby = (k) => !!db.local.get(seenKey025(k));
+app.markLobbySeen = (k) => db.local.set(seenKey025(k), true);
+/** This phone's spot went to a sub (Replace): its last player slot now holds someone else. */
+app.lobbyRemoved = () => {
+  if (app.me) return null;
+  const o = db.owner.get();
+  const pid = db.recent.all().find((r) => r.code === app.code)?.lobbyPid || null;
+  return spotGiven(app.event, { pid, personId: o?.personId || null });
+};
+/** Which lobby view this phone shows instead of the tabs (null = the normal round). */
+app.lobbyView = () => {
+  const st = app.lobby();
+  if (!st) return null;
+  return pickLobbyView(st, {
+    me: app.me, watching: app.ui.lobbyWatch === app.code, picking: app.ui.lobbyPick === app.code,
+    seenWelcome: app.seenLobby('welcome'), seenOpen: app.seenLobby('open'), removed: !!app.lobbyRemoved(),
+  });
+};
+app.gated = () => !!app.lobbyView();
+/** "Scoring opens at 7:30" (or by itself once start times are in). */
+app.opensLine = () => {
+  const st = app.lobby();
+  return st?.stage === 'ready' ? `Scoring opens at ${st.opensLabel}` : 'Scoring opens once start times are set';
+};
 /** The organizer finalized the round: scores are locked (organizer PIN to edit). */
 app.isFinal = () => !!app.event?.finalized_at;
 /** Nothing left to enter (finalized, or every score is in): the round opens on the Board. */
@@ -115,6 +147,7 @@ app.inMyFoursome = (pid, hole) =>
 
 /** May this phone write this player's score on this hole? (mirrors the server) */
 app.canEdit = (pid, hole) => {
+  if (app.lobby() && !app.lobby().open) return false; // 025: nothing to enter before scoring opens
   // Finalized: locked on every phone, the organizer's too, until "Fix a score" unlocks this one.
   if (app.isFinal()) return app.finalUnlocked();
   if (app.adminPin) return true;
@@ -213,7 +246,8 @@ function freshStart(wasPlaying) {
 /** Optimistic score write: screen updates now, server in the background. */
 app.setScore = (pid, hole, strokes) => {
   if (!app.canEdit(pid, hole)) {
-    if (app.isFinal()) app.toast({ title: 'The round is final', sub: app.adminPin ? 'Scores are locked. Tap Unlock to fix one.' : 'Scores are locked. The organizer PIN unlocks them.', action: 'Unlock', onAction: () => app.unlockFinal(), error: true });
+    if (app.lobby() && !app.lobby().open) app.toast({ title: app.opensLine(), sub: 'Scores can’t be entered yet.' });
+    else if (app.isFinal()) app.toast({ title: 'The round is final', sub: app.adminPin ? 'Scores are locked. Tap Unlock to fix one.' : 'Scores are locked. The organizer PIN unlocks them.', action: 'Unlock', onAction: () => app.unlockFinal(), error: true });
     else app.toast({ title: 'Not your matchup', sub: 'You can enter your cart and the cart you’re playing.', error: true });
     return false;
   }
@@ -235,9 +269,23 @@ const REJECT_TEXT = {
   finalized: 'the round is final (organizer PIN to edit)',
   unknown_player: 'that player isn’t in the round anymore',
   own_entry: 'they entered it on their own phone, so theirs stays',
+  not_open: 'scoring isn’t open yet',
 };
+let notOpenToast = 0;
 
 function onQueueReject(item, error, res = {}) {
+  if (error === 'not_open') {
+    // 025: one quiet toast per flush, then the server's view of the round (its opensAt / stage wins).
+    // A kept score (the round opens within minutes) retries every flush: say it once, not every 15 s.
+    if (Date.now() - notOpenToast > (res.kept ? 600000 : 4000)) {
+      notOpenToast = Date.now();
+      const st = app.lobby();
+      const when = res.stage === 'ready' && st?.tz ? clock12(wallClock(parseTime(res.opens_at), st.tz)) : '';
+      app.toast(res.kept ? { title: `Scoring opens at ${when}`, sub: 'Your score is saved on this phone and sends then.' } : { title: when ? `Scoring opens at ${when}` : 'Scoring isn’t open yet', sub: 'That score wasn’t saved.' });
+    }
+    refetchAll();
+    return;
+  }
   const name = app.snapshot?.playerById.get(item.playerId)?.name || 'score';
   if (error === 'own_entry') {
     // A player's own entry wins: take their number and say so (not an error, nothing to retry).
@@ -337,7 +385,7 @@ async function verifyMe() {
     if (server !== app.me) {
       const had = app.me;
       setMe(server);
-      if (had && !server) {
+      if (had && !server && !(app.lobby() && !app.lobby().open)) {
         app.toast({ title: 'You’re watching now', sub: 'Your name moved to another phone. Tap your name chip to pick again.' });
       }
     }
@@ -361,12 +409,13 @@ app.claim = async (pid, { auto = false } = {}) => {
     return false;
   }
   if (res.ok) {
+    app.ui.lobbyPick = null; // 025: the A–Z list is done
     app.joining = Date.now(); // name → cart name → Today's game: hold coach tips until it's done
     const confirm = !auto && needsConfirm(pid);
     setMe(pid);
     app.claimed.add(pid);
     channel?.send({ kind: 'join', playerId: pid });
-    if (app.route.tab !== app.homeTab()) app.go(app.tabHash(app.homeTab()));
+    if (app.route.tab !== app.homeTab() && !(auto && app.route.tab === 'host')) app.go(app.tabHash(app.homeTab())); // 025: the organizer stays on Host
     else {
       app.ui.hole = null;
       render();
@@ -395,6 +444,18 @@ app.claim = async (pid, { auto = false } = {}) => {
   }
   return false;
 };
+
+/** 025: the home screen app opened this round as a player: Host counts "N of 16 have Golf Board". Keyed by player,
+ *  so a re-claim ("I'm not X", a let-in) marks again. */
+async function markInApp() {
+  if (!db.STANDALONE || !app.me || !app.lobby() || app.lobby().open) return;
+  const key = `glb.inapp.${app.code}`;
+  if (db.local.get(key) === app.me) return;
+  try {
+    const res = await db.api.markInApp(app.code);
+    if (res?.ok) db.local.set(key, app.me);
+  } catch { /* next open */ }
+}
 
 /** "Yes, that's me" (024 §5.2): this device now belongs to that person. */
 app.confirmMe = () => {
@@ -494,6 +555,9 @@ app.pickTeamName = async (name) => {
 /** Right after joining: name the cart if it still has its placeholder name, then
  *  "Today's game" (once per phone per round), then you're on Enter. */
 function afterJoin() {
+  markInApp();
+  // 025: a lobby never asks for a cart name or shows Today's game here: "See you Saturday" / "Scoring is open" do.
+  if (app.lobby()) { app.joining = 0; render(); return; }
   const t = app.myTeam() && app.snapshot?.teamById.get(app.myTeam());
   if (t && isDefaultTeamName(t) && !app.roundOver()) fx.showTeamPicker(app, maybeBrief);
   else maybeBrief();
@@ -838,6 +902,7 @@ async function loadRound(code) {
   });
   await Promise.all([verifyMe(), refreshClaimed()]);
   if (seq !== loadSeq) return;
+  markInApp();
   maybeAskWho();
 }
 
@@ -919,7 +984,10 @@ function onRemoteEvent(row) {
   refetchAll();
   const lineupsBefore = JSON.stringify(before.settings?.lineups || []);
   const lineupsNow = JSON.stringify(row.settings?.lineups || before.settings?.lineups || []);
-  if (finalChanged && !app.adminPin) {
+  if (app.lobby() && !app.lobby().open) {
+    // 025: the lobby screen itself shows what changed (teams, start times, notices); no generic toast.
+    if (!before.settings?.lobby?.opensAt && row.settings?.lobby?.opensAt) scheduleLobbyTick();
+  } else if (finalChanged && !app.adminPin) {
     app.toast(row.finalized_at
       ? { title: 'The round is final', sub: 'Scores are locked. Nice playing.' }
       : { title: 'The organizer reopened the round', sub: 'Scores can be changed again.' });
@@ -1099,7 +1167,21 @@ function openAppGate() {
  * on a real open and never on a redraw or a poll; a failed auto-join falls to the sheet and never loops.
  */
 async function maybeAskWho() {
-  if (!app.event || app.me || app.route.tab === 'host') return;
+  if (!app.event || app.me) return;
+  const st = app.lobby();
+  if (st && !st.open) {
+    // 025: before scoring opens, the owner joins himself on every open (Undo after a Replace gives the spot back);
+    // a taken spot asks the organizer; everyone else picks from the lobby's own A–Z list (no sheet).
+    if (st.stage === 'off' || app.lobbyRemoved()) return;
+    const { plan, pid } = joinPlan({ owner: db.owner.get(), roster: app.event.roster, claims: app.claimed, deviceClaim: app.me, practice: isPractice() });
+    if (plan === 'auto') await app.claim(pid, { auto: true });
+    else if (plan === 'ask' && app.route.tab !== 'host' && !db.local.get(`glb.who.${app.code}`)) {
+      db.local.set(`glb.who.${app.code}`, true);
+      app.openSheet('taken', { pid, lobby: true });
+    }
+    return;
+  }
+  if (app.route.tab === 'host') return;
   if (app.mustUseApp()) { openAppGate(); return; }
   const skipKey = `glb.who.${app.code}`;
   if (db.local.get(skipKey)) return;
@@ -1194,7 +1276,9 @@ function render(opts = {}) {
 
 function draw(opts) {
   const r = app.route;
-  const screen = SCREENS[r.name] || home;
+  const inLobby = !!r.round && !!app.snapshot && !app.loading && app.gated();
+  // 025: a lobby round shows its lobby instead of the tabs (Host still opens for the organizer).
+  const screen = inLobby && r.tab !== 'host' ? lobbyScreen : SCREENS[r.name] || home; // Host: the PIN form, or the lobby Host
   const appEl = $('app');
   const content = $('content');
   const inRound = !!r.round;
@@ -1207,8 +1291,8 @@ function draw(opts) {
   appEl.classList.toggle('no-top', hideTop);
   $('topbar').innerHTML = hideTop ? '' : renderTopbar(screen, inRound);
   if (screen !== SCREENS.enter) gps.stop();
-  renderTabbar($('tabbar'), inRound && ready);
-  appEl.classList.toggle('has-tabbar', inRound && ready);
+  renderTabbar($('tabbar'), inRound && ready && !inLobby);
+  appEl.classList.toggle('has-tabbar', inRound && ready && !inLobby);
 
   const active = document.activeElement;
   const typing = active && content.contains(active) && /^(INPUT|TEXTAREA|SELECT)$/.test(active.tagName);
@@ -1225,6 +1309,26 @@ function draw(opts) {
   renderSheet();
   fx.renderBanners(app);
   if (fx.pickerOpen()) fx.renderPicker(app);
+  if (inLobby || app.lobby()) scheduleLobbyTick();
+}
+
+// 025: while a lobby round waits to open, wake at opensAt (the server's clock), refetch so the server's stage and
+// opensAt win, then redraw: 7:29 → 7:30 unlocks without a reload. Under an hour out, tick every 30 s for the countdown.
+let lobbyTimer = null, lobbyTickAt = 0;
+function scheduleLobbyTick() {
+  const st = app.lobby();
+  if (!st || st.open || st.stage !== 'ready' || st.msToOpen == null) { clearTimeout(lobbyTimer); lobbyTimer = null; lobbyTickAt = 0; return; }
+  const wait = Math.max(250, Math.min(st.msToOpen + 300, st.msToOpen < 3600000 ? 30000 : 3600000));
+  const at = Date.now() + wait;
+  if (lobbyTimer && Math.abs(at - lobbyTickAt) < 1000) return;
+  clearTimeout(lobbyTimer);
+  lobbyTickAt = at;
+  lobbyTimer = setTimeout(async () => {
+    lobbyTimer = null;
+    const s2 = app.lobby();
+    if (s2 && s2.stage === 'ready' && s2.msToOpen <= 1000) { await refetchAll(); db.flush(); }
+    render();
+  }, wait);
 }
 
 document.addEventListener('focusout', () => {
@@ -1365,6 +1469,7 @@ Object.assign(actions, {
   'round-menu': () => app.openSheet('menu', {}),
   'name-chip': () => {
     if (app.me) app.openSheet('you', {});
+    else if (app.lobby() && !app.lobby().open) { app.ui.lobbyPick = app.code; app.ui.lobbyWatch = null; render(); } // 025: the A–Z list
     else {
       refreshClaimed();
       app.openSheet('who', {});
@@ -1373,7 +1478,7 @@ Object.assign(actions, {
   'retry-load': () => loadRound(app.route.code),
   reload: () => location.reload(),
 });
-for (const s of [...Object.values(SCREENS), sheets, fx]) Object.assign(actions, s.actions || {});
+for (const s of [...Object.values(SCREENS), sheets, fx, lobbyScreen]) Object.assign(actions, s.actions || {});
 
 let suppressClick = false;
 let userAction = false;
