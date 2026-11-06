@@ -814,6 +814,21 @@ Still open: nothing blocking. Design direction (section 9) is final.
   `lobby`; Season / crew / Setup's last groups skip lobby rounds that never opened (`_sync_crew` still counts them in
   `crew_members.rounds`; harmless, noted). Not built: Play without him, the app-only Safari gate, captains drafting,
   the example round, changing the course in a lobby. Open questions: BUILD-PLAN.md §10.
+- **025 revision: carts before the draft + the handicap reveal (Nov 6, branch `claude/new-session-a0hcnv`; no SQL):**
+  new stage **`carts`** between `lobby` and `teams`: `roster.teams` = C1…C8 (temporary ids, `lobby.pairedRoster`), no
+  sides / groups; `isPaired` is strict (8 × 2, 16 players); a stage the roster doesn't support falls back to the highest
+  one it does. `ryderView` scores nothing until a cart id carries a side. Setup: create → **Who rides together?** (lobby
+  edit mode `carts`, `fromSetup`: Skip / Open the lobby; Cart 1 / 2 labelled captain; handicaps beside names) → Host +
+  invite sheet. Host: `lobby` → **Pair the carts**, `carts` → **Enter the draft** (draft 1 of 2 → saves teams → start
+  times 2 of 2 → Share the teams sheet), Carts row, Teams · redo the draft (`maySaveStep('draft')` at carts|teams), a
+  Handicap editor per player, Replace / Add ask for the sub's handicap; `rosterKey` includes `teamId` (stale steps
+  refuse); Remove on a called-off round keeps it off. Players: invite link **`#/e/CODE/hcp`** (`app.ui.lobbyInvite`) →
+  **invite** ("Andrew set your handicap", only when every player has one) → **guide** (iPhone Safari; the move link
+  with the round in the address bar; "Can't add it? Reveal it here") → the home screen app: 024 auto-join or the A–Z
+  list → confirm → **reveal** (`lobby.revealFrame`, redraw-safe; starts once no sheet is open; `glb.seen.CODE.hcp` =
+  the player id; none for the organizer `lobby.hostId`) → the lobby with **Your handicap**, **Your cart** (stage carts)
+  and Who's playing · handicap. See you Saturday is gone. `db.moved`: a Safari reload of a move link returns to its
+  round only when it's in this phone's Recent rounds. Plan, council and open questions: BUILD-PLAN.md Part 2.
 
 ## 13. V2 backlog (running list)
 
