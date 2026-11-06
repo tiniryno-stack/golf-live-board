@@ -151,7 +151,7 @@ export function hostLobbyView(app) {
       ${st.stage === 'lobby' || st.stage === 'carts' ? row('Carts', st.paired ? '8 paired' : 'not paired yet', 'lh-carts') : ''}
       ${st.stage === 'teams' ? row('Teams', 'redo the draft', 'lh-draft') : ''}
       ${row('Players', st.stage === 'off' ? `${n} players` : 'replace a player', 'lh-players')}
-      ${st.stage === 'off' ? '' : row('Handicaps', `${L.handicapCount(ev.roster)} of ${n} set`, 'lh-players')}
+      ${st.stage === 'off' ? '' : row('Handicaps', L.handicapCount(ev.roster) < n ? `${L.handicapCount(ev.roster)} of ${n} set · all ${n} for the handicap invite` : `all ${n} set`, 'lh-players')}
       ${row('Co-host', esc(cohost), 'lh-cohost')}
       ${row('Round', st.stage === 'off' ? 'bring it back, date' : 'date, course, call it off', 'lh-options')}
     </div>
@@ -222,7 +222,8 @@ export const lobbySheets = {
       <div class="field"><label for="lr-name">${p ? 'Sub’s first and last name' : 'First and last name'}</label>
         <input class="input" id="lr-name" maxlength="40" autocapitalize="words" autocomplete="off" value="${esc(q)}" data-input="lh-rq" data-enter="lh-rgo"></div>
       ${nick ? `<div class="field"><label for="lr-nick">Nickname (someone else is called ${esc(q)})</label><input class="input" id="lr-nick" maxlength="24" placeholder="e.g. Tini Ryno" autocomplete="off" data-enter="lh-rgo"></div>` : ''}
-      <div class="field"><label for="lr-hcp">Handicap (blank = not set)${L.hasHandicaps(app.event.roster) ? '. Blank turns the handicap invite off for everyone not in yet.' : ''}</label><input class="input mono" id="lr-hcp" inputmode="numeric" pattern="[0-9]*" maxlength="2" autocomplete="off" data-enter="lh-rgo"></div>
+      <div class="field"><label for="lr-hcp">Handicap (blank = not set)</label><input class="input mono" id="lr-hcp" inputmode="numeric" pattern="[0-9]*" maxlength="2" autocomplete="off" data-enter="lh-rgo">
+        ${L.hasHandicaps(app.event.roster) ? '<p class="meta nr-hint">Leave it blank and the invite stops showing the reveal.</p>' : ''}</div>
       <div id="lr-picks">${picks}</div>
       <div class="stack" style="margin-top:14px"><button class="btn primary big block" data-act="lh-rgo">${typed.first ? `${p ? 'Replace' : 'Add'} with ${esc(typed.first)}` : p ? 'Replace' : 'Add'}</button>
       <button class="btn ghost block" data-act="sheet-close">Cancel</button></div>`;

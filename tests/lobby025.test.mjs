@@ -448,6 +448,8 @@ test('rev · the draft from paired carts: mates stay together, real cart ids, id
   assert.deepEqual([merged.players.find((p) => p.id === 'p10').strokes, merged.players.find((p) => p.id === 'p11').name], [3, 'Mitchell']);
   assert.deepEqual(merged.players.map((p) => `${p.id}:${p.teamId}:${p.groupId}`), roster.players.map((p) => `${p.id}:${p.teamId}:${p.groupId}`));
   assert.equal(merged.teams, roster.teams);
+  const gone = structuredClone(fresh); gone.players = gone.players.filter((p) => p.id !== 'p16');
+  assert.equal(L.mergeStep(roster, gone).players.length, 16, 'never drops a player (rosterKey refuses such a save anyway)');
   // Engine: a carts roster scores nothing and never throws; season and crew skip it.
   const snap = compute(ev, [{ player_id: 'p10', hole: 1, strokes: 4, updated_at: '2026-11-07T14:00:00Z', updated_by: 'Baker' }]);
   assert.equal(snap.game ?? null, null);
@@ -542,7 +544,6 @@ test('rev · lobbyView precedence (table) and Home at carts', () => {
     [lob, { ...me, seenHcp: true, revealing: true }, 'reveal', 'seen is written on the first frame: still revealing'],
     [lob, { ...me, safariPhone: true }, 'guide', 'joined in Safari (024 auto-join): the steps before the reveal'],
     [lob, { ...me, safariPhone: true, revealHere: true }, 'reveal', 'Can’t add it? Reveal it here'],
-    [lob, { ...me, safariPhone: true, revealHere: true, picking: false }, 'reveal', 'Join in Safari for now sets revealHere too (lb-find)'],
     [lob, { me: 'p10', hasHcp: false }, 'early', 'no handicap: no reveal'],
     [car, { ...me, seenHcp: true }, 'early'],
     [car, { ...me, seenHcp: true }, 'dayWait', at('2026-11-07T13:00:00Z')],

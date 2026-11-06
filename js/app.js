@@ -107,7 +107,7 @@ app.lobbyView = () => {
   return pickLobbyView(st, {
     me: app.me, watching: app.ui.lobbyWatch === app.code, picking: app.ui.lobbyPick === app.code,
     guide: app.ui.lobbyGuide === app.code, invite: app.ui.lobbyInvite === app.code, standalone: db.STANDALONE,
-    safariPhone: !db.STANDALONE && db.isIOS(), revealHere: app.ui.revealHere === app.code,
+    safariPhone: !db.STANDALONE && db.isIOS(), revealHere: app.ui.revealHere === app.code || app.seenLobby('here'),
     hcpFlow: hasHandicaps(roster),
     ...revealCtx(st, roster, { me: app.me, seenPid: db.local.get(seenKey025('hcp')) }),
     revealing: !!app.me && app.ui.reveal?.code === app.code && app.ui.reveal.pid === app.me,

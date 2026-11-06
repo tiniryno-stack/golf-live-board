@@ -273,7 +273,7 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
   `glb.who.CODE`, `glb.cardOpen.CODE`, `glb.coach.{tile5,oppcart3,prov2,pad1}`, `glb.setupDraft`,
   `glb.theme`, `glb.people`, `glb.crews`, `glb.crew`, (024) `glb.owner` (`{ personId, name }` = the one person this
   device belongs to; `{ personId: null }` = cleared by "I'm not X"), `glb.hasApp` (Add to Home Screen was tapped).
-  (025) `glb.seen.CODE.open` (Scoring is open shown once), `glb.seen.CODE.hcp` (= the player id the handicap reveal was shown to; `.welcome` is no longer read), `glb.inapp.CODE` (= the player id
+  (025) `glb.seen.CODE.open` (Scoring is open shown once), `glb.seen.CODE.hcp` (= the player id the handicap reveal was shown to; `.welcome` is no longer read), `glb.seen.CODE.here` (chose to stay in Safari: Can't add it / Join in Safari for now), `glb.inapp.CODE` (= the player id
   `mark_in_app` was sent for; not moved), `glb.lobbyhost.CODE` (`{ teamsShared, told }`, the organizer's one-time
   primaries; moved). `glb.recent` entries can carry `lobby` (Home's Coming up card) and `lobbyPid`.
   Bump a coach key's suffix when its text changes so people see the new tip.

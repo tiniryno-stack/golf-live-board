@@ -236,6 +236,7 @@ call off. 6. Countdown + Scoring is open. Then: live DB (rollback test → apply
 |---|---|---|---|---|---|---|---|
 | 0 · plan | 7.5 | 8 | 7 | 7 | 6.5 | 7 | Plan reviewed; every point in P2.8 folded in (QA's 6.5 items were built before code review). |
 | 1 · code | 8 | 8.5 | 7.5 | 8 | 8 | 8 | Code reviewed (fb1e670); fixes in P2.10. |
+| 2 · code | 9 | 9 | 8.5 | 9 | 9 | 8.5 | Round-1 fixes reviewed (c0ad4f0); P2.11. |
 | 0 · plan | 6.5 | 7 | 6.5 | 7 | 7 | 6 | Plan reviewed; every point below folded into §12 before code. |
 | 1 · code | 8 | 8 | 8 | 8 | 8 | 7 | Code reviewed after the build; every confirmed bug fixed the same night (§14). Owner asked for two rounds, so no third round. |
 
@@ -446,6 +447,7 @@ without handicaps → landing, standalone → who, reveal once · `homeCard` car
 |---|---|---|---|---|---|---|---|
 | 0 · plan | 7.5 | 8 | 7 | 7 | 6.5 | 7 | Plan reviewed; every point in P2.8 folded in (QA's 6.5 items were built before code review). |
 | 1 · code | 8 | 8.5 | 7.5 | 8 | 8 | 8 | Code reviewed (fb1e670); fixes in P2.10. |
+| 2 · code | 9 | 9 | 8.5 | 9 | 9 | 8.5 | Round-1 fixes reviewed (c0ad4f0); P2.11. |
 
 ## P2.8 · Round 0 changes (what the council asked for, as built)
 
@@ -518,6 +520,20 @@ without handicaps → landing, standalone → who, reveal once · `homeCard` car
   actual result. `hcpOf` clamps at 0 like the reveal.
 - **Known limits (noted, not changed):** `pick_team_name` is client-gated in a lobby (cosmetic: the next save renames
   the cart); `update_event` has no version check, so two organizers saving in the same second: last write wins (V2).
+
+## P2.11 · Round 2 fixes
+
+- Redo the draft no longer says “Wrong? Back to Host → Carts.” (the Carts row is gone after the draft); the captains
+  line shows only when both captains exist (QA, red team, frontend).
+- The guide has two notes, not three: the Partiful hint shows only inside an app's own browser (no “Safari/” in the
+  user agent), joined to the Join-with-code line (frontend).
+- Replace's handicap warning is a hint under the field, not a long label (frontend). Host: “Handicaps · 0 of 16 set ·
+  all 16 for the handicap invite” (QA).
+- “Not playing? Follow along” is on the A–Z list for everyone (red team: an iPhone spectator on a plain link);
+  the iPhone landing keeps one ghost.
+- Staying in Safari (Can't add it / Join in Safari for now) is kept per round in `glb.seen.CODE.here`, so a reload
+  doesn't show the steps again (red team).
+- Tests: the duplicate lobbyView row is gone; `mergeStep` never drops a player.
 
 ## P2.9 · Open questions for the owner (Part 2)
 

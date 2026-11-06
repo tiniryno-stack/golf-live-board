@@ -848,7 +848,7 @@ function ryDraftView(s) {
       ${d[side].map((k, i) => `<div class="ry-slot${i === 0 ? ' cap' : ''}${i === 0 && side === 'A' ? ' you' : ''}"><span class="ellipsis">${esc(ryCartName(s, k))}</span></div>`).join('')}</div>`;
   const head = s.lobby
     ? headline(`${esc(s.name)} · draft · 1 of 2`, title, d.done ? 'Two sides of 4 carts. Start times next.'
-      : `Drafting in person? Tap each cart as it’s picked. Captains: ${esc(capA?.firstName || capA?.name || '')} (cart 1) and ${esc(capJ?.firstName || capJ?.name || '')} (cart 2). Wrong? Back to Host → Carts.`)
+      : `Drafting in person? Tap each cart as it’s picked.${capA && capJ ? ` Captains: ${esc(capA.firstName || capA.name || '')} (cart 1) and ${esc(capJ.firstName || capJ.name || '')} (cart 2).${(s.lobby.roster?.sides || []).length ? '' : ' Wrong? Back to Host → Carts.'}` : ''}`)
     : headline('Step 5 · Draft', title, d.done ? 'Two sides of 4 carts. Tee times next.' : 'Tap a cart to take it.');
   return `${topBar(s)}${head}
     <div class="nr-line"><span class="meta">${d.done ? '' : `Snake order: ${RY_SNAKE.map((x) => esc(fn(x === 'A' ? capA : capJ))).join(', ')}`}</span><button class="btn small" data-act="setup-ry-reset">Start over</button></div>

@@ -9,6 +9,8 @@ import { joinList, myLobby, myCart, dayName, shortDate, hostLine, clock12, wallC
 import { playOrder } from '../scoring.js';
 
 const safariPhone = () => !db.STANDALONE && db.isIOS();
+/** An app's own browser (Partiful, Instagram…), not Safari: iOS web views leave "Safari/" out of the user agent. */
+const inAppBrowser = () => { try { return !/Safari\//.test(navigator.userAgent) || /CriOS|FxiOS|FBAN|FBAV|Instagram/.test(navigator.userAgent); } catch { return false; } };
 const first = (p) => p?.firstName || String(p?.name || '').split(' ')[0];
 
 /** Players' counts ("3 haven't added Golf Board"): numbers only, refreshed at most once a minute. */
@@ -117,8 +119,7 @@ function guide(app, st) {
       <li><span class="hs-n">3</span><span>Tap <b>Add to Home Screen</b>, then <b>Add</b></span></li>
       <li><span class="hs-n">4</span><span>Tap the new <b>Golf Board</b> icon</span></li>
     </ol>
-    <p class="meta lb-note">Already have Golf Board on your home screen? Open it, tap <b>Join with code</b> and type <b class="mono">${esc(app.code)}</b>.</p>
-    <p class="meta lb-note">Opened inside Partiful or another app? Tap <b>•••</b> → <b>Open in Safari</b> first.</p>
+    <p class="meta lb-note">${inAppBrowser() ? 'In Partiful or another app? Tap <b>•••</b> → <b>Open in Safari</b> first. ' : ''}Already have Golf Board? Open it and tap <b>Join with code</b> · <b class="mono">${esc(app.code)}</b>.</p>
     <p class="meta lb-note">This link signs in as you: use Add to Home Screen only, don’t send it.</p>
     ${foot(`<button class="btn ghost block lb-quiet lb-left" data-act="lb-here">${hcp ? 'Can’t add it? Reveal it here' : 'Can’t add it? Join here'}</button>`)}
     <div class="lb-point" aria-hidden="true"><span class="lbl">Start here</span>${icon('fwd', 22)}</div>`;
@@ -145,7 +146,7 @@ function who(app) {
     ${head(kicker, 'Which one are you?')}
     <input class="input lb-search" type="search" placeholder="Search ${n} names" aria-label="Search names" value="${esc(q)}" autocomplete="off" data-input="lb-q">
     <div id="lb-who">${whoRows(app, q)}</div>
-    ${foot(`<button class="btn ghost block" data-act="lb-notlisted">I’m not on the list</button>${db.STANDALONE ? '<button class="btn ghost block lb-quiet" data-act="lb-follow">Not playing? Follow along</button>' : ''}`)}`;
+    ${foot(`<button class="btn ghost block" data-act="lb-notlisted">I’m not on the list</button><button class="btn ghost block lb-quiet" data-act="lb-follow">Not playing? Follow along</button>`)}`;
 }
 
 /** The reveal (once per phone per round): blurred, rolling, then the number; the rest fades in. Drawn from
@@ -347,6 +348,7 @@ export default {
   actions: {
     'lb-find': (el, ev, app) => {
       app.ui.revealHere = app.code; // chose Safari (Join in Safari for now): after the pick, the reveal, not the steps
+      app.markLobbySeen('here'); // and after a reload too
       app.ui.lobbyPick = app.code;
       app.ui.lobbyWatch = null;
       app.ui.lobbyQ = '';
@@ -360,7 +362,8 @@ export default {
       // Can't add it: carry on in Safari (the name list, or the reveal for a player who's already in).
       restoreHash(app);
       app.ui.lobbyGuide = null;
-      app.ui.revealHere = app.code; // this load stays in Safari: after the name pick, the reveal (not the steps again)
+      app.ui.revealHere = app.code; // this phone stays in Safari: after the name pick, the reveal (not the steps again)
+      app.markLobbySeen('here'); // a reload keeps the choice
       if (!app.me) { app.ui.lobbyPick = app.code; app.ui.lobbyQ = ''; app.refreshClaimed(); }
       app.render();
     },
