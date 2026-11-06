@@ -176,6 +176,7 @@ end $$;
 
 drop function if exists public.mark_in_app(text, uuid);
 drop function if exists public.lobby_status(text, text);
+drop function if exists public.lobby_counts(text);
 drop function if exists public.set_round_date(text, text, date, timestamptz);
 drop function if exists public._lobby_gate(public.events);
 alter table public.claims drop column if exists in_app;

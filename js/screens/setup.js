@@ -21,6 +21,7 @@ import { FLAGS } from '../flags.js';
 import { loadGeo } from '../geoload.js';
 import { TEAM_NAME_PICKS, isDefaultTeamName } from '../teams.js';
 import { initials } from '../ui.js';
+import { countsAsPlayed, draftedRoster } from '../lobby.js';
 
 const TEAM_IDS = ['A', 'B', 'C', 'D'];
 const DRAFT_KEY = 'glb.setupDraft';
@@ -103,7 +104,7 @@ async function loadPast(app, crewId) {
     const plays = new Map(); // course id → rounds your group played there
     const lastHcp = {}; // person → strokes in the latest round they played (rounds come oldest first)
     const freq = {}; // person → rounds in the crew's last 12 (Quick players order, feature 007)
-    const live = rounds.filter(({ event }) => String(event.settings?.practice) !== 'true');
+    const live = rounds.filter(({ event, scores }) => String(event.settings?.practice) !== 'true' && countsAsPlayed(event, scores)); // 025: not a lobby that never opened
     for (const { event } of live.slice(-12)) for (const p of event.roster?.players || []) if (p.personId) freq[p.personId] = (freq[p.personId] || 0) + 1;
     // Last groups: the crew's 4 most recent rounds, newest first ("All 8 from Friday", "Sat 2v2 · 4").
     const groups = live.slice(-4).reverse().map(({ event }) => ({
@@ -180,7 +181,7 @@ async function loadFrom(app, code) {
     s.teams = TEAM_IDS.map((id) => ({ id, name: (ev.roster.teams || []).find((t) => t.id === id)?.name || '' }));
     if (ryder) Object.assign(s, { rySkip: true, ryPicks: [], ryTee: null }); // run it back: same sides, same tee times
     s.sideNames = ryder ? ['1', '2'].map((id) => (ev.roster.sides || []).find((x) => x.id === id)?.name || '') : ['', ''];
-    const { rotation, lineups, ryder: _r, ...settings } = ev.settings || {};
+    const { rotation, lineups, ryder: _r, lobby: _l, ...settings } = ev.settings || {}; // 025: never the lobby
     s.settings = { ...s.settings, ...settings };
     // The same game as last time (the course isn't copied).
     const nCarts = (ev.roster.teams || []).length;
@@ -463,11 +464,12 @@ function buildRyder(s, c, shown) {
   const d = rySides(s), tee = ryTee(s);
   const order = [...d.A, ...tee].flatMap((k) => [2 * k, 2 * k + 1]);
   const players = order.map((k) => s.players[k]).map((p, i) => ({
-    id: `p${i + 1}`, personId: p.personId || db.uuid(), name: shown[i],
+    id: p.lobbyId || `p${i + 1}`, personId: p.personId || db.uuid(), name: shown[i],
     firstName: p.firstName, lastName: p.lastName || '', ...(p.nickname ? { nickname: p.nickname } : {}),
     strokes: p.strokes === '' || p.strokes == null || Number.isNaN(Number(p.strokes)) ? null : Math.max(0, Math.round(Number(p.strokes))),
   }));
-  const { roster, settings } = ryderSetup(players.map((p, i) => ({ ...p, id: `p${i + 1}`, name: shown[order[i]] })), ['', '']);
+  // 025: draftedRoster keeps a lobby round's player ids (claims point at them); new rounds get p1…p16 as before.
+  const { roster, settings } = draftedRoster(players.map((p, i) => ({ ...p, name: shown[order[i]] })), ['', '']);
   return {
     name: s.name.trim() || `${c.shortName || cd.shortCourseName(c.name)} · ${prettyDate(todayISO())}`,
     course: courseOf(s, c),

@@ -342,6 +342,14 @@ export function createBackend() {
         return { player_id: p.id, claimed: !!c, in_app: !!c?.in_app };
       }) };
     },
+    // 025: counts only (no ids), for players' "3 haven't added Golf Board".
+    lobby_counts({ p_code }) {
+      const e = ev(p_code);
+      if (!e) return no('not_found');
+      const ids = new Set((e.roster.players || []).map((p) => p.id));
+      const cs = t.claims.filter((c) => c.event_id === e.id && ids.has(c.player_id));
+      return { ok: true, total: ids.size, claimed: cs.length, in_app: cs.filter((c) => c.in_app).length };
+    },
     // 025: organizer only; the date (and, for a lobby at 'ready', opensAt in the same write).
     set_round_date({ p_code, p_admin_pin, p_date, p_opens_at = null }) {
       const e = ev(p_code);

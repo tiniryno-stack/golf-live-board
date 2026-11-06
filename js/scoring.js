@@ -1025,6 +1025,11 @@ export function seasonStandings(rounds) {
   const personKey = (p) => p.personId || `name:${String(p.name || '').trim().toLowerCase()}`;
   let counted = 0;
   for (const { event, scores } of sorted) {
+    // 025: a Team Ryder Cup lobby round counts once it opened and has scores (mirrors lobby.countsAsPlayed;
+    // scoring.js can't import lobby.js, which imports it).
+    const lb = event.settings?.lobby;
+    if (lb && typeof lb === 'object' && !Array.isArray(lb) && String(event.settings.ryder) === 'true'
+      && (lb.stage !== 'ready' || !(scores || []).some((s) => s.strokes != null))) continue;
     const snap = compute(event, scores);
     for (const p of snap.players) {
       const k = personKey(p);

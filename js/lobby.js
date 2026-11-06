@@ -108,7 +108,8 @@ const minutesOf = (hhmm) => { const m = HHMM.exec(String(hhmm || '')); return m 
 /** settings.lobby, cleaned up, or null (old rounds, other games). */
 export function lobbyOf(settings) {
   const l = settings?.lobby;
-  if (!l || typeof l !== 'object' || Array.isArray(l)) return null;
+  // Only Team Ryder Cup has a lobby (the server's gate checks the same).
+  if (!l || typeof l !== 'object' || Array.isArray(l) || String(settings.ryder) !== 'true') return null;
   const n = l.notice && typeof l.notice === 'object' && l.notice.text ? { text: String(l.notice.text), at: l.notice.at || null, until: l.notice.until || null } : null;
   return {
     stage: STAGES.includes(l.stage) ? l.stage : 'lobby',
@@ -404,4 +405,45 @@ export function parseTime(v) {
   if (v == null || v === '') return NaN;
   const s = String(v).trim().replace(' ', 'T').replace(/([+-]\d{2})$/, '$1:00').replace(/\.(\d{3})\d+/, '.$1');
   return Date.parse(s);
+}
+
+/**
+ * Set start times keeps the names everyone has already seen: side names by side id, and each cart's name by the
+ * pair riding in it (ryderSetup would rename side 2 after whichever cart now tees off first).
+ */
+export function keepNames(roster, before) {
+  if (!before) return roster;
+  const pairKey = (r, tid) => (r.players || []).filter((p) => p.teamId === tid).map((p) => p.personId || p.id).sort().join('|');
+  const oldCart = new Map((before.teams || []).map((t) => [pairKey(before, t.id), t.name]));
+  return {
+    ...roster,
+    sides: (roster.sides || []).map((sd) => ({ ...sd, name: (before.sides || []).find((o) => o.id === sd.id)?.name || sd.name })),
+    teams: (roster.teams || []).map((t) => ({ ...t, name: oldCart.get(pairKey(roster, t.id)) || t.name })),
+  };
+}
+
+/** Same players (ids and people) as when a step opened? Otherwise someone else changed the roster meanwhile. */
+export const rosterKey = (roster) => (roster?.players || []).map((p) => `${p.id}:${p.personId || ''}`).sort().join(',');
+
+/** Every start time is set (one per group)? Stage 'ready' needs them all. */
+export const allTimesSet = (times, groups) => groups > 0 && Array.from({ length: groups }, (_, i) => times?.[i]).every((t) => HHMM.test(String(t || '')));
+
+/** A new player id that can't collide: the highest p-number + 1. */
+export function nextPlayerId(roster) {
+  const n = Math.max(0, ...(roster?.players || []).map((p) => Number(String(p.id).replace(/^p/, '')) || 0));
+  return `p${n + 1}`;
+}
+
+/** Run it back copies settings: never the lobby (a new round starts fresh). */
+export function withoutLobby(settings) {
+  const { lobby, ...rest } = settings || {};
+  return rest;
+}
+
+/** Season, crew and Setup's last groups count a lobby round only once it opened and has scores. */
+export function countsAsPlayed(event, scores = null) {
+  const l = lobbyOf(event?.settings);
+  if (!l) return true;
+  if (l.stage !== 'ready') return false;
+  return scores == null ? true : scores.some((s) => s.strokes != null);
 }

@@ -7,6 +7,7 @@ import * as db from '../db.js';
 import { esc, icon, initials, copyText } from '../ui.js';
 import { FLAGS } from '../flags.js';
 import { buildSeasons, seasonTable, placeLabel } from '../seasons.js';
+import { countsAsPlayed } from '../lobby.js';
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const today = () => new Date().toLocaleDateString('en-CA');
@@ -28,7 +29,7 @@ export async function loadCrew(app, id, { force = false } = {}) {
       c.info = info.crew;
       db.crews.put({ id, name: info.crew.name || null, ...(info.crew.me ? { me: info.crew.me } : {}) });
     } else if (info?.error === 'not_found') c.missing = true;
-    c.rounds = (rounds || []).filter((r) => String(r.event?.settings?.practice) !== 'true');
+    c.rounds = (rounds || []).filter((r) => String(r.event?.settings?.practice) !== 'true' && countsAsPlayed(r.event, r.scores)); // 025
     c.error = null;
   } catch (e) {
     c.error = 'No signal';

@@ -810,6 +810,22 @@ begin
       left join public.claims c on c.event_id = e.id and c.player_id = p->>'id'), '[]'::jsonb));
 end $$;
 
+-- Anyone with the code: how many of the roster joined and how many use the home screen app. Numbers only, no ids,
+-- so claims stay unreadable ("12 more · 3 haven't added Golf Board").
+create or replace function public.lobby_counts(p_code text)
+returns jsonb language plpgsql stable security definer set search_path = public as $$
+declare e public.events; v_total int; v_claimed int; v_app int;
+begin
+  e := public._event(p_code);
+  if e.id is null then return jsonb_build_object('ok', false, 'error', 'not_found'); end if;
+  v_total := coalesce(jsonb_array_length(e.roster->'players'), 0);
+  select count(*), count(*) filter (where in_app) into v_claimed, v_app
+    from public.claims c
+   where c.event_id = e.id
+     and exists (select 1 from jsonb_array_elements(coalesce(e.roster->'players', '[]'::jsonb)) p where p->>'id' = c.player_id);
+  return jsonb_build_object('ok', true, 'total', v_total, 'claimed', v_claimed, 'in_app', v_app);
+end $$;
+
 -- Organizer only: move the round to another date (update_event has no date parameter). For a lobby round at
 -- 'ready', the app passes the new opensAt so the date and the opening time change in one statement.
 create or replace function public.set_round_date(p_code text, p_admin_pin text, p_date date, p_opens_at timestamptz default null)
@@ -836,6 +852,7 @@ end $$;
 revoke all on function public._lobby_gate(public.events) from public, anon, authenticated;
 grant execute on function public.mark_in_app(text, uuid) to anon, authenticated;
 grant execute on function public.lobby_status(text, text) to anon, authenticated;
+grant execute on function public.lobby_counts(text) to anon, authenticated;
 grant execute on function public.set_round_date(text, text, date, timestamptz) to anon, authenticated;
 
 -- ─────────────────────────────────────────────────────────────── function permissions
