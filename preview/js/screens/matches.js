@@ -6,9 +6,11 @@
 // separate screen (people confuse it with their own score). Split point keeps its own view.
 
 import { esc, seg, seg2, icon, foldIn, mark } from '../ui.js';
+import { ryderMatches, ryderActions } from './ryder.js';
+import { isRider } from '../riderview.js';
 import { raceState, holeShares, holeOutcomes, showStakes } from '../race.js';
-import { fmtPts, fmtSigned, rotationIndexFor, holeAt, HOLES, playOrder, sideOn } from '../scoring.js';
-import { teamColor, shortTeam } from '../teams.js';
+import { fmtPts, fmtSigned, rotationIndexFor, holeAt, HOLES, playOrder, sideOn, sideOf, matchSidePoints } from '../scoring.js';
+import { teamColor, shortTeam, sideColor } from '../teams.js';
 
 /** The matches to switch between: yours (one per rotation, or two at once with 3 carts), or each
  *  rotation's first match when you're watching. [{ ri, m, my }] */
@@ -98,6 +100,20 @@ function statusPair(app, g, m, left, yours = false) {
   const need = Math.max(0, target - Math.max(a, b));
   const who = yours && lead === left ? '' : `${name(lead)} needs `;
   return [`${fmtPts(m.left)} pt${m.left === 1 ? '' : 's'} left`, m.played ? `${who}${fmtPts(need)} more ${who ? 'to clinch' : 'clinches it'}` : `${fmtPts(target)} clinches it`];
+}
+
+/** 012: the score card's kicker — "THRU 4 · YOU'RE UP 2" / "YOU'RE DOWN 1" / "ALL SQUARE" (a team's
+ *  name instead of "you're" when watching another match). Plus/Minus counts strokes the same way. */
+function standingLine(app, g, m, left, yours) {
+  const snap = app.snapshot;
+  const right = m.teams.find((t) => t !== left);
+  const name = (t) => shortTeam(snap.teamById.get(t).name).toUpperCase();
+  const thru = m.final ? 'FINAL' : m.played ? `THRU ${m.played}` : 'UP NEXT';
+  const diff = g.type === 'rotationPlusMinus' ? m.margin[left] : m.points[left] - m.points[right];
+  if (diff === 0) return `${thru} · ALL SQUARE`;
+  const who = yours ? 'YOU’RE' : name(diff > 0 ? left : right);
+  const by = g.type === 'rotationPlusMinus' ? Math.abs(diff) : fmtPts(Math.abs(diff));
+  return `${thru} · ${who} ${yours ? (diff > 0 ? 'UP' : 'DOWN') : 'UP'} ${by}`;
 }
 
 /** Hole · Low Ball · Low Total · Pts, one row per hole of the matchup. */
@@ -196,13 +212,16 @@ export function teamGameView(app) {
        <div class="m-sub">holes ${hero.firstHole} → ${hero.lastHole}</div>`;
   const heroFull = `<div class="m-hero">${head}
       ${segs.length > 1 ? seg2('matches-rot', segs, String(sel)) : ''}
-      <div class="m-score">
-        <div class="ms-side r"><div style="color:${lc}">${esc(shortTeam(name(left)))}</div><small>${mine ? 'you' : esc(playersOf(app, left))}</small></div>
-        <div class="ms-num mono"><span style="color:${lc}">${esc(cl)}</span><span class="dash">–</span><span style="color:${rc}">${esc(cr)}</span></div>
-        <div class="ms-side"><div style="color:${rc}">${esc(shortTeam(name(right)))}</div><small>${mine ? 'them' : esc(playersOf(app, right))}</small></div>
+      <div class="m-card">
+        <div class="m-kicker mono">${esc(standingLine(app, g, hero, left, !!mine))}</div>
+        <div class="m-score">
+          <div class="ms-side r"><div style="color:${lc}">${esc(shortTeam(name(left)))}</div><small>${mine ? 'you' : esc(playersOf(app, left))}</small></div>
+          <div class="ms-num mono"><span style="color:${lc}">${esc(cl)}</span><span class="dash">–</span><span style="color:${rc}">${esc(cr)}</span></div>
+          <div class="ms-side"><div style="color:${rc}">${esc(shortTeam(name(right)))}</div><small>${mine ? 'them' : esc(playersOf(app, right))}</small></div>
+        </div>
+        ${g.type === 'rotationPlusMinus' ? '' : pointsBar(app, g, hero, left, lc, rc, 18)}
+        <div class="m-line"><b>${esc(st1)}</b><span class="soft">${esc(st2)}</span></div>
       </div>
-      ${g.type === 'rotationPlusMinus' ? '' : pointsBar(app, g, hero, left, lc, rc, 18)}
-      <div class="m-line"><b>${esc(st1)}</b><span class="soft">${esc(st2)}</span></div>
       ${table(app, g, hero, left, lc, rc, liveHoleOf(hero))}
     </div>`;
   const mineBar = `<button class="mine-bar${foldIn(app.ui)}" style="--fold-h:80px" data-act="match-mine">
@@ -240,6 +259,91 @@ export function teamGameView(app) {
   return `<div class="plain matches-nr">
       ${watching ? mineBar : heroFull}
       ${otherBoxes}
+    </div>`;
+}
+
+// ───────────────────────────────────────────── Team Ryder Cup (sides, 1 point a match)
+
+/** "Team Andrew 5½ · Team Josh 4½" as a score card, with the matches-left line. Board + Matches share it. */
+export function ryderScoreCard(app, { big = true } = {}) {
+  const snap = app.snapshot;
+  const g = snap.game;
+  const [a, b] = ['1', '2'].map((id) => g.sides.find((s) => s.sideId === id));
+  const mine = sideOf(app.myTeam());
+  const ac = sideColor('1'), bc = sideColor('2');
+  const n = a.total;
+  const cells = Array.from({ length: n }, (_, i) => {
+    const lf = Math.max(0, Math.min(1, a.points - i));
+    const rf = Math.max(0, Math.min(1, b.points - (n - 1 - i)));
+    return `<i class="pb-cell"><b class="l" style="width:${lf * 100}%;background:${ac}"></b><b class="r" style="width:${rf * 100}%;background:${bc}"></b></i>`;
+  }).join('');
+  const prov = a.provisionalPoints || b.provisionalPoints;
+  const line = snap.roundComplete
+    ? a.points === b.points ? 'Shared · 6–6 is a tie' : `${(a.points > b.points ? a : b).name} win the cup`
+    : a.clinched || b.clinched
+      ? `${(a.clinched ? a : b).name} have clinched it`
+      : `${a.left} match${a.left === 1 ? '' : 'es'} left`;
+  const sub = snap.roundComplete ? '' : `${fmtPts(a.toWin)} wins the cup${prov ? ' · provisional points counted' : ''}`;
+  const kicker = `${snap.roundComplete ? 'FINAL' : snap.officialThrough ? `OFFICIAL THRU ${snap.officialHole}` : 'NOT STARTED'} · ${n} MATCHES`;
+  return `<div class="m-card ryder-card">
+      <div class="m-kicker mono">${esc(kicker)}</div>
+      <div class="m-score${big ? '' : ' small'}">
+        <div class="ms-side r"><div style="color:${ac}">${esc(a.name)}</div><small>${mine === '1' ? 'your side' : `${a.matchesWon}-${a.matchesLost}-${a.matchesHalved}`}</small></div>
+        <div class="ms-num mono"><span style="color:${ac}">${fmtPts(a.points)}</span><span class="dash">–</span><span style="color:${bc}">${fmtPts(b.points)}</span></div>
+        <div class="ms-side"><div style="color:${bc}">${esc(b.name)}</div><small>${mine === '2' ? 'your side' : `${b.matchesWon}-${b.matchesLost}-${b.matchesHalved}`}</small></div>
+      </div>
+      <div class="pbar" style="--h:${big ? 18 : 12}px">${cells}<span class="pb-mid"></span></div>
+      <div class="m-line"><b>${esc(line)}</b><span class="soft">${esc(sub)}</span></div>
+    </div>`;
+}
+
+/** One match as a row: carts (side colors), the score, who it went to; open = the hole table underneath. */
+function ryderMatchRow(app, m, open) {
+  const snap = app.snapshot;
+  const g = snap.game;
+  const mine = app.myTeam();
+  const [x, y] = m.teams;
+  const name = (t) => snap.teamById.get(t)?.name || t;
+  const xc = teamColor(mine, x), yc = teamColor(mine, y);
+  const sp = matchSidePoints(m);
+  const winner = sp ? Object.keys(sp).find((k) => sp[k] === 1) : null;
+  const lead = m.points[x] - m.points[y];
+  let status;
+  if (m.final) status = lead === 0 ? 'Halved' : `${shortTeam(name(lead > 0 ? x : y))} won ${fmtPts(Math.max(m.points[x], m.points[y]))}–${fmtPts(Math.min(m.points[x], m.points[y]))}`;
+  else if (m.clinchedBy) status = `${shortTeam(name(m.clinchedBy))} clinched · thru ${m.played}`;
+  else if (!m.played) status = 'Up next';
+  else status = lead === 0 ? `All square thru ${m.played}` : `${shortTeam(name(lead > 0 ? x : y))} ${fmtPts(Math.abs(lead))} up thru ${m.played}`;
+  const went = sp
+    ? `<span class="ry-side" style="color:${winner ? sideColor(winner) : 'var(--ink-soft)'}"><i class="jdot" style="--jersey:${winner ? sideColor(winner) : 'var(--ink-soft)'}"></i>${winner ? esc(g.sides.find((s) => s.sideId === winner)?.name || '') : '½ each'}${m.final ? '' : ' · prov.'}</span>`
+    : '';
+  const me = m.teams.includes(mine);
+  const body = open
+    ? `<div class="wb-body${foldIn(app.ui)}" style="--fold-h:700px"><div class="wb-table">${table(app, g, m, me ? mine : x, me ? teamColor(mine, mine) : xc, me ? teamColor(mine, m.teams.find((t) => t !== mine)) : yc, liveHoleOf(m))}</div></div>`
+    : '';
+  return `<div class="watch-box ry-match${open ? ' open' : ''}${me ? ' me' : ''}">
+    <button class="watch-head" data-act="ryder-match" data-v="${esc(m.id)}" aria-expanded="${open}">
+      <span class="ry-main">
+        <span class="ry-names"><b style="color:${xc}">${esc(name(x))}</b><b class="mono ry-score">${fmtPts(m.points[x])}–${fmtPts(m.points[y])}</b><b style="color:${yc}">${esc(name(y))}</b></span>
+        <span class="ry-sub"><span>${esc(status)}${me ? ' · <b class="good-ink">YOU</b>' : ''}</span>${went}</span>
+      </span>
+      <span class="chev">${icon('fwd', 18).replace('<svg', '<svg style="transform:rotate(90deg)"')}</span>
+    </button>${body}</div>`;
+}
+
+/** Matches tab: side score, then the matches by rotation; your cart's match first in each. */
+export function ryderMatchesView(app) {
+  const snap = app.snapshot;
+  const g = snap.game;
+  const mine = app.myTeam();
+  const open = app.ui.ryderOpen;
+  const groups = g.rotations.map((r) => {
+    const ms = [...r.matches].sort((p, q) => (q.teams.includes(mine) ? 1 : 0) - (p.teams.includes(mine) ? 1 : 0));
+    return `<div class="lbl nr-lbl">${esc(r.label)}${r.matches.some((m) => !m.final && m.played) ? ' · LIVE' : r.matches.every((m) => m.final) ? ' · FINAL' : ''}</div>
+      <div class="ry-list">${ms.map((m) => ryderMatchRow(app, m, open === m.id)).join('')}</div>`;
+  }).join('');
+  return `<div class="plain matches-nr ryder">
+      <div class="m-hero"><div class="m-kicker mono">MATCHES · TEAM RYDER CUP</div>${ryderScoreCard(app)}</div>
+      ${groups}
     </div>`;
 }
 
@@ -336,11 +440,18 @@ export default {
         <button class="btn primary block" data-act="tab" data-v="board">See the Board</button></div>`;
     }
     if (g.type === 'splitPoint') return splitView(app);
+    if (g.sides || isRider(snap)) return ryderMatches(app); // Team Ryder Cup (015 §3) and Partner “Rider” Cup (018 §4)
     if (!snap.anyPosted && !app.isFinal()) return waitingView(app);
     return teamGameView(app);
   },
 
   actions: {
+    ...ryderActions,
+    'ryder-match': (el, ev, app) => {
+      app.ui.ryderOpen = app.ui.ryderOpen === el.dataset.v ? null : el.dataset.v;
+      app.ui.foldAt = Date.now();
+      app.render();
+    },
     'matches-rot': (el, ev, app) => {
       app.ui.matchesRot = Number(el.dataset.v);
       app.ui.watchOther = false;

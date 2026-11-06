@@ -1,4 +1,7 @@
 // ui.js — small shared helpers for screens: escaping, icons, controls, formatting.
+import { markKind, markPaths } from './reward.js';
+
+export { reward, markKind, markPaths, pointsLine, standing } from './reward.js';
 
 export const esc = (s) =>
   String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -24,6 +27,7 @@ const P = {
   trophy: '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
   minus: '<path d="M5 12h14"/>',
+  gps: '<path d="M21 3 10 21l-1-8-8-1z" fill="currentColor" stroke="none"/>',
   more: '<circle cx="5" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="19" cy="12" r="1.6" fill="currentColor"/>',
   user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
   phone: '<rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/>',
@@ -151,4 +155,57 @@ export const reducedMotion = () => window.matchMedia?.('(prefers-reduced-motion:
 export function roundLink(code, suffix = '') {
   const base = `${location.origin}${location.pathname}`;
   return `${base}#/e/${code}${suffix}`;
+}
+
+// ───────────────────────────────────────────── ScorePad `row` variant (handoff 016 §5)
+
+/** The 4 scores a pad row shows: starts at `lo` (default par−1), kept inside 1 … cap. */
+export function padWindow(par, cap, lo = null, n = 4) {
+  const top = Math.max(1, cap - (n - 1));
+  const start = Math.max(1, Math.min(lo == null ? par - 1 : lo, top));
+  return { lo: start, pads: Array.from({ length: n }, (_, i) => start + i).filter((v) => v <= cap), canLower: start > 1, canHigher: start + n - 1 < cap };
+}
+
+/** The label next to a name on team Enter: TAP A SCORE → BIRDIE / PAR / DOUBLE …, " · MAX" at the cap. tone: under | even | dbl. */
+export function padLabel(v, par, cap) {
+  if (v == null) return { text: 'TAP A SCORE', tone: 'even' };
+  const d = v - par;
+  const name = v === 1 ? 'ACE' : d <= -3 ? 'ALBATROSS' : d === -2 ? 'EAGLE' : d === -1 ? 'BIRDIE' : d === 0 ? 'PAR' : d === 1 ? 'BOGEY' : d === 2 ? 'DOUBLE' : d === 3 ? 'TRIPLE' : `+${d}`;
+  return { text: `${name}${v === cap ? ' · MAX' : ''}`, tone: d < 0 ? 'under' : d >= 2 ? 'dbl' : 'even' };
+}
+
+// ───────────────────────────────────────────── 021/022 Enter: SVG marks that draw, motion that survives redraws
+
+/**
+ * A score mark as SVG outlines (021 §7.1 / 022 §4), for the calm team Enter only (`mark` above stays the
+ * CSS mark everywhere else). One faint `.ce-ln.base` + one `.ce-ln.draw` per outline, each with --len =
+ * its length; the second outline draws 120 ms after the first. Par has no outline ('').
+ */
+export function markSvg(strokes, par, size = 40) {
+  const ps = markPaths(strokes, par, size);
+  if (!ps.length) return '';
+  return `<svg class="ce-m" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" aria-hidden="true">${ps.map((p) => `<path class="ce-ln base" d="${p.d}"/>`).join('')}${ps.map((p, i) => `<path class="ce-ln draw" d="${p.d}" style="--len:${p.len.toFixed(1)};animation-delay:${(0.06 + i * 0.12).toFixed(2)}s"/>`).join('')}</svg>`;
+}
+
+/** A small read-only score: the number in its SVG mark ('–' when there's no score). */
+export function smallMark(strokes, par, size = 30) {
+  if (strokes == null) return '<span class="ce-dash">–</span>';
+  return `<span class="ce-sm ${markKind(strokes, par) || 'p'}" style="--sm:${size}px">${markSvg(strokes, par, size)}${esc(strokes)}</span>`;
+}
+
+/**
+ * The render loop redraws Enter often (GPS fixes, realtime), and every redraw would restart a CSS
+ * animation. Each animated element carries data-t0 (ms timestamp its motion starts at); after a redraw
+ * this puts every animation under it back where it was, so a redraw can't cut motion short or replay it.
+ */
+export function syncMotion(root) {
+  const els = root?.querySelectorAll?.('[data-t0]');
+  if (!els?.length || !els[0].getAnimations) return;
+  const now = Date.now();
+  for (const el of els) {
+    const t = now - Number(el.dataset.t0);
+    for (const a of el.getAnimations({ subtree: true })) {
+      try { a.currentTime = t; } catch { /* older engines: let it run */ }
+    }
+  }
 }

@@ -7,7 +7,7 @@
 
 import { esc, icon, seg, mark, clock, foldIn } from '../ui.js';
 import { foursomeFor, nextHoleFor, playOrder, HOLES } from '../scoring.js';
-import { teamColor, shortTeam } from '../teams.js';
+import { teamColor } from '../teams.js';
 
 /** Foursomes on a hole, yours first (cart order inside: your cart, then the other). */
 function groupsAt(app, hole) {
@@ -32,15 +32,6 @@ function groupHole(app, g) {
 
 function hasCarts(app) {
   return (app.event?.roster?.teams || []).length > 0;
-}
-
-function groupLabel(app, g) {
-  const snap = app.snapshot;
-  if (hasCarts(app)) {
-    const teams = [...new Set(g.players.map((p) => p.teamId))].map((t) => snap.teamById.get(t));
-    return teams.map((t, i) => `<span style="color:${teamColor(app.myTeam(), t.id)}">${esc(i ? t.name : shortTeam(t.name))}</span>`).join(' <span class="soft">+</span> ');
-  }
-  return esc(g.players.map((p) => p.name).join(' · '));
 }
 
 /** One nine of the grid for a group. */
@@ -100,9 +91,8 @@ export default {
       const gh = groupHole(app, g);
       return `<div class="watch-box${open ? ' open' : ''}" data-group="${esc(g.key)}">
         <button class="watch-head" data-act="card-other" data-v="${esc(g.key)}" aria-expanded="${open}">
-          <span class="wk">${open ? 'WATCHING' : 'OTHER GROUP'}</span>
-          <span class="ellipsis" style="flex:1;font-weight:700">${groupLabel(app, g)}</span>
-          <span class="mono meta">${gh ? `on ${gh}` : 'done'}</span>
+          <span style="flex:1;min-width:0"><span class="wk">${open ? 'WATCHING' : 'OTHER GROUP'} · ${gh ? `ON ${gh}` : 'DONE'}</span>
+          <span class="wt">${esc(g.players.map((p) => p.name).join(' · '))}</span></span>
           <span class="chev">${icon('fwd', 18).replace('<svg', '<svg style="transform:rotate(90deg)"')}</span>
         </button>
         ${open ? `<div class="wb-grid${foldIn(app.ui)}" style="--fold-h:520px">${grid(app, g, from, mode, gh, 'var(--tint-n)', 'var(--ink-soft)')}</div>` : ''}

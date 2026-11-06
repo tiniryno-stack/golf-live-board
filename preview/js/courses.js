@@ -23,5 +23,14 @@ export const COURSES = [
     ],
     par: [5, 4, 3, 4, 4, 5, 3, 4, 4, 4, 3, 4, 5, 4, 3, 5, 4, 4],
     strokeIndex: [5, 9, 15, 1, 17, 11, 3, 7, 13, 18, 16, 6, 14, 10, 12, 4, 8, 2],
+    // yards per hole by tee: the scorecard fingerprint used to tell greens apart (GPS yardages stage 3b)
+    yards: [
+      { gold: 555, blue: 516, white: 463, red: 388 }, { gold: 383, blue: 349, white: 309, red: 252 }, { gold: 189, blue: 176, white: 156, red: 121 },
+      { gold: 470, blue: 437, white: 396, red: 304 }, { gold: 346, blue: 315, white: 272, red: 237 }, { gold: 530, blue: 485, white: 436, red: 369 },
+      { gold: 215, blue: 190, white: 170, red: 116 }, { gold: 413, blue: 378, white: 357, red: 303 }, { gold: 407, blue: 374, white: 331, red: 259 },
+      { gold: 336, blue: 313, white: 274, red: 218 }, { gold: 162, blue: 149, white: 136, red: 96 }, { gold: 439, blue: 405, white: 384, red: 303 },
+      { gold: 505, blue: 458, white: 405, red: 366 }, { gold: 352, blue: 330, white: 277, red: 232 }, { gold: 157, blue: 133, white: 116, red: 89 },
+      { gold: 548, blue: 514, white: 491, red: 369 }, { gold: 412, blue: 381, white: 348, red: 291 }, { gold: 421, blue: 385, white: 330, red: 289 },
+    ],
   },
 ];

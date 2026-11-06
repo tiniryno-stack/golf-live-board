@@ -13,10 +13,12 @@
 import { esc, icon, seg, todayISO, prettyDate, copyText, roundLink, empty } from '../ui.js';
 import { COURSES } from '../courses.js';
 import * as cd from '../coursedata.js';
-import { DEFAULT_SETTINGS, DEFAULT_ROTATION, GAMES, gameFix, autoGroups, cartRotation, threeCartRotation, cartIdsFor } from '../scoring.js';
+import { DEFAULT_SETTINGS, DEFAULT_ROTATION, GAMES, gameFix, autoGroups, cartRotation, threeCartRotation, cartIdsFor, ryderSetup, teeTimeName } from '../scoring.js';
+import { sideColor } from '../teams.js';
 import * as db from '../db.js';
 import * as names from '../names.js';
 import { FLAGS } from '../flags.js';
+import { loadGeo } from '../geoload.js';
 import { TEAM_NAME_PICKS, isDefaultTeamName } from '../teams.js';
 import { initials } from '../ui.js';
 
@@ -60,7 +62,7 @@ function blank(from = null) {
     course: null, courseStatus: 'idle', mine: [], q: '', results: null, searching: false, searchError: '',
     near: null, nearStatus: 'idle', loc: null, which: null, whichName: '',
     players: [], teams: TEAM_IDS.map((id) => ({ id, name: '' })),
-    game: 'scorecard', pairSwitch: 'never', schedule: 'six', opps: null, custom: false, swapSel: null, rulesOpen: false,
+    game: 'scorecard', pairSwitch: 'never', schedule: 'six', opps: null, custom: false, swapSel: null, rulesOpen: false, sideNames: ['', ''],
     settings: { ...settings, rotationMode: 'fixed' }, // keep tee times by default (designspec §6 ④b)
     crewId: null, crewFromSource: false, past: [], newName: '', nickAsk: null, pairedFromLast: false,
     saving: false, saved: null,
@@ -168,16 +170,21 @@ async function loadFrom(app, code) {
       app.render();
       return;
     }
-    s.players = (ev.roster.players || []).map((p, i) => ({
+    const ryder = !!ev.settings?.ryder;
+    // Team Ryder Cup: players come back in side → cart order (the sides screen reads them that way).
+    const src = ryder ? [...(ev.roster.players || [])].sort((a, b) => String(a.teamId).localeCompare(String(b.teamId))) : ev.roster.players || [];
+    s.players = src.map((p, i) => ({
       key: `k${i}`, personId: p.personId || db.uuid(), name: p.name, firstName: p.firstName, lastName: p.lastName, nickname: p.nickname,
-      strokes: p.strokes ?? '', teamId: p.teamId || null, groupId: p.groupId || 'g1',
+      strokes: p.strokes ?? '', teamId: ryder ? null : p.teamId || null, groupId: p.groupId || 'g1',
     })).map(withName);
     s.teams = TEAM_IDS.map((id) => ({ id, name: (ev.roster.teams || []).find((t) => t.id === id)?.name || '' }));
-    const { rotation, ...settings } = ev.settings || {};
+    if (ryder) Object.assign(s, { rySkip: true, ryPicks: [], ryTee: null }); // run it back: same sides, same tee times
+    s.sideNames = ryder ? ['1', '2'].map((id) => (ev.roster.sides || []).find((x) => x.id === id)?.name || '') : ['', ''];
+    const { rotation, lineups, ryder: _r, ...settings } = ev.settings || {};
     s.settings = { ...s.settings, ...settings };
     // The same game as last time (the course isn't copied).
     const nCarts = (ev.roster.teams || []).length;
-    s.game = settings.pairs ? '2v2' : settings.solo ? 'match' : nCarts === 4 || nCarts === 3 ? 'carts' : 'scorecard';
+    s.game = ryder ? 'ryder' : settings.pairs ? '2v2' : settings.solo ? 'match' : nCarts === 4 || nCarts === 3 ? 'carts' : 'scorecard';
     s.pairSwitch = settings.pairSwitch || 'never';
     if (Array.isArray(rotation) && rotation.length === 2) s.schedule = 'turn';
     if (Array.isArray(rotation) && rotation.length) s.opps = rotation.map((r) => r.matches?.[0]?.[1]).filter(Boolean);
@@ -230,6 +237,7 @@ async function loadCourse(app, ogaId) {
     if (app.setup !== s || s.course?.ogaId !== ogaId) return;
     s.course = { ...full, name: s.course.name || full.name, shortName: s.course.shortName || full.shortName };
     s.courseStatus = 'ready';
+    if (FLAGS.gps) loadGeo(s.course); // greens for the GPS card, in the background (usually ready by Save)
   } catch {
     if (app.setup !== s || s.course?.ogaId !== ogaId) return;
     s.courseStatus = 'error';
@@ -398,6 +406,7 @@ function buildRound(s) {
   const c = course(s);
   const game = gameOf(s);
   const shown = names.displayNames(s.players);
+  if (game === 'ryder') return buildRyder(s, c, shown);
   const three = game === 'carts' && s.players.length === 6; // 3 carts: everyone plays everyone, all 18
   const rotation = three ? threeCartRotation() : game === 'carts' ? cartRotation(s.schedule, s.opps) : clone(DEFAULT_ROTATION);
   const groupOfTeam = three ? { A: 'g1', B: 'g1', C: 'g2' } : {};
@@ -437,6 +446,38 @@ function buildRound(s) {
   };
 }
 
+/** The course part of a round, shared by every game. */
+function courseOf(s, c) {
+  const { variants, variant, ...cleanCourse } = c;
+  return {
+    id: cleanCourse.id, ...(c.ogaId ? { ogaId: c.ogaId } : {}), source: c.source === 'yours' ? c.lastSource || 'yours' : c.source || 'builtin',
+    name: c.name.trim(), shortName: c.shortName || cd.shortCourseName(c.name), location: c.location || '',
+    ...(c.lat != null && c.lng != null ? { lat: c.lat, lng: c.lng } : {}),
+    tee: s.tee, tees: (c.tees || []).map((t) => ({ name: t.name, yards: t.yards ?? null, rating: t.rating ?? null, slope: t.slope ?? null })),
+    par: c.par.map(Number), strokeIndex: c.strokeIndex.map(Number),
+  };
+}
+
+/** Team Ryder Cup: players in order = side 1 then side 2, pairs = carts, cart k of each side = tee time k. */
+function buildRyder(s, c, shown) {
+  const d = rySides(s), tee = ryTee(s);
+  const order = [...d.A, ...tee].flatMap((k) => [2 * k, 2 * k + 1]);
+  const players = order.map((k) => s.players[k]).map((p, i) => ({
+    id: `p${i + 1}`, personId: p.personId || db.uuid(), name: shown[i],
+    firstName: p.firstName, lastName: p.lastName || '', ...(p.nickname ? { nickname: p.nickname } : {}),
+    strokes: p.strokes === '' || p.strokes == null || Number.isNaN(Number(p.strokes)) ? null : Math.max(0, Math.round(Number(p.strokes))),
+  }));
+  const { roster, settings } = ryderSetup(players.map((p, i) => ({ ...p, id: `p${i + 1}`, name: shown[order[i]] })), ['', '']);
+  return {
+    name: s.name.trim() || `${c.shortName || cd.shortCourseName(c.name)} · ${prettyDate(todayISO())}`,
+    course: courseOf(s, c),
+    roster,
+    settings: { ...s.settings, ...settings },
+    playedOn: todayISO(),
+    crewId: s.crewId,
+  };
+}
+
 // ───────────────────────────────────────────── handicap sheet (designspec §6b)
 
 /** Bottom sheet for one player's handicap: big stepper, last round's number, full / no strokes. */
@@ -463,12 +504,14 @@ export function handicapSheet(app, { i }) {
 // ───────────────────────────────────────────── screens (designspec §6)
 
 /** Back target for each screen. */
-const BACK = { which: 'course', players: 'course', check: 'players', game: 'players', teams: 'game', matchups: 'teams' };
-const BACK_LABEL = { course: 'Course', players: 'Players', game: 'Game', teams: s => (s.game === 'carts' ? 'Carts' : 'Partners') };
+const BACK = { which: 'course', players: 'course', check: 'players', game: 'players', teams: 'game', matchups: 'tee', draft: 'teams', tee: 'draft' };
+// Partner “Rider” Cup (018): Carts → Tee times (no draft); matchups is an optional screen off Tee times.
+const backOf = (s) => (s.game === 'carts' && s.screen === 'tee' ? 'teams' : BACK[s.screen]);
+const BACK_LABEL = { course: 'Course', players: 'Players', game: 'Game', teams: s => (s.game === 'carts' ? 'Carts' : s.game === 'ryder' ? 'Carts' : 'Partners'), draft: 'Draft', tee: 'Tee times' };
 
 /** Progress bars: how far along the flow this screen is (2–4 bars depending on the game). */
 function progress(s) {
-  const flow = ['course', 'players', 'game', ...(s.game === '2v2' ? ['teams'] : s.game === 'carts' ? ['teams', 'matchups'] : [])];
+  const flow = ['course', 'players', 'game', ...(s.game === 'ryder' ? ['teams', 'draft', 'tee'] : s.game === '2v2' ? ['teams'] : s.game === 'carts' ? ['teams', 'tee'] : [])];
   const at = Math.max(0, flow.indexOf(s.screen === 'which' ? 'course' : s.screen === 'check' ? 'players' : s.screen));
   return `<div class="nr-bars">${flow.map((_, i) => `<i class="${i <= at ? 'on' : ''}"></i>`).join('')}</div>`;
 }
@@ -601,7 +644,7 @@ function quickPlayersView(s, c, line, tee) {
           <p class="cc-meta">Invite the crew, or add people by name. People you add join the crew list after the round.</p>
           <div class="cc-actions"><button class="btn cc-btn" data-act="crew-invite" data-v="${esc(s.crewId)}">${icon('share', 20)} Invite crew</button><button class="btn cc-btn" data-act="qp-search">Add by name</button></div></div>`
         : `<div class="qp-foot">${rows.length > 8 ? `<span class="meta">+${rows.length - 8} more in the crew · scroll</span>` : '<span></span>'}<button class="link-btn" data-act="qp-search">${icon('plus', 16)} Guest</button></div>`}`;
-  return `${topBar(s)}${headline('Step 2 · Players', 'Who’s playing?')}
+  return `${topBar(s)}${headline('Step 2 · Players', 'Who’s playing?', s.players.length === 16 && gameOf(s) === 'ryder' ? '16 in. That’s a Team Ryder Cup.' : '')}
     ${c ? `<div class="nr-course">
       <button class="nc-main" data-act="setup-go" data-v="${c.variants?.length > 1 && !c.variant ? 'which' : 'check'}">
         <b class="ellipsis">${esc(c.shortName || c.name || 'Your course')}${esc(tee)}</b>
@@ -630,7 +673,7 @@ function playersView(s) {
   const used = new Set(s.players.map((p) => p.personId));
   const recent = s.past.filter((p) => !used.has(p.personId)).slice(0, 8);
   const tee = s.tee ? ` · ${s.tee.name} tees` : '';
-  return `${topBar(s)}${headline('Step 2 · Players', 'Who’s playing?')}
+  return `${topBar(s)}${headline('Step 2 · Players', 'Who’s playing?', s.players.length === 16 && gameOf(s) === 'ryder' ? '16 in. That’s a Team Ryder Cup.' : '')}
     ${c ? `<div class="nr-course">
       <button class="nc-main" data-act="setup-go" data-v="${c.variants?.length > 1 && !c.variant ? 'which' : 'check'}">
         <b class="ellipsis">${esc(c.shortName || c.name || 'Your course')}${esc(tee)}</b>
@@ -669,7 +712,7 @@ function playersView(s) {
 function gameView(s) {
   const n = s.players.length;
   const pick = gameOf(s);
-  const next = pick === '2v2' || pick === 'carts';
+  const next = pick === '2v2' || pick === 'carts' || pick === 'ryder';
   return `${topBar(s)}${headline(`Step 3 · Game · ${n} player${n === 1 ? '' : 's'}`, 'Pick a game', 'Games that don’t fit your player count are greyed out.')}
     <div class="game-list">${GAMES.map((g) => {
       const fix = gameFix(g.id, n);
@@ -682,8 +725,8 @@ function gameView(s) {
     }).join('')}</div>
     ${pick === 'match' ? '<p class="meta nr-hint">Match play: everyone plays their own ball. Each hole is worth 1 point; low net score takes it, a tie for low splits it.</p>' : ''}
     <div class="nr-foot">
-      ${next ? '' : '<p class="meta" style="text-align:center;margin:0 0 8px">2v2 and Partner “Rider” Cup go to one more screen to set teams.</p>'}
-      <button class="btn primary nr-cta" data-act="${next ? 'setup-go' : 'setup-save'}" ${next ? 'data-v="teams"' : ''} ${s.saving ? 'aria-busy="true"' : ''}>${s.saving ? 'Starting…' : next ? `Next: ${pick === '2v2' ? 'pick partners' : 'carts'}` : `Start round · ${n} player${n === 1 ? '' : 's'}`}${next ? icon('fwd', 18) : ''}</button>
+      ${next ? '' : '<p class="meta" style="text-align:center;margin:0 0 8px">2v2, Partner “Rider” Cup and Team Ryder Cup go to one more screen to set teams.</p>'}
+      <button class="btn primary nr-cta" data-act="${next ? 'setup-go' : 'setup-save'}" ${next ? 'data-v="teams"' : ''} ${s.saving ? 'aria-busy="true"' : ''}>${s.saving ? 'Starting…' : next ? `Next: ${pick === '2v2' ? 'pick partners' : pick === 'ryder' ? 'carts' : 'carts'}` : `Start round · ${n} player${n === 1 ? '' : 's'}`}${next ? icon('fwd', 18) : ''}</button>
     </div>`;
 }
 
@@ -700,7 +743,7 @@ function rulesSummary(s) {
   parts.push({ bestBallAggregate: 'Low ball + total', bestBall: 'Best ball', aggregate: 'Aggregate' }[st.teamScore] || 'Low ball + total');
   parts.push({ doublePar: 'double par max', netDoubleBogey: 'net double bogey max', none: 'no max' }[st.maxHoleScore] || 'double par max');
   if (st.game !== 'rotationPlusMinus') parts.push(Number(st.halvedHolePoints) ? '½ ties' : 'no points for ties');
-  if (st.game !== 'rotationPlusMinus' && Number(st.matchBonus ?? 1)) parts.push(`+${st.matchBonus ?? 1} win`);
+  if (st.game !== 'rotationPlusMinus' && s.game !== 'ryder' && Number(st.matchBonus ?? 1)) parts.push(`+${st.matchBonus ?? 1} win`);
   return parts.join(' · ');
 }
 
@@ -714,7 +757,7 @@ function rulesBlock(s) {
       ${st.game !== 'none' ? `<div class="field"><span class="label">Team score</span>${seg('setup-set', [['bestBallAggregate', 'Low ball + total'], ['bestBall', 'Best ball'], ['aggregate', 'Aggregate']], st.teamScore, 'data-k="teamScore"')}</div>` : ''}
       <div class="field"><span class="label">Max hole score</span>${seg('setup-set', [['doublePar', 'Double par'], ['netDoubleBogey', 'Net dbl bogey'], ['none', 'None']], st.maxHoleScore, 'data-k="maxHoleScore"')}</div>
       ${!pm && st.game !== 'none' ? `<div class="field"><span class="label">Ties</span>${seg('setup-set', [['0.5', '½ each'], ['0', 'Nothing']], String(st.halvedHolePoints), 'data-k="halvedHolePoints"')}</div>
-      <div class="field"><span class="label">Matchup win bonus</span>${seg('setup-set', [['1', '+1 point'], ['0', 'None']], String(st.matchBonus ?? 1), 'data-k="matchBonus"')}</div>` : ''}
+      ${s.game === 'ryder' ? '' : `<div class="field"><span class="label">Matchup win bonus</span>${seg('setup-set', [['1', '+1 point'], ['0', 'None']], String(st.matchBonus ?? 1), 'data-k="matchBonus"')}</div>`}` : ''}
       ${pm ? `<div class="field"><span class="label">Max swing per rotation</span>${seg('setup-set', [['', 'Uncapped'], ['3', '3'], ['5', '5']], st.plusMinusCap == null ? '' : String(st.plusMinusCap), 'data-k="plusMinusCap"')}</div>` : ''}
       <div class="chips"><button class="pill" data-act="setup-toggle" data-k="par3NoMax" aria-pressed="${!!st.par3NoMax}"><span class="dot"></span>No max on par 3s</button>
       <button class="pill" data-act="setup-lowman" aria-pressed="${st.handicapMode === 'offLow'}"><span class="dot"></span>Play off the low man</button></div>
@@ -745,6 +788,96 @@ function pairsView(s) {
 }
 
 const CART_TINT = { A: 'var(--cart-you)', B: 'var(--t-B)', C: 'var(--t-C)', D: 'var(--t-D)' };
+
+// ───────────────────────────────────────────── Team Ryder Cup setup (handoff 015 §4, RULES §7)
+// ④ Carts (s.players in order, pairs = carts) → ⑤ Draft (s.ryPicks: cart indexes in pick order, or
+// s.rySkip) → ⑥ Tee times (s.ryTee: their side's cart index per tee time). buildRyder reorders the
+// players into side 1 carts by tee time, then side 2 the same way, which is what ryderSetup reads.
+export const RY_SNAKE = ['J', 'A', 'A', 'J', 'J', 'A'];
+const ryCartName = (s, k) => [s.players[2 * k], s.players[2 * k + 1]].map((p) => p?.firstName || p?.name || '').join(' + ');
+/** The two sides as cart indexes: captains' carts (1 and 2) first, then picks; skip = carts 1–4 v 5–8. */
+export function rySides(s) {
+  if (s.rySkip) return { A: [0, 1, 2, 3], J: [4, 5, 6, 7], done: true };
+  const A = [0], J = [1];
+  const picks = (s.ryPicks || []).filter((k, i, all) => k >= 2 && k <= 7 && all.indexOf(k) === i);
+  picks.forEach((k, i) => (RY_SNAKE[i] === 'A' ? A : J).push(k));
+  return { A, J, done: picks.length === 6, turn: RY_SNAKE[picks.length] || null, picks };
+}
+/** Their side's cart per tee time (a permutation of side J), default in pick order. */
+export function ryTee(s) {
+  const { J } = rySides(s);
+  const t = s.ryTee || [];
+  return t.length === J.length && J.every((k) => t.includes(k)) ? t : [...J];
+}
+const ryCaptain = (s, side) => s.players[2 * rySides(s)[side][0]];
+const ryTeamName = (s, side) => `Team ${ryCaptain(s, side)?.firstName || ryCaptain(s, side)?.name || ''}`;
+
+/** ④ Who rides together? */
+function ryCartsView(s) {
+  if (gameFix('ryder', s.players.length)) return gameView(s);
+  const rows = Array.from({ length: 8 }, (_, k) => `<div class="ry-cart"><span class="lbl">Cart ${k + 1}</span>
+      <div class="ry-cart-pair">${swapBtn(s, 2 * k)}${swapBtn(s, 2 * k + 1)}</div></div>`).join('');
+  return `${topBar(s)}${headline('Step 4 · Carts', 'Who rides together?')}
+    <div class="nr-line"><span class="meta">${s.swapSel != null ? 'Now tap who to swap with.' : 'Tap two names to swap.'}</span><button class="btn small" data-act="setup-shuffle">Shuffle</button></div>
+    ${rows}
+    ${bottom('Next: pick sides', 'setup-go', { v: 'draft', arrow: true })}`;
+}
+
+/** ⑤ Draft: one phone, both captains looking. Snake J, A, A, J, J, A. */
+function ryDraftView(s) {
+  if (gameFix('ryder', s.players.length)) return gameView(s);
+  const d = rySides(s);
+  const capA = ryCaptain(s, 'A'), capJ = ryCaptain(s, 'J');
+  const fn = (p) => p?.firstName || p?.name || '';
+  const title = d.done ? 'Sides are set' : `${esc(fn(d.turn === 'A' ? capA : capJ))} picks`;
+  const pool = s.rySkip ? [] : [2, 3, 4, 5, 6, 7].filter((k) => !d.picks.includes(k));
+  const col = (side) => `<div class="ry-col"><div class="ry-col-h${side === 'A' ? ' you' : ''}"><span class="ellipsis">${esc(ryTeamName(s, side))}</span>${!d.done && d.turn === side ? '<span class="ry-tag mono">PICKING</span>' : ''}</div>
+      ${d[side].map((k, i) => `<div class="ry-slot${i === 0 ? ' cap' : ''}${i === 0 && side === 'A' ? ' you' : ''}"><span class="ellipsis">${esc(ryCartName(s, k))}</span></div>`).join('')}</div>`;
+  return `${topBar(s)}${headline('Step 5 · Draft', title, d.done ? 'Two sides of 4 carts. Tee times next.' : 'Tap a cart to take it.')}
+    <div class="nr-line"><span class="meta">${d.done ? '' : `Snake order: ${RY_SNAKE.map((x) => esc(fn(x === 'A' ? capA : capJ))).join(', ')}`}</span><button class="btn small" data-act="setup-ry-reset">Start over</button></div>
+    ${pool.length ? `<div class="lbl ry-pool-k">Still on the board</div><div class="ry-pool">${pool.map((k) => `<button class="ry-pick" data-act="setup-ry-pick" data-i="${k}"><span class="ellipsis">${esc(ryCartName(s, k))}</span></button>`).join('')}</div>` : ''}
+    <div class="ry-cols">${col('A')}${col('J')}</div>
+    ${d.done ? bottom('Next: tee times', 'setup-go', { v: 'tee', arrow: true })
+      : `<div class="nr-foot"><button class="btn nr-cta" data-act="setup-ry-skip">Skip the draft · split in cart order</button></div>`}`;
+}
+
+/** ⑥ Who tees off together? Your side's carts fixed, theirs tap-to-swap; then your three matches. */
+function ryTeeView(s) {
+  if (gameFix('ryder', s.players.length)) return gameView(s);
+  const d = rySides(s);
+  if (!d.done) return ryDraftView(s);
+  const tee = ryTee(s);
+  const times = s.settings.teeTimes || [];
+  const rows = d.A.map((a, k) => `<div class="ry-tee">
+      <div class="ry-tee-k"><span class="lbl">${['1st', '2nd', '3rd', '4th'][k]}</span>
+        <input class="ry-time mono${times[k] ? ' set' : ''}" type="time" value="${esc(times[k] || '')}" aria-label="${['1st', '2nd', '3rd', '4th'][k]} tee time" data-input="setup-ry-time" data-i="${k}">${times[k] ? '' : '<span class="ry-time-ph">Add time</span>'}</div>
+      <div class="ry-tee-pair"><div class="ry-slot you"><span class="ellipsis">${esc(ryCartName(s, a))}</span></div><span class="meta">v</span>
+        <button class="ry-pick${s.rySel === k ? ' sel' : ''}" data-act="setup-ry-tee" data-i="${k}" aria-pressed="${s.rySel === k}"><span class="ellipsis">${esc(ryCartName(s, tee[k]))}</span></button></div></div>`).join('');
+  const ord = ['same tee time', '2nd', '3rd', '4th'];
+  const mine = [0, 1, 2].map((r) => `<div class="ry-my"><span class="mono">${['1–6', '7–12', '13–18'][r]}</span><span class="ellipsis">${esc(ryCartName(s, tee[r % 4]))}</span><span class="meta">${r === 0 ? ord[0] : ord[r]}</span></div>`).join('');
+  return `${topBar(s)}${headline('Step 6 · Tee times', 'Who tees off together?', `Tap two ${esc(ryTeamName(s, 'J'))} carts to swap.`)}
+    ${rows}
+    <div class="lbl ry-pool-k">Your three matches · ${esc(ryCartName(s, d.A[0]))}</div>
+    ${mine}
+    ${rulesBlock(s)}
+    ${bottom(s.saving ? 'Starting…' : 'Start round · 16 players', 'setup-save', { busy: s.saving })}`;
+}
+
+/** The share text for a Team Ryder Cup round (RULES §7). */
+export function ryderShareText(round, link) {
+  const r = round.roster, st = round.settings;
+  const sideName = (id) => r.sides.find((x) => x.id === id)?.name || '';
+  const cartName = (tid) => r.teams.find((t) => t.id === tid)?.name || tid;
+  const t0 = (st.teeTimes || [])[0];
+  const lines = [
+    `${round.course.shortName || round.course.name}${t0 ? ` · first tee ${teeTimeName(st, 0).replace(' tee time', '')}` : ''}`,
+    `Join: ${link}`, '',
+    `${sideName('1')} v ${sideName('2')}`,
+    ...r.sides[0].teamIds.map((tid, k) => `${teeTimeName(st, k)}: ${cartName(tid)} v ${cartName(r.sides[1].teamIds[k])}`), '',
+    'New opponent every 6 holes. 12 matches, 6½ wins the cup.',
+  ];
+  return lines.join('\n');
+}
 
 /** ④ Partner “Rider” Cup: 8 players in 4 carts, or 6 in 3. */
 // ───────────────────────────────────────────── team names per crew (feature 009-team-names-per-crew)
@@ -812,26 +945,52 @@ function tnList(s, id, list, custom, takenBy) {
 
 function cartsView(s) {
   applyUsual(s);
-  const c = course(s);
-  const n = s.players.length;
   const ids = cartIds(s);
   const idx = (id) => s.players.map((p, i) => [p, i]).filter(([p]) => p.teamId === id).map(([, i]) => i);
-  const sched = ids.length === 3 ? 'everyone plays everyone' : s.schedule === 'turn' ? '2 rotations' : '3 rotations';
-  return `${topBar(s)}${headline('Step 4 · Partner “Rider” Cup', `${n} players, ${ids.length} carts`)}
-    <div class="nr-course small"><div class="ellipsis" style="flex:1"><b>Partner “Rider” Cup</b> <span class="soft">· ${n} players${c ? ` · ${esc(c.shortName || c.name)}` : ''}</span></div><button class="btn small" data-act="setup-go" data-v="game">Change</button></div>
-    <p class="meta nr-hint">${s.pairedFromLast ? 'Paired like your last round · ' : ''}Tap two names to swap. Pairs that have played together before get their usual name back. Tap a name to change it.</p>
-    <div class="cart-grid">${ids.map((id) => {
-      const t = s.teams.find((x) => x.id === id);
-      return `<div class="cart-card" style="--jersey:${CART_TINT[id]}">
-        <div class="cc-k mono">CART ${id}</div>
-        <button class="tn-cart" data-act="tn-open" data-v="${id}" aria-label="Name cart ${id}: ${esc(t.name || 'not named')}">
-          <span class="tn-cart-main"><span class="tn-cart-name ellipsis${t.name ? '' : ' empty'}">${esc(t.name || 'Pick a name')}</span>${cartTag(s, id) ? `<span class="ts-label tn-cart-tag">${esc(cartTag(s, id))}</span>` : ''}</span>${icon('fwd', 16)}</button>
-        ${idx(id).map((i) => swapBtn(s, i, s.players[i].strokes !== '' && s.players[i].strokes != null ? `<span class="mono soft">${esc(s.players[i].strokes)}</span>` : '')).join('')}
-      </div>`;
-    }).join('')}</div>
-    <div class="nr-two"><button class="btn ghost" data-act="setup-shuffle">Shuffle carts</button><button class="btn ghost" data-act="setup-go" data-v="players">Edit players</button></div>
+  const rows = ids.map((id) => {
+    const t = s.teams.find((x) => x.id === id);
+    return `<div class="ry-cart rider-cart" style="--jersey:${CART_TINT[id]}">
+      <div class="rider-cart-k"><span class="lbl">Cart ${id}</span>
+        <button class="tn-cart rider-tn" data-act="tn-open" data-v="${id}" aria-label="Name cart ${id}: ${esc(t.name || 'not named')}"><span class="ellipsis${t.name ? '' : ' empty'}">${esc(t.name || 'Pick a name')}</span>${cartTag(s, id) ? `<span class="ts-label tn-cart-tag">${esc(cartTag(s, id))}</span>` : ''}${icon('fwd', 14)}</button></div>
+      <div class="ry-cart-pair">${idx(id).map((i) => swapBtn(s, i)).join('')}</div></div>`;
+  }).join('');
+  return `${topBar(s)}${headline('Step 4 · Carts', 'Who rides together?')}
+    <div class="nr-line"><span class="meta">${s.swapSel != null ? 'Now tap who to swap with.' : s.pairedFromLast ? 'Paired like your last round · tap two names to swap.' : 'Tap two names to swap.'}</span><button class="btn small" data-act="setup-shuffle">Shuffle</button></div>
+    ${rows}
+    ${bottom('Next: tee times', 'setup-go', { v: 'tee', arrow: true })}`;
+}
+
+/** Partner “Rider” Cup tee times: who tees off together = the first matchups. */
+function riderGroups(s) {
+  const ids = cartIds(s);
+  if (ids.length === 3) return [['A', 'B'], ['C']];
+  return cartRotation(s.schedule, s.opps)[0].matches.map((m) => [...m]);
+}
+
+/** ⑤ Who tees off together? Tap two carts to swap them; your three matches; matchups optional. */
+function riderTeeView(s) {
+  ensureCarts(s);
+  applyUsual(s);
+  const ids = cartIds(s);
+  const name = (id) => s.teams.find((x) => x.id === id)?.name || `Cart ${id}`;
+  const times = s.settings.teeTimes || [];
+  const ord = ['1st', '2nd', '3rd', '4th'];
+  const chip = (id) => `<button class="ry-pick rider-pick${s.rySel === id ? ' sel' : ''}" style="--jersey:${CART_TINT[id]}" data-act="setup-rider-swap" data-v="${id}" aria-pressed="${s.rySel === id}"><span class="ellipsis">${esc(name(id))}</span></button>`;
+  const rows = riderGroups(s).map((g, k) => `<div class="ry-tee">
+      <div class="ry-tee-k"><span class="lbl">${ord[k]}</span>
+        <input class="ry-time mono${times[k] ? ' set' : ''}" type="time" value="${esc(times[k] || '')}" aria-label="${ord[k]} tee time" data-input="setup-ry-time" data-i="${k}">${times[k] ? '' : '<span class="ry-time-ph">Add time</span>'}</div>
+      <div class="ry-tee-pair">${chip(g[0])}<span class="meta">${g[1] ? 'v' : ''}</span>${g[1] ? chip(g[1]) : '<span></span>'}</div></div>`).join('');
+  const rot = ids.length === 3 ? threeCartRotation() : cartRotation(s.schedule, s.opps);
+  const mine = rot.flatMap((r) => r.matches.filter((m) => m.includes('A')).map((m) => [r.holes, m[0] === 'A' ? m[1] : m[0]]));
+  const groupOf = (id) => riderGroups(s).findIndex((g) => g.includes(id));
+  const my = mine.map(([holes, o]) => `<div class="ry-my"><span class="mono">${holes[0]}–${holes[1]}</span><span class="ellipsis" style="color:${CART_TINT[o]}">${esc(name(o))}</span><span class="meta">${groupOf(o) === groupOf('A') ? 'same tee time' : ord[groupOf(o)]}</span></div>`).join('');
+  const sched = ids.length === 3 ? 'everyone plays everyone' : s.schedule === 'turn' ? 'switch at the turn' : 'switch every 6';
+  return `${topBar(s)}${headline('Step 5 · Tee times', 'Who tees off together?', s.rySel ? 'Now tap the cart to swap with.' : 'Tap two carts to swap them.')}
+    ${rows}
+    <div class="lbl ry-pool-k">Your matches · ${esc(name('A'))}</div>
+    ${my}
     <button class="nr-row" data-act="setup-go" data-v="matchups"><span style="flex:1;min-width:0"><b class="rt">Game &amp; matchups</b><span class="rs ellipsis">${esc(`${rulesSummary(s).split(' · ').slice(0, 2).join(' · ')} · ${sched}`)}</span></span><span class="meta">Optional</span>${icon('fwd', 18)}</button>
-    ${bottom(s.saving ? 'Starting…' : `Start round · ${n} players`, 'setup-save', { busy: s.saving })}`;
+    ${bottom(s.saving ? 'Starting…' : `Start round · ${s.players.length} players`, 'setup-save', { busy: s.saving })}`;
 }
 
 /** ④b with 3 carts: nothing to switch; every matchup runs all 18. Rules only. */
@@ -938,24 +1097,27 @@ function savedView(s) {
   const v = s.saved;
   const c = course(s);
   const n = s.players.length;
+  const ry = gameOf(s) === 'ryder';
   return `<div class="live-top"><div class="live-check">${icon('check', 28)}</div>
       <h1 class="nr-title">Round is live</h1>
       <div class="nr-sub">${esc([c?.shortName || c?.name, prettyDate(todayISO()), s.tee ? `${s.tee.name} tees` : '', `${n} player${n === 1 ? '' : 's'}`].filter(Boolean).join(' · '))}</div></div>
     <div class="saved-box">
       <div class="lbl">Join code</div><div class="big-code mono">${esc(v.code)}</div>
       <div class="mono meta live-link">${esc(roundLink(v.code).replace(/^https?:\/\//, ''))}</div>
-      <div class="nr-two"><button class="btn primary" data-act="setup-copy" data-v="share">${icon('share', 18)} Text the group</button><button class="btn" data-act="setup-copy" data-v="link">Copy link</button></div>
+      ${ry ? `<div class="nr-two"><button class="btn" data-act="setup-copy" data-v="link">Copy link</button><button class="btn" data-act="setup-copy" data-v="text">Copy the text</button></div>`
+        : `<div class="nr-two"><button class="btn primary" data-act="setup-copy" data-v="share">${icon('share', 18)} Text the group</button><button class="btn" data-act="setup-copy" data-v="link">Copy link</button></div>`}
     </div>
+    ${ry ? `<pre class="ry-share">${esc(ryderShareText(buildRound(s), roundLink(v.code)))}</pre>` : ''}
     <div class="saved-box secret">
       <div class="sec-k">${icon('lock', 16)} Organizer only · screenshot this, keep it private</div>
       <div class="sec-grid"><span class="soft">Admin PIN</span><span class="mono sec-pin">${esc(v.admin_pin)}</span>
         <span class="soft">Host link</span><span class="sec-link"><span class="mono ellipsis">${esc(roundLink(v.code, '/host').replace(/^https?:\/\//, ''))}</span><button class="btn small" data-act="setup-copy" data-v="host">Copy</button></span></div>
       <div class="meta">Lets you fix scores and the scorecard from any phone if this one dies.</div>
     </div>
-    ${bottom('Open the round', 'setup-open')}`;
+    ${ry ? `<div class="nr-foot"><button class="btn primary nr-cta" data-act="setup-copy" data-v="share">${icon('share', 18)} Text the group</button><button class="link-btn" style="margin-top:8px" data-act="setup-open">Open the round</button></div>` : bottom('Open the round', 'setup-open')}`;
 }
 
-const VIEWS = { course: courseView, which: whichView, players: playersView, check: checkView, game: gameView, teams: (s) => (s.game === 'carts' ? cartsView(s) : pairsView(s)), matchups: matchupsView };
+const VIEWS = { course: courseView, which: whichView, players: playersView, check: checkView, game: gameView, teams: (s) => (s.game === 'carts' ? cartsView(s) : s.game === 'ryder' ? ryCartsView(s) : pairsView(s)), matchups: matchupsView, draft: ryDraftView, tee: (s) => (s.game === 'carts' ? riderTeeView(s) : ryTeeView(s)) };
 
 
 // ───────────────────────────────────────────── course search actions
@@ -1024,6 +1186,7 @@ function pickCourse(app, c, status) {
   s.whichName = '';
   s.screen = c.variants?.length > 1 ? 'which' : c.source === 'manual' ? 'check' : 'players';
   persist(s);
+  if (FLAGS.gps && status === 'ready') loadGeo(c); // a course we already have the card for: get its greens now
   app.render();
   document.getElementById('content').scrollTop = 0;
 }
@@ -1087,7 +1250,7 @@ export default {
 
   topBack(app) {
     const s = app.setup;
-    const back = s && !s.saved ? BACK[s.screen] : null;
+    const back = s && !s.saved ? backOf(s) : null;
     if (!back) return null;
     const label = typeof BACK_LABEL[back] === 'function' ? BACK_LABEL[back](s) : BACK_LABEL[back];
     return `<button class="back" data-act="setup-go" data-v="${back}">${icon('back', 22)}<span>${esc(label)}</span></button>`;
@@ -1347,6 +1510,70 @@ export default {
       app.closeSheet();
       app.render();
     },
+    'setup-ry-pick': (el, ev, app) => {
+      const s = app.setup;
+      const d = rySides(s);
+      if (d.done) return;
+      s.ryPicks = [...d.picks, Number(el.dataset.i)];
+      s.ryTee = null;
+      persist(s);
+      app.render();
+    },
+    'setup-rider-swap': (el, ev, app) => {
+      const s = app.setup;
+      const id = el.dataset.v;
+      if (s.rySel == null) s.rySel = id;
+      else if (s.rySel === id) s.rySel = null;
+      else {
+        const a = s.rySel, b = id;
+        s.players.forEach((p) => { if (p.teamId === a) p.teamId = b; else if (p.teamId === b) p.teamId = a; });
+        const ta = s.teams.find((t) => t.id === a), tb = s.teams.find((t) => t.id === b);
+        if (ta && tb) { const keep = ['name', 'auto', 'autoKey']; for (const k of keep) [ta[k], tb[k]] = [tb[k], ta[k]]; }
+        s.rySel = null;
+        persist(s);
+      }
+      app.render();
+    },
+    'setup-ry-reset': (el, ev, app) => {
+      Object.assign(app.setup, { ryPicks: [], rySkip: false, ryTee: null, rySel: null });
+      persist(app.setup);
+      app.render();
+    },
+    'setup-ry-skip': (el, ev, app) => {
+      const s = app.setup;
+      Object.assign(s, { ryPicks: [], rySkip: true, ryTee: null, rySel: null, screen: 'tee' });
+      persist(s);
+      app.render();
+    },
+    'setup-ry-tee': (el, ev, app) => {
+      const s = app.setup;
+      const k = Number(el.dataset.i);
+      if (s.rySel == null) s.rySel = k;
+      else if (s.rySel === k) s.rySel = null;
+      else {
+        const t = [...ryTee(s)];
+        [t[k], t[s.rySel]] = [t[s.rySel], t[k]];
+        s.ryTee = t;
+        s.rySel = null;
+        persist(s);
+      }
+      app.render();
+    },
+    'setup-ry-time': (el, ev, app) => {
+      const s = app.setup;
+      const t = [...(s.settings.teeTimes || [])];
+      while (t.length < 4) t.push('');
+      t[Number(el.dataset.i)] = /^\d{1,2}:\d{2}$/.test(el.value) ? el.value : '';
+      s.settings.teeTimes = t;
+      persist(s);
+      app.render();
+    },
+    'setup-sidename': (el, ev, app) => {
+      const s = app.setup;
+      s.sideNames = Array.isArray(s.sideNames) ? [...s.sideNames] : ['', ''];
+      s.sideNames[Number(el.dataset.i)] = el.value.slice(0, 20);
+      persist(s);
+    },
     'setup-teamname': (el, ev, app) => {
       app.setup.teams.find((t) => t.id === el.dataset.v).name = el.value.slice(0, 20);
       persist(app.setup);
@@ -1410,9 +1637,18 @@ export default {
           return;
         }
       } catch { /* keep going */ }
-      let res;
+      let res, round;
       try {
-        res = await db.api.createEvent(buildRound(s));
+        round = buildRound(s);
+      } catch (e) {
+        // A bug building the round is not a signal problem: say so instead of "No signal" (Nov 4).
+        s.saving = false;
+        app.render();
+        app.toast({ title: 'Couldn’t start the round', sub: e?.message || 'Something in Setup is off. Go back a step and try again.', error: true });
+        return;
+      }
+      try {
+        res = await db.api.createEvent(round);
       } catch {
         s.saving = false;
         app.render();
@@ -1435,9 +1671,15 @@ export default {
     'setup-copy': async (el, ev, app) => {
       const v = app.setup.saved;
       const link = el.dataset.v === 'host' ? roundLink(v.code, '/host') : roundLink(v.code);
+      const ry = gameOf(app.setup) === 'ryder' ? ryderShareText(buildRound(app.setup), link) : null;
+      if (el.dataset.v === 'text' && ry) {
+        const ok = await copyText(ry);
+        app.toast({ title: ok ? 'Copied' : 'Couldn’t copy' });
+        return;
+      }
       if (el.dataset.v === 'share' && navigator.share) {
         try {
-          await navigator.share({ title: 'Golf Live Board', text: `Join code ${v.code}`, url: link });
+          await navigator.share(ry ? { title: 'Team Ryder Cup', text: ry } : { title: 'Golf Live Board', text: `Join code ${v.code}`, url: link });
           return;
         } catch { /* fall through to copy */ }
       }
@@ -1455,10 +1697,10 @@ export default {
       if (to === 'game' && !s.players.length) return;
       if (to === 'teams') {
         const g = gameOf(s);
-        if (g !== s.game || (g !== '2v2' && g !== 'carts')) return;
+        if (g !== s.game || (g !== '2v2' && g !== 'carts' && g !== 'ryder')) return;
         if (g === 'carts') ensureCarts(s);
       }
-      if (to === 'matchups') ensureCarts(s);
+      if (to === 'matchups' || to === 'tee') { if (gameOf(s) === 'carts') ensureCarts(s); }
       s.screen = to;
       s.swapSel = null;
       persist(s);

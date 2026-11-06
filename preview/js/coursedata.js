@@ -155,6 +155,9 @@ export function fromOpenGolf(d) {
   const at = (n) => rows.find((h) => h.n === n);
   const par = Array.from({ length: 18 }, (_, i) => at(i + 1)?.par ?? null);
   const strokeIndex = Array.from({ length: 18 }, (_, i) => at(i + 1)?.si ?? null);
+  // Per-hole yardage by tee set ({ black: 428, blue: 403, … }), the scorecard "fingerprint" the GPS build matches greens with.
+  const yardsRaw = Array.from({ length: 18 }, (_, i) => at(i + 1)?.yards);
+  const yards = yardsRaw.some((y) => y && Object.values(y).some((v) => num(v))) ? yardsRaw.map((y) => (y && typeof y === 'object' ? y : null)) : undefined;
   const raw = (d.tees || []).filter((t) => t.tee_name || t.name);
   const named = (t) => (t.tee_name || t.name).trim();
   const dupes = new Set(raw.map(named).filter((n, i, a) => a.indexOf(n) !== i));
@@ -178,6 +181,7 @@ export function fromOpenGolf(d) {
     tees,
     par,
     strokeIndex,
+    ...(yards ? { yards } : {}),
     holes,
     source: 'opengolfapi',
   };

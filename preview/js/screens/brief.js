@@ -4,7 +4,8 @@
 // what's up for grabs, how the day is won.
 
 import { esc } from '../ui.js';
-import { componentNames, foursomeTeams, fmtPts, holesLabel } from '../scoring.js';
+import { componentNames, foursomeTeams, fmtPts, holesLabel, ryderState, teeTimeName, holeAt } from '../scoring.js';
+import { riderState, isRider } from '../riderview.js';
 import { teamColor } from '../teams.js';
 
 const half = (n) => fmtPts(n); // 0.5 → "½"
@@ -15,7 +16,53 @@ export function briefPages(app) {
   const g = snap?.game;
   if (!g) return [];
   if (g.type === 'splitPoint') return [splitPage(snap)];
+  if (g.sides) return [ryderPage(app, snap, g)];
+  if (isRider(snap)) return [riderPage(app, snap, g)]; // 018 §2: one page, like Team Ryder Cup
   return [scoringPage(snap, g, !!app.myTeam()), dayPage(app, snap, g)];
+}
+
+// Team Ryder Cup (014 §8, 015 rules): the two sides, what wins, your three matches and where they play.
+function ryderPage(app, snap, g) {
+  const st = snap.settings;
+  const mine = app.myTeam();
+  const rs = ryderState(snap, mine);
+  const us = rs.sides.us, them = rs.sides.them;
+  const nCarts = (snap.roster.teams || []).length / 2;
+  const sideCard = (k, s) => `<div class="brief-side${k === 'YOUR SIDE' ? ' you' : ''}"><span class="lbl">${mine ? k : ''}</span><b class="ellipsis">${esc(s.name)}</b><small>${nCarts} carts · ${nCarts * 2} players</small></div>`;
+  const myMatches = mine ? rs.matches.filter((m) => m.us.id === mine) : [];
+  const meName = myMatches[0]?.us.names.join(' + ') || '';
+  const rows = myMatches.map((m) => `<li><span class="rh">${esc(m.label)}</span><span class="rv">vs <b>${esc(m.them.names.join(' + '))}</b><small>${m.rotation === 0 ? 'in your group' : `${esc(teeTimeName(st, m.them.tee))} · hole by hole`}</small></span></li>`).join('');
+  return `<div class="fc-title">Team Ryder Cup</div>
+    <div class="sub">Two sides of ${nCarts * 2}. ${mine ? 'Your cart plays' : 'Each cart plays'} a different cart every 6 holes.</div>
+    <div class="brief-sides">${sideCard('YOUR SIDE', us)}${sideCard('THEM', them)}</div>
+    <div class="brief-big"><span class="n">1</span><span>point a match<small>${rs.matches.length} matches · 1 point each · <b>${fmtPts(rs.toWin)}</b> wins</small></span></div>
+    <p class="brief-note">Each hole: low ball 1 point, low total 1 point. Most hole points after 6 holes wins the match for your side. A tie is ½ each.</p>
+    ${mine ? `<div class="lbl brief-k">YOUR MATCHES · ${esc(meName.toUpperCase())}</div><ol class="brief-rots">${rows}</ol>
+    <p class="brief-note">Holes 7–18 are against a cart in another tee time. The app scores it hole by hole; nobody moves.</p>` : ''}`;
+}
+
+// Partner “Rider” Cup (018 §2): what a hole is worth and your matches (your cart in the list's header,
+// each opponent in its color). The spec's 2×2 cart tiles repeated that list and made the page scroll: left out.
+function riderPage(app, snap, g) {
+  const st = snap.settings;
+  const mine = app.myTeam();
+  const rs = riderState(snap, mine);
+  const n = (snap.roster.teams || []).length;
+  const pm = g.type === 'rotationPlusMinus';
+  const names = componentNames(st.teamScore);
+  const myMatches = mine ? rs.matches.filter((m) => m.us.id === mine) : [];
+  const inGroup = (m) => !!app.me && foursomeTeams(snap.roster, st, app.me, holeAt(st, m.from)).includes(m.them.id);
+  const rows = myMatches.map((m) => `<li><span class="rh">${esc(m.label.replace(/^Holes /, ''))}</span><span class="rv">vs <b style="color:${m.them.color}">${esc(m.them.name)}</b><small>${inGroup(m) ? 'your group' : esc(teeTimeName(st, m.them.tee))}</small></span></li>`).join('');
+  const rule = n === 3 ? 'Your cart plays both other carts on every hole, all 18.' : `${mine ? 'Your cart plays' : 'Each cart plays'} a different cart every ${rs.rotations.length === 2 ? '9' : '6'} holes.`;
+  const sentence = pm
+    ? 'Your strokes against theirs on every hole; lowest over the match wins it.'
+    : names.length > 1
+      ? `Low ball 1, low total 1.${Number(st.halvedHolePoints) ? ` A tie is ${fmtPts(Number(st.halvedHolePoints))} each.` : ' A tie is worth nothing.'}`
+      : `${names[0]} 1 point a hole.`;
+  return `<div class="fc-title">Partner “Rider” Cup</div>
+    <div class="sub">${esc(rule)}</div>
+    <div class="brief-big"><span class="n">${pm ? '±' : names.length}</span><span>${pm ? 'strokes a hole' : `point${names.length === 1 ? '' : 's'} a hole`}<small>${esc(sentence)}${g.bonus ? ` +${fmtPts(g.bonus)} for winning a match.` : ''}</small></span></div>
+    ${mine ? `<div class="lbl brief-k">YOUR MATCHES · ${esc((snap.teamById.get(mine)?.name || '').toUpperCase())}</div><ol class="brief-rots one-line">${rows}</ol>` : ''}`;
 }
 
 function rotationLength(st) {

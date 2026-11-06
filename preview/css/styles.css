@@ -5,22 +5,16 @@
    from docs/design/design-system/tokens.css. Use those names. Below: what the system doesn't have yet,
    and the older names as aliases while screens move over (BUILD-PLAN.md §2). */
 :root, [data-theme="dark"] {
-  /* not in the system yet: carts E/F (5–6 player match play) — flagged for the design system */
-  --cart-e: #36c5c5; --cart-f: #e3b341;
-  /* retired as screens move over: line-strong → line, text-faint → text-muted, tint-n → surface-2,
-     glass → surface-1 */
+  /* retired as screens move over: line-strong → line, text-faint → text-muted, tint-n → surface-2 */
   --line-strong: #3b4048;
   --text-faint: rgba(167, 172, 180, .55);
   --tint-n: rgba(167, 172, 180, .10);
-  --glass: rgba(21, 23, 27, .92);
   color-scheme: dark;
 }
 [data-theme="light"] {
-  --cart-e: #0e8c8c; --cart-f: #8a6000;
   --line-strong: #c3c8cf;
   --text-faint: #8a9099;
   --tint-n: rgba(79, 85, 94, .08);
-  --glass: rgba(255, 255, 255, .94);
   color-scheme: light;
 }
 :root {
@@ -108,7 +102,7 @@ a { color: inherit; }
 .tabbar:empty { display: none; }
 .dock {
   position: relative; display: flex; padding: 6px; border-radius: 34px;
-  background: var(--glass); border: 1px solid var(--glass-line); box-shadow: var(--shadow-float);
+  background: var(--glass); border: 1px solid var(--glass-line); box-shadow: var(--shadow-dock); /* 012: the dock is the only thing that glows (dark) */
   -webkit-backdrop-filter: blur(22px) saturate(1.8); backdrop-filter: blur(22px) saturate(1.8);
 }
 .tab-hl {
@@ -507,6 +501,9 @@ a { color: inherit; }
 .m-title { font-size: 32px; font-weight: 800; letter-spacing: -0.03em; margin-top: 2px; }
 .m-sub { font-size: 15px; color: var(--ink-soft); margin-top: 2px; }
 .m-hero .seg2 { margin: 14px 0 0; }
+.m-card { margin-top: 14px; padding: 18px 14px 14px; border-radius: 24px; background: var(--surface-1); box-shadow: var(--shadow-card); } /* 012: the score is the card */
+.m-card .m-kicker { margin-bottom: 10px; }
+.m-card .m-score { margin-top: 0; }
 .m-score { display: flex; align-items: center; justify-content: center; gap: 18px; margin-top: 16px; }
 .ms-side { width: 96px; text-align: left; font-size: 15px; font-weight: 700; min-width: 0; }
 .ms-side.r { text-align: right; }
@@ -526,6 +523,7 @@ a { color: inherit; }
 .m-line b { font-weight: 600; }
 .m-line.small { font-size: 13px; margin-top: 8px; }
 .mtable { margin-top: 14px; border-radius: 18px; background: var(--surface); padding: 4px 14px; text-align: left; }
+.m-hero > .mtable { margin: 14px 8px 0; padding: 0; border-radius: 0; background: transparent; } /* 012: hole table on the background, 24px side margins */
 .mt-row { width: 100%; display: grid; gap: 8px; align-items: center; height: 44px; border-top: 1px solid var(--line); text-align: left; }
 .mt-head { height: auto; padding: 10px 0 6px; border-top: 0; font-size: 12px; color: var(--ink-soft); letter-spacing: .06em; }
 .mt-row .r { text-align: right; }
@@ -543,6 +541,33 @@ a { color: inherit; }
 .wb-body { padding: 0 14px 14px; }
 .wb-body .spread { font-size: 13px; gap: 8px; white-space: nowrap; }
 .wb-table { margin: 14px -14px -14px; border-top: 1px solid var(--line); }
+/* Team Ryder Cup: side score card + one row per match, the hole table folds open underneath */
+.ryder-card { margin-top: 10px; }
+.ryder-card .ms-side { width: 104px; }
+.ry-list { display: flex; flex-direction: column; gap: 8px; }
+.ry-match .watch-head { align-items: center; }
+.ry-match.me { border-color: var(--cart-you); background: var(--tint-you); }
+.ry-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; text-align: left; }
+.ry-names { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 15px; }
+.ry-names b { font-weight: 700; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.ry-names b:last-child { text-align: right; }
+.ry-names .ry-score { flex: none; font-size: 17px; font-weight: 700; text-align: center; min-width: 52px; }
+.ry-sub { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; color: var(--ink-soft); }
+.ry-sub > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ry-side { display: inline-flex; align-items: center; gap: 5px; font-weight: 600; flex: none; }
+.ry-side .jdot { width: 8px; height: 8px; border-radius: 50%; background: var(--jersey); }
+.ry-brow { width: 100%; gap: 10px; text-align: left; }
+.ry-brow.me { background: var(--tint-you); border-radius: 12px; margin: 0 -6px; width: calc(100% + 12px); padding-left: 6px; padding-right: 6px; }
+.ry-brow .ry-h { flex: none; width: 44px; }
+.ry-brow .ry-names { flex: 1; }
+.ry-brow .ry-names b { font-size: 13px; }
+.ry-brow .ry-side, .ry-brow .meta { flex: none; font-size: 12px; max-width: 92px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ryder-hero .ry-top { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-top: 6px; }
+.ryder-hero .ry-s { flex: 1; min-width: 0; }
+.ryder-hero .ry-s.r { text-align: right; }
+.ryder-hero .ry-sn { font-size: 15px; font-weight: 700; line-height: 1.2; overflow-wrap: anywhere; }
+.ryder-hero .ry-sp { font-family: var(--mono); font-size: 64px; font-weight: 700; line-height: .9; letter-spacing: -0.05em; margin-top: 4px; }
+.ryder-hero .ry-dash { font-family: var(--mono); font-size: 32px; color: var(--hero-soft); padding-bottom: 8px; flex: none; }
 .wb-table .mtable { margin: 0; border-radius: 0; }
 
 /* ───────────────────────────────────────────── Board (designspec §4) */
@@ -744,7 +769,7 @@ a { color: inherit; }
   padding: calc(var(--sat) + 24px) 24px calc(var(--sab) + 24px);
   animation: rise .28s cubic-bezier(.2, .8, .2, 1);
 }
-.fullcard.sunny { background: var(--warn-bg); box-shadow: inset 0 0 0 1.5px var(--warn); color: var(--text); } /* what's at stake: amber callout, not a fill */
+.fullcard.sunny { background: linear-gradient(var(--warn-bg), var(--warn-bg)), var(--bg); box-shadow: inset 0 0 0 1.5px var(--warn); color: var(--text); } /* what's at stake: amber tint over a solid page (warn-bg alone is see-through: the app showed through it) */
 .fullcard .kicker { font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; opacity: .7; }
 .fullcard .fc-title { font-size: 32px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.08; }
 .fullcard .result { font-family: var(--mono); font-size: 17px; font-weight: 700; }
@@ -841,13 +866,7 @@ a { color: inherit; }
   .fullcard, .away { animation: none; }
 }
 
-/* ───────────────────────────────────────────── launch screen + portrait only */
-.splash {
-  position: fixed; inset: 0; z-index: 100; background: var(--bg); display: grid; place-items: center;
-  transition: opacity .25s;
-}
-.splash svg { width: 64px; height: 64px; color: var(--line); }
-.splash.gone { opacity: 0; pointer-events: none; }
+/* ───────────────────────────────────────────── portrait only (the loading screen #loader is styled in index.html) */
 .landscape {
   display: none; position: fixed; inset: 0; z-index: 200; background: var(--bg); color: var(--text);
   align-items: center; justify-content: center; flex-direction: column; gap: 12px; font-size: 17px; font-weight: 700;
@@ -914,7 +933,7 @@ details.fold { margin: 6px 0 14px; }
 details.fold summary { min-height: var(--tap); display: flex; align-items: center; font-weight: 600; color: var(--ink-soft); cursor: pointer; list-style: none; }
 details.fold summary::-webkit-details-marker { display: none; }
 
-/* Opening a round / something went wrong: never a blank screen */
+/* Spinner: the recap pager only (opening a round = the loading screen, feature 020) */
 .loading-state { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; min-height: 50vh; text-align: center; }
 .spinner { width: 28px; height: 28px; border-radius: 50%; border: 3px solid var(--line-strong); border-top-color: var(--ink); animation: spin .8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -1132,6 +1151,12 @@ details.fold summary::-webkit-details-marker { display: none; }
 .swap-name { width: 100%; height: 52px; margin-top: 6px; border-radius: 12px; background: var(--bg); font-size: 17px; font-weight: 600; display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 0 12px; }
 .pair-card .swap-name { justify-content: center; }
 .cart-card .swap-name { height: 48px; font-size: 15px; }
+/* Team Ryder Cup setup: side names, then one row per tee time with a cart from each side */
+.ryder-names { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 14px; }
+.ryder-names .label { display: block; margin: 0 0 6px 4px; }
+.ryder-tee { margin: 14px 4px 6px; }
+.ryder-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.ryder-row .cart-card .cc-k { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .swap-name.sel { outline: 2px solid var(--ink); outline-offset: -2px; }
 .cc-name { width: 100%; margin-top: 3px; border: 0; background: transparent; font-size: 15px; font-weight: 700; color: var(--ink); outline: none; padding: 0; }
 .cc-name::placeholder { color: var(--ink-soft); font-style: italic; font-weight: 500; }
@@ -1156,6 +1181,8 @@ details.fold summary::-webkit-details-marker { display: none; }
 .mu-chip { font-size: 13px; font-weight: 700; min-width: 32px; height: 30px; display: inline-flex; align-items: center; justify-content: center; padding: 0 8px; border-radius: 8px; white-space: nowrap;
   color: var(--jersey); background: color-mix(in srgb, var(--jersey) 12%, transparent); border: 1.5px solid var(--jersey); }
 .mu-picks { display: flex; gap: 4px; }
+.ry-chip { flex: 1; min-width: 0; height: 40px; justify-content: flex-start; overflow: hidden; text-overflow: ellipsis; display: inline-block; line-height: 37px; text-align: left; }
+.ry-chip.sel { outline: 2px solid var(--ink); outline-offset: 1px; }
 .mu-pick { width: 44px; height: 44px; border-radius: 10px; font-size: 15px; font-weight: 700; background: var(--surface-2); color: var(--ink-soft); }
 .mu-pick.on { color: var(--jersey); background: color-mix(in srgb, var(--jersey) 12%, transparent); border: 2px solid var(--jersey); }
 .mu-rest { flex: 1; text-align: right; font-size: 12px; white-space: nowrap; }
@@ -1263,6 +1290,12 @@ details.fold summary::-webkit-details-marker { display: none; }
 .home-me .avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--surface-2); display: grid; place-items: center; font-size: 13px; font-weight: 600; }
 .home-me .hm-name { font-size: 15px; line-height: 20px; font-weight: 600; }
 .home-title { margin: var(--space-2) 0 var(--space-5); }
+/* The mark (020): 30px, ring (center 58% down the box) on the capitals' middle (18px down a 32/36 title) */
+.home-title { display: flex; align-items: center; gap: 10px; }
+.home-mark { flex: none; width: 30px; height: 30px; position: relative; top: -2.4px; }
+.home-mark img { display: block; width: 30px; height: 30px; }
+.home-mark .mk-light, [data-theme="light"] .home-mark .mk-dark { display: none; }
+[data-theme="light"] .home-mark .mk-light { display: block; }
 .home-k { color: var(--text-muted); margin: var(--space-5) 0 var(--space-2); }
 .home-title + .home-k { margin-top: 0; }
 .live-card { border-radius: var(--radius-2xl); background: var(--tint-you); border: 1.5px solid var(--cart-you); box-shadow: var(--shadow-card); padding: var(--space-4); }
@@ -1547,3 +1580,436 @@ details.fold summary::-webkit-details-marker { display: none; }
 .tn-tag { color: var(--text-muted); flex: none; }
 .tn-tag.on { color: var(--cart-you-text); }
 .pr-last { padding: 0 var(--space-3) var(--space-3) 64px; border-bottom: 1px solid var(--line); }
+
+/* ───────────────────────────────────────────── Green card (features 011 + 013): one component, two sizes */
+.gps-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; letter-spacing: .06em; color: var(--text-muted); }
+.gps-badge.dim { color: var(--ink-faint); }
+.green-card {
+  display: flex; align-items: center; gap: 14px; height: 92px; margin: 10px 8px 0; padding: 0 14px;
+  border-radius: 22px; background: var(--surface-1); color: var(--text);
+}
+.green-card.compact { height: 68px; }
+.green-pic { flex: none; display: grid; place-items: center; }
+.green-svg { display: block; }
+.green-nums { flex: 1; min-width: 0; display: grid; grid-template-columns: 1fr 1.35fr 1fr; align-items: center; text-align: center; }
+.green-nums .gn { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; }
+.green-nums .gn b { font-size: 17px; font-weight: 600; line-height: 1; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.green-nums .gn .label { font-size: 12px; letter-spacing: .08em; color: var(--text-muted); }
+.green-nums .gn.mid b { font-size: 32px; font-weight: 700; letter-spacing: -1.5px; color: var(--text); }
+.green-nums .gn.mid .label { color: var(--text); }
+.green-card.compact .gn b { font-size: 15px; }
+.green-card.compact .gn.mid b { font-size: 32px; }
+.green-card.weak .gn b, .green-card.finding .gn b { color: var(--text-muted); }
+.green-card.denied { height: 56px; justify-content: space-between; gap: 10px; font-size: 15px; color: var(--ink-soft); }
+.green-card.denied .btn { min-height: 36px; padding: 0 14px; flex: none; }
+/* while the card shows, the hole header is the top of the screen (the name row is gone) */
+.no-top .topbar { display: none; }
+.no-top .enter .hero { padding-top: calc(6px + var(--sat)); }
+.no-top .enter { --ht: 36px; } /* 013: 36px hole title while the card shows */
+/* compact: the pads never go under 80px; if it still doesn't fit, Enter scrolls */
+.enter.gps-card.compact .tile .step { width: max(80px, min(88px, 100cqh)); height: max(80px, min(88px, 100cqh)); }
+.enter.gps-card.compact .sheet { overflow-y: auto; }
+
+/* Team Ryder Cup setup (handoff 015 §4) */
+.ry-cart { margin-top: var(--space-3); }
+.ry-cart .lbl { display: block; margin: 0 4px 4px; }
+.ry-cart-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
+.ry-cart-pair .swap-name { margin-top: 0; height: 48px; font-size: 15px; background: var(--surface-1); }
+.ry-pool-k { display: block; margin: var(--space-5) 4px var(--space-2); }
+.ry-pool { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
+.ry-pick { height: 48px; min-width: 0; padding: 0 12px; border-radius: var(--radius-lg); background: var(--surface-1); font-size: 15px; font-weight: 600; display: flex; align-items: center; justify-content: center; }
+.ry-pick.sel { outline: 2px solid var(--text); outline-offset: -2px; }
+.ry-cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); margin-top: var(--space-5); }
+.ry-col { min-width: 0; }
+.ry-col-h { display: flex; align-items: center; gap: var(--space-2); height: 32px; font-size: 15px; font-weight: 700; color: var(--text-muted); min-width: 0; }
+.ry-col-h.you { color: var(--cart-you-text); }
+.ry-tag { flex: none; font-size: 12px; font-weight: 600; letter-spacing: .08em; padding: 0 6px; border-radius: var(--radius-sm); border: 1px solid currentColor; }
+.ry-slot { height: 48px; min-width: 0; display: flex; align-items: center; padding: 0 12px; margin-top: 6px; border-radius: var(--radius-lg); border: 1px solid var(--line); font-size: 15px; font-weight: 600; }
+.ry-slot.cap { background: var(--surface-1); border-color: transparent; }
+.ry-slot.cap.you { background: var(--tint-you); }
+.ry-tee { margin-top: var(--space-4); }
+.ry-tee-k { display: flex; align-items: center; gap: var(--space-2); margin: 0 4px 6px; position: relative; }
+.ry-time { height: 28px; width: 92px; padding: 0 8px; border-radius: var(--radius-pill); border: 1px dashed var(--line); background: transparent; color: var(--text); font-size: 13px; }
+.ry-time:not(.set) { color: transparent; }
+.ry-time.set { border-style: solid; }
+.ry-time-ph { position: absolute; left: 44px; pointer-events: none; font-size: 13px; color: var(--text-muted); padding-left: 10px; }
+.ry-tee-pair { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: var(--space-2); }
+.ry-tee-pair .ry-slot { margin-top: 0; }
+.ry-tee-pair .ry-slot.you { color: var(--cart-you-text); }
+.ry-my { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; gap: var(--space-2); align-items: center; height: 40px; padding: 0 4px; font-size: 15px; }
+.ry-share { white-space: pre-wrap; font-family: var(--font-sans); font-size: 13px; line-height: 1.4; color: var(--text-muted); background: var(--surface-1); border-radius: var(--radius-lg); padding: var(--space-3) var(--space-4); margin: var(--space-3) 0 0; }
+
+/* Team Ryder Cup Board + match sheet (handoff 015 §1–§2). Green = your side's points only. */
+.ry-board { padding-top: var(--space-2); }
+.ry-cup { background: var(--surface-1); border-radius: var(--radius-2xl); box-shadow: var(--shadow-card); padding: var(--space-4); }
+.ry-cup-top { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: end; gap: var(--space-2); }
+.ry-cup-top > .lbl { padding-bottom: 12px; text-align: center; color: var(--text-muted); }
+.ry-cup-top > .lbl.you, .ry-board .lbl.on { color: var(--text); }
+.ry-cup-top > .lbl.you { color: var(--cart-you-text); }
+.ry-side { min-width: 0; } .ry-side.r { text-align: right; }
+.ry-sn { font-size: 15px; font-weight: 700; line-height: 20px; color: var(--text-muted); }
+.ry-sn.you, .ry-tot.you, .ry-num.you, .ry-board .you, .ry-matches .you { color: var(--cart-you-text); }
+.ry-tot, .ry-num { font-size: 64px; font-weight: 700; line-height: 1.1; letter-spacing: -0.03em; color: var(--text); }
+.ry-num.muted { color: var(--text-muted); }
+.ry-cupbar { display: flex; align-items: center; gap: 3px; margin-top: var(--space-3); }
+.ry-grp { flex: 1; display: flex; gap: 3px; }
+.ry-mid { width: 2px; height: 20px; background: var(--text); border-radius: 1px; flex: none; }
+.ry-seg { flex: 1; height: 12px; border-radius: 3px; background: var(--surface-2); position: relative; overflow: hidden; }
+.ry-seg b { position: absolute; top: 0; bottom: 0; }
+.ry-seg b.us { left: 0; background: var(--cart-you); }
+.ry-seg b.them { right: 0; background: var(--text-muted); }
+.ry-final { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-3); font-size: 15px; font-weight: 600; }
+.ry-final > span { flex: 1; min-width: 0; }
+.ry-rot { margin-top: var(--space-4); }
+.ry-rot.future .ry-rows { opacity: .7; }
+.ry-rot.done .ry-rows { opacity: .85; }
+.ry-strip-h { width: 100%; height: 40px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 0 var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md); background: transparent; color: var(--text-muted); }
+.ry-strip-h > .lbl { justify-self: start; }
+.ry-strip-h > :last-child { justify-self: end; }
+.ry-tally { font-size: 13px; font-weight: 700; color: var(--text-muted); }
+.ry-st { font-family: var(--font-mono); font-size: 12px; font-weight: 600; letter-spacing: .08em; color: var(--text-muted); }
+.ry-st.live { color: var(--cart-you-text); }
+.ry-chev { display: inline-flex; transform: rotate(90deg); transition: transform .2s; }
+.ry-chev.open { transform: rotate(-90deg); }
+.ry-rows { margin-top: var(--space-1); }
+.ry-row { width: 100%; min-height: 54px; display: grid; grid-template-columns: 1fr 0 1fr; align-items: stretch; margin-top: 2px; background: transparent; text-align: left; }
+.ry-cell { min-width: 0; display: flex; align-items: center; padding: 6px var(--space-3); }
+.ry-cell.r { justify-content: flex-end; text-align: right; }
+.ry-cell.hold { background: var(--surface-1); }
+.ry-cell.l.hold { border-radius: var(--radius-lg) 0 0 var(--radius-lg); padding-right: 76px; }
+.ry-cell.r.hold { border-radius: 0 var(--radius-lg) var(--radius-lg) 0; padding-left: 76px; }
+.ry-nm { display: flex; flex-direction: column; min-width: 0; font-size: 13px; line-height: 16px; font-weight: 600; color: var(--text); }
+.ry-nm.muted { color: var(--text-muted); } .ry-nm.you { color: var(--cart-you-text); }
+.ry-line { position: relative; }
+.ry-flag { position: absolute; top: 50%; width: 72px; height: 26px; margin-top: -13px; display: flex; align-items: center; justify-content: center; gap: 2px; font-family: var(--font-mono); font-size: 12px; font-weight: 700; white-space: nowrap; }
+.ry-flag.at-line { left: -36px; border-radius: var(--radius-sm); }
+.ry-flag.at-us { right: 0; border-radius: var(--radius-sm) 0 0 var(--radius-sm); }
+.ry-flag.at-them { left: 0; border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+.ry-flag.tee { border: 1px dashed var(--line); color: var(--text-muted); background: var(--bg); }
+.ry-flag.up, .ry-flag.tied { background: var(--text); color: var(--bg); }
+.ry-flag.won { background: var(--surface-3); color: var(--text); }
+.ry-flag.halved { background: var(--surface-2); color: var(--text-muted); }
+.ry-sheet { padding: 0 var(--space-1) var(--space-4); }
+.ry-sheet > .lbl { color: var(--text-muted); }
+.ry-ms-top { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); margin-top: var(--space-2); }
+.ry-ms-s.r { text-align: right; }
+.ry-ms-n { display: flex; align-items: center; gap: var(--space-2); }
+.ry-ms-s.r .ry-ms-n { flex-direction: row-reverse; }
+.ry-sdot { width: 10px; height: 10px; border-radius: 50%; background: var(--text); flex: none; }
+.ry-sdot.r { background: var(--text-muted); }
+.ry-sheet .ry-sn { color: var(--text); }
+.ry-mbar { margin-top: var(--space-3); }
+.ry-mtrack { position: relative; height: 12px; border-radius: 6px; background: var(--surface-2); overflow: hidden; }
+.ry-mtrack b { position: absolute; top: 0; bottom: 0; }
+.ry-mtrack b.us { left: 0; background: var(--cart-you); }
+.ry-mbar.plain .ry-mtrack b.us { background: var(--text); }
+.ry-mtrack b.them { right: 0; background: var(--text-muted); }
+.ry-mtrack .ry-mline { position: absolute; top: 0; bottom: 0; left: 50%; width: 2px; margin-left: -1px; background: var(--text); }
+.ry-mlbl { margin-top: 4px; text-align: center; color: var(--text-muted); }
+.ry-bl { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-2); margin-top: var(--space-2); }
+.ry-bl .lbl { color: var(--text-muted); flex: none; }
+.ry-strip { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: var(--space-1); margin-top: var(--space-3); }
+.ry-tile { height: 60px; border-radius: var(--radius-lg); background: var(--surface-1); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 15px; font-weight: 700; }
+.ry-tile.on { outline: 2px solid var(--text); outline-offset: -2px; }
+.ry-dots { display: flex; flex-direction: column; gap: 3px; }
+.ry-dot { width: 11px; height: 11px; flex: none; display: block; }
+.ry-hd { margin-top: var(--space-3); }
+.ry-hd-h { display: flex; align-items: baseline; gap: 4px; font-size: 17px; }
+.ry-hd-h .mono { margin-left: auto; }
+.ry-marks { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-2); margin-top: var(--space-2); }
+.ry-mk { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; }
+.ry-mk-n { font-size: 13px; color: var(--text-muted); max-width: 100%; } .ry-mk-n.you { color: var(--cart-you-text); }
+.ry-hl { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-2); font-size: 15px; }
+
+/* Team Ryder Cup Matches (handoff 015 §3): same layout in every state. */
+.ry-matches { padding-top: var(--space-2); }
+.ry-matches > .lbl { color: var(--text-muted); }
+.ry-vs { margin: 2px 0 2px; }
+.ry-picker { margin-top: var(--space-2); }
+.ry-card { margin-top: var(--space-3); padding: var(--space-4); border-radius: var(--radius-2xl); background: var(--surface-1); box-shadow: var(--shadow-card); }
+.ry-card > .lbl { color: var(--text-muted); }
+.ry-card > .lbl.you { color: var(--cart-you-text); }
+.ry-legend { display: flex; align-items: center; gap: 6px; margin-top: var(--space-2); font-size: 13px; color: var(--text-muted); }
+.ry-legend .ry-dot + * { margin-left: 0; }
+.ry-legend .ry-dot:not(:first-child) { margin-left: var(--space-2); }
+
+/* Team Ryder Cup: Enter header dot (014 §5) + Today's game sides (014 §8) */
+.ry-hdot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); margin-right: 6px; vertical-align: middle; }
+.status .you { color: var(--cart-you-text); }
+.brief-sides { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); margin: var(--space-3) 0; }
+.brief-side { min-width: 0; display: flex; flex-direction: column; gap: 2px; padding: var(--space-3); border-radius: var(--radius-lg); background: var(--surface-2); font-size: 15px; }
+.brief-side .lbl { color: var(--text-muted); }
+.brief-side.you { background: var(--tint-you); }
+.brief-side.you b, .brief-side.you .lbl { color: var(--cart-you-text); }
+.brief-side small { font-size: 13px; color: var(--text-muted); }
+.brief-k { display: block; margin: var(--space-4) 0 var(--space-1); color: var(--text-muted); }
+
+.ry-hls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
+
+/* Matches score card: title size (32 mono) so the whole screen fits; the cup card keeps number-xl. */
+.ry-card .ry-num { font-size: 32px; line-height: 1.15; }
+.ry-prow { width: 100%; display: grid; grid-template-columns: 24px minmax(0, 1fr) 44px 56px 56px; align-items: center; gap: var(--space-2); min-height: 44px; padding: 0 2px; border-bottom: 1px solid var(--line); font-size: 17px; font-weight: 600; text-align: left; }
+.ry-prow.head { min-height: 24px; color: var(--text-muted); }
+.ry-prow .r { text-align: right; } .ry-prow .b { font-weight: 700; }
+.ry-prow .you { color: var(--cart-you-text); }
+.ry-prow:not(.head) .mono.r { font-size: 15px; } .ry-prow:not(.head) .mono.r.b { font-size: 17px; }
+
+.ry-board .board-segs { margin: var(--space-4) 0 var(--space-2); }
+
+/* Scorecard: other groups use the same two-line head as your collapsed group (kicker · on N, then the names). */
+.watch-head .wk { display: block; }
+.watch-head .wt { display: block; font-size: 15px; font-weight: 600; margin-top: 2px; color: var(--text); }
+.watch-head { min-height: 56px; padding-top: 8px; padding-bottom: 8px; }
+
+.ry-pc { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.15; padding: 4px 0; }
+.ry-pc small { font-size: 12px; font-weight: 500; color: var(--text-muted); }
+
+
+/* Cup card: the cup line gets its own row so the side names have the full width (they wrap, never cut off). */
+.ry-cup-k { text-align: center; color: var(--text-muted); margin-bottom: var(--space-2); }
+.ry-cup-k.you { color: var(--cart-you-text); }
+.ry-cup-top { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: end; gap: var(--space-4); }
+.ry-cup-top .ry-sn { overflow-wrap: anywhere; }
+/* Players table: roomier columns, no header letter-spacing, so THRU / GROSS / PROJ / NET never touch. */
+.ry-prow { grid-template-columns: 18px minmax(0, 1fr) 36px 60px 48px 44px; gap: 6px; }
+.ry-prow.head { letter-spacing: 0; }
+
+/* Enter, Team Ryder Cup: the other cart's slim row is just "Josh 4 · Brandon 5", each name with room to show. */
+.slim-scores.names-only { gap: var(--space-3); font-family: var(--font-sans); }
+.slim-scores.names-only .face { flex: 1 1 0; gap: 6px; font-size: 15px; font-weight: 600; }
+
+/* Team Ryder Cup Enter (handoff 016): one card, one-row ScorePad, flag button, plain Next hole. Never scrolls on an iPhone 16 home screen app. */
+.ry-enter { display: flex; flex-direction: column; padding: 0 var(--space-4); }
+.ry-enter > .hero { padding-left: 0; padding-right: 0; }
+.ry-ecard { margin-top: 10px; padding: 10px 12px 12px; border-radius: var(--radius-2xl); background: var(--surface-1); border: 1.5px solid var(--cart-you); box-shadow: var(--shadow-card); }
+.ry-ecard.theirs { border-color: var(--line); }
+.ry-ehead { min-height: 36px; display: flex; align-items: center; gap: var(--space-2); }
+.ry-ehead-l { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 6px; font-size: 15px; }
+.ry-ehead-l b { font-weight: 700; min-width: 0; }
+.ry-vs-k { color: var(--text-muted); font-weight: 600; flex: none; }
+.ry-ehead-l .ry-k { flex: none; color: var(--text-muted); }
+.ry-ehead-r { flex: none; display: flex; align-items: center; gap: var(--space-2); }
+.ry-thru { color: var(--text-muted); }
+.ry-eflag { width: 72px; height: 26px; border-radius: var(--radius-sm); font-family: var(--font-mono); font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; padding: 0; }
+.ry-eflag.up { background: var(--cart-you); color: var(--bg); }
+.ry-eflag.down { background: var(--surface-3); color: var(--text); }
+.ry-eflag.tied { background: var(--bg); color: var(--text); box-shadow: inset 0 0 0 1.5px var(--text-muted); }
+.ry-chip { height: 40px; padding: 0 14px; border-radius: var(--radius-md); background: var(--surface-2); font-size: 15px; font-weight: 600; display: inline-flex; align-items: center; flex: none; color: var(--text); }
+.ry-player { margin-top: var(--space-2); padding: 0 2px; }
+.ry-pl-top { height: 22px; display: flex; align-items: center; gap: 6px; }
+.ry-pl-n { font-size: 15px; font-weight: 700; min-width: 0; }
+.ry-stroke { width: 7px; height: 7px; border-radius: 50%; background: var(--text); flex: none; }
+.ry-pl-l { margin-left: auto; flex: none; color: var(--text-muted); }
+.ry-pl-l.under { color: var(--cart-you-text); }
+.ry-pl-l.dbl { color: var(--double); }
+.ry-src { font-size: 13px; color: var(--text-muted); min-width: 0; flex: 0 1 auto; }
+.ry-pl-n { flex: none; }
+.ry-pads { display: grid; grid-template-columns: 34px repeat(4, minmax(0, 1fr)) 34px; gap: 4px; margin-top: 6px; }
+.ry-pad, .ry-pad-arrow { height: 52px; border-radius: var(--radius-lg); background: var(--bg); border: 1px solid var(--line); display: flex; align-items: center; justify-content: center; padding: 0; color: var(--text); }
+.ry-pad-arrow { color: var(--text-muted); }
+.ry-pad-arrow.off { opacity: .3; }
+.ry-pad.likely { border-color: var(--text-muted); }
+.ry-pad.on { background: var(--text); color: var(--bg); border-color: transparent; }
+.ry-pad.on .mk, .ry-pad.on .mk * { color: var(--bg); border-color: var(--bg); background: transparent; }
+.ry-pad.off:not(.on) { opacity: .5; }
+.ry-player.nudge .ry-pad { animation: nudge .45s ease-in-out 2; border-color: var(--text); }
+@media (prefers-reduced-motion: reduce) { .ry-player.nudge .ry-pad { animation: none; } }
+.ry-slim { margin-top: var(--space-2); height: 52px; width: 100%; display: flex; align-items: center; gap: 14px; padding: 0 6px 0 14px; border-radius: var(--radius-lg); background: var(--surface-1); text-align: left; }
+.ry-slim-p { flex: 1 1 0; min-width: 0; display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 600; }
+.ry-slim .ry-chip { margin-left: auto; }
+.ry-you { color: var(--cart-you-text); padding: 0 10px; flex: none; }
+.ry-prog-row { display: flex; align-items: center; gap: var(--space-2); margin-top: 10px; }
+.ry-prog { flex: 1; display: flex; gap: 3px; }
+.ry-prog i { flex: 1; height: 6px; border-radius: 3px; background: var(--surface-2); display: block; }
+.ry-prog i.done { background: var(--text-muted); }
+.ry-prog i.here { background: var(--text); }
+.ry-foot { margin-top: 12px; }
+.ry-next { width: 100%; height: 58px; border-radius: var(--radius-xl); background: var(--surface-2); color: var(--text-muted); font-size: 17px; font-weight: 600; }
+.ry-next.ready { background: var(--text); color: var(--bg); }
+.ry-prog i.brk { margin-left: 8px; }
+
+/* Partner “Rider” Cup on the Team Ryder Cup screens (handoff 018): same layout, cart colors kept. */
+.ry-slim.colored { box-shadow: inset 0 0 0 1px var(--slim); }
+.ry-slim.colored .ry-slim-p > .ellipsis { color: var(--slim); }
+.ry-slim + .ry-slim { margin-top: var(--space-2); }
+.ry-fixing { display: inline-flex; align-items: center; gap: 6px; flex: none; color: var(--text-muted); }
+.ry-fixing .relock { margin-left: 4px; }
+.ry-bonus { margin-top: 2px; }
+.rider-rank { padding: var(--space-3) var(--space-4) var(--space-2); }
+.ry-rank-k { display: flex; justify-content: space-between; gap: var(--space-2); }
+.ry-rank-k .lbl { color: var(--text-muted); }
+.rider-board .headlines { margin-top: var(--space-3); }
+.rider-cart { padding: var(--space-2) var(--space-3) var(--space-3); border-radius: var(--radius-xl); box-shadow: inset 0 0 0 1px var(--jersey); }
+.rider-cart-k { display: flex; align-items: center; gap: var(--space-2); margin-bottom: 6px; }
+.rider-cart-k .lbl { color: var(--jersey); margin: 0; }
+.rider-tn { display: inline-flex; align-items: center; gap: 4px; min-height: 32px; font-size: 15px; font-weight: 700; color: var(--text); background: transparent; padding: 0; min-width: 0; }
+.rider-tn .empty { color: var(--text-muted); font-weight: 500; }
+.rider-pick { box-shadow: inset 0 0 0 1px var(--jersey); color: var(--jersey); }
+.brief-sides.rider .brief-side b { font-size: 15px; }
+.brief-side.compact { padding: 10px var(--space-3); }
+/* 018 Today's game (one page): one line per match, no pager dots for a single page. */
+.brief-dots.none { display: none; }
+.brief-rots.one-line li { padding-top: 8px; padding-bottom: 8px; }
+.brief-rots.one-line .rv { display: flex; align-items: baseline; gap: 6px; min-width: 0; flex-wrap: wrap; }
+.brief-rots.one-line .rv small { display: inline; margin: 0; }
+.brief-rots.one-line .rv small::before { content: '· '; }
+/* Small phones (016 §0): the 016/018 Enter may scroll, so it grows instead of sitting at 100% (keeps Next clear of the tab bar). */
+.ry-enter { height: auto; min-height: 100%; }
+
+/* Team Ryder Cup final card (handoff 019). Sizes stay on the type scale: title 32 for the winner, number-xl 64 for the score (spec: 36 / 88, flagged). */
+.ry-endcard { position: relative; overflow: hidden; background: var(--surface-1); border-radius: var(--radius-2xl); box-shadow: inset 0 0 0 1.5px var(--line), var(--shadow-card); padding: 0 var(--space-4) var(--space-4); text-align: center; }
+.ry-endcard.won { box-shadow: inset 0 0 0 1.5px var(--cart-you), var(--shadow-card); }
+.ry-end-wash { margin: 0 calc(-1 * var(--space-4)); padding: var(--space-5) var(--space-4) var(--space-3); }
+.ry-endcard.won .ry-end-wash { background: var(--tint-you); }
+.ry-end-wash .lbl { color: var(--text-muted); }
+.ry-trophy { display: block; margin: var(--space-3) auto 0; color: var(--text-muted); }
+.ry-endcard.won .ry-trophy { color: var(--cart-you); }
+.ry-end-who { font-size: 32px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; margin-top: var(--space-2); color: var(--text); overflow-wrap: anywhere; }
+.ry-end-who.you { color: var(--cart-you-text); }
+.ry-end-sub { font-size: 17px; font-weight: 600; color: var(--text-muted); margin-top: 2px; }
+.ry-end-score { font-size: 64px; font-weight: 700; letter-spacing: -0.04em; line-height: 1.05; margin-top: var(--space-2); display: flex; justify-content: center; align-items: baseline; gap: 6px; }
+.ry-end-score .you { color: var(--cart-you-text); } .ry-end-score .muted { color: var(--text-muted); }
+.ry-end-dash { font-size: 32px; color: var(--text-muted); }
+.ry-end-line { color: var(--text-muted); margin-top: var(--space-3); font-size: 13px; }
+.ry-end-line b { color: var(--text); font-weight: 600; }
+.ry-end-btn { margin-top: var(--space-4); }
+.ry-endcard .btn.ghost { margin-top: var(--space-2); }
+.ry-finalize { margin-top: var(--space-3); }
+.ry-recs { margin-top: var(--space-5); }
+.ry-recs .lbl { color: var(--text-muted); margin-bottom: 4px; }
+.ry-recs .lbl.you { color: var(--cart-you-text); }
+.ry-rec { display: grid; grid-template-columns: minmax(0, 1fr) auto 40px; align-items: center; gap: var(--space-3); min-height: 40px; border-bottom: 1px solid var(--line); font-size: 15px; font-weight: 600; }
+.ry-rec:last-child { border-bottom: 0; }
+.ry-rec .you { color: var(--cart-you-text); }
+.ry-rec-r { color: var(--text-muted); font-size: 13px; }
+.ry-rec-p { font-size: 17px; font-weight: 700; text-align: right; }
+
+/* ───────── 021 + 022 · the calm team Enter (Partner “Rider” Cup + Team Ryder Cup) ─────────
+   Under the app's hole header: card · match line · your rows (rail) · their quiet row · space · status + Next.
+   Two values the design system doesn't have yet (flagged in 021 §8; proposed tokens in brackets):
+   the 5% divider [line-faint] and the dark red on the white pill [double-on-light = light theme's --double]. */
+.ce { --ce-line: rgba(255,255,255,.05); --ce-dbl-pill: #b42318; min-height: 100%; }
+html.light .ce, [data-theme="light"] .ce { --ce-line: rgba(11,13,16,.06); --ce-dbl-pill: #ff6b6b; } /* light: the pill is dark, so the dark theme's red */
+.ce-flex { flex: 1; min-height: 8px; }
+.ce-match { height: 36px; flex: none; display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); font-size: 15px; font-weight: 500; color: var(--text-muted); min-width: 0; }
+.ce-us { color: var(--text); font-weight: 600; min-width: 0; flex: 0 1 auto; }
+.ce-end { display: flex; align-items: center; gap: 12px; flex: none; }
+.ce-st { font-family: var(--font-mono); font-weight: 700; color: var(--text-muted); }
+.ce-st.you { color: var(--cart-you-text); }
+.ce-edit { height: 48px; padding: 0 0 0 var(--space-3); margin-right: -2px; font-size: 15px; font-weight: 600; color: var(--text); flex: none; }
+.ce-row { padding: 8px 0 4px; border-top: 1px solid var(--ce-line); }
+.ce-nm { height: 24px; display: flex; align-items: center; gap: 8px; margin-bottom: 2px; min-width: 0; white-space: nowrap; }
+.ce-nm > b { font-size: 17px; font-weight: 600; min-width: 0; flex: 0 1 auto; }
+.ce-stk { font-size: 13px; font-weight: 500; color: var(--text-muted); min-width: 0; flex: 0 100 auto; overflow: hidden; text-overflow: ellipsis; }
+.ce-pads { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) 56px; gap: 6px; }
+.ce-pad { height: 64px; border-radius: var(--radius-lg); display: grid; place-items: center; position: relative; padding: 0; background: transparent; color: var(--text); -webkit-tap-highlight-color: transparent; }
+.ce-pad.sel { background: var(--text); color: var(--bg); }
+.ce-pad svg.ce-m { position: absolute; inset: 0; margin: auto; overflow: visible; }
+.ce-n { font-family: var(--font-mono); font-weight: 700; font-size: calc(var(--mk, 40px) * .55); position: relative; } /* a score mark's numeral is sized off its box, like .mk (40px → 22px, the prototype's) */
+.ce-pad[aria-disabled="true"]:not(.sel) { opacity: .5; }
+.ce-mine { position: relative; }
+.ce-mine.rail::before { content: ''; position: absolute; left: -10px; top: 12px; bottom: 8px; width: 3px; border-radius: 2px; background: var(--cart-you); pointer-events: none; } /* 022 §1: in the gutter beside flat rows, not a card edge */
+.ce-row.nudge .ce-pad { animation: nudge .45s ease-in-out 2; }
+@media (prefers-reduced-motion: reduce) { .ce-row.nudge .ce-pad { animation: none; } }
+/* the other cart: one quiet row; read-only small marks */
+.ce-line { height: 60px; flex: none; width: 100%; border-top: 1px solid var(--ce-line); display: flex; align-items: center; gap: 14px; text-align: left; padding: 0; background: transparent; color: var(--text); }
+.ce-who { flex: 1; min-width: 0; display: flex; gap: 18px; align-items: center; font-size: 17px; font-weight: 600; }
+.ce-who-p { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+.ce-go { font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 2px; flex: none; }
+.ce-dash { font-family: var(--font-mono); color: var(--text-muted); font-weight: 600; width: 26px; text-align: center; flex: none; }
+.ce-sm { position: relative; width: var(--sm); height: var(--sm); flex: none; display: inline-grid; place-items: center; font-family: var(--font-mono); font-weight: 700; font-size: calc(var(--sm) * .5); color: var(--text); }
+.ce-sm svg { position: absolute; inset: 0; }
+.ce-sm .ce-ln { fill: none; stroke: var(--text); stroke-width: 1.5; }
+.ce-sm .ce-ln.draw { display: none; }
+.ce-sm.s .ce-ln { stroke: var(--text-muted); }
+.ce-sm.d { color: var(--double); } .ce-sm.d .ce-ln { stroke: var(--double); }
+/* preview / locked holes: read-only rows */
+.ce-ro { height: 68px; border-top: 1px solid var(--ce-line); display: flex; align-items: center; gap: var(--space-3); }
+.ce-ro-n { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+.ce-ro-n b { font-size: 17px; font-weight: 600; min-width: 0; }
+.ce-ro.them .ce-ro-n b { color: var(--text-muted); }
+.ce-ro .ce-sm { margin-right: 2px; font-size: calc(var(--sm) * .55); }
+/* status + Next, pinned 16px above the tab bar */
+.ce-foot { flex: none; margin-bottom: var(--space-4); }
+.ce-status { font-size: 13px; font-weight: 500; line-height: 18px; margin-bottom: var(--space-3); display: flex; align-items: center; gap: 6px; }
+.ce-status.warn { color: var(--warn); }
+.ce-status.muted { color: var(--text-muted); }
+.ce-status .relock { margin-left: 4px; }
+.ce-next { height: var(--button-primary); border-radius: var(--radius-lg); width: 100%; font-size: 17px; font-weight: 600; background: var(--surface-1); color: var(--text-muted); }
+.ce-next.go { background: var(--button); color: var(--on-button); }
+/* sheets: ⋯ More and the other cart */
+.ce-sheet { padding-top: var(--space-1); }
+.ce-sh-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); min-height: 48px; margin-bottom: var(--space-2); }
+.ce-sh-title { margin: 0; font-size: 17px; line-height: 22px; font-weight: 600; min-width: 0; } /* BottomSheet title (= ts-row); the mockup draws ~24px, flagged */
+.ce-done { height: 48px; padding: 0 0 0 var(--space-3); font-size: 15px; font-weight: 600; color: var(--text); flex: none; }
+.ce-sheet .ce-row:first-of-type, .ce-sheet .ce-own:first-of-type { border-top: 0; }
+.ce-grid { row-gap: 6px; margin-bottom: var(--space-3); }
+.ce-sh-row { width: 100%; height: 56px; display: flex; align-items: center; text-align: left; border-top: 1px solid var(--line); font-size: 17px; font-weight: 600; color: var(--text); background: transparent; padding: 0; }
+.ce-sh-row .muted { font-size: 15px; font-weight: 500; }
+.ce-sh-row.muted, .ce-sh-row .muted { color: var(--text-muted); }
+.ce-sh-row:disabled { opacity: .5; }
+.ce-own { height: 64px; display: flex; align-items: center; gap: 10px; border-top: 1px solid var(--ce-line); }
+.ce-own b { font-size: 17px; font-weight: 600; min-width: 0; }
+.ce-own-src { margin-left: auto; font-size: 15px; color: var(--text-muted); flex: none; }
+/* short phones: pads give a little so Next stays clear of the tab bar */
+@media (max-height: 640px) { .ce-pad { height: 56px; } .ce-line { height: 52px; } }
+
+/* ── 022 motion.css, as approved (class names mapped: .pad → .ce-pad, .ln → .ce-ln, .word → .ce-word,
+   .match .up/.roll/.swap/.vs/.won → .ce-up/.ce-roll/.ce-swap/.ce-vs/.ce-won, .next → .ce-next, .ripple → .ce-ripple).
+   `.anim` is only ever on the render right after a tap; ui.syncMotion keeps it running across redraws. */
+.ce-pad .ce-ln { fill: none; stroke: var(--text-muted); stroke-width: 1.5; }
+.ce-pad.sel .ce-ln { stroke: var(--bg); stroke-width: 1.75; }
+.ce-pad.sel.dbl .ce-ln { stroke: var(--ce-dbl-pill); stroke-width: 2; }
+.ce-pad.sel.dbl .ce-n { color: var(--ce-dbl-pill); }
+.ce-pad .ce-ln.draw { opacity: 0; }
+.ce-pad.sel .ce-ln.draw { opacity: 1; }
+.ce-ripple { position: absolute; inset: 0; margin: auto; width: 56px; height: 56px; border-radius: 50%; box-shadow: 0 0 0 2px var(--text); opacity: 0; pointer-events: none; }
+.ce-word { font-size: 15px; font-weight: 700; opacity: 0; color: var(--text); flex: none; }
+.ce-word.quiet { color: var(--text-muted); }
+.ce-word.dbl { color: var(--double); }
+.ce-word.big { font-size: 17px; }
+.ce-up { display: inline-flex; overflow: hidden; height: 20px; font-family: var(--font-mono); font-weight: 700; color: var(--cart-you-text); }
+.ce-up.muted { color: var(--text-muted); }
+.ce-roll { display: flex; flex-direction: column; line-height: 20px; }
+.ce-swap { display: grid; }
+.ce-swap > * { grid-area: 1 / 1; text-align: left; white-space: nowrap; }
+.ce-won { font-size: 15px; font-weight: 600; opacity: 0; color: var(--text); }
+.ce-won.muted { color: var(--text-muted); }
+
+@keyframes ce-bump   { 0% { transform: scale(.92) } 55% { transform: scale(1.06) } 100% { transform: scale(1) } }
+@keyframes ce-draw   { from { stroke-dashoffset: var(--len) } to { stroke-dashoffset: 0 } }
+@keyframes ce-word   { 0% { opacity: 0; transform: translateY(6px) } 15% { opacity: 1; transform: none } 75% { opacity: 1 } 100% { opacity: 0 } }
+@keyframes ce-tilt   { 0% { transform: rotate(-4deg) translateY(4px) } 100% { transform: none } }
+@keyframes ce-ripple { 0% { opacity: .55; transform: scale(.7) } 100% { opacity: 0; transform: scale(1.35) } }
+@keyframes ce-stamp  { 0% { transform: scale(1.45) rotate(-4deg); opacity: .35 } 60% { transform: scale(.95) rotate(1deg); opacity: 1 } 100% { transform: none; opacity: 1 } }
+@keyframes ce-thud   { 0%, 100% { transform: none } 40% { transform: translateY(2px) scale(.98) } }
+@keyframes ce-roll   { from { transform: translateY(0) } to { transform: translateY(-20px) } }
+@keyframes ce-wonin  { 0% { opacity: 0; transform: translateX(8px) } 20% { opacity: 1; transform: none } 80% { opacity: 1 } 100% { opacity: 0 } }
+@keyframes ce-vsout  { 0% { opacity: 1 } 12% { opacity: 0 } 85% { opacity: 0 } 100% { opacity: 1 } }
+@keyframes ce-fadeonly { 0% { opacity: 0 } 15% { opacity: 1 } 75% { opacity: 1 } 100% { opacity: 0 } }
+
+.ce-pad.sel.anim { animation: ce-bump .22s cubic-bezier(.2,.8,.2,1); }
+.ce-pad.sel.anim .ce-ln.base { opacity: .3; animation: none; stroke-dasharray: none; }
+.ce-pad.sel.anim .ce-ln.draw { stroke-dasharray: var(--len); animation: ce-draw .32s .06s cubic-bezier(.3,.7,.2,1) both; }
+.ce-ripple.anim { animation: ce-ripple .45s .1s ease-out both; }
+.ce-ripple.anim.r2 { animation-delay: .25s; }
+.ce-pad.sel.anim.dbl:not(.stamp) .ce-ln.draw { stroke-dasharray: var(--len); animation: ce-draw .32s .06s cubic-bezier(.3,.7,.2,1) both; }
+.ce-pad.sel.anim.dbl.stamp { animation: ce-thud .22s .14s ease-out; }
+.ce-pad.sel.anim.dbl.stamp svg.ce-m { animation: ce-stamp .16s cubic-bezier(.2,.8,.2,1) both; }
+.ce-pad.sel.anim.dbl.stamp .ce-ln.draw { animation: none; stroke-dasharray: none; }
+.ce-word.anim { animation: ce-word 1.6s ease-out both; }
+.ce-word.big.anim { animation-duration: 3s; }
+.ce-word.dbl.anim { animation: ce-word 1.6s ease-out both, ce-tilt .3s .05s cubic-bezier(.2,.8,.2,1) both; }
+.ce-next.go.anim { animation: ce-bump .22s .05s cubic-bezier(.2,.8,.2,1); }
+.ce-up.anim .ce-roll { animation: ce-roll .3s .2s cubic-bezier(.3,.7,.2,1) both; }
+.ce-up.anim .ce-roll.dn { animation-direction: reverse; } /* 021 §7.5: rolls down when it goes down */
+.ce-vs.anim { animation: ce-vsout 2.6s .45s ease-out both; }
+.ce-won.anim { animation: ce-wonin 2.4s .5s ease-out both; }
+@media (prefers-reduced-motion: reduce) {
+  .ce-pad.sel.anim, .ce-pad.sel.anim *, .ce-ripple.anim, .ce-next.go.anim, .ce-up.anim .ce-roll, .ce-vs.anim, .ce-won.anim { animation: none !important; }
+  .ce-word.anim { animation: ce-fadeonly 1.6s linear both !important; }
+  .ce-won.anim { opacity: 1; }
+  .ce-vs.anim { opacity: 0; }
+  .ce-up.anim .ce-roll { transform: translateY(-20px); }
+  .ce-up.anim .ce-roll.dn { transform: none; }
+}

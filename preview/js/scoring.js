@@ -25,6 +25,7 @@ export const DEFAULT_SETTINGS = {
   rotationMode: 'swap',
   startHole: 1, // 1 = front nine first; 10 = start on the back nine
   teeTimes: [], // optional clock time per tee time (group order), "HH:MM"; '' = not set
+  gps: true, // yardages on Enter when the course has green data (feature 011); Host → Rules can turn it off
   rotation: DEFAULT_ROTATION,
 };
 
@@ -40,7 +41,120 @@ export const GAMES = [
     desc: '4 carts of 2. Opponents rotate.',
     desc6: '3 carts of 2. Everyone plays everyone.',
   },
+  {
+    id: 'ryder', name: 'Team Ryder Cup', count: 'EXACTLY 16', min: 16, max: 16,
+    desc: 'Two sides. Cart vs cart, 1 point a match.',
+  },
 ];
+
+// ───────────────────────────────────────────── Team Ryder Cup (settings.ryder)
+// Two sides of 2–4 carts. Cart ids carry the side: '1A' = side 1's first cart, '2A' = side 2's.
+// Tee time k = cart k from each side. Rotation 1 (holes 1–6): you play the cart in your foursome;
+// rotations 2 and 3: a cart from another tee time, compared hole by hole. Each match is worth
+// 1 point to the SIDE (½ each when halved); the per-hole points only decide the match.
+// settings.lineups = [{ fromHole, foursomes: [[cart1, cart2], …] }]: from that hole on those carts
+// ride together AND play each other (Host → Rules → New lineup, §3 of the handoff).
+
+export const SIDE_IDS = ['1', '2'];
+
+/** Cart ids for a Team Ryder Cup with n players: 8 → 1A 2A 1B 2B, 12 → … 1C 2C, 16 → … 1D 2D. */
+export function ryderCartIds(n) {
+  const k = Math.max(2, Math.min(4, Math.floor(n / 4)));
+  const out = [];
+  for (let i = 0; i < k; i++) out.push(`1${'ABCD'[i]}`, `2${'ABCD'[i]}`);
+  return out;
+}
+
+/** The side a cart belongs to ('1' or '2'), from its id. */
+export const sideOf = (teamId) => (teamId && /^[12][A-D]$/.test(teamId) ? teamId[0] : null);
+
+/**
+ * Roster + settings for a Team Ryder Cup from players in order: the first half is side 1, the
+ * second half side 2; inside a side, pairs in order are carts; cart k of each side = tee time k.
+ * players: [{ ...player fields }] (8, 12 or 16). sideNames: ['Team Andrew', 'Team Josh'] ('' = default).
+ */
+export function ryderSetup(players, sideNames = ['', '']) {
+  const n = players.length;
+  const half = n / 2;
+  const first = (p) => p.firstName || String(p.name || '').split(' ')[0];
+  const teams = [];
+  const sides = SIDE_IDS.map((id, s) => {
+    const mine = players.slice(s * half, (s + 1) * half);
+    const teamIds = [];
+    for (let k = 0; k < half / 2; k++) {
+      const pair = mine.slice(k * 2, k * 2 + 2);
+      const tid = `${id}${'ABCD'[k]}`;
+      teams.push({ id: tid, name: pair.map(first).join(' + ').slice(0, 20), sideId: id });
+      teamIds.push(tid);
+    }
+    return { id, name: (sideNames[s] || '').trim() || `Team ${first(mine[0])}`, teamIds };
+  });
+  const out = players.map((p, i) => {
+    const s = Math.floor(i / half), k = Math.floor((i % half) / 2);
+    return { ...p, teamId: `${SIDE_IDS[s]}${'ABCD'[k]}`, groupId: `g${k + 1}` };
+  });
+  const groups = Array.from({ length: half / 2 }, (_, k) => ({ id: `g${k + 1}`, name: `Group ${k + 1}` }));
+  return {
+    roster: { groups, teams, sides, players: out },
+    settings: { game: 'rotationMatch', ryder: true, solo: false, pairs: false, rotationMode: 'fixed', matchBonus: 0, lineups: [], rotation: DEFAULT_ROTATION.map((r) => ({ holes: [...r.holes], matches: [] })) },
+  };
+}
+
+/** Carts of a side in tee-time order. */
+function sideCarts(roster, sideId) {
+  const side = (roster.sides || []).find((s) => s.id === sideId);
+  const ids = side ? side.teamIds : (roster.teams || []).filter((t) => sideOf(t.id) === sideId).map((t) => t.id);
+  const g = (tid) => groupIndex((roster.players || []).find((p) => p.teamId === tid)?.groupId);
+  return [...ids].sort((a, b) => g(a) - g(b) || a.localeCompare(b));
+}
+
+/** The lineup override in force at a play-order position, or null (the tee-time lineup). */
+function lineupAt(settings, pos) {
+  let best = null;
+  for (const l of settings.lineups || []) {
+    const p = posOf(settings, Number(l.fromHole));
+    if (p <= pos && (!best || p >= best.pos)) best = { pos, ...l, pos: p };
+  }
+  return best;
+}
+
+/** Physical foursomes (pairs of cart ids) on a play-order position: tee times, or the lineup in force. */
+export function ryderFoursomes(roster, settings, pos) {
+  const l = lineupAt(settings, pos);
+  if (l && Array.isArray(l.foursomes) && l.foursomes.length) return l.foursomes.map((f) => [...f]);
+  const a = sideCarts(roster, '1'), b = sideCarts(roster, '2');
+  return a.map((x, k) => [x, b[k]]).filter((f) => f[0] && f[1]);
+}
+
+/** Who plays whom on a play-order position: the lineup in force, else rotation i pairs cart k with cart k+i. */
+function ryderPairsAt(roster, settings, pos) {
+  const l = lineupAt(settings, pos);
+  if (l && Array.isArray(l.foursomes) && l.foursomes.length) return l.foursomes.map((f) => [...f]);
+  const a = sideCarts(roster, '1'), b = sideCarts(roster, '2');
+  const n = Math.min(a.length, b.length);
+  const ranges = settings.rotation.map((r) => r.holes);
+  const i = Math.max(0, ranges.findIndex((h) => pos >= h[0] && pos <= h[1]));
+  return a.slice(0, n).map((x, k) => [x, b[(k + i) % n]]);
+}
+
+/** The matchups on a real hole (Host's lineup editor prefills with these). */
+export function ryderMatchupsAt(roster, settings, hole) {
+  const st = normalizeSettings(settings);
+  return ryderPairsAt(roster, st, posOf(st, hole));
+}
+
+const sameSet = (x, y) => JSON.stringify([...x].map((p) => p.join('v')).sort()) === JSON.stringify([...y].map((p) => p.join('v')).sort());
+
+/** The engine's view of a Team Ryder Cup: a rotation per run of holes with the same matches. */
+export function ryderView(roster, settings) {
+  const st = { ...settings, game: 'rotationMatch', rotationMode: 'fixed', solo: false, pairs: false, matchBonus: 0 };
+  const starts = new Set([1, ...st.rotation.map((r) => r.holes[0])]);
+  const pairs = Array.from({ length: HOLES + 1 }, (_, p) => (p ? ryderPairsAt(roster, st, p) : null));
+  for (let p = 2; p <= HOLES; p++) if (!sameSet(pairs[p], pairs[p - 1])) starts.add(p);
+  const from = [...starts].filter((p) => p >= 1 && p <= HOLES).sort((a, b) => a - b);
+  st.rotation = from.map((f, i) => ({ holes: [f, (from[i + 1] || HOLES + 1) - 1], matches: pairs[f] }));
+  return { roster, settings: st };
+}
 
 /** Carts in a Partner “Rider” Cup for this many players: 3 for 6, else 4. */
 export function cartIdsFor(n) {
@@ -103,6 +217,9 @@ export function normalizeSettings(s) {
   if (!Array.isArray(out.rotation) || !out.rotation.length) out.rotation = DEFAULT_ROTATION;
   out.startHole = Number(out.startHole) === 10 ? 10 : 1;
   out.teeTimes = Array.isArray(out.teeTimes) ? out.teeTimes.map((t) => (/^\d{1,2}:\d{2}$/.test(String(t || '')) ? String(t) : '')) : [];
+  out.lineups = Array.isArray(out.lineups)
+    ? out.lineups.filter((l) => l && Number(l.fromHole) >= 1 && Number(l.fromHole) <= HOLES && Array.isArray(l.foursomes)).map((l) => ({ fromHole: Number(l.fromHole), foursomes: l.foursomes.map((f) => [...f]) }))
+    : [];
   return out;
 }
 
@@ -296,6 +413,13 @@ export function sameFoursome(roster, settings, aPid, bPid, hole) {
   const b = playerOf(roster, bPid);
   if (!a || !b) return false;
   const st = normalizeSettings(settings);
+  if (st.ryder && a.teamId && b.teamId) {
+    // Team Ryder Cup: tee times, until a Host lineup puts carts together from a hole on.
+    if (a.teamId === b.teamId) return true;
+    const l = lineupAt(st, posOf(st, hole));
+    if (l && Array.isArray(l.foursomes) && l.foursomes.length) return l.foursomes.some((f) => f.includes(a.teamId) && f.includes(b.teamId));
+    return !!a.groupId && a.groupId === b.groupId;
+  }
   if ((st.rotationMode || 'swap') === 'swap' && a.teamId && b.teamId && Array.isArray(st.rotation)) {
     if (a.teamId === b.teamId) return true;
     const r = rotationFor(st, hole);
@@ -334,6 +458,10 @@ function gameIsValid(roster, settings) {
   const players = roster?.players || [];
   if (settings.pairs) {
     if (players.length !== 4 || !teams.length || !teams.every((t) => t.members?.length === 2)) return false;
+  } else if (settings.ryder) {
+    const n = teams.length;
+    if (![4, 6, 8].includes(n) || !teams.every((t) => players.filter((p) => p.teamId === t.id).length === 2)) return false;
+    if (teams.filter((t) => sideOf(t.id) === '1').length !== n / 2 || teams.filter((t) => sideOf(t.id) === '2').length !== n / 2) return false;
   } else {
     const size = settings.solo ? 1 : 2;
     if (settings.solo ? teams.length < 2 || teams.length > 6 : teams.length !== 4 && teams.length !== 3) return false;
@@ -424,6 +552,7 @@ export function compute(event, scores) {
   let roster = event.roster || { players: [], teams: [], groups: [] };
   let settings = normalizeSettings(event.settings);
   if (settings.pairs) ({ roster, settings } = pairView(roster, settings));
+  else if (settings.ryder) ({ roster, settings } = ryderView(roster, settings));
   else if (settings.solo) ({ roster, settings } = soloView(roster, settings));
   const par = course.par;
   const si = course.strokeIndex;
@@ -504,7 +633,7 @@ export function compute(event, scores) {
   let officialThrough = 0;
   while (officialThrough < HOLES && holeComplete[holeAt(settings, officialThrough + 1) - 1]) officialThrough++;
   const officialHole = officialThrough ? holeAt(settings, officialThrough) : 0;
-  if (game) finishGame(game, settings, teams, officialThrough);
+  if (game) finishGame(game, settings, teams, officialThrough, roster);
 
   const anyPosted = players.some((p) => p.thru > 0);
   const roundComplete = game
@@ -695,7 +824,7 @@ function recordOf(game, teamId, through = HOLES) {
   return r;
 }
 
-function finishGame(game, settings, teams, officialThrough) {
+function finishGame(game, settings, teams, officialThrough, roster) {
   game.officialThrough = officialThrough;
   const rows = teams.map((t) => {
     if (game.type === 'splitPoint') {
@@ -742,11 +871,50 @@ function finishGame(game, settings, teams, officialThrough) {
     });
     game.people = people;
   }
+  if (settings.ryder) game.sides = ryderSides(game, roster, officialThrough);
   game.provisionalHoles = []; // real hole numbers past the official line that already have points
   for (let pos = officialThrough + 1; pos <= HOLES; pos++) {
     const h = holeAt(settings, pos);
     if (game.pointsByHole[h - 1]) game.provisionalHoles.push(h);
   }
+}
+
+/** A Team Ryder Cup match's side points: the winner's side gets 1 (½ each when halved) once it's
+ *  decided (all holes in, or clinched: lead bigger than the points left). */
+export function matchSidePoints(m) {
+  const who = m.final ? m.result : m.clinchedBy;
+  if (!who) return null;
+  if (who === 'halved') return Object.fromEntries(m.teams.map((t) => [sideOf(t), 0.5]));
+  return Object.fromEntries(m.teams.map((t) => [sideOf(t), t === who ? 1 : 0]));
+}
+
+/** Team Ryder Cup side rollup: points (decided matches), official (match over on the official line),
+ *  matches won/halved/lost/left, the number that wins (more than half) and whether a side has it. */
+function ryderSides(game, roster, officialThrough) {
+  const total = game.matches.length;
+  const toWin = total / 2 + 0.5;
+  const rows = SIDE_IDS.map((id) => {
+    const side = (roster.sides || []).find((s) => s.id === id);
+    const r = {
+      sideId: id, name: side?.name || `Team ${id}`, teamIds: side?.teamIds || (roster.teams || []).filter((t) => sideOf(t.id) === id).map((t) => t.id),
+      points: 0, officialPoints: 0, provisionalPoints: 0, matchesWon: 0, matchesHalved: 0, matchesLost: 0, left: 0, total, toWin, clinched: false,
+    };
+    for (const m of game.matches) {
+      const sp = matchSidePoints(m);
+      if (!sp) { r.left++; continue; }
+      const v = sp[id] || 0;
+      r.points += v;
+      if (m.final && m.to <= officialThrough) r.officialPoints += v;
+      if (v === 1) r.matchesWon++; else if (v === 0.5) r.matchesHalved++; else r.matchesLost++;
+    }
+    r.provisionalPoints = Math.round((r.points - r.officialPoints) * 1e9) / 1e9;
+    r.clinched = r.points >= toWin - 1e-9;
+    return r;
+  });
+  const sorted = [...rows].sort((a, b) => b.points - a.points || a.sideId.localeCompare(b.sideId));
+  sorted.forEach((r, i) => { r.rank = i > 0 && Math.abs(sorted[i - 1].points - r.points) < 1e-9 ? sorted[i - 1].rank : i + 1; });
+  sorted.forEach((r) => { r.shared = sorted.filter((o) => o.rank === r.rank).length > 1; });
+  return sorted;
 }
 
 /** Head-to-head result between two teams across the day: 1 if a won, -1 if b won, 0 otherwise. */
@@ -912,4 +1080,183 @@ export function seasonStandings(rounds) {
     players: [...people.values()].map(fin).sort(order),
     pairs: [...pairs.values()].map(fin).filter((p) => p.games > 0).sort(order),
   };
+}
+
+// ───────────────────────────────────────────── Team Ryder Cup v2 (handoff 015, RULES.md)
+// ryderState(snapshot, myTeamId) → everything the Board, Matches and the match sheet render, from
+// the viewer's side ('us' = the viewer's side; a watcher sees side 1 as 'us'). Pure.
+// A hole counts for a match only when all four scores are in. Nothing is provisional: a match's side
+// point counts the moment it's done (clinched at 6½, or all six holes in). Hole points freeze at the clinch.
+
+const RY_WIN = 6.5; // hole points that clinch a 12-point match
+const RY_CUP = 6.5; // side points that win the cup (12 matches)
+
+function ryderCartInfo(snap, tid) {
+  const ps = snap.players.filter((p) => p.teamId === tid);
+  const first = (p) => p.firstName || String(p.name || '').split(' ')[0];
+  const tee = groupIndex(ps[0]?.groupId);
+  // Where the cart is: the first hole in play order either player hasn't posted (null = finished).
+  let pos = null;
+  for (let q = 1; q <= HOLES; q++) {
+    const h = holeAt(snap.settings, q);
+    if (ps.some((p) => p.gross[h - 1] == null)) { pos = q; break; }
+  }
+  const started = ps.some((p) => p.thru > 0);
+  return { id: tid, side: sideOf(tid), names: ps.map(first), playerIds: ps.map((p) => p.id), tee, pos, hole: pos ? holeAt(snap.settings, pos) : null, started };
+}
+
+const cmpPt = (a, b) => (a < b ? 'us' : b < a ? 'them' : 'halved');
+
+/** One match, from our side. */
+function ryderMatch(snap, m, ourSide, carts) {
+  const [x, y] = m.teams;
+  const usId = sideOf(x) === ourSide ? x : y, themId = usId === x ? y : x;
+  const us = carts.get(usId), them = carts.get(themId);
+  const net = (pid, h) => snap.playerById.get(pid).net[h - 1];
+  const pts = { us: 0, them: 0 };
+  let thru = 0, clinchedAt = null;
+  const holes = [];
+  for (let pos = m.from; pos <= m.to; pos++) {
+    const h = holeAt(snap.settings, pos);
+    const u = us.playerIds.map((id) => net(id, h)), t = them.playerIds.map((id) => net(id, h));
+    const uIn = u.every((v) => v != null), tIn = t.every((v) => v != null);
+    const whoIsIn = uIn && tIn ? 'both' : uIn ? 'us' : tIn ? 'them' : 'none';
+    const hole = { hole: h, pos, par: snap.course.par[h - 1], whoIsIn, lowBall: 'pending', lowTotal: 'pending', net: { us: u, them: t }, points: null, counts: false };
+    if (whoIsIn === 'both') {
+      hole.lowBall = cmpPt(Math.min(...u), Math.min(...t));
+      hole.lowTotal = cmpPt(u[0] + u[1], t[0] + t[1]);
+      const p = { us: 0, them: 0 };
+      for (const r of [hole.lowBall, hole.lowTotal]) {
+        if (r === 'halved') { p.us += 0.5; p.them += 0.5; } else p[r] += 1;
+      }
+      hole.points = p;
+      if (clinchedAt == null) { // after a clinch the holes still get scores, but don't change the match
+        hole.counts = true;
+        pts.us += p.us; pts.them += p.them; thru++;
+        if (pts.us >= RY_WIN || pts.them >= RY_WIN) clinchedAt = pos;
+      }
+    }
+    holes.push(hole);
+  }
+  const total = m.to - m.from + 1;
+  const status = clinchedAt != null || thru === total ? 'done' : thru > 0 ? 'live' : 'notStarted';
+  const diff = pts.us - pts.them;
+  const leader = Math.abs(diff) < 1e-9 ? null : diff > 0 ? 'us' : 'them';
+  const result = status !== 'done' ? null : leader === 'us' ? 'won' : leader === 'them' ? 'lost' : 'halved';
+  const decidedEarly = clinchedAt != null ? total - thru : 0;
+  const sidePts = status !== 'done' ? null : result === 'halved' ? { us: 0.5, them: 0.5 } : { us: result === 'won' ? 1 : 0, them: result === 'lost' ? 1 : 0 };
+  const score = (a, b) => `${fmtPts(a)}–${fmtPts(b)}`;
+  const hi = Math.max(pts.us, pts.them), lo = Math.min(pts.us, pts.them);
+  // Where the other cart is: the trailing cart's current hole (drives `on 12` and the Matches subline).
+  const trailing = [us, them].filter((c) => c.pos != null).sort((a, b) => a.pos - b.pos)[0] || null;
+  let flag;
+  if (status === 'notStarted') {
+    const text = trailing && trailing.started ? `on ${trailing.hole}` : teeClock(snap.settings, us.tee) || ordinal(us.tee + 1);
+    flag = { look: 'tee', side: 'line', text };
+  } else if (status === 'live') {
+    flag = leader ? { look: 'up', side: leader, text: `${fmtPts(Math.abs(diff))} UP` } : { look: 'tied', side: 'line', text: score(pts.us, pts.them) };
+  } else {
+    flag = result === 'halved' ? { look: 'halved', side: 'line', text: score(hi, lo) } : { look: 'won', side: leader, text: score(hi, lo) };
+  }
+  const margin = fmtPts(Math.abs(diff));
+  const kicker = status === 'notStarted' ? 'NOTHING COUNTS YET'
+    : status === 'live' ? `THRU ${thru} · ${leader === 'us' ? `YOU'RE UP ${margin}` : leader === 'them' ? `YOU'RE DOWN ${margin}` : 'ALL SQUARE'}`
+    : `FINAL · ${result === 'won' ? `YOU WON ${score(hi, lo)}` : result === 'lost' ? `THEY WON ${score(hi, lo)}` : 'HALVED'}`;
+  const left = (total - thru) * 2;
+  const barLine = decidedEarly ? `Decided with ${decidedEarly} to play`
+    : status === 'done' ? null
+    : leader === 'us' ? `${fmtPts(RY_WIN - pts.us)} more and it's yours`
+    : `${fmtPts(left)} pts left`;
+  return {
+    id: m.id, rotation: m.rotation - 1, label: m.label, from: m.from, to: m.to,
+    us, them, status, thru, total, holePts: [pts.us, pts.them], leader, tied: status !== 'notStarted' && !leader,
+    margin: leader ? margin : null, result, decidedEarly, sidePts, flag, kicker, barLine, holes,
+    where: { us: us.hole, them: them.hole, trailing: trailing ? trailing.hole : null },
+  };
+}
+
+/** Text for a hole where only their two scores are in: what ties low ball and what takes low total. */
+export function ryderNeedLine(match, hole) {
+  if (hole.whoIsIn === 'us') return 'Your scores are in, waiting on them.';
+  if (hole.whoIsIn !== 'them') return null;
+  const [a, b] = hole.net.them, [na, nb] = match.them.names;
+  return `${na} made ${a}, ${nb} ${b}. A ${Math.min(a, b)} halves low ball; ${a + b - 1} or better between you takes low total.`;
+}
+
+/** "Low ball · you" / "· them" / "· halved" (null while pending). */
+export function ryderHoleLine(kind, r) {
+  if (r === 'pending') return null;
+  return `${kind === 'lowBall' ? 'Low ball' : 'Low total'} · ${r === 'us' ? 'you' : r}`;
+}
+
+export function ryderState(snap, myTeamId = null) {
+  const g = snap.game;
+  if (!g || !snap.settings.ryder) return null;
+  const ourSide = sideOf(myTeamId) || '1', theirSide = ourSide === '1' ? '2' : '1';
+  const carts = new Map((snap.roster.teams || []).map((t) => [t.id, ryderCartInfo(snap, t.id)]));
+  const matches = g.matches.map((m) => ryderMatch(snap, m, ourSide, carts));
+  const n = matches.length;
+  const sides = {};
+  for (const [k, id] of [['us', ourSide], ['them', theirSide]]) {
+    const s = (snap.roster.sides || []).find((x) => x.id === id);
+    sides[k] = { id, name: s?.name || `Team ${id}`, total: 0 };
+  }
+  for (const m of matches) if (m.sidePts) { sides.us.total += m.sidePts.us; sides.them.total += m.sidePts.them; }
+  const done = matches.filter((m) => m.status === 'done').length;
+  const left = n - done;
+  const toWin = n / 2 + 0.5;
+  for (const k of ['us', 'them']) {
+    sides[k].left = left;
+    sides[k].clinched = sides[k].total >= toWin - 1e-9;
+    sides[k].needs = Math.max(0, toWin - sides[k].total);
+  }
+  const ri = [...new Set(matches.map((m) => m.rotation))].sort((a, b) => a - b);
+  const rotations = ri.map((r) => {
+    const ms = matches.filter((m) => m.rotation === r);
+    const tally = { us: 0, them: 0 };
+    for (const m of ms) if (m.sidePts) { tally.us += m.sidePts.us; tally.them += m.sidePts.them; }
+    const anyScore = ms.some((m) => m.holes.some((h) => h.whoIsIn !== 'none'));
+    const status = ms.every((m) => m.status === 'done') ? 'done' : ms.some((m) => m.status === 'live') || anyScore ? 'live' : 'future';
+    return { index: r, label: ms[0].label, holes: ms[0].label.replace(/^Holes /, ''), status, tally, matches: ms };
+  });
+  const rank = { live: 0, done: 1, future: 2 };
+  const order = [...rotations].sort((a, b) => rank[a.status] - rank[b.status] || (a.status === 'live' ? b.index - a.index : a.index - b.index));
+  const final = left === 0 && n > 0;
+  const cupLine = final ? 'FINAL' : done === 0 ? `${n} MATCHES · ${fmtPts(toWin)} WINS` : `${left} LEFT · ${fmtPts(toWin)} WINS`;
+  const winner = !final ? null : sides.us.total > sides.them.total ? 'us' : sides.them.total > sides.us.total ? 'them' : 'shared';
+  // MVP cart (final): most match points, tiebreak most hole points.
+  let mvp = null;
+  if (final) {
+    const rows = [...carts.values()].map((c) => {
+      const mine = matches.filter((m) => m.us.id === c.id || m.them.id === c.id);
+      const k = (m) => (m.us.id === c.id ? 'us' : 'them');
+      return {
+        cart: c,
+        matchPts: mine.reduce((a, m) => a + m.sidePts[k(m)], 0),
+        holePts: mine.reduce((a, m) => a + m.holePts[k(m) === 'us' ? 0 : 1], 0),
+        record: mine.map((m) => m.sidePts[k(m)]),
+      };
+    });
+    rows.sort((a, b) => b.matchPts - a.matchPts || b.holePts - a.holePts || a.cart.id.localeCompare(b.cart.id));
+    mvp = rows[0];
+  }
+  return { ourSide, sides, matches, rotations, order, cupLine, final, winner, mvp, toWin, done, left };
+}
+
+/** The viewer's match in a rotation (index 0–2), or the one on their current hole. */
+export function ryderMyMatch(state, myTeamId, rotation = null) {
+  if (!state || !myTeamId) return null;
+  const mine = state.matches.filter((m) => m.us.id === myTeamId);
+  if (rotation != null) return mine.find((m) => m.rotation === rotation) || null;
+  const cur = mine.find((m) => m.status === 'live') || mine.find((m) => m.status === 'notStarted') || mine[mine.length - 1];
+  return cur || null;
+}
+
+/** Projected gross for 18: strokes so far + (par + handicap strokes) on every hole not played yet,
+ *  i.e. "you play your usual game from here". Scratch = par for the rest. null before the first score. */
+export function projectedGross(snap, p) {
+  if (!p || !p.thru) return null;
+  let t = p.grossTotal;
+  for (let i = 0; i < HOLES; i++) if (p.gross[i] == null) t += snap.course.par[i] + (p.dots[i] || 0);
+  return t;
 }

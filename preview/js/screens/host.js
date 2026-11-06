@@ -3,9 +3,12 @@
 // mid-round, rename teams, strokes, swap players, fix par / hole handicap,
 // approve "let them in", free up a spot, and read the audit log.
 
+import { FLAGS } from '../flags.js';
+import { geoFor } from '../geo.js';
 import { esc, icon, seg, clock, copyText, roundLink } from '../ui.js';
 import * as db from '../db.js';
-import { teeTimeName } from '../scoring.js';
+import { teeTimeName, ryderMatchupsAt, normalizeSettings, playOrder, sideOf } from '../scoring.js';
+import { sideColor } from '../teams.js';
 
 const clone = (x) => JSON.parse(JSON.stringify(x));
 const TEAM_IDS = ['A', 'B', 'C', 'D'];
@@ -51,6 +54,36 @@ function teeTimesField(d) {
   </div>`;
 }
 
+// ───────────────────────────────────────────── Team Ryder Cup: the lineup (§3 of the handoff)
+
+const cartName = (d, id) => (d.roster.teams || []).find((t) => t.id === id)?.name || id;
+
+/** Current lineups, and the editor: "New lineup from hole N" → tap carts into the foursomes → Add. */
+function lineupField(app, d) {
+  const st = d.settings;
+  const ed = d.lineup; // { fromHole, foursomes, sel } while editing
+  const chip = (id, k, side) => `<button class="mu-chip ry-chip${ed?.sel && ed.sel.k === k && ed.sel.side === side ? ' sel' : ''}" style="--jersey:${sideColor(sideOf(id))}" data-act="host-lineup-sel" data-k="${k}" data-side="${side}" aria-pressed="${!!(ed?.sel && ed.sel.k === k && ed.sel.side === side)}">${esc(cartName(d, id))}</button>`;
+  const list = (st.lineups || []).map((l, i) => `<div class="mu-row"><span class="mono soft mu-h">${l.fromHole}→</span>
+      <span class="mu-m" style="flex-wrap:wrap;gap:4px 10px">${l.foursomes.map((f) => `<span class="meta">${esc(cartName(d, f[0]))} + ${esc(cartName(d, f[1]))}</span>`).join('')}</span>
+      <button class="btn small ghost" data-act="host-lineup-del" data-i="${i}">Remove</button></div>`).join('');
+  const order = playOrder(st);
+  const next = app.snapshot ? app.nextHole() : order[0];
+  const editor = ed
+    ? `<div class="mu-card" style="margin-top:10px;padding-top:12px">
+      <div class="field" style="margin:0 0 10px"><label for="lineup-hole">From hole</label>
+        <select class="input" id="lineup-hole" data-change="host-lineup-hole" style="width:120px">${order.map((h) => `<option value="${h}"${h === ed.fromHole ? ' selected' : ''}>Hole ${h}</option>`).join('')}</select></div>
+      <p class="help" style="margin:0 0 8px">${ed.sel ? 'Now tap the cart to swap with (same side).' : 'Tap two carts on the same side to swap them. Each row is one foursome: these carts ride together and play each other.'}</p>
+      ${ed.foursomes.map((f, k) => `<div class="mu-row"><span class="mono soft mu-h">${esc(teeTimeName({ teeTimes: [] }, k).replace(' tee time', ''))}</span><span class="mu-m">${chip(f[0], k, 0)}<small>+</small>${chip(f[1], k, 1)}</span></div>`).join('')}
+      <div class="nr-two"><button class="btn primary" data-act="host-lineup-add">Use from hole ${ed.fromHole}</button><button class="btn" data-act="host-lineup-cancel">Cancel</button></div>
+    </div>`
+    : `<button class="btn block" data-act="host-lineup-new" data-v="${next}">New lineup from hole ${next}</button>`;
+  return `<div class="divider"></div>
+    <div class="micro" style="margin:0 0 6px">Lineup · who rides with whom</div>
+    <p class="help" style="margin:0 0 10px">Carts ride by tee time and face other tee times hole by hole. If carts physically swap places (say, at the turn), set a new lineup from that hole: those carts ride together and <b>play each other</b> until the next lineup. Holes already played keep their results; a match in progress ends at the hole before and counts as a match. Everyone’s phone gets a note once you save.</p>
+    ${list ? `<div class="mu-card" style="margin:0 0 10px">${list}</div>` : ''}
+    ${editor}`;
+}
+
 function rules(app, d) {
   const st = d.settings;
   const pm = st.game === 'rotationPlusMinus';
@@ -59,6 +92,21 @@ function rules(app, d) {
   // split it). Switching recounts from hole 1; scores never change.
   const noCarts = !(d.roster.teams || []).length;
   const n = (d.roster.players || []).length;
+  if (st.ryder) {
+    const sides = d.roster.sides || [];
+    return `<div class="field"><span class="label">Game</span><p class="soft" style="margin:0">Team Ryder Cup · ${sides.map((s) => s.name).join(' vs ')} · ${(d.roster.teams || []).length / 2} carts a side, 1 point a match. Set when the round was made.</p></div>
+      <div class="field"><span class="label">First tee</span>${seg('host-set', [['1', 'Hole 1'], ['10', 'Hole 10']], String(st.startHole || 1), 'data-k="startHole"')}</div>
+      ${teeTimesField(d)}
+      <div class="field"><span class="label">Max hole score</span>${seg('host-set', [['doublePar', 'Double par'], ['netDoubleBogey', 'Net dbl bogey'], ['none', 'None']], st.maxHoleScore, 'data-k="maxHoleScore"')}</div>
+      <div class="chips" style="margin:0 0 16px"><button class="pill" data-act="host-toggle" data-k="par3NoMax" aria-pressed="${!!st.par3NoMax}"><span class="dot"></span>No max on par 3s</button></div>
+      <div class="field"><span class="label">Halved points</span>${seg('host-set', [['0.5', '½ each'], ['0', 'Nothing']], String(st.halvedHolePoints), 'data-k="halvedHolePoints"')}</div>
+      
+      <details class="fold"${st.handicapMode !== 'full' ? ' open' : ''}><summary>Advanced handicaps</summary>
+        <div class="chips" style="margin:4px 0 12px"><button class="pill" data-act="host-lowman" aria-pressed="${st.handicapMode === 'offLow'}"><span class="dot"></span>Play off the low man</button></div>
+        <div class="field"><label for="h-allow">Allowance %</label><input class="input num" id="h-allow" inputmode="numeric" maxlength="3" value="${esc(st.allowancePct ?? 100)}" data-input="host-allow" style="width:96px"></div>
+      </details>
+      ${courseAndFinish(app, d)}`;
+  }
   const gameField = st.pairs
     ? `<div class="field"><span class="label">Game</span><p class="soft" style="margin:0">2v2 · partners ${({ never: 'stay the same all 18', six: 'switch every 6 holes', turn: 'switch at the turn' })[st.pairSwitch] || 'stay the same all 18'}. Set when the round was made.</p></div>`
     : noCarts
@@ -93,9 +141,15 @@ function rules(app, d) {
 }
 
 /** Course fixes + Finish the round + cleanup (shared by every round type). */
+/** 011: GPS yardages on Enter — only offered when the course has green data (else nothing to switch). */
+function gpsField(d) {
+  if (!FLAGS.gps || !geoFor(d.course)) return '';
+  return `<div class="chips" style="margin:0 0 16px"><button class="pill" data-act="host-gps" aria-pressed="${d.settings.gps !== false}"><span class="dot"></span>GPS yardages on Enter</button></div>`;
+}
+
 function courseAndFinish(app, d) {
   const par = d.course.par, si = d.course.strokeIndex;
-  return `<details class="fold"><summary>Course: par + hole handicap</summary>
+  return `${gpsField(d)}<details class="fold"><summary>Course: par + hole handicap</summary>
       <p class="help" style="margin:0 0 10px">Fix a hole if the card at the course disagrees. Every score recomputes.</p>
       <div class="par-grid"><span class="micro">Hole</span><span class="micro">Par</span><span class="micro">Hcp</span>
       ${par.map((p, i) => `<span class="h">${i + 1}</span>
@@ -126,13 +180,15 @@ function players(app, d) {
       ${asks.map((q) => `<div class="spread" style="margin:6px 0"><span class="row-title">${esc(app.snapshot.playerById.get(q.player_id)?.name || q.player_id)}</span>
         <span><button class="btn small" data-act="join-deny" data-v="${esc(q.id)}">Not them</button> <button class="btn small primary" data-act="join-approve" data-v="${esc(q.id)}">Let them in</button></span></div>`).join('')}</div>` : ''}
     <div class="field"><label for="h-name">Round name</label><input class="input" id="h-name" maxlength="60" value="${esc(d.name)}" data-input="host-name"></div>
-    ${(r.teams || []).length ? `<div class="micro" style="margin:4px 0 8px">Team names</div>
+    ${(r.sides || []).length ? `<div class="micro" style="margin:4px 0 8px">Sides</div>
+      ${r.sides.map((s) => `<div class="field" style="margin:0 0 8px"><input class="input" maxlength="20" value="${esc(s.name)}" placeholder="Team ${esc(s.id)}" aria-label="Side ${esc(s.id)} name" data-input="host-side" data-v="${esc(s.id)}" style="border-left:4px solid ${sideColor(s.id)}"></div>`).join('')}` : ''}
+    ${(r.teams || []).length ? `<div class="micro" style="margin:4px 0 8px">${(r.sides || []).length ? 'Cart' : 'Team'} names</div>
       ${r.teams.map((t) => `<div class="field" style="margin:0 0 8px"><input class="input" maxlength="20" value="${esc(t.name)}" placeholder="Cart ${esc(t.id)}" aria-label="Team ${esc(t.id)} name" data-input="host-team" data-v="${esc(t.id)}"></div>`).join('')}` : ''}
-    <div class="micro" style="margin:14px 0 4px">Players · name · strokes${(r.teams || []).length ? ' · cart' : ''}</div>
+    <div class="micro" style="margin:14px 0 4px">Players · name · strokes${(r.teams || []).length && !d.settings.ryder ? ' · cart' : ''}</div>
     ${r.players.map((p, i) => `<div class="player-row" style="flex-wrap:wrap">
         <input class="input" style="flex:1;min-width:120px" maxlength="24" value="${esc(p.name)}" aria-label="Player name" data-input="host-pname" data-i="${i}">
         <input class="input num" inputmode="numeric" maxlength="2" placeholder="even" value="${esc(p.strokes ?? '')}" aria-label="Strokes for ${esc(p.name)}" data-input="host-strokes" data-i="${i}">
-        ${(r.teams || []).length ? `<div class="team-picks">${TEAM_IDS.filter((id) => r.teams.some((t) => t.id === id)).map((id) => `<button data-act="host-pteam" data-i="${i}" data-v="${id}" aria-pressed="${p.teamId === id}">${id}</button>`).join('')}</div>` : ''}
+        ${(r.teams || []).length && !d.settings.ryder ? `<div class="team-picks">${TEAM_IDS.filter((id) => r.teams.some((t) => t.id === id)).map((id) => `<button data-act="host-pteam" data-i="${i}" data-v="${id}" aria-pressed="${p.teamId === id}">${id}</button>`).join('')}</div>` : d.settings.ryder ? `<span class="meta mono" style="min-width:44px;text-align:center">${esc(p.teamId || '')}</span>` : ''}
         ${app.claimed.has(p.id) ? `<button class="btn small ghost" data-act="host-release" data-v="${esc(p.id)}">Free up</button>` : '<span class="meta" style="min-width:64px;text-align:center">open</span>'}
       </div>`).join('')}
     <p class="help" style="margin-top:10px">“Free up” releases a name if that phone is gone and nobody in the foursome can let the new phone in. To fix any foursome’s score, tap the cell on the Card.</p>
@@ -176,6 +232,12 @@ function validate(d) {
   const teams = d.roster.teams || [];
   if (st.pairs) {
     if (d.roster.players.length !== 4) return '2v2 needs exactly 4 players.';
+  } else if (st.ryder) {
+    if (![4, 6, 8].includes(teams.length) || !teams.every((t) => d.roster.players.filter((p) => p.teamId === t.id).length === 2)) return 'Team Ryder Cup needs 2–4 carts of 2 on each side.';
+    for (const l of st.lineups || []) {
+      const ids = (l.foursomes || []).flat();
+      if (ids.length !== teams.length || new Set(ids).size !== ids.length || !(l.foursomes || []).every((f) => sideOf(f[0]) === '1' && sideOf(f[1]) === '2')) return `The lineup from hole ${l.fromHole} needs every cart once, one from each side per foursome.`;
+    }
   } else if (st.solo && st.game !== 'none') {
     const n = d.roster.players.length;
     if (teams.length || n < 2 || n > 6) return 'Match play (split point) is for 2–6 players with no carts.';
@@ -240,6 +302,12 @@ export default {
       touch(app);
       app.render();
     },
+    'host-gps': (el, ev, app) => {
+      const st = draft(app).settings;
+      st.gps = st.gps === false;
+      touch(app);
+      app.render();
+    },
     'host-swap': (el, ev, app) => {
       const st = draft(app).settings;
       st.rotationMode = (st.rotationMode || 'swap') === 'swap' ? 'fixed' : 'swap';
@@ -281,6 +349,64 @@ export default {
       const t = draft(app).roster.teams.find((x) => x.id === el.dataset.v);
       t.name = el.value.slice(0, 20);
       touch(app);
+    },
+    'host-side': (el, ev, app) => {
+      const s = (draft(app).roster.sides || []).find((x) => x.id === el.dataset.v);
+      if (!s) return;
+      s.name = el.value.slice(0, 20);
+      touch(app);
+    },
+    // Team Ryder Cup lineup editor (prefilled with the matchups scheduled for that hole).
+    'host-lineup-new': (el, ev, app) => {
+      const d = draft(app);
+      const fromHole = Number(el.dataset.v) || 1;
+      d.lineup = { fromHole, foursomes: ryderMatchupsAt(d.roster, normalizeSettings(d.settings), fromHole), sel: null };
+      app.render();
+    },
+    'host-lineup-hole': (el, ev, app) => {
+      const d = draft(app);
+      if (!d.lineup) return;
+      d.lineup.fromHole = Number(el.value) || 1;
+      d.lineup.foursomes = ryderMatchupsAt(d.roster, normalizeSettings(d.settings), d.lineup.fromHole);
+      d.lineup.sel = null;
+      app.render({ force: true });
+    },
+    'host-lineup-sel': (el, ev, app) => {
+      const d = draft(app);
+      const ed = d.lineup;
+      if (!ed) return;
+      const k = Number(el.dataset.k), side = Number(el.dataset.side);
+      if (!ed.sel) ed.sel = { k, side };
+      else if (ed.sel.k === k && ed.sel.side === side) ed.sel = null;
+      else if (ed.sel.side !== side) { app.toast({ title: 'Swap carts on the same side', sub: 'A foursome is one cart from each side.', error: true }); return; }
+      else {
+        [ed.foursomes[k][side], ed.foursomes[ed.sel.k][side]] = [ed.foursomes[ed.sel.k][side], ed.foursomes[k][side]];
+        ed.sel = null;
+      }
+      app.render();
+    },
+    'host-lineup-add': (el, ev, app) => {
+      const d = draft(app);
+      const ed = d.lineup;
+      if (!ed) return;
+      const st = d.settings;
+      st.lineups = (Array.isArray(st.lineups) ? st.lineups : []).filter((l) => Number(l.fromHole) !== ed.fromHole);
+      st.lineups.push({ fromHole: ed.fromHole, foursomes: ed.foursomes.map((f) => [...f]) });
+      st.lineups.sort((a, b) => a.fromHole - b.fromHole);
+      d.lineup = null;
+      touch(app);
+      app.render();
+      app.toast({ title: `Lineup from hole ${ed.fromHole} added`, sub: 'Tap Save changes to send it to every phone.' });
+    },
+    'host-lineup-cancel': (el, ev, app) => {
+      draft(app).lineup = null;
+      app.render();
+    },
+    'host-lineup-del': (el, ev, app) => {
+      const st = draft(app).settings;
+      st.lineups = (st.lineups || []).filter((_, i) => i !== Number(el.dataset.i));
+      touch(app);
+      app.render();
     },
     'host-pname': (el, ev, app) => {
       draft(app).roster.players[Number(el.dataset.i)].name = el.value.slice(0, 24);

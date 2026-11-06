@@ -8,14 +8,18 @@
 // Holes two or more back open locked. Holes follow play order (start on 1 or 10).
 // Must fit an iPhone SE with no scrolling (rows and buttons shrink to the space).
 
-import { esc, icon, mark, scoreName, foldIn } from '../ui.js';
+import { esc, icon, mark, scoreName, foldIn, padWindow, markSvg, smallMark, syncMotion, reward, markKind, pointsLine, standing } from '../ui.js';
 import {
   maxHoleScore, maxLabel, rotationFor, rotationIndexFor, foursomeFor, matchFor, matchesFor, componentNames,
-  fmtPts, fmtSigned, playOrder, posOf, holeAt, HOLES, sideOn,
+  fmtPts, fmtSigned, ryderState, teeTimeName, playOrder, posOf, holeAt, HOLES, sideOn,
 } from '../scoring.js';
 import { matchupAlert } from '../headlines.js';
 import { teamColor, isDefaultTeamName, shortTeam } from '../teams.js';
 import { local } from '../db.js';
+import { riderState, isRider } from '../riderview.js';
+import { cardOn, cardState, gpsBadge, greenCard } from './greencard.js';
+import { shortCourseName } from '../coursedata.js';
+import { gps } from '../gps.js';
 
 /** "+2 thru 4" / "All square" from this team's side of its current matchup. */
 export function matchStatus(snap, m, teamId) {
@@ -46,9 +50,15 @@ function sideColor(app, teamId) {
   return teamColor(app.myTeam(), teamId);
 }
 
-/** Furthest hole you can step forward to: the next one your foursome hasn't finished. */
+/** The next hole your foursome hasn't finished (where "Next hole" lands). ◀ ▶ can browse past it:
+ *  holes ahead open as a read-only preview (`isAhead`), so you can see what's coming. */
 function holeLimit(app) {
   return app.nextHole();
+}
+
+/** A hole your group hasn't reached yet: look, don't touch. */
+function isAhead(app, h) {
+  return posOf(app.snapshot.settings, h) > frontierPos(app);
 }
 
 function currentHole(app) {
@@ -150,15 +160,17 @@ function cartCard(app, cart, hole, mine, locked) {
     ? `<button class="name name-btn" data-act="team-picker" aria-label="Name your cart"><i class="jd"></i><span class="ellipsis">${esc(label)}</span>${isDefaultTeamName(team) ? '<span class="pick">Name it</span>' : ''}</button>`
     : `<span class="name"><i class="jd"></i><span class="ellipsis">${esc(label)}</span></span>`;
   // A locked (finished) hole: the whole card is the tap target that unlocks it for editing.
-  const tap = locked ? ` data-act="hole-unlock" data-enter="hole-unlock" role="button" tabindex="0" aria-label="Edit hole ${hole}"` : '';
-  const chip = locked ? `<span class="focus-chip lock-chip">${icon('lock', 12)} Tap to edit</span>` : `<span class="lblt">${esc(teamLine(app, cart, hole))}</span>`;
+  const ahead = isAhead(app, hole);
+  const tap = locked && !ahead ? ` data-act="hole-unlock" data-enter="hole-unlock" role="button" tabindex="0" aria-label="Edit hole ${hole}"` : '';
+  const chip = ahead ? '<span class="focus-chip lock-chip">Up next</span>' : locked ? `<span class="focus-chip lock-chip">${icon('lock', 12)} Tap to edit</span>` : `<span class="lblt">${esc(teamLine(app, cart, hole))}</span>`;
   return `<section class="cart ${mine ? 'mine' : 'opp'} focus${locked ? ' locked' : ''}" style="--jersey:${jersey}"${tap}>
     <div class="cart-head">${name}${chip}</div>
     <div class="tiles">${cart.players.map((p) => tile(app, p, hole, locked)).join('')}</div>
   </section>`;
 }
 
-/** The other cart, collapsed to one slim row: name, their scores with marks, Edit / Back. */
+/** The other cart, collapsed to one slim row: name, their scores with marks, Edit / Back.
+ *  Team Ryder Cup: no cart name (the names already say who), each player gets half the row. */
 function slimCart(app, cart, hole, mine) {
   const snap = app.snapshot;
   const team = cart.teamId ? snap.teamById.get(cart.teamId) : null;
@@ -167,8 +179,8 @@ function slimCart(app, cart, hole, mine) {
   const par = snap.holes[hole - 1].par;
   const scores = cart.players.map((p) => `<span class="face" data-pid="${esc(p.id)}"><span class="ellipsis">${esc(p.name)}</span>${mark(p.gross[hole - 1], par, 28, { ghost: '–' })}</span>`).join('');
   return `<section class="cart ${mine ? 'mine' : 'opp'} dim" style="--jersey:${jersey}" data-act="cart-focus" data-enter="cart-focus" data-v="${mine ? 'mine' : 'opp'}" role="button" tabindex="0" aria-label="${mine ? 'Back to your cart' : `Enter scores for ${esc(label)}`}">
-    <i class="jd"></i><span class="name ellipsis">${esc(label)}</span>
-    <span class="slim-scores mono">${scores}</span>
+    <i class="jd"></i>${snap.settings.ryder ? '' : `<span class="name ellipsis">${esc(label)}</span>`}
+    <span class="slim-scores mono${snap.settings.ryder ? ' names-only' : ''}">${scores}</span>
     <span class="edit-btn">${mine ? 'Back' : 'Edit'}</span>
   </section>`;
 }
@@ -258,7 +270,8 @@ function individualView(app, h, parts) {
   const snap = app.snapshot;
   const st = snap.settings;
   const me = app.myPlayer();
-  const locked = isLocked(app, h);
+  const ahead = isAhead(app, h);
+  const locked = isLocked(app, h) || ahead;
   const ids = foursomeFor(snap.roster, st, app.me, h).filter((id) => id !== app.me);
   const others = ids.map((id) => snap.playerById.get(id));
   const blanks = others.filter((p) => p.gross[h - 1] == null && app.canEdit(p.id, h));
@@ -268,15 +281,15 @@ function individualView(app, h, parts) {
     ? snap.game.liveStandings.filter((x) => x.teamId !== me.teamId).map((x) => `${esc(snap.teamById.get(x.teamId).name)} <span class="status">${fmtPts(x.points)}</span>`).join(' <span class="faint">·</span> ') || 'Match play'
     : snap.hasStrokes ? 'Stroke play · net' : 'Stroke play';
   const pos = myPosition(app);
-  const tap = locked ? ` data-act="hole-unlock" data-enter="hole-unlock" role="button" tabindex="0" aria-label="Edit hole ${h}"` : '';
+  const tap = locked && !ahead ? ` data-act="hole-unlock" data-enter="hole-unlock" role="button" tabindex="0" aria-label="Edit hole ${h}"` : '';
   const strip = app.isFinal()
     ? `<span class="teams">${icon('lock', 13)} Fixing a finalized round</span><button class="link-btn relock" data-act="final-relock">Done</button>`
     : `<span class="teams">${kind}</span>${pos ? `<span class="status">${esc(pos)}</span>` : ''}`;
-  return `<div class="enter nr solo-enter${others.some((p) => app.ui.pad?.hole === h && app.ui.pad?.pid === p.id) ? ' pad-open' : ''}">
-      <div class="hero">${parts.holeRow}<div class="matchup-line">${strip}</div></div>
+  return `<div class="enter nr solo-enter${others.some((p) => app.ui.pad?.hole === h && app.ui.pad?.pid === p.id) ? ' pad-open' : ''}${parts.gcard ? ` gps-card ${app.ui.gpsSize || 'regular'}` : ''}">
+      <div class="hero">${parts.holeRow}${parts.gcard || ''}<div class="matchup-line">${strip}</div></div>
       <div class="sheet">
         <section class="cart mine focus you-card${locked ? ' locked' : ''}" style="--jersey:var(--cart-you)"${tap}>
-          ${locked ? `<div class="cart-head"><span class="name">Your score</span><span class="focus-chip lock-chip">${icon('lock', 12)} Tap to edit</span></div>` : ''}
+          ${ahead ? '<div class="cart-head"><span class="name">Your score</span><span class="focus-chip lock-chip">Up next</span></div>' : locked ? `<div class="cart-head"><span class="name">Your score</span><span class="focus-chip lock-chip">${icon('lock', 12)} Tap to edit</span></div>` : ''}
           <div class="tiles">${youTile}</div>
         </section>
         ${others.length ? `<div class="group-head"><span class="lbl">Your group</span><span class="meta">${blanks.length ? `${blanks.length} still to go · tap to enter for them` : 'All in'}</span></div>
@@ -313,9 +326,296 @@ function finalView(app) {
     </div></div></div>`;
 }
 
+// ───────────────────────────────────────────── Team Enter: the calm screen (handoffs 021 + 022)
+// Partner “Rider” Cup + Team Ryder Cup. Under the app's own hole header: the yardage card (your group's
+// current hole only), one match line ("Andrew + Sean · 2 UP vs Mike + Justin"), your cart's rows (green
+// rail, 4 bare pads par−1 … par+2 + ⋯ More), the other cart as one quiet row that opens its own sheet,
+// free space, then the status line + Next pinned above the tab bar. No jersey colors on Enter.
+// Rewards (021 §7, 022 §3–4, values from 022/motion.css): every pick bumps the pad and draws its mark;
+// a word (judged on net) fades in and out after the name; when the deciding score lands the standing
+// rolls and the hole's points (engine: match hole entry `points.us`) swap in for "vs …" for ~2.4 s.
+// Each animated node carries data-t0 and mount() runs ui.syncMotion, so redraws never restart or cut it.
+
+const SHEET_CLOSE_MS = 280; // the bottom sheet slides away; a pick in More plays after it
+const PTS_MS = 3200; // the points moment: vs fades back by 0.45 s + 2.6 s
+const DOTS = '<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>';
+
+/** Your match on hole h, from the 015 / 018 match state (3 carts: the one against the other cart in your group, else the first). */
+function ceMatch(app, h, carts) {
+  const snap = app.snapshot;
+  const myTeam = app.myTeam();
+  const rs = snap.settings.ryder ? ryderState(snap, myTeam) : riderState(snap, myTeam);
+  const pos = posOf(snap.settings, h);
+  const here = (rs?.matches || []).filter((x) => x.us.id === myTeam && pos >= x.from && pos <= x.to);
+  return here.find((x) => carts.some((c) => c.teamId === x.them.id)) || here[0] || null;
+}
+
+/** The standing from your side ("2 UP" / "AS" / "1 DN"), optionally only through play-order position `upto`. */
+function ceStanding(m, upto = null) {
+  if (!m) return { text: 'AS', you: false, d: 0 };
+  if (m.pm) { // Plus/Minus: strokes
+    const d = m.leader === 'us' ? Number(m.margin) : m.leader === 'them' ? -Number(m.margin) : 0;
+    return { text: d > 0 ? `+${m.margin}` : d < 0 ? `−${m.margin}` : 'E', you: d > 0, d };
+  }
+  const d = upto == null ? m.holePts[0] - m.holePts[1]
+    : m.holes.filter((e) => e.counts && e.points && e.pos <= upto).reduce((s, e) => s + e.points.us - e.points.them, 0);
+  return { text: standing(d), you: d > 1e-9, d };
+}
+
+const ptsKey = (app) => `glb.seen.${app.code}.pts`;
+function markPtsSeen(app, hole) {
+  const s = new Set(local.get(ptsKey(app)) || []);
+  s.add(hole);
+  local.set(ptsKey(app), [...s]);
+}
+
+/** The hole's points moment (021 §7.5 / 022 §3): starts once per hole, when its points first exist.
+ *  Right after your own pick it plays at once; a deciding score from another phone plays ~300 ms after
+ *  Enter draws (naming the hole when you've already moved on). */
+function checkPts(app, h, m) {
+  if (!m || m.pm || app.sheet) return;
+  const now = Date.now();
+  let seen = local.get(ptsKey(app));
+  if (!Array.isArray(seen)) { // first look at this round on this phone: what's already in is old news
+    seen = m.holes.filter((e) => e.counts && e.points).map((e) => e.hole);
+    local.set(ptsKey(app), seen);
+    return;
+  }
+  if (app.ui.cePts && now < app.ui.cePts.at + PTS_MS) return;
+  const pos = posOf(app.snapshot.settings, h);
+  const e = [pos, pos - 1].map((q) => m.holes.find((x) => x.pos === q)).find((x) => x?.counts && x.points && !seen.includes(x.hole));
+  if (!e) return;
+  const tap = app.ui.ceTap?.hole === e.hole && now - app.ui.ceTap.at < 4000;
+  let at = tap ? Math.max(app.ui.ceTap.at, now) : now + 300;
+  if (now - (app.ui.ceSheetAt || 0) < 400) at = Math.max(at, app.ui.ceSheetAt + SHEET_CLOSE_MS);
+  const after = ceStanding(m);
+  const before = ceStanding({ ...m, holePts: [m.holePts[0] - e.points.us, m.holePts[1] - e.points.them] });
+  app.ui.cePts = {
+    hole: e.hole, matchId: m.id, at, tap, named: e.hole !== h,
+    from: before.text, to: after.text, dir: after.d > before.d + 1e-9 ? 'up' : after.d < before.d - 1e-9 ? 'dn' : null,
+    line: pointsLine(e.points.us),
+  };
+  markPtsSeen(app, e.hole);
+}
+
+/** The reward on a player's row right now (the last pick, until its word has faded). */
+function rewardFor(app, p, h) {
+  const r = app.ui.ceReward;
+  if (!r || r.pid !== p.id || r.hole !== h || p.gross[h - 1] !== r.v || Date.now() > r.end) return null;
+  return { ...reward(r.v, app.snapshot.holes[h - 1].par, p.dots[h - 1] || 0), at: r.at };
+}
+
+/** One bare score pad (64px, no fill): the mark's outline + number; picked = white pill. */
+function cePad(p, v, par, { on, rw, editable, act = 'ce-pick' }) {
+  const dbl = markKind(v, par) === 'd';
+  const cls = `ce-pad${on ? ' sel' : ''}${rw ? ' anim' : ''}${dbl ? ' dbl' : ''}${rw?.stamp ? ' stamp' : ''}`;
+  const tap = editable ? ` data-act="${act}" data-pid="${esc(p.id)}" data-v="${v}"` : ' aria-disabled="true"';
+  const ripples = rw?.ripples ? '<span class="ce-ripple anim"></span><span class="ce-ripple anim r2"></span>' : '';
+  return `<button class="${cls}"${tap}${rw ? ` data-t0="${rw.at}"` : ''} aria-label="${esc(p.name)} ${v}" aria-pressed="${on}">${markSvg(v, par, 40)}<span class="ce-n">${v}</span>${ripples}</button>`;
+}
+
+/** "1 stroke" / "2 strokes" + " · net 3" once a score is in (the net part hides while a word shows). */
+function ceStrokes(p, h, { net = true, hideNet = false } = {}) {
+  const k = p.dots[h - 1] || 0;
+  if (!k) return '';
+  const g = p.gross[h - 1];
+  return `<span class="ce-stk">${k} stroke${k > 1 ? 's' : ''}${net && g != null && !hideNet ? ` · net ${g - k}` : ''}</span>`;
+}
+
+/** A player you can score: name line (+ strokes, + the reward word), then 4 pads + ⋯. */
+function ceRow(app, p, h, editable) {
+  const snap = app.snapshot;
+  const par = snap.holes[h - 1].par;
+  const g = p.gross[h - 1];
+  const cap = maxHoleScore(snap.course, snap.settings, h, p.dots[h - 1]);
+  const rw = rewardFor(app, p, h);
+  const w = padWindow(par, cap).pads;
+  const out = g != null && !w.includes(g); // picked from More: it takes the ⋯ slot
+  const pads = w.map((v) => cePad(p, v, par, { on: g === v, rw: g === v ? rw : null, editable })).join('')
+    + (out ? cePad(p, g, par, { on: true, rw, editable, act: 'ce-more' })
+      : `<button class="ce-pad ce-dots"${editable ? ` data-act="ce-more" data-pid="${esc(p.id)}"` : ' aria-disabled="true"'} aria-label="Other scores for ${esc(p.name)}">${DOTS}</button>`);
+  const word = rw ? `<span class="ce-word anim${rw.tone ? ` ${rw.tone}` : ''}" data-t0="${rw.at}">${esc(rw.word)}</span>` : '';
+  const nudge = g == null && app.ui.nudge?.hole === h && Date.now() < app.ui.nudge.until ? ' nudge' : '';
+  return `<div class="ce-row${nudge}"><div class="ce-nm"><b class="ellipsis">${esc(p.name)}</b>${ceStrokes(p, h, { hideNet: !!rw })}${word}</div>
+    <div class="ce-pads">${pads}</div></div>`;
+}
+
+/** Preview / locked holes: a read-only row (name, strokes, the score's mark at the right). */
+function ceReadRow(app, p, h, mine, ahead) {
+  const par = app.snapshot.holes[h - 1].par;
+  const g = p.gross[h - 1];
+  return `<div class="ce-ro${mine ? '' : ' them'}"><span class="ce-ro-n"><b class="ellipsis">${esc(p.name)}</b>${ceStrokes(p, h, { net: !ahead })}</span>${g != null ? smallMark(g, par, 40) : ''}</div>`;
+}
+
+/** Was this score entered on that player's own phone? (then nobody else can change it: own-entry rule) */
+function ownEntry(p, h) {
+  const by = p.meta?.[h - 1]?.by;
+  return p.gross[h - 1] != null && !!by && by === p.name;
+}
+
+const names = (ps) => ps.map((p) => p.name).join(' + ');
+
+function ryderEnterView(app, h, { holeRow, gcard, carts, locked, ahead, pos, lastHole, done, cur }) {
+  const snap = app.snapshot;
+  const par = snap.holes[h - 1].par;
+  const now = Date.now();
+  const live = !locked && !ahead;
+  const mine = carts[0];
+  const others = carts.slice(1);
+  const m = ceMatch(app, h, carts);
+  if (app.ui.ceReward && now > app.ui.ceReward.end) app.ui.ceReward = null;
+  if (app.ui.cePts && now > app.ui.cePts.at + PTS_MS) app.ui.cePts = null;
+  if (live) checkPts(app, h, m);
+  const pt = app.ui.cePts && m && app.ui.cePts.matchId === m.id ? app.ui.cePts : null;
+
+  // The match line (022 §2) · preview "Up next" · locked "Played · locked · 1 UP after 6   Edit".
+  let matchLine;
+  if (ahead) matchLine = '<div class="ce-match"><span>Up next</span></div>';
+  else if (locked) {
+    const s = m ? ceStanding(m, pos) : null;
+    matchLine = `<div class="ce-match"><span class="ellipsis">Played · locked${s ? ` · <b class="ce-st${s.you ? ' you' : ''}">${esc(s.text)}</b> after ${h}` : ''}</span><button class="ce-edit" data-act="hole-unlock">Edit</button></div>`;
+  } else {
+    let right = '';
+    if (m) {
+      const s = ceStanding(m);
+      const roll = pt?.dir ? `<span class="ce-roll${pt.dir === 'dn' ? ' dn' : ''}">${pt.dir === 'dn' ? `<span>${esc(pt.to)}</span><span>${esc(pt.from)}</span>` : `<span>${esc(pt.from)}</span><span>${esc(pt.to)}</span>`}</span>`
+        : `<span class="ce-roll"><span>${esc(s.text)}</span></span>`;
+      const up = `<span class="ce-up${s.you ? '' : ' muted'}${pt?.dir ? ' anim' : ''}"${pt?.dir ? ` data-t0="${pt.at}"` : ''}>${roll}</span>`;
+      const them = m.them.playerIds.map((id) => snap.playerById.get(id)?.name || '').filter(Boolean).join(' + ');
+      const won = pt ? `<span class="ce-won anim${pt.line.tone === 'text' ? '' : ' muted'}" data-t0="${pt.at}">${esc(pt.line.text)}${pt.named ? ` on ${pt.hole}` : ''}</span>` : '';
+      right = `<span class="ce-end">${up}<span class="ce-swap"><span class="ce-vs${pt ? ' anim' : ''}"${pt ? ` data-t0="${pt.at}"` : ''}>vs ${esc(them)}</span>${won}</span></span>`;
+    }
+    matchLine = `<div class="ce-match"><span class="ce-us ellipsis">${esc(names(mine.players))}</span>${right}</div>`;
+  }
+
+  // Rows: yours with pads (and the green rail), theirs as one quiet row; read-only rows on preview / locked holes.
+  const rows = live
+    ? `<div class="ce-mine rail">${mine.players.map((p) => ceRow(app, p, h, app.canEdit(p.id, h))).join('')}</div>${others.map((c) => {
+      const allIn = c.players.every((p) => p.gross[h - 1] != null);
+      return `<button class="ce-line" data-act="ce-theirs" data-t="${esc(c.teamId || '')}" aria-label="Enter scores for ${esc(c.players.map((p) => p.name).join(' and '))}">
+        <span class="ce-who">${c.players.map((p) => `<span class="ce-who-p"><span class="ellipsis">${esc(p.name)}</span>${smallMark(p.gross[h - 1], par, 30)}</span>`).join('')}</span>
+        <span class="ce-go">${allIn ? 'Edit' : 'Enter'}${icon('fwd', 18)}</span></button>`;
+    }).join('')}`
+    : `<div class="ce-mine">${carts.map((c, i) => c.players.map((p) => ceReadRow(app, p, h, i === 0, ahead)).join('')).join('')}</div>`;
+
+  // Status (only when something's wrong) + Next (021 §6, 022 §6).
+  const blanks = blankPlayers(app, h);
+  const mineIds = new Set(mine.players.map((p) => p.id));
+  const theirBlanks = blanks.filter((p) => !mineIds.has(p.id));
+  const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
+  let status = '';
+  if (app.isFinal()) status = `<div class="ce-status muted">${icon('lock', 13)} Fixing a finalized round<button class="link-btn relock" data-act="final-relock">Done</button></div>`;
+  else if (offline && live) {
+    const n = app.unsynced;
+    status = `<div class="ce-status warn">Offline · ${n ? `your ${n} score${n === 1 ? '' : 's'} will send` : 'scores will send'} when you’re back</div>`;
+  }
+  let next;
+  if (pos >= frontierPos(app) - 1 && !ahead) {
+    const go = !blanks.length;
+    const label = go ? (h === lastHole ? 'Round done' : 'Next hole')
+      : blanks.length === theirBlanks.length ? (offline ? `Can’t see ${names(theirBlanks)} yet` : `Waiting on ${names(theirBlanks)}`)
+      : `Next hole · ${blanks.length} to go`;
+    const bump = go && pt?.tap && pt.hole === h;
+    next = `<button class="ce-next${go ? ' go' : ''}${bump ? ' anim' : ''}"${bump ? ` data-t0="${pt.at}"` : ''} data-act="next-hole">${esc(label)}</button>`;
+  } else if (done) next = '<button class="ce-next go" data-act="tab" data-v="board">See the Board</button>';
+  else next = `<button class="ce-next go" data-act="hole-current">Back to hole ${cur}</button>`;
+
+  const card = live ? gcard : ''; // 021 §1: your hole only (current, or the one you just finished): never on preview / locked holes
+  return `<div class="enter nr ry-enter ce${card ? ` gps-card ${app.ui.gpsSize || 'regular'}` : ''}">
+      <div class="hero">${holeRow}${card}</div>
+      ${matchLine}${rows}
+      <div class="ce-flex"></div>
+      <div class="ce-foot">${status}${next}</div>
+    </div>`;
+}
+
+/** A pick on the calm Enter (row, More, or the other cart's sheet). The reward is set before the write so the
+ *  render the write triggers already shows it; `delay` holds the motion until a closing sheet is gone. */
+function cePick(app, pid, h, v, delay = 0, inSheet = false) {
+  const snap = app.snapshot;
+  const p = snap.playerById.get(pid);
+  if (!p) return;
+  const at = Date.now() + delay;
+  const rw = reward(v, snap.holes[h - 1].par, p.dots[h - 1] || 0);
+  app.ui.ceReward = { pid, hole: h, v, at, end: at + rw.holdMs + 100 };
+  app.ui.ceTap = { hole: h, at };
+  app.ui.cePts = null; // a tap during the points moment jumps it to its end
+  if (p.gross[h - 1] === v) app.render(); // same score again: no write, just the motion
+  else if (!app.setScore(pid, h, v)) { app.ui.ceReward = null; app.render(); return; }
+  if (inSheet) armTheirsClose(app, h);
+}
+
+// The other cart's sheet closes itself 1.2 s after both their scores are in, after 1.2 s with no taps.
+let theirsTimer = null;
+let ceApp = null; // set in mount, for the sheet's touch listener
+function armTheirsClose(app, h) {
+  clearTimeout(theirsTimer);
+  theirsTimer = null;
+  const s = app.sheet;
+  if (s?.type !== 'ce-theirs') return;
+  const c = theirsCart(app, s.props.hole, s.props.teamId);
+  if (!c || c.players.some((p) => p.gross[h - 1] == null)) return;
+  theirsTimer = setTimeout(() => {
+    theirsTimer = null;
+    if (app.sheet?.type === 'ce-theirs') app.closeSheet();
+  }, 1200);
+}
+if (typeof document !== 'undefined') {
+  document.addEventListener('pointerdown', (ev) => {
+    if (!theirsTimer || !ev.target?.closest?.('#sheet')) return;
+    if (ceApp) armTheirsClose(ceApp, ceApp.sheet?.props?.hole);
+  }, true);
+}
+
+function theirsCart(app, hole, teamId) {
+  const carts = cartsFor(app, hole);
+  return carts.find((c, i) => i > 0 && c.teamId === teamId) || carts[1] || null;
+}
+
+const sheetHead = (title, done = false) => `<div class="ce-sh-head"><h2 class="ce-sh-title ellipsis">${esc(title)}</h2>${done ? '<button class="ce-done" data-act="sheet-close">Done</button>' : ''}</div>`;
+
+/** Bottom sheets for the calm Enter (registered in sheets.js). */
+export const enterSheets = {
+  /** ⋯ More (021 §3): every score 1 … max on the pad row's columns, Picked up (= max), Clear score. */
+  'ce-more': (app, { pid, hole }) => {
+    const snap = app.snapshot;
+    const p = snap.playerById.get(pid);
+    if (!p) return '';
+    const par = snap.holes[hole - 1].par;
+    const cap = maxHoleScore(snap.course, snap.settings, hole, p.dots[hole - 1]);
+    const g = p.gross[hole - 1];
+    const pads = Array.from({ length: cap }, (_, i) => cePad(p, i + 1, par, { on: g === i + 1, rw: null, editable: true, act: 'ce-more-pick' })).join('');
+    return `<div class="ce-sheet">${sheetHead(`${p.name} · Hole ${hole}`)}
+      <div class="ce-pads ce-grid">${pads}</div>
+      <button class="ce-sh-row" data-act="ce-more-pick" data-pid="${esc(pid)}" data-v="${cap}"><b>Picked up</b><span class="muted">&nbsp;· counts as ${cap}</span></button>
+      <button class="ce-sh-row muted" data-act="ce-more-clear" data-pid="${esc(pid)}"${g == null ? ' disabled' : ''}>Clear score</button></div>`;
+  },
+  /** The other cart (021 §4): same pads; a score from that player's own phone is a read-only line. */
+  'ce-theirs': (app, { hole, teamId }) => {
+    const c = theirsCart(app, hole, teamId);
+    if (!c) return '';
+    const par = app.snapshot.holes[hole - 1].par;
+    const rows = c.players.map((p) => (ownEntry(p, hole)
+      ? `<div class="ce-own"><b class="ellipsis">${esc(p.name)}</b>${smallMark(p.gross[hole - 1], par, 30)}<span class="ce-own-src">From their phone</span></div>`
+      : ceRow(app, p, hole, app.canEdit(p.id, hole)))).join('');
+    return `<div class="ce-sheet">${sheetHead(`${names(c.players)} · Hole ${hole}`, true)}${rows}</div>`;
+  },
+};
+
+/** Redraw once a word or the points moment ends, so the rest state (e.g. "· net 3") comes back. */
+let ceRedraw = null;
+function armRedraw(app) {
+  clearTimeout(ceRedraw);
+  const now = Date.now();
+  const ends = [app.ui.ceReward?.end, app.ui.cePts ? app.ui.cePts.at + PTS_MS : null].filter((t) => t && t > now);
+  if (ends.length) ceRedraw = setTimeout(() => app.render(), Math.min(...ends) - now + 30);
+}
+
 export default {
   hero: true,
   noscroll: true,
+  /** 011/013: the name row goes while the green card shows (the hole header is the top of the screen). */
+  hideTop(app) { return !!app.myPlayer() && (!app.isFinal() || app.finalUnlocked()) && !!cardState(app, currentHole(app)); },
 
   render(app) {
     const snap = app.snapshot;
@@ -325,7 +625,7 @@ export default {
     const h = currentHole(app);
     const pos = posOf(st, h);
     const hole = snap.holes[h - 1];
-    const limitPos = posOf(st, holeLimit(app));
+    const limitPos = HOLES; // browse every hole; scores lock themselves (isLocked / isAhead)
     const lastHole = playOrder(st)[HOLES - 1];
     const myTeam = app.myTeam(h);
     const rot = rotationFor(st, h);
@@ -356,10 +656,33 @@ export default {
       matchLine = `<span class="teams">${snap.hasStrokes ? 'Stroke play · net' : 'Stroke play'}</span>`;
     }
     // Fixing a finalized round: say so, with Done to lock this phone again.
+    // 013: no rotation strip on team Enter (match status lives on Matches). Only the fixing line stays —
+    // except the Team Ryder Cup, where the header says your match and the cup score ("vs Josh + Brandon · UP 1 thru 3").
     if (app.isFinal()) matchLine = `<span class="teams">${icon('lock', 13)} Fixing a finalized round</span><button class="link-btn relock" data-act="final-relock">Done</button>`;
+    else if (snap.game?.sides && myTeam) {
+      // 014 §5 / 015: "● vs Joseph + Jay" left; "UP 2 · CUP 5½–3½" right (green only for UP; never red).
+      const rs = ryderState(snap, myTeam);
+      const pos = posOf(st, h);
+      const m = rs?.matches.find((x) => x.us.id === myTeam && pos >= x.from && pos <= x.to);
+      if (m) {
+        const lead = m.status === 'notStarted' ? ['UP NEXT', false]
+          : m.status === 'done' ? [m.result === 'won' ? `WON ${m.flag.text}` : m.result === 'lost' ? `LOST ${m.flag.text}` : 'HALVED', m.result === 'won']
+          : m.leader === 'us' ? [`UP ${m.margin}`, true] : m.leader === 'them' ? [`DOWN ${m.margin}`, false] : ['AS', false];
+        matchLine = `<span class="teams ellipsis"><i class="ry-hdot"></i>vs ${esc(m.them.names.join(' + '))}</span><span class="status mono"><span class="${lead[1] ? 'you' : 'faint'}">${esc(lead[0])}</span><span class="faint"> · CUP ${fmtPts(rs.sides.us.total)}–${fmtPts(rs.sides.them.total)}</span></span>`;
+      }
+    } else matchLine = '';
+    const gstate = cardState(app, h);
+    const gcard = greenCard(gstate, app.ui.gpsSize || 'regular');
+    // 013 (team): the course name replaces the max label while the card shows; the GPS badge only when
+    // something's off (finding / weak / denied). 011 (individual): the badge always (see individualView).
+    const solo = individual(app);
+    const subtitle = gstate
+      ? `Par ${hole.par} · Hcp ${hole.si} · ${solo || gstate.kind !== 'ok' ? gpsBadge(gstate) : esc(shortCourseName(snap.course?.name || ''))}`
+      : `Par ${hole.par} · Hcp ${hole.si} · ${esc(maxLabel(snap.course, st, h))}`;
     const carts = cartsFor(app, h);
     const focus = focusSide(app, h, carts);
-    const locked = isLocked(app, h);
+    const ahead = isAhead(app, h);
+    const locked = isLocked(app, h) || ahead;
     const cur = app.nextHole();
     const done = app.foursomeDone();
     // 18-hole progress strip; a gap where the opponents switch (or at the turn).
@@ -378,7 +701,7 @@ export default {
       : ' →';
     const nextLabel = `${h === lastHole ? 'Finish' : 'Next hole'}${left}`;
     // Looking back at a finished hole: the button takes you back to where you are.
-    const footBtn = pos >= frontierPos(app) - 1
+    const footBtn = pos >= frontierPos(app) - 1 && !ahead
       ? `<button class="btn primary block next-btn${blanks.length ? ' waiting' : ''}" data-act="next-hole">${esc(nextLabel)}</button>`
       : done
         ? '<button class="btn primary block next-btn" data-act="tab" data-v="board">See the Board →</button>'
@@ -389,15 +712,17 @@ export default {
           <button class="arrow" data-act="hole-prev" aria-label="Previous hole" ${pos <= 1 ? 'disabled' : ''}>${icon('back')}</button>
           <button class="hole-head" data-act="hole-grid" aria-label="Hole ${h}: all holes">
             <span class="hole-title">Hole ${h}</span>
-            <span class="hole-meta">Par ${hole.par} · Hcp ${hole.si} · ${esc(maxLabel(snap.course, st, h))}</span>
+            <span class="hole-meta">${subtitle}</span>
           </button>
           <button class="arrow" data-act="hole-next" aria-label="Next hole" ${pos >= limitPos ? 'disabled' : ''}>${icon('fwd')}</button>
           ${app.isOrganizer() ? `<button class="hole-more" data-act="fixhole-open" data-v="${h}" aria-label="Hole menu: fix hole ${h}">${icon('more', 20)}</button>` : ''}
         </div>`;
-    if (individual(app)) return individualView(app, h, { holeRow, dots, footBtn });
-    return `<div class="enter nr">
+    if (individual(app)) return individualView(app, h, { holeRow, dots, footBtn, gcard, gstate });
+    if ((st.ryder || isRider(snap)) && app.myTeam() && carts.length) return ryderEnterView(app, h, { holeRow, gcard, carts, focus, locked, ahead, pos, lastHole, done, cur });
+    return `<div class="enter nr${gcard ? ` gps-card ${app.ui.gpsSize || 'regular'}` : ''}">
       <div class="hero">
         ${holeRow}
+        ${gcard}
         ${matchLine ? `<div class="matchup-line">${matchLine}</div>` : ''}
       </div>
       <div class="sheet${focus === 'opp' ? ' even' : ''}">
@@ -411,6 +736,41 @@ export default {
 
   mount(root, app) {
     if (!app.myPlayer()) return;
+    // 011: location only while Enter is open and the card is on for this hole.
+    const h = currentHole(app);
+    if (cardOn(app, h) && !app.isFinal()) {
+      if (!gps.isOn() && gps.state().status !== 'denied') gps.start(() => app.render());
+      // 013: Regular when the score pads fit at full size, else Compact (measured, per screen height).
+      const key = `${innerWidth}x${innerHeight}`;
+      if (app.ui.gpsSizeKey !== key) { app.ui.gpsSizeKey = key; app.ui.gpsSize = 'regular'; }
+      const ry = root.querySelector('.ry-enter.gps-card');
+      if (ry && app.ui.gpsSize === 'regular') {
+        const c = document.getElementById('content');
+        if (c && c.scrollHeight > c.clientHeight + 1) { app.ui.gpsSize = 'compact'; requestAnimationFrame(() => app.render()); return; }
+      }
+      const step = root.querySelector('.enter.gps-card .cart.focus .tile .step');
+      if (step && app.ui.gpsSize === 'regular' && step.getBoundingClientRect().width < 87) { app.ui.gpsSize = 'compact'; requestAnimationFrame(() => app.render()); return; }
+    } else if (gps.isOn()) gps.stop();
+    const ryCard = root.querySelector('.ry-enter.gps-card');
+    if (ryCard && (app.ui.gpsSize || 'regular') === 'regular') {
+      const c = document.getElementById('content');
+      if (c && c.scrollHeight > c.clientHeight + 1) { app.ui.gpsSize = 'compact'; requestAnimationFrame(() => app.render()); return; }
+    }
+    const ce = root.querySelector('.ce');
+    if (ce) {
+      // 021/022: put any reward motion back where it was before this redraw, and redraw when it ends.
+      ceApp = app;
+      syncMotion(ce);
+      armRedraw(app);
+      if (document.querySelector('.coach')) return; // one tip at a time
+      const mineRows = ce.querySelector('.ce-mine.rail'), theirs = ce.querySelector('.ce-line');
+      if (mineRows && !mineRows.querySelector('.ce-pad.sel') && mineRows.querySelector('.ce-pads')) {
+        app.coach('pad2', mineRows.querySelector('.ce-pads'), 'Tap the score you made. ⋯ has every other score.');
+      } else if (mineRows && theirs && !theirs.querySelector('.ce-sm') && mineRows.querySelectorAll('.ce-pad.sel').length >= 2) {
+        app.coach('oppcart4', theirs, 'You can enter scores for the other cart in your group too. Tap their row.');
+      }
+      return;
+    }
     if (document.querySelector('.coach')) return; // one tip at a time
     const first = root.querySelector('.cart.focus .tile.empty .face');
     const mine = root.querySelector('.cart.mine.focus');
@@ -424,6 +784,7 @@ export default {
   },
 
   actions: {
+    'gps-on': (el, ev, app) => { gps.stop(true); gps.start(() => app.render()); },
     'tile-tap': (el, ev, app) => {
       const pid = el.dataset.pid;
       const h = app.ui.hole;
@@ -472,15 +833,31 @@ export default {
       if (!app.myPlayer()) return;
       const st = app.snapshot.settings;
       const pos = posOf(st, app.ui.hole);
-      if (pos < posOf(st, holeLimit(app))) {
+      if (pos < HOLES) {
         app.ui.hole = holeAt(st, pos + 1);
         app.render();
       }
     },
     'next-hole': (el, ev, app) => nextHole(app),
+    // 021/022 calm team Enter
+    'ce-pick': (el, ev, app) => cePick(app, el.dataset.pid, app.ui.hole, Number(el.dataset.v), 0, !!el.closest('#sheet')),
+    'ce-more': (el, ev, app) => app.openSheet('ce-more', { pid: el.dataset.pid, hole: app.ui.hole }),
+    'ce-more-pick': (el, ev, app) => {
+      const hole = app.sheet?.props?.hole ?? app.ui.hole;
+      app.closeSheet();
+      cePick(app, el.dataset.pid, hole, Number(el.dataset.v), SHEET_CLOSE_MS);
+    },
+    'ce-more-clear': (el, ev, app) => {
+      const hole = app.sheet?.props?.hole ?? app.ui.hole;
+      app.closeSheet();
+      app.ui.ceReward = null;
+      app.setScore(el.dataset.pid, hole, null);
+    },
+    'ce-theirs': (el, ev, app) => app.openSheet('ce-theirs', { hole: app.ui.hole, teamId: el.dataset.t || null }),
     'cart-focus': (el, ev, app) => {
       // Remembered for this hole only: any other hole opens on your cart (70/30).
       app.ui.enterFocus = el.dataset.v === 'opp' ? app.ui.hole : null;
+      app.ui.enterCart = el.dataset.v === 'opp' ? el.dataset.t || null : null;
       app.render();
     },
     'team-picker': (el, ev, app) => app.openTeamPicker(),
@@ -529,12 +906,16 @@ function blankPlayers(app, h) {
 /** Next hole tapped with boxes still empty: point at them instead of moving on. */
 function nudgeBlanks(app, h, blanks) {
   const carts = cartsFor(app, h);
-  const open = focusSide(app, h, carts) === 'opp' ? carts[1] : carts[0];
+  const calm = !!document.querySelector('#content .ce'); // 021: the other cart is a sheet, not a flip
+  const open = !calm && focusSide(app, h, carts) === 'opp' ? carts[1] : carts[0];
   const blankIds = new Set(blanks.map((p) => p.id));
   const openHasBlank = open.players.some((p) => blankIds.has(p.id));
-  // All the missing scores are in the greyed cart: open it so they can be entered.
+  // All the missing scores are in the other cart: open it so they can be entered.
   if (!openHasBlank && carts.length > 1) {
-    app.ui.enterFocus = open === carts[0] ? h : null;
+    if (calm) {
+      const c = carts.find((x, i) => i > 0 && x.players.some((p) => blankIds.has(p.id))) || carts[1];
+      app.openSheet('ce-theirs', { hole: h, teamId: c.teamId });
+    } else app.ui.enterFocus = open === carts[0] ? h : null;
   }
   app.ui.nudge = { hole: h, until: Date.now() + 1200 };
   // "You first" rounds: open the score pad on the first player still waiting.
@@ -600,6 +981,23 @@ function nextHole(app) {
       const opp = next.teams[0] === myTeam ? next.teams[1] : next.teams[0];
       const players = snap.teamById.get(opp).playerIds.map((id) => snap.playerById.get(id).name).join(' + ');
       sub = `${next.label} vs ${name(opp)} · ${players}`;
+    }
+    if (st.ryder) {
+      // Team Ryder Cup: the finished match from the 015 engine (hole points frozen at a clinch), then who's next.
+      const rs = ryderState(snap, myTeam);
+      const pos2 = posOf(st, nh);
+      const prev = rs.matches.find((x) => x.us.id === myTeam && pos >= x.from && pos <= x.to);
+      const up = rs.matches.find((x) => x.us.id === myTeam && pos2 >= x.from && pos2 <= x.to);
+      app.showCard({
+        kicker: 'New opponent',
+        big: up ? up.label : 'Next match',
+        result: !prev ? '' : prev.status === 'done' ? `Last match: ${prev.result === 'won' ? 'you won' : prev.result === 'lost' ? 'they won' : 'halved'} ${prev.flag.text}` : `Last match: ${prev.kicker.toLowerCase()}`,
+        sub: up ? `vs ${up.them.names.join(' + ')} · ${teeTimeName(st, up.them.tee)}` : '',
+        sub2: 'Nobody moves. The app compares your scores hole by hole.',
+        button: `Continue to hole ${nh}`,
+        onContinue: () => goHole(app, nh, h),
+      });
+      return;
     }
     const swap = (st.rotationMode || 'swap') === 'swap';
     app.showCard({

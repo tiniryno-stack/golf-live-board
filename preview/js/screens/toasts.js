@@ -87,7 +87,7 @@ export function renderBanners(app) {
     html += headline.list
       .map((h, i) => {
         const more = i === headline.list.length - 1 && headline.extra > 0 ? `<span class="more">+${headline.extra}</span>` : '';
-        return `<button class="banner headline-b" data-act="headline-dismiss" data-swipe="headline" style="--jersey:${headlineColor(mine, h)}">
+        return `<button class="banner headline-b" data-act="headline-dismiss" data-swipe="headline" style="--jersey:${headlineColor(mine, h, app.me)}">
       <span class="spark">${icon('spark', 18)}</span><span style="flex:1">${esc(h.text)}</span>${more}</button>`;
       })
       .join('');
@@ -122,7 +122,7 @@ let overlay = null; // { onContinue, onDismiss }
 
 export function showCard(opts, app) {
   const root = $('overlay');
-  overlay = { onContinue: opts.onContinue, app };
+  overlay = { onContinue: opts.onContinue, app, at: Date.now() };
   root.innerHTML = `<div class="fullcard${opts.sunny ? ' sunny' : ''}" role="dialog" aria-modal="true">
     ${opts.kicker ? `<div class="kicker">${esc(opts.kicker)}</div>` : ''}
     <div class="fc-title">${esc(opts.big)}</div>
@@ -140,7 +140,7 @@ export function showAway(list, app, markSeen) {
   overlay = { onDismiss: markSeen, app, away: true };
   root.innerHTML = `<div class="away" data-act="away-dismiss" role="dialog">
     <div class="kicker">While you were away</div>
-    <ol>${list.map((h) => `<li><i class="jdot" style="--jersey:${headlineColor(app.myTeam(), h)}"></i><span>${esc(h.text)}</span></li>`).join('')}</ol>
+    <ol>${list.map((h) => `<li><i class="jdot" style="--jersey:${headlineColor(app.myTeam(), h, app.me)}"></i><span>${esc(h.text)}</span></li>`).join('')}</ol>
     <div class="actions"><button data-act="away-all">See all</button><button data-act="away-dismiss">Got it</button></div>
   </div>`;
   root.classList.add('open');
@@ -240,7 +240,7 @@ export function showBrief(app, onDone) {
     <div class="brief-top"><span class="kicker">Today’s game</span><button class="brief-skip" data-act="brief-done">Skip</button></div>
     <div class="brief-track">${pages.map((p, i) => `<section class="brief-page" aria-label="${i + 1} of ${pages.length}">${p}</section>`).join('')}</div>
     <div class="brief-foot">
-      <div class="brief-dots" aria-hidden="true">${pages.map((_, i) => `<i${i === 0 ? ' class="on"' : ''}></i>`).join('')}</div>
+      ${pages.length > 1 ? '' : '<!-- one page: no dots -->'}<div class="brief-dots${pages.length > 1 ? '' : ' none'}" aria-hidden="true">${pages.map((_, i) => `<i${i === 0 ? ' class="on"' : ''}></i>`).join('')}</div>
       <button class="btn primary big block" data-act="brief-next">${pages.length > 1 ? 'Next' : 'Let’s play'}</button>
     </div>
   </div>`;
@@ -374,6 +374,8 @@ export const actions = {
   'join-approve': (el, ev, app) => app.answerJoin(el.dataset.v, true),
   'join-deny': (el, ev, app) => app.answerJoin(el.dataset.v, false),
   'card-continue': () => {
+    // A fast second tap on Next hole used to land on the card's button before it could be read.
+    if (overlay?.at && Date.now() - overlay.at < 700) return;
     const fn = overlay?.onContinue;
     closeOverlay();
     fn?.();

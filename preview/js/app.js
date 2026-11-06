@@ -19,6 +19,10 @@ import board from './screens/board.js';
 import card from './screens/card.js';
 import host from './screens/host.js';
 import crew from './screens/crew.js';
+import { gps } from './gps.js';
+import { loadGeo } from './geoload.js';
+import { FLAGS } from './flags.js';
+import { initLoader, showLoader, updateLoader, loaderReady, hideLoaderNow } from './loader.js';
 
 const SCREENS = { home, setup, season, enter, matches, board, card, host, crew };
 const TABS = [
@@ -134,10 +138,13 @@ app.openSheet = (type, props = {}) => {
   renderSheet();
 };
 app.closeSheet = () => {
+  const was = app.sheet?.type;
   app.sheet = null;
   // Leaving the Add to Home Screen sheet: take this phone's keys back out of the address bar.
   if (location.hash.startsWith('#move=')) history.replaceState(null, '', `${location.pathname}${location.search}#/`);
   renderSheet();
+  // 021: closing an Enter sheet lets a waiting points moment start on the screen underneath.
+  if (was?.startsWith('ce-')) { app.ui.ceSheetAt = Date.now(); render(); }
 };
 
 // ───────────────────────────────────────────── scores
@@ -269,9 +276,11 @@ function onQueueSaved(item, res) {
 /** The crew learns which person this phone is from the name it plays as (feature 006, "you" across rounds). */
 function rememberCrewMe() {
   const ev = app.event;
-  if (!ev?.crew_id || !app.me || String(ev.settings?.practice) === 'true') return;
+  if (!app.me || String(ev?.settings?.practice) === 'true') return;
   const pid = (ev.roster?.players || []).find((p) => p.id === app.me)?.personId;
   if (!pid) return;
+  db.people.add(pid); // so Home can find your other rounds on a new phone (Nov 5)
+  if (!ev.crew_id) return;
   const c = db.crews.get(ev.crew_id);
   if (!c?.me) db.crews.put({ id: ev.crew_id, me: pid });
 }
@@ -704,6 +713,7 @@ async function loadRound(code) {
   app.me = db.me.get(code);
   app.adminPin = db.admin.get(code);
   app.unsynced = db.queue.count(code);
+  showLoader(); // the loading screen covers opening a round (feature 020)
   render();
   let res;
   try {
@@ -716,17 +726,17 @@ async function loadRound(code) {
     if (seq !== loadSeq) return;
     app.loading = false;
     app.loadError = e.message || 'No connection';
-    hideSplash();
     render();
+    updateLoader(); // No signal + Try again, on the loading screen
     return;
   }
   if (seq !== loadSeq) return;
   app.loading = false;
-  hideSplash();
   if (!res) {
     app.notFound = true;
     db.forgetRound(code);
     render();
+    loaderReady();
     return;
   }
   app.event = res.event;
@@ -735,12 +745,14 @@ async function loadRound(code) {
   db.recent.remember(app.event);
   rememberCrewMe();
   recompute({ headlines: 'now' });
+  if (FLAGS.gps && app.event.course) loadGeo(app.event.course, () => { if (seq === loadSeq) render(); }); // greens for the GPS card
   // Coming back to a round that's over (finalized, or every score in): show the result, not Enter.
   if (app.route.tab === 'enter' && app.roundOver()) {
     history.replaceState(null, '', app.tabHash('board'));
     app.route = parseHash();
   }
   render();
+  loaderReady(); // app.snapshot is in: the ball finishes its lap and drops
   processHeadlines('away');
   fx.renderBanners(app);
 
@@ -845,10 +857,20 @@ function onRemoteEvent(row) {
   recompute({ headlines: 'now' });
   render();
   refetchAll();
+  const lineupsBefore = JSON.stringify(before.settings?.lineups || []);
+  const lineupsNow = JSON.stringify(row.settings?.lineups || before.settings?.lineups || []);
   if (finalChanged && !app.adminPin) {
     app.toast(row.finalized_at
       ? { title: 'The round is final', sub: 'Scores are locked. Nice playing.' }
       : { title: 'The organizer reopened the round', sub: 'Scores can be changed again.' });
+  } else if (lineupsNow !== lineupsBefore && !recentlySaved && !app.adminPin) {
+    // Team Ryder Cup: the organizer set a new lineup (carts physically swapped foursomes).
+    const ls = row.settings?.lineups || [];
+    const newest = ls.length ? ls[ls.length - 1] : null;
+    app.ui.hole = null; // your foursome may have changed: land on the hole you're on, with the new carts
+    app.toast(newest
+      ? { title: `Lineup changed from hole ${newest.fromHole}`, sub: 'Your foursome and opponent may be different now. Check Matches.', tab: 'matches', ms: 6000 }
+      : { title: 'Lineup back to tee times', sub: 'The organizer removed the lineup change.', ms: 5000 });
   } else if (settingsChanged && !recentlySaved && !app.adminPin) app.toast({ title: 'The organizer updated the round', sub: 'Scores and standings are recomputed.' });
   else if (renamed.length && !(renamed.length === 1 && renamed[0].id === app.myTeam() && app.justPicked)) {
     app.toast({ title: renamed.map((r) => `${r.from} is now ${r.to}`).join(' · ') });
@@ -1063,10 +1085,10 @@ function route() {
     }
   } else {
     if (app.code) closeRound();
-    hideSplash();
     const s = SCREENS[app.route.name];
     s.enter?.(app);
     render();
+    loaderReady(); // Home (or Setup…) has rendered
   }
   if (prev.name !== app.route.name) $('content').scrollTop = 0;
 }
@@ -1096,7 +1118,10 @@ function draw(opts) {
   appEl.classList.toggle('has-hero', hasHero);
   content.classList.toggle('noscroll', ready && !!screen.noscroll);
 
-  $('topbar').innerHTML = renderTopbar(screen, inRound);
+  const hideTop = ready && !!screen.hideTop?.(app);
+  appEl.classList.toggle('no-top', hideTop);
+  $('topbar').innerHTML = hideTop ? '' : renderTopbar(screen, inRound);
+  if (screen !== SCREENS.enter) gps.stop();
   renderTabbar($('tabbar'), inRound && ready);
   appEl.classList.toggle('has-tabbar', inRound && ready);
 
@@ -1125,15 +1150,7 @@ document.addEventListener('focusout', () => {
 });
 
 function renderRoundState() {
-  if (app.loading) {
-    return `<div class="plain loading-state"><div class="spinner" aria-hidden="true"></div>
-      <p class="soft">Opening ${esc(app.code || 'the round')}…</p></div>`;
-  }
-  if (app.loadError) {
-    return `<div class="plain"><h1 class="title">No signal</h1>
-      <p class="soft">Couldn’t reach the scoreboard. Scores you enter are saved on this phone and sync when you’re back.</p>
-      <button class="btn primary block big" data-act="retry-load">Try again</button></div>`;
-  }
+  if (app.loading || app.loadError) return ''; // the loading screen (js/loader.js) covers these
   if (app.deleted) {
     return `<div class="plain"><h1 class="title">Round deleted</h1>
       <p class="soft">The organizer deleted ${esc(app.code)}. Start or join another round from Home.</p>
@@ -1199,7 +1216,8 @@ function renderTabbar(el, show) {
 
 function renderSyncChip() {
   // Connection pill (design system → Toast): under the header while offline with scores waiting to send.
-  const off = app.code && (typeof navigator !== 'undefined' && navigator.onLine === false) && app.unsynced > 0;
+  // 021: the calm team Enter says it in its own status line instead.
+  const off = app.code && (typeof navigator !== 'undefined' && navigator.onLine === false) && app.unsynced > 0 && !document.querySelector('#content .ce');
   let pill = document.getElementById('netpill');
   if (off && !pill) {
     pill = document.createElement('div');
@@ -1216,8 +1234,8 @@ function renderSyncChip() {
   el.textContent = n ? `${n} unsynced` : app.live === 'live' ? 'Synced' : app.live === 'reconnecting' ? 'Reconnecting' : 'Synced';
 }
 app.renderSyncChip = renderSyncChip;
-window.addEventListener('online', () => renderSyncChip());
-window.addEventListener('offline', () => renderSyncChip());
+window.addEventListener('online', () => { renderSyncChip(); if (document.querySelector('#content .ce')) render(); });
+window.addEventListener('offline', () => { renderSyncChip(); if (document.querySelector('#content .ce')) render(); });
 
 function renderSheet() {
   sheets.render($('sheet'), app);
@@ -1226,7 +1244,7 @@ function renderSheet() {
 // Never a blank screen: if drawing fails, say so, show the error (screenshot-able) and offer a reload.
 function showCrash(e) {
   console.error(e);
-  hideSplash();
+  hideLoaderNow();
   // Clear anything on top so the message (and Reload) is what you see.
   app.sheet = null;
   $('sheet').className = 'sheet-root';
@@ -1245,15 +1263,6 @@ window.addEventListener('error', (ev) => {
 window.addEventListener('unhandledrejection', (ev) => {
   if (blankScreen()) showCrash(ev.reason);
 });
-
-let splashGone = false;
-function hideSplash() {
-  if (splashGone) return;
-  splashGone = true;
-  const s = $('splash');
-  s.classList.add('gone');
-  setTimeout(() => s.remove(), 300);
-}
 
 // ───────────────────────────────────────────── input: taps, long-press, typing
 
@@ -1382,6 +1391,7 @@ $('content').addEventListener('touchend', (ev) => {
 // ───────────────────────────────────────────── boot
 
 window.__glb = app; // handy for debugging from the console
+app._gps = gps; // tests + console: the location watcher
 // Realtime handlers, reachable from the console / headless checks to simulate a push.
 app._remote = { score: onRemoteScore, event: onRemoteEvent, joinRequest: onRemoteJoinRequest, note: onRemoteNote };
 document.documentElement.classList.toggle('standalone', db.STANDALONE); // home screen app: no Safari bars
@@ -1394,6 +1404,7 @@ if (db.STANDALONE) {
   fit();
   addEventListener('resize', fit);
 }
+initLoader(() => ({ loading: app.loading, error: !!app.loadError, code: app.code }));
 route();
 if (db.moved) app.toast({ title: 'You’re all set', sub: 'Same phone as in Safari: your rounds and crew came with you.' });
-setTimeout(hideSplash, 4000); // never strand anyone on the launch screen
+setTimeout(() => { if (!app.loading && !app.loadError) loaderReady(); }, 4000); // never strand anyone on the launch screen

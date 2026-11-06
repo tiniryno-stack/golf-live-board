@@ -11,10 +11,67 @@
   <meta name="apple-mobile-web-app-title" content="Golf Board">
   <link rel="apple-touch-icon" href="icon-180.png">
   <title>Golf Live Board</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23000'/%3E%3Cpath d='M26 12v34' stroke='%23ECEEF1' stroke-width='4' stroke-linecap='round'/%3E%3Cpath d='M28 13l16 6-16 7z' fill='%23F4C95D'/%3E%3Cellipse cx='32' cy='50' rx='14' ry='4' fill='none' stroke='%23ECEEF1' stroke-width='3'/%3E%3C/svg%3E">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="favicon-32.png" sizes="32x32">
+  <!-- iOS launch images (home screen app only; feature 020). The mark sits 300pt from the top, where #loader draws it. -->
+  <link rel="apple-touch-startup-image" href="img/startup/startup-se-750x1334.png" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="img/startup/startup-13mini-1125x2436.png" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="img/startup/startup-14-1170x2532.png" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="img/startup/startup-15-16-1179x2556.png" media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="img/startup/startup-16pro-1206x2622.png" media="(device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="img/startup/startup-plus-promax-1290x2796.png" media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="img/startup/startup-16promax-1320x2868.png" media="(device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <style>
+    /* The loading screen (feature 020) is styled here, not in styles.css, so it is right from the first
+       paint, before the loader below has fetched the CSS. Colors = design tokens (dark / light). */
+    /* The page itself is painted from the first frame too: until styles.css loads, an unpainted page is white,
+       and on the home screen app (a page ~one status bar shorter than the screen) that showed as a white
+       sliver at the bottom for a frame (Nov 5). */
+    html, body { margin: 0; background: #0a0b0d; color-scheme: dark; }
+    html[data-theme="light"], html[data-theme="light"] body { background: #f2f3f5; color-scheme: light; }
+    .loader { --ld-bg: #0a0b0d; --ld-text: #f4f5f7; --ld-muted: #a7acb4; --ld-ball: #3ddc84; --ld-button: #f4f5f7; --ld-on-button: #0a0b0d; }
+    [data-theme="light"] .loader { --ld-bg: #f2f3f5; --ld-text: #0b0d10; --ld-muted: #4f555e; --ld-ball: #12a35c; --ld-button: #0b0d10; --ld-on-button: #ffffff; }
+    .loader {
+      position: fixed; top: 0; left: 0; right: 0; height: 100vh; height: max(100dvh, var(--app-h, 100dvh)); z-index: 100;
+      background: var(--bg, var(--ld-bg)); color: var(--text, var(--ld-text));
+      font-family: Geist, system-ui, -apple-system, sans-serif; -webkit-font-smoothing: antialiased;
+      display: flex; flex-direction: column; align-items: center; padding-top: 300px; box-sizing: border-box;
+      transition: opacity 280ms cubic-bezier(.2, .8, .2, 1);
+    }
+    .loader.gone { opacity: 0; pointer-events: none; }
+    .loader[hidden] { display: none; }
+    .ld-mark { display: block; width: 120px; height: 120px; overflow: visible; }
+    .ld-ring { transform-origin: 42px 58px; }
+    .ld-ball { fill: var(--cart-you, var(--ld-ball)); transform-origin: 42px 58px; }
+    .ld-ball.orbit { animation: ld-orbit 1000ms linear infinite; }
+    .loader.stopped .ld-ball.orbit { animation-play-state: paused; }
+    .ld-ball.drop { transform-origin: 73.1px 26.9px; animation: ld-drop 460ms cubic-bezier(.4, 0, 1, 1) both; }
+    .ld-ring.dip { animation: ld-settle 420ms cubic-bezier(.2, .8, .2, 1) both; }
+    @keyframes ld-orbit { to { transform: rotate(360deg); } }
+    @keyframes ld-drop { 0% { transform: translate(0, 0) scale(1); opacity: 1; } 70% { transform: translate(-31px, 31px) scale(.55); opacity: 1; } 100% { transform: translate(-31px, 31px) scale(.22); opacity: 0; } }
+    @keyframes ld-settle { 0%, 30% { transform: translate(0, 0); } 55% { transform: translate(0, 2px); } 100% { transform: translate(0, 0); } }
+    .ld-name { font-size: 20px; line-height: 24px; font-weight: 800; letter-spacing: -0.6px; margin-top: 22px; }
+    .ld-text { min-height: 120px; margin-top: 28px; width: 100%; padding: 0 32px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; text-align: center; }
+    .ld-text > * { margin: 0; animation: ld-fade 280ms cubic-bezier(.2, .8, .2, 1) both; }
+    .ld-text .ld-sub { font-size: 15px; line-height: 20px; font-weight: 500; color: var(--text-muted, var(--ld-muted)); }
+    .ld-text .ld-small { font-size: 13px; line-height: 18px; font-weight: 500; color: var(--text-muted, var(--ld-muted)); margin-top: 6px; }
+    .ld-text .ld-head { font-size: 22px; line-height: 28px; font-weight: 700; }
+    .ld-text .ld-head + .ld-sub { margin-top: 6px; }
+    .ld-text .ld-btn { margin-top: 18px; height: 52px; padding: 0 28px; border: 0; border-radius: var(--radius-lg, 16px); background: var(--button, var(--ld-button)); color: var(--on-button, var(--ld-on-button)); font: inherit; font-size: 17px; font-weight: 600; cursor: pointer; }
+    @keyframes ld-fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+    @media (prefers-reduced-motion: reduce) { .ld-ball.orbit, .ld-ball.drop, .ld-ring.dip, .ld-text > * { animation: none; } }
+  </style>
   <script>
     // Theme before first paint: dark by default, light if this phone chose it.
     try { if (JSON.parse(localStorage.getItem('glb.theme')) === 'light') document.documentElement.dataset.theme = 'light'; } catch (e) {}
+    // Home screen app: the real screen height before the first paint too (app.js keeps it updated), so the
+    // loading screen covers the whole screen from frame one. Same rule as app.js; standalone = no Safari bars.
+    try {
+      if (navigator.standalone || matchMedia('(display-mode: standalone)').matches) {
+        var tall = Math.max(screen.width, screen.height), short = Math.min(screen.width, screen.height);
+        document.documentElement.style.setProperty('--app-h', (innerHeight > innerWidth ? tall : short) + 'px');
+      }
+    } catch (e) {}
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -67,10 +124,13 @@
     Turn your phone upright
   </div>
 
-  <div id="splash" class="splash" aria-hidden="true">
-    <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M26 10v38"/><path d="M27 11l17 6.5L27 24z" fill="currentColor" stroke="none"/><ellipse cx="32" cy="52" rx="16" ry="4.5"/>
+  <div id="loader" class="loader" role="status" aria-label="Golf Live Board">
+    <svg class="ld-mark" viewBox="0 0 100 100" aria-hidden="true">
+      <circle class="ld-ring" cx="42" cy="58" r="30" fill="none" stroke="currentColor" stroke-width="13"/>
+      <circle class="ld-ball orbit" cx="73.1" cy="26.9" r="11"/>
     </svg>
+    <div class="ld-name">Golf Live Board</div>
+    <div class="ld-text" aria-live="polite"></div>
   </div>
   <noscript>Golf Live Board needs JavaScript.</noscript>
 </body>

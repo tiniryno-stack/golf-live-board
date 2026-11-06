@@ -5,7 +5,7 @@
 // lives in a round's ⋯ menu. Everything here comes from this phone (glb.recent), no network.
 
 import { esc, icon, prettyDate, initials, empty } from '../ui.js';
-import { recent, normCode, STANDALONE, moveLink } from '../db.js';
+import { recent, normCode, STANDALONE, moveLink, syncMyRounds } from '../db.js';
 import { homeCrew } from './crew.js';
 import { fmtPts, fmtToPar, playerLeaderboard } from '../scoring.js';
 
@@ -25,6 +25,7 @@ function gameLabel(snap) {
   const st = snap.settings;
   if (st.pairs) return '2v2';
   if (snap.game?.type === 'splitPoint') return 'Match play';
+  if (snap.game?.sides) return 'Team Ryder Cup';
   if (snap.game) return 'Partner “Rider” Cup';
   return 'Stroke play';
 }
@@ -51,6 +52,17 @@ export function roundSummary(app) {
     const r = g.people.find((x) => x.playerId === me.id);
     if (r) { rank = r.rank; value = fmtPts(r.points); points = value; }
     line = rank ? `${ordinal(rank)}` : '';
+  } else if (g && g.sides) {
+    const s = g.sides.find((x) => x.teamIds.includes(app.myTeam())) || g.sides[0];
+    const o = g.sides.find((x) => x !== s);
+    rank = s.rank;
+    points = `${fmtPts(s.points)}–${fmtPts(o.points)}`;
+    value = points;
+    line = `${s.name} · ${s.points > o.points ? 'up' : s.points < o.points ? 'down' : 'all square'}${s.points !== o.points ? ` ${fmtPts(Math.abs(s.points - o.points))}` : ''}`;
+    if (out.done) {
+      out.result = { line: s.points > o.points ? 'Won the cup' : s.points < o.points ? 'Lost the cup' : 'Shared the cup', value };
+      return out;
+    }
   } else if (g) {
     const mine = app.myTeam();
     const st = g.liveStandings;
@@ -122,10 +134,19 @@ function codeField() {
     </div>`;
 }
 
+// The Home header: the mark (feature 020, L2 lockup: ring centered on the capitals, 10px gap).
+const TITLE = `<h1 class="ts-title home-title"><span class="home-mark" aria-hidden="true"><img class="mk-dark" src="img/mark-dark.svg" alt="" width="30" height="30"><img class="mk-light" src="img/mark-light.svg" alt="" width="30" height="30"></span>Golf Live Board</h1>`;
+let synced = false;
+
 export default {
   topLeft: () => header(recent.all()),
 
   render(app) {
+    // Once per open: pull in your rounds this phone has never seen (new phone / home screen app).
+    if (!synced) {
+      synced = true;
+      syncMyRounds().then((n) => { if (n) app.render(); }).catch(() => { /* offline: next open */ });
+    }
     const rounds = recent.all();
     const now = Date.now();
     const live = rounds.find((r) => r.live && !r.done && now - (r.seen || r.at || 0) < LIVE_FOR) || null;
@@ -138,7 +159,7 @@ export default {
 `;
     if (!rounds.length) {
       return `<div class="plain home">
-        <h1 class="ts-title home-title">Golf Live Board</h1>
+        ${TITLE}
         ${empty({ icon: 'flag', headline: 'No rounds yet', help: 'Start one and text the code to your group, or join a round a friend started.' })}
         <div class="home-join">${codeField()}</div>
         ${season}<div class="home-list">${extras}</div>
@@ -146,7 +167,7 @@ export default {
       </div>`;
     }
     return `<div class="plain home">
-      <h1 class="ts-title home-title">Golf Live Board</h1>
+      ${TITLE}
       ${live ? liveCard(live) : ''}
       ${season}
       ${extras.trim() ? `<div class="home-list">${extras}</div>` : ''}
