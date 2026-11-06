@@ -106,7 +106,7 @@ function hcpStepView(app) {
       <div class="nr-sub">Strokes over 18 holes. Each player sees theirs when they join, so set them before you send the invite.</div></div>
     <div class="card lb-card lb-rows">${ps.map((p) => `<label class="row lb-row" for="hs-${esc(p.id)}"><span class="body"><b class="lb-rt">${esc(p.name)}</b></span>
       <input class="input num" id="hs-${esc(p.id)}" inputmode="numeric" pattern="[0-9]*" maxlength="2" autocomplete="off" value="${esc(val(p))}" aria-label="${esc(p.name)} handicap" data-input="lh-hstep-in" data-v="${esc(p.id)}"></label>`).join('')}</div>
-    <div class="nr-foot"><p class="meta lb-note" id="hs-left">${left ? `${left} still to set` : 'All set'}</p>
+    <div class="nr-foot">${step.fromSetup ? '<p class="meta lb-note">Not sure of one? Put your best guess: you can fix it in Host → Handicaps before the day.</p>' : ''}<p class="meta lb-note" id="hs-left">${left ? `${left} still to set` : 'All set'}</p>
       <button class="btn primary nr-cta" data-act="lh-hstep-save" id="hs-save"${step.fromSetup && left ? ' disabled' : ''}>${step.fromSetup ? 'Open the lobby' : 'Save handicaps'}</button></div>
   </div>`;
 }

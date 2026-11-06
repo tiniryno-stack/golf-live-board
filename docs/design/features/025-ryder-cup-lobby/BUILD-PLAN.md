@@ -565,3 +565,7 @@ pass; show the move link only on the Add to Home Screen step itself; a practice 
   the Home / app-only sheet uses the same four steps (••• → Share → Add to Home Screen → the icon).
 - **"Start here"** is now a bold inverse badge, **Tap ••• here**, with a gently bobbing arrow (still with reduced
   motion: no bob), bottom-right over Safari's •••.
+
+Light check after the owner's notes (red team 9 · frontend 9 · product QA 9, owner asked for one pass): no breaks. Added
+the "Not sure of one? Put your best guess…" hint on the handicap step. Known: the required step and the 3-minute timer
+live in memory, so a reload skips the step (Host → Handicaps still covers it) and restarts the timer.
