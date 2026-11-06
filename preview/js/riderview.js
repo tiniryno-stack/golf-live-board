@@ -100,9 +100,10 @@ function riderMatch(snap, m, myTeam, carts, g) {
  * `strokes` (optional) = [us0, us1, them0, them1] "gets a stroke on this hole" flags, so the not-counted
  * line can read "a net 4". Returns { counts:[bool×4], lowBall, lowTotal, need }, each of lowBall/lowTotal
  * being { who:'us'|'them'|'tie', text, pts } once counted (null before), and need being
- * { lead, rest } or null.
+ * { lead, rest } or null. `mine: false` (a match you're not in, opened from the Board) = neutral words:
+ * "Josh + Brandon are in. Andrew + Alex haven't posted yet.", no advice addressed to you.
  */
-export function holeLines(hole, usNames, themNames, strokes = null) {
+export function holeLines(hole, usNames, themNames, strokes = null, { mine = true } = {}) {
   const u = hole.net.us, t = hole.net.them;
   const allIn = hole.whoIsIn === 'both';
   // Which of the four scores count (lit); the rest dim. Judged on net.
@@ -129,7 +130,10 @@ export function holeLines(hole, usNames, themNames, strokes = null) {
   const lowTotal = allIn ? win(hole.lowTotal, (hole.lowTotal === 'us' ? usNames : themNames).join(' + ')) : null;
   // The "not counted yet" line (one or the other side in, never both).
   let need = null;
-  if (hole.whoIsIn === 'us') {
+  if (!mine && (hole.whoIsIn === 'us' || hole.whoIsIn === 'them')) {
+    const [inN, outN] = hole.whoIsIn === 'us' ? [usNames, themNames] : [themNames, usNames];
+    need = { lead: `${inN.join(' + ')} are in.`, rest: `${outN.join(' + ')} haven’t posted yet.` };
+  } else if (hole.whoIsIn === 'us') {
     need = { lead: 'Your scores are in.', rest: `${themNames.join(' + ')} haven’t posted yet.` };
   } else if (hole.whoIsIn === 'them') {
     const net = (i) => `${strokes && strokes[2 + i] ? 'a net ' : ''}${t[i]}`;

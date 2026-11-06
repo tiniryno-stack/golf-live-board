@@ -9,6 +9,7 @@ import { esc, icon, seg, clock, copyText, roundLink } from '../ui.js';
 import * as db from '../db.js';
 import { teeTimeName, ryderMatchupsAt, normalizeSettings, playOrder, sideOf } from '../scoring.js';
 import { sideColor } from '../teams.js';
+import { hostLobbyView, lobbyActions, openedLine } from './hostlobby.js';
 
 const clone = (x) => JSON.parse(JSON.stringify(x));
 const TEAM_IDS = ['A', 'B', 'C', 'D'];
@@ -250,6 +251,9 @@ function validate(d) {
 export default {
   render(app) {
     if (!app.adminPin) return pinForm();
+    // 025: a Team Ryder Cup lobby that isn't open yet (or is called off): the lobby view replaces the tabs.
+    const lst = app.lobby();
+    if (lst && !lst.open) return hostLobbyView(app);
     const d = draft(app);
     const tab = app.ui.hostTab;
     const body = tab === 'players' ? players(app, d) : tab === 'activity' ? activity(app) : rules(app, d);
@@ -258,12 +262,22 @@ export default {
       <button class="btn" data-act="host-discard">Discard</button></div>`;
     return `<div class="plain" style="padding-bottom:0">
       <h1 class="title">Host</h1>
+      ${openedLine(app)}
       <div class="segs">${seg('host-tab', [['rules', 'Rules'], ['players', 'Players'], ['activity', 'Activity']], tab)}</div>
       ${body}${save}
     </div>`;
   },
 
+  mount(root, app) {
+    // 025: right after "Invite now, draft later" creates the round, the invite share sheet opens once.
+    if (app.ui.lobbyShare === app.code && app.adminPin && app.lobby() && !app.sheet) {
+      app.ui.lobbyShare = null;
+      lobbyActions['lh-invite'](null, null, app);
+    }
+  },
+
   actions: {
+    ...lobbyActions,
     'host-pin': async (el, ev, app) => {
       const input = document.getElementById('pin');
       const pin = (input?.value || '').replace(/\D/g, '');
@@ -463,6 +477,8 @@ export default {
         app.toast({ title: 'Not saved', sub: problem, error: true });
         return;
       }
+      // 025: the lobby (opensAt, notice, stage) is never taken from a draft opened earlier: the latest copy wins.
+      if (app.event.settings?.lobby !== undefined) d.settings.lobby = clone(app.event.settings.lobby);
       for (const t of d.roster.teams || []) t.name = t.name.trim() || `Cart ${t.id}`;
       for (const p of d.roster.players) p.name = p.name.trim();
       const ok = await app.saveEvent({ course: d.course, roster: d.roster, settings: d.settings, name: d.name.trim() });

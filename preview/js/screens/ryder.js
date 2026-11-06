@@ -233,10 +233,57 @@ export function ryderPlayers(app) {
 
 // ───────────────────────────────────────────── match sheet (read-only, no X)
 
+/**
+ * The sheet's score card (council, Nov 6): the names show once. One top line = state (holes · LIVE / FINAL /
+ * UP NEXT, and THRU n / ALL SQUARE / HALVED on the right); both sides on one baseline, each with a reserved
+ * label row under its points: your margin under your pair on your match (2 UP / 2 DN), else 1 UP under
+ * the leader; WON under the winner. Someone else's match: fixed colours by side, left pair white (your side
+ * in Team Ryder Cup), right pair grey, bars and tiles included; only the label moves with the lead.
+ */
+function rsCard(m, snap, mine) {
+  const ncomp = snap.game?.ncomp || 2;
+  const [u, t] = m.holePts;
+  const max = m.maxPts || m.total * ncomp;
+  const halves = Number(snap.settings.halvedHolePoints) || 0;
+  const clinch = m.clinchAt ?? (halves ? max / 2 + 0.5 : Math.floor(max / 2) + 1);
+  const tickPct = (clinch / max) * 100;
+  const done = m.status === 'done', live = m.status === 'live';
+  const lead = done ? (m.result === 'won' ? 'us' : m.result === 'lost' ? 'them' : null) : live ? (m.leader === 'us' || m.leader === 'them' ? m.leader : null) : null;
+  const margin = fmtPts(Math.abs(u - t));
+  const holes = m.label.replace(/^Holes /, '');
+  const state = done ? 'FINAL' : live ? 'LIVE' : 'UP NEXT';
+  const right = done ? (m.result === 'halved' ? 'HALVED' : '') : live ? `THRU ${m.thru}${lead ? '' : ' · ALL SQUARE'}` : '';
+  const slot = (side) => {
+    if (done) return lead === side ? 'WON' : '';
+    if (!live || !lead) return '';
+    if (mine) return side === 'us' ? `${margin} ${lead === 'us' ? 'UP' : 'DN'}` : '';
+    return lead === side ? `${margin} UP` : '';
+  };
+  const sideHtml = (side, cart, pts) => `<div class="rm-side ${side}"><span class="rm-cn ellipsis">${esc(cartTitle(cart))}</span><span class="rm-pts mono">${fmtPts(pts)}</span><span class="rs-slot lbl${mine && side === 'us' && lead === 'us' ? ' up' : ''}">${slot(side)}</span></div>`;
+  return `<div class="rs-top"><span class="lbl">HOLES ${esc(holes)} · <b>${state}</b></span><span class="lbl">${right}</span></div>
+    <section class="rm-card">
+      <div class="rm-sides">${sideHtml('us', m.us, u)}${sideHtml('them', m.them, t)}</div>
+      <div class="rm-bar"><span class="rm-u" style="width:${Math.min(100, (u / max) * 100)}%"></span><span class="rm-t" style="width:${Math.min(100, (t / max) * 100)}%"></span><span class="rm-tick" style="left:${tickPct}%"></span></div>
+      ${done ? '' : `<div class="rm-foot"><span>${fmtPts((m.total - m.thru) * ncomp)} pts left</span><span class="rm-cl" style="left:${tickPct}%">${fmtPts(clinch)} wins</span></div>`}
+    </section>`;
+}
+
+/** Board → tap a match: the same pieces as Matches (023), read-only. Green only when it's your cart's match. */
 export function ryderMatchSheet(app, { id, hole }) {
   const st = ryState(app);
   const m = st?.matches.find((x) => x.id === id);
   if (!m) return '';
+  if (m.pm) return ryderMatchSheetLegacy(app, m, hole); // Plus/Minus: as on Matches, out of 023's scope
+  const mine = !!app.myTeam() && m.us.id === app.myTeam();
+  const h = m.holes.find((x) => x.hole === Number(hole)) || m.holes.find((x) => x.hole === defaultHole(m));
+  return `<div class="ry-sheet rm rs${mine ? '' : ' plain'}">
+      ${rsCard(m, app.snapshot, mine)}
+      ${rmStrip(m, h.hole, 'ry-sheet-hole', null, { split: !mine })}
+      ${rmDetail(app, m, h, { mine })}
+    </div>`;
+}
+
+function ryderMatchSheetLegacy(app, m, hole) {
   const h = m.holes.find((x) => x.hole === Number(hole)) || m.holes.find((x) => x.hole === defaultHole(m));
   const status = m.status === 'done' ? 'FINAL' : m.status === 'live' ? 'LIVE' : 'UP NEXT';
   const [u, t] = m.holePts;
@@ -339,6 +386,83 @@ function rmRes(label, line) {
   return `<div class="rm-r"><span class="rm-rk">${label}</span><b class="rm-rw ${line.who === 'us' ? 'me' : 'them'}">${esc(line.text)}</b><span class="rm-rp ${ptClass(line.who)}">${esc(line.pts)}</span></div>`;
 }
 
+/** The score card (023 §1.3); shared with the Board's match sheet. */
+function rmCard(m, snap, { mine = true } = {}) {
+  const ncomp = snap.game?.ncomp || 2;
+  const [u, t] = m.holePts;
+  const max = m.maxPts || m.total * ncomp;
+  const halves = Number(snap.settings.halvedHolePoints) || 0;
+  const clinch = m.clinchAt ?? (halves ? max / 2 + 0.5 : Math.floor(max / 2) + 1);
+  const tickPct = (clinch / max) * 100;
+  const leftPts = (m.total - m.thru) * ncomp;
+  const up = (m.status === 'live' && m.leader === 'us') || m.result === 'won';
+  const margin = fmtPts(Math.abs(u - t));
+  // A match you're not in (the Board's sheet) names the leader / winner instead of "you".
+  const who = (side) => cartTitle(side === 'us' ? m.us : m.them).toUpperCase();
+  const score = `${fmtPts(Math.max(u, t))}–${fmtPts(Math.min(u, t))}`;
+  const kicker = m.status === 'notStarted' ? 'NOTHING COUNTS YET'
+    : m.status === 'done'
+      ? (m.result === 'halved' ? 'FINAL · HALVED' : mine ? `FINAL · ${m.result === 'won' ? 'YOU WON' : 'LOST'} ${fmtPts(u)}–${fmtPts(t)}` : `FINAL · ${who(m.result === 'won' ? 'us' : 'them')} WON ${score}`)
+      : m.leader !== 'us' && m.leader !== 'them' ? `THRU ${m.thru} · ALL SQUARE`
+        : mine ? `THRU ${m.thru} · ${margin} ${m.leader === 'us' ? 'UP' : 'DN'}` : `THRU ${m.thru} · ${who(m.leader)} ${margin} UP`;
+  return `<section class="rm-card">
+      <div class="rm-k lbl${up ? ' up' : ''}">${esc(kicker)}</div>
+      <div class="rm-sides">
+        <div class="rm-side us"><span class="rm-cn ellipsis">${esc(cartTitle(m.us))}</span><span class="rm-pts mono">${fmtPts(u)}</span></div>
+        <div class="rm-side them"><span class="rm-cn ellipsis">${esc(cartTitle(m.them))}</span><span class="rm-pts mono">${fmtPts(t)}</span></div>
+      </div>
+      <div class="rm-bar"><span class="rm-u" style="width:${Math.min(100, (u / max) * 100)}%"></span><span class="rm-t" style="width:${Math.min(100, (t / max) * 100)}%"></span><span class="rm-tick" style="left:${tickPct}%"></span></div>
+      <div class="rm-foot"><span>${m.status === 'done' ? 'Match over' : `${fmtPts(leftPts)} pts left`}</span><span class="rm-cl" style="left:${tickPct}%">${fmtPts(clinch)} wins</span></div>
+    </section>`;
+
+}
+
+/** Six hole tiles with your points (023 §1.4). `motion` = the new-since rings + pop (Matches only). */
+function rmStrip(m, selHole, act, motion = null, { split = false } = {}) {
+  const { newHoles = [], popHoles = [], t0 = 0 } = motion || {};
+  // Someone else's match (Board sheet): colour is the key (left pair white, right pair grey, as in the card),
+  // so a counted tile shows the winning side's points in that side's colour; a split hole is AS.
+  const val = (h) => {
+    if (!split || !h.points) return rmTileVal(h);
+    const { us, them } = h.points;
+    if (us === them) return '<i class="sp-as">AS</i>';
+    return us > them ? `<i class="sp-us">+${fmtPts(us)}</i>` : `<i class="sp-them">+${fmtPts(them)}</i>`;
+  };
+  return `<div class="rm-strip">${m.holes.map((h) => {
+    const isNew = newHoles.includes(h.hole);
+    const pop = popHoles.indexOf(h.hole);
+    return `<button class="rm-tile${h.hole === selHole ? ' on' : ''}${isNew ? ' rm-new' : ''}"${isNew ? ` data-t0="${t0}"` : ''} data-act="${act}" data-m="${esc(m.id)}" data-v="${h.hole}" aria-pressed="${h.hole === selHole}"><b>${h.hole}</b><span class="rm-tv${pop >= 0 ? ' rm-pop' : ''}"${pop >= 0 ? ` style="--d:${pop * 120}ms"` : ''}>${val(h)}</span></button>`;
+  }).join('')}</div>`;
+
+}
+
+/** The selected hole: four scores (dimmed where they didn't count) + Low ball / Low total or the need line (023 §1.5). */
+function rmDetail(app, m, h, { mine = true } = {}) {
+  const snap = app.snapshot, ncomp = snap.game?.ncomp || 2;
+  const par = h.par;
+  const usNames = m.us.names, themNames = m.them.names;
+  const strokes = [...m.us.playerIds, ...m.them.playerIds].map((pid) => (snap.playerById.get(pid)?.dots[h.hole - 1] || 0) > 0);
+  const hl = holeLines(h, usNames, themNames, strokes, { mine });
+  const col = (name, pid, i, mineSide) => {
+    const g = grossOf(app, pid, h.hole);
+    const dim = !hl.counts[i];
+    return `<div class="rm-col"><span class="rm-cnm ellipsis${mineSide ? ' me' : ''}">${esc(name)}</span>
+      <span class="rm-cm">${g == null ? '<span class="rm-dash">–</span>' : mark(g, par, 34, { cls: dim ? 'rm-dim' : '' })}</span></div>`;
+  };
+  const cols = [
+    col(usNames[0], m.us.playerIds[0], 0, true), col(usNames[1], m.us.playerIds[1], 1, true),
+    col(themNames[0], m.them.playerIds[0], 2, false), col(themNames[1], m.them.playerIds[1], 3, false),
+  ].join('');
+  let lines = '';
+  if (hl.lowBall) {
+    lines = `<div class="rm-res">${rmRes('Low ball', hl.lowBall)}${ncomp > 1 && hl.lowTotal ? rmRes('Low total', hl.lowTotal) : ''}</div>`;
+  } else if (hl.need) {
+    lines = `<div class="rm-need">${esc(hl.need.lead)} <span class="m">${esc(hl.need.rest)}</span></div>`;
+  }
+
+  return `<div class="rm-detail"><div class="rm-four">${cols}</div>${lines}</div>`;
+}
+
 export function ryderMatches(app) {
   const st = ryState(app);
   const myCart = app.myTeam();
@@ -373,27 +497,7 @@ export function ryderMatches(app) {
     ? seg2('ry-rot', mine.map((x) => [x.id, `vs ${x.them.name}`, x.status === 'live' ? 'live' : x.status === 'notStarted' ? 'up next' : `${x.result === 'won' ? 'won' : x.result === 'lost' ? 'lost' : 'halved'} ${fmtPts(Math.max(...x.holePts))}–${fmtPts(Math.min(...x.holePts))}`, { live: x.status === 'live' }]), m.id)
     : `<div class="rm-seg" role="group">${mine.map((x) => rmSeg(x, m.id, live?.id)).join('')}</div>`;
 
-  // Score card.
-  const [u, t] = m.holePts;
-  const max = m.maxPts || m.total * ncomp;
-  const halves = Number(snap.settings.halvedHolePoints) || 0;
-  const clinch = m.clinchAt ?? (halves ? max / 2 + 0.5 : Math.floor(max / 2) + 1);
-  const tickPct = (clinch / max) * 100;
-  const leftPts = (m.total - m.thru) * ncomp;
-  const up = (m.status === 'live' && m.leader === 'us') || m.result === 'won';
-  const margin = fmtPts(Math.abs(u - t));
-  const kicker = m.status === 'notStarted' ? 'NOTHING COUNTS YET'
-    : m.status === 'done' ? `FINAL · ${m.result === 'won' ? 'YOU WON' : m.result === 'lost' ? 'LOST' : 'HALVED'}${m.result === 'halved' ? '' : ` ${fmtPts(u)}–${fmtPts(t)}`}`
-    : `THRU ${m.thru} · ${m.leader === 'us' ? `${margin} UP` : m.leader === 'them' ? `${margin} DN` : 'ALL SQUARE'}`;
-  const card = `<section class="rm-card">
-      <div class="rm-k lbl${up ? ' up' : ''}">${esc(kicker)}</div>
-      <div class="rm-sides">
-        <div class="rm-side us"><span class="rm-cn ellipsis">${esc(cartTitle(m.us))}</span><span class="rm-pts mono">${fmtPts(u)}</span></div>
-        <div class="rm-side them"><span class="rm-cn ellipsis">${esc(cartTitle(m.them))}</span><span class="rm-pts mono">${fmtPts(t)}</span></div>
-      </div>
-      <div class="rm-bar"><span class="rm-u" style="width:${Math.min(100, (u / max) * 100)}%"></span><span class="rm-t" style="width:${Math.min(100, (t / max) * 100)}%"></span><span class="rm-tick" style="left:${tickPct}%"></span></div>
-      <div class="rm-foot"><span>${m.status === 'done' ? 'Match over' : `${fmtPts(leftPts)} pts left`}</span><span class="rm-cl" style="left:${tickPct}%">${fmtPts(clinch)} wins</span></div>
-    </section>`;
+  const card = rmCard(m, snap);
 
   // Hole strip, with 023 §4 "new since you last looked": holes counted here since your last visit get
   // a dashed ring and a staggered pop; the seen set is recorded (in mount) once they've been shown.
@@ -408,34 +512,10 @@ export function ryderMatches(app) {
   if (app.ui.rmKey !== motionKey) { app.ui.rmKey = motionKey; app.ui.rmT0 = now; }
   const t0 = app.ui.rmT0;
   app.ui.rm = { matchId: m.id, counted: countedNow, newHoles, t0 }; // mount reads this to record the seen set
-  const strip = `<div class="rm-strip">${m.holes.map((h) => {
-    const isNew = newHoles.includes(h.hole);
-    const pop = popHoles.indexOf(h.hole);
-    return `<button class="rm-tile${h.hole === selHole ? ' on' : ''}${isNew ? ' rm-new' : ''}"${isNew ? ` data-t0="${t0}"` : ''} data-act="ry-hole" data-m="${esc(m.id)}" data-v="${h.hole}" aria-pressed="${h.hole === selHole}"><b>${h.hole}</b><span class="rm-tv${pop >= 0 ? ' rm-pop' : ''}"${pop >= 0 ? ` style="--d:${pop * 120}ms"` : ''}>${rmTileVal(h)}</span></button>`;
-  }).join('')}</div>`;
+  const strip = rmStrip(m, selHole, 'ry-hole', { newHoles, popHoles, t0 });
 
-  // Hole detail: four score columns (dimmed where they didn't count), then the result rows / need line.
   const h = m.holes.find((x) => x.hole === selHole) || m.holes[0];
-  const par = h.par;
-  const usNames = m.us.names, themNames = m.them.names;
-  const strokes = [...m.us.playerIds, ...m.them.playerIds].map((pid) => (snap.playerById.get(pid)?.dots[h.hole - 1] || 0) > 0);
-  const hl = holeLines(h, usNames, themNames, strokes);
-  const col = (name, pid, i, mineSide) => {
-    const g = grossOf(app, pid, h.hole);
-    const dim = !hl.counts[i];
-    return `<div class="rm-col"><span class="rm-cnm ellipsis${mineSide ? ' me' : ''}">${esc(name)}</span>
-      <span class="rm-cm">${g == null ? '<span class="rm-dash">–</span>' : mark(g, par, 34, { cls: dim ? 'rm-dim' : '' })}</span></div>`;
-  };
-  const cols = [
-    col(usNames[0], m.us.playerIds[0], 0, true), col(usNames[1], m.us.playerIds[1], 1, true),
-    col(themNames[0], m.them.playerIds[0], 2, false), col(themNames[1], m.them.playerIds[1], 3, false),
-  ].join('');
-  let lines = '';
-  if (hl.lowBall) {
-    lines = `<div class="rm-res">${rmRes('Low ball', hl.lowBall)}${ncomp > 1 && hl.lowTotal ? rmRes('Low total', hl.lowTotal) : ''}</div>`;
-  } else if (hl.need) {
-    lines = `<div class="rm-need">${esc(hl.need.lead)} <span class="m">${esc(hl.need.rest)}</span></div>`;
-  }
+  const detail = rmDetail(app, m, h);
 
   return `<div class="plain ry-matches rm">
       <div class="rm-head">
@@ -445,10 +525,7 @@ export function ryderMatches(app) {
       ${picker}
       ${card}
       ${strip}
-      <div class="rm-detail">
-        <div class="rm-four">${cols}</div>
-        ${lines}
-      </div>
+      ${detail}
     </div>`;
 }
 

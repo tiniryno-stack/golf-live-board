@@ -5,7 +5,8 @@
 // lives in a round's ⋯ menu. Everything here comes from this phone (glb.recent), no network.
 
 import { esc, icon, prettyDate, initials, empty } from '../ui.js';
-import { recent, normCode, STANDALONE, moveLink, syncMyRounds, local } from '../db.js';
+import { recent, normCode, STANDALONE, moveLink, syncMyRounds, local, refreshLobbies, owner, clock } from '../db.js';
+import { lobbyState, homeCard } from '../lobby.js';
 import { homeCrew } from './crew.js';
 import { fmtPts, fmtToPar, playerLeaderboard } from '../scoring.js';
 
@@ -37,6 +38,15 @@ function gameLabel(snap) {
 export function roundSummary(app) {
   const snap = app.snapshot;
   if (!snap) return null;
+  // 025: a Team Ryder Cup lobby before scoring opens: Home's Coming up card, and which player this phone was
+  // (lobbyPid stays when the spot goes to a sub, so Home can say so).
+  const lst = app.event ? lobbyState(app.event, app.now ? app.now() : Date.now()) : null;
+  if (lst && !lst.open) {
+    const o = owner.get();
+    const me = app.myPlayer();
+    const card = homeCard(app.event, { pid: app.me || recent.all().find((r) => r.code === app.code)?.lobbyPid || null, personId: o?.personId || me?.personId || null }, app.now ? app.now() : Date.now());
+    return { game: 'Team Ryder Cup', myName: me ? me.firstName || me.name : null, done: false, ...(card ? { lobby: card } : {}), ...(app.me ? { lobbyPid: app.me } : {}) };
+  }
   const me = app.myPlayer();
   const out = { game: gameLabel(snap), myName: me ? me.firstName || me.name : null, done: !!(snap.roundComplete || app.isFinal()) };
   if (!me) return out;
@@ -117,6 +127,21 @@ function liveCard(r) {
     </div>`;
 }
 
+/** 025 · Coming up (9 / 10 / 11): a lobby round before scoring opens. A plain card (never the green live card);
+ *  its button is secondary (New round stays Home's primary). */
+function comingCard(r) {
+  const c = r.lobby;
+  const off = c.kind === 'off';
+  return `<div class="card lb-card lb-home">
+      <span class="lbl${off ? ' lb-offk' : ''}">${off ? '<span class="lb-dot" aria-hidden="true"></span>Called off · was ' : ''}${esc(c.when)}${off ? '' : ` · ${esc(r.course || '')}`}</span>
+      <b class="lb-name">${esc(r.name)}</b>
+      <span class="soft lb-line">${esc(c.line)}</span>
+      ${c.kind === 'coming'
+        ? `<button class="btn block lb-cbtn" data-act="go" data-v="#/e/${esc(r.code)}">Open</button>`
+        : `<button class="btn block lb-cbtn" data-act="home-text" data-v="${esc(c.host)}" data-r="${esc(r.name)}">Text ${esc(c.host)}</button>`}
+    </div>`;
+}
+
 function roundRow(r) {
   const sub = [prettyDate(r.played_on), r.game, r.result?.line].filter(Boolean).join(' · ');
   return `<button class="home-row" data-act="go" data-v="#/e/${esc(r.code)}" aria-label="Open ${esc(r.name)}">
@@ -146,11 +171,14 @@ export default {
     if (!synced) {
       synced = true;
       syncMyRounds().then((n) => { if (n) app.render(); }).catch(() => { /* offline: next open */ });
+      refreshLobbies(clock.now()).then((n) => { if (n) app.render(); }).catch(() => { /* offline: next open */ }); // 025
     }
     const rounds = recent.all();
     const now = Date.now();
-    const live = rounds.find((r) => r.live && !r.done && now - (r.seen || r.at || 0) < LIVE_FOR) || null;
-    const rest = rounds.filter((r) => r !== live);
+    const yesterday = new Date(now - 86400000).toISOString().slice(0, 10);
+    const coming = rounds.filter((r) => r.lobby && (!r.played_on || r.played_on >= yesterday));
+    const live = rounds.find((r) => !r.lobby && r.live && !r.done && now - (r.seen || r.at || 0) < LIVE_FOR) || null;
+    const rest = rounds.filter((r) => r !== live && !coming.includes(r));
     const season = homeCrew(app); // crew card / switcher / Start a crew (feature 006)
     const extras = `${!STANDALONE && isIOS() ? `<button class="home-row" data-act="home-add">
           <span class="hr-ico">${icon('phone', 22)}</span>
@@ -169,6 +197,7 @@ export default {
     return `<div class="plain home">
       ${TITLE}
       ${live ? liveCard(live) : ''}
+      ${coming.length ? `<div class="ts-label home-k">Coming up</div>${coming.map(comingCard).join('')}` : ''}
       ${season}
       ${extras.trim() ? `<div class="home-list">${extras}</div>` : ''}
       ${rest.length ? `<div class="ts-label home-k">Recent rounds</div><div class="home-list">${rest.map(roundRow).join('')}</div>` : ''}
@@ -190,6 +219,11 @@ export default {
       app.openSheet('homescreen', {});
     },
     'home-joinsheet': (el, ev, app) => app.openSheet('join', {}),
+    'home-text': async (el, ev, app) => {
+      const text = `Hi ${el.dataset.v}, about ${el.dataset.r}: `;
+      if (navigator.share) { try { await navigator.share({ text }); } catch { /* cancelled */ } return; }
+      app.toast({ title: `Text ${el.dataset.v} from your messages`, sub: 'There’s no number in Golf Board.' });
+    },
     'home-join': (el, ev, app) => {
       const code = normCode(document.getElementById('join-code')?.value || draftCode);
       if (code.length < 4) {

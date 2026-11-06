@@ -4,6 +4,7 @@
 
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from './config.js';
 import { migratedOwner } from './identity.js';
+import { homeCard, keepQueued, parseTime } from './lobby.js';
 
 // ───────────────────────────────────────────── local storage (never throws)
 
@@ -86,7 +87,7 @@ export function isPhone() {
   try { return /iPhone|iPod|Android/.test(navigator.userAgent); } catch { return false; }
 }
 
-const MOVE_KEYS =/^glb\.(device|recent|people|theme|crews|crew$|owner$|hasApp$|me\.|admin\.|brief\.|who\.|coach\.|seen\.)/;
+const MOVE_KEYS =/^glb\.(device|recent|people|theme|crews|crew$|owner$|hasApp$|me\.|admin\.|brief\.|who\.|coach\.|seen\.|lobbyhost\.)/;
 const toB64 = (s) => btoa(String.fromCharCode(...new TextEncoder().encode(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const fromB64 = (s) => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0)));
 
@@ -197,8 +198,10 @@ export const recent = {
   },
   remember(ev) {
     if (!ev?.code) return;
+    const was = recent.all().find((r) => r.code === ev.code);
     const list = recent.all().filter((r) => r.code !== ev.code);
     list.unshift({
+      ...(was?.lobbyPid ? { lobbyPid: was.lobbyPid } : {}), ...(was?.lobby ? { lobby: was.lobby } : {}), // 025: who this phone was
       code: ev.code, name: ev.name, played_on: ev.played_on || null, crew_id: ev.crew_id || null,
       practice: String(ev.settings?.practice) === 'true' || undefined,
       course: ev.course?.shortName || ev.course?.name || '', at: Date.now(),
@@ -215,11 +218,46 @@ export const recent = {
     const next = { ...rest, ...patch, seen: Date.now() };
     if (!patch.live) delete next.live;
     if (!patch.result) delete next.result;
+    if (!patch.lobby) delete next.lobby; // 025: Home's Coming up card (lobbyPid stays: who this phone was)
     const strip = (o) => JSON.stringify({ ...o, seen: 0 });
     if (strip(next) === strip(list[i])) return; // nothing new: don't rewrite storage on every redraw
     list[i] = next;
     local.set('glb.recent', list);
   },
+};
+
+/**
+ * 025: refresh Home's "Coming up" cards from the server (one select for the lobby rounds this phone knows, not past):
+ * teams drafted, start times, a spot given to a sub, called off. Returns how many cards changed.
+ */
+export async function refreshLobbies(nowMs = Date.now()) {
+  const today = new Date(nowMs - 86400000).toISOString().slice(0, 10);
+  const mine = recent.all().filter((r) => r.lobby && (!r.played_on || r.played_on >= today));
+  if (!mine.length) return 0;
+  const rows = (await select(sb().from('events').select('code,name,played_on,course,roster,settings').in('code', mine.map((r) => r.code)))) || [];
+  const o = owner.get();
+  let n = 0;
+  const list = recent.all();
+  for (const ev of rows) {
+    const i = list.findIndex((r) => r.code === ev.code);
+    if (i < 0) continue;
+    const card = homeCard(ev, { pid: list[i].lobbyPid || null, personId: o?.personId || null }, nowMs);
+    const next = { ...list[i], played_on: ev.played_on || list[i].played_on, lobby: card || undefined };
+    if (!card) delete next.lobby;
+    if (JSON.stringify(next) !== JSON.stringify(list[i])) { list[i] = next; n++; }
+  }
+  if (n) local.set('glb.recent', list);
+  return n;
+}
+
+/** 025: the server's clock minus this phone's (ms), learned from answers that carry `now`. */
+export const clock = {
+  skew: 0,
+  learn(serverNow) {
+    const t = parseTime(serverNow);
+    if (Number.isFinite(t)) clock.skew = t - Date.now();
+  },
+  now: () => Date.now() + clock.skew,
 };
 
 /** The people this phone has played as (personId), so a new phone or home screen app can find its rounds (Nov 5). */
@@ -401,7 +439,20 @@ export const api = {
     }),
   verifyAdmin: (code, pin) => rpc('verify_admin', { p_code: code, p_admin_pin: pin }),
   claimedPlayers: (code) => rpc('claimed_players', { p_code: code }),
-  whoami: (code) => rpc('whoami', { p_code: code, p_device_id: deviceId }),
+  whoami: async (code) => {
+    const res = await rpc('whoami', { p_code: code, p_device_id: deviceId });
+    if (res?.now) clock.learn(res.now); // 025: the server decides when scoring opens
+    return res;
+  },
+  // 025 · Team Ryder Cup lobby
+  markInApp: async (code) => {
+    const res = await rpc('mark_in_app', { p_code: code, p_device_id: deviceId });
+    if (res?.now) clock.learn(res.now);
+    return res;
+  },
+  lobbyStatus: (code, pin) => rpc('lobby_status', { p_code: code, p_admin_pin: pin }),
+  lobbyCounts: (code) => rpc('lobby_counts', { p_code: code }),
+  setRoundDate: (code, pin, date, opensAt = null) => rpc('set_round_date', { p_code: code, p_admin_pin: pin, p_date: date, p_opens_at: opensAt }),
   claimPlayer: (code, playerId) => rpc('claim_player', { p_code: code, p_player_id: playerId, p_device_id: deviceId }),
   leaveRound: (code) => rpc('leave_round', { p_code: code, p_device_id: deviceId }),
   notMe: (code) => rpc('not_me', { p_code: code, p_device_id: deviceId }), // 024 §4: "I'm not Baker"
@@ -526,6 +577,10 @@ export async function flush() {
       } catch (e) {
         break; // no signal — keep everything, try again later
       }
+      if (res?.now) clock.learn(res.now);
+      // 025: a not_open refusal moments before opening (a phone clock a little fast) stays queued and goes again
+      // when the round opens; every other refusal is final, so not_open writes never pile up.
+      if (keepQueued(res)) { sync.handlers.onReject?.(item, res.error, { ...res, kept: true }); continue; }
       queue.settle(code, item);
       if (res.ok) sync.handlers.onSaved?.(item, res);
       else sync.handlers.onReject?.(item, res.error, res);

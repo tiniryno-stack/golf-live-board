@@ -1,5 +1,5 @@
 {
- "v": "20261106075434",
+ "v": "20261106172542",
  "files": [
   "css/styles.css",
   "css/tokens.css",
@@ -17,6 +17,7 @@
   "js/headlines.js",
   "js/identity.js",
   "js/loader.js",
+  "js/lobby.js",
   "js/names.js",
   "js/race.js",
   "js/reward.js",
@@ -30,6 +31,8 @@
   "js/screens/greencard.js",
   "js/screens/home.js",
   "js/screens/host.js",
+  "js/screens/hostlobby.js",
+  "js/screens/lobby.js",
   "js/screens/matches.js",
   "js/screens/recap.js",
   "js/screens/ryder.js",
