@@ -11,6 +11,7 @@ import { teeTimeName, ryderMatchupsAt, normalizeSettings, playOrder, sideOf } fr
 import { sideColor } from '../teams.js';
 import { hostLobbyView, lobbyActions, openedLine } from './hostlobby.js';
 import { startLobbyEdit } from './setup.js';
+import * as L from '../lobby.js';
 
 const clone = (x) => JSON.parse(JSON.stringify(x));
 const TEAM_IDS = ['A', 'B', 'C', 'D'];
@@ -277,12 +278,21 @@ export default {
       setTimeout(() => startLobbyEdit(app, 'carts', { fromSetup: true }), 0);
       return;
     }
+    // Then everyone's handicap (required before the invite: each player sees theirs when they join).
+    if (app.ui.lobbyHcp === app.code && app.adminPin && app.lobby() && !app.setup?.lobby) {
+      app.ui.lobbyHcp = null;
+      const r = app.event.roster;
+      if (L.handicapCount(r) < (r.players || []).length) {
+        setTimeout(() => { app.ui.hcpStep = { code: app.code, fromSetup: true, vals: {} }; app.render(); }, 0);
+        return;
+      }
+    }
     if (app.ui.lobbyShareTeams === app.code && app.adminPin && app.lobby() && !app.sheet && !app.setup?.lobby) {
       app.ui.lobbyShareTeams = null;
       lobbyActions['lh-share-teams'](null, null, app);
       return;
     }
-    if (app.ui.lobbyShare === app.code && app.adminPin && app.lobby() && !app.sheet && !app.setup?.lobby) {
+    if (app.ui.lobbyShare === app.code && app.adminPin && app.lobby() && !app.sheet && !app.setup?.lobby && app.ui.hcpStep?.code !== app.code && app.ui.lobbyHcp !== app.code) {
       app.ui.lobbyShare = null;
       lobbyActions['lh-invite'](null, null, app);
     }

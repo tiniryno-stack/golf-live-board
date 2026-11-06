@@ -278,6 +278,7 @@ export function lobbyView(state, ctx = {}) {
     if (ctx.guide) return 'guide';
     return ctx.invite && ctx.hcpFlow ? 'invite' : 'landing';
   }
+  if (ctx.guide && ctx.safariPhone) return 'guide'; // Add Golf Board to your home screen (the lobby row)
   if (ctx.revealing) return 'reveal';
   if (ctx.hasHcp && !ctx.seenHcp) {
     // The handicap opens in the app (SPEC §6): on iPhone Safari a joined player (024 auto-join included) gets the
@@ -638,3 +639,17 @@ export function inviteText(name, day, withHcp, who = '') {
 /** The guide's steps are Safari's: is this iPhone browser something else (an app's own web view such as Partiful's,
  *  which leaves "Safari/" out of its user agent, or Chrome / Firefox / Facebook / Instagram)? */
 export const notSafari = (ua) => !/Safari\//.test(String(ua || '')) || /CriOS|FxiOS|FBAN|FBAV|Instagram/.test(String(ua || ''));
+
+/** Who's playing, lowest handicap first (owner, Nov 6); no handicap last; ties A–Z. */
+export function byHandicap(roster, list) {
+  const h = (id) => hcpOf(roster, id)?.strokes;
+  return [...list].sort((a, b) => {
+    const x = h(a.id), y = h(b.id);
+    if (x == null || y == null) return x == null && y == null ? 0 : x == null ? 1 : -1;
+    return x - y;
+  });
+}
+
+/** The guide's "Can't add it?" escape shows only after this long on the steps (owner: the home screen is the way in). */
+export const GUIDE_ESCAPE_MS = 3 * 60000;
+export const guideEscape = (shownAt, nowMs) => Number.isFinite(shownAt) && nowMs - shownAt >= GUIDE_ESCAPE_MS;

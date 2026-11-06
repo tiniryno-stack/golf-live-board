@@ -276,9 +276,10 @@ const BODIES = {
     // 024 §6: the app-only gate opens this for one round (placeholder until 025's landing screen).
     return `${head('Add to Home Screen', round ? `To play in ${round}, open it from your home screen` : '')}
       <ol class="hs-steps">
-        <li><span class="hs-n">1</span><span>Tap <b>Share</b> ${icon('share', 18)} in Safari’s bar. On newer iPhones it’s under <b>•••</b> first.</span></li>
-        <li><span class="hs-n">2</span><span>Scroll down and tap <b>Add to Home Screen</b>, then <b>Add</b>.</span></li>
-        <li><span class="hs-n">3</span><span>Open <b>Golf Board</b> from your home screen. You’ll still be you: same rounds, same crew.</span></li>
+        <li><span class="hs-n">1</span><span>Tap <b>•••</b> in Safari’s bar</span></li>
+        <li><span class="hs-n">2</span><span>Tap <b>Share</b> ${icon('share', 18)}</span></li>
+        <li><span class="hs-n">3</span><span>Tap <b>Add to Home Screen</b>, then <b>Add</b></span></li>
+        <li><span class="hs-n">4</span><span>Tap the new <b>Golf Board</b> icon. You’ll still be you: same rounds, same crew.</span></li>
       </ol>
       <div class="hs-warn">${icon('lock', 18)}<span>Right now this page’s link signs in as you. Use <b>Add to Home Screen</b> only. Don’t copy or send this link.</span></div>
       <button class="btn ghost block" data-act="sheet-close" style="margin-top:14px">Not now</button>`;

@@ -5,7 +5,7 @@
 
 import { esc, icon } from '../ui.js';
 import * as db from '../db.js';
-import { notSafari, joinList, myLobby, myCart, dayName, shortDate, hostLine, clock12, wallClock, hasHandicaps, hcpOf, rankLine, revealFrame } from '../lobby.js';
+import { notSafari, byHandicap, guideEscape, GUIDE_ESCAPE_MS, joinList, myLobby, myCart, dayName, shortDate, hostLine, clock12, wallClock, hasHandicaps, hcpOf, rankLine, revealFrame } from '../lobby.js';
 import { playOrder } from '../scoring.js';
 
 const safariPhone = () => !db.STANDALONE && db.isIOS();
@@ -64,10 +64,9 @@ function hostRow(app, st) {
 }
 
 function whoPlaying(app, st) {
-  const ps = joinList(app.event.roster, app.claimed, '', app.me);
-  // The organizer, then you, then A–Z (screenshot 4).
-  const top = [st.hostId, app.me].filter(Boolean);
-  const meFirst = [...top.map((id) => ps.find((p) => p.id === id)).filter(Boolean), ...ps.filter((p) => !top.includes(p.id))];
+  // Lowest handicap first (owner, Nov 6); joinList is A–Z, so ties stay A–Z.
+  const meFirst = byHandicap(app.event.roster, joinList(app.event.roster, app.claimed, '', app.me));
+  const ps = meFirst;
   const c = counts(app);
   const missing = c ? Math.max(0, c.total - c.in_app) : null;
   const more = ps.length - 4;
@@ -94,7 +93,7 @@ function landing(app, st) {
     ${noticeCard(st)}
     ${foot(`${note(ios ? `No account. About a minute. On ${esc(day)}, just tap the icon.` : 'No account. About a minute.')}
       ${ios ? '<button class="btn primary nr-cta" data-act="lb-guide">Add Golf Board to my home screen</button>' : '<button class="btn primary nr-cta" data-act="lb-find">Find my name</button>'}
-      ${ios ? '<button class="btn ghost block lb-quiet" data-act="lb-find">Join in Safari for now</button>' : '<button class="btn ghost block lb-quiet" data-act="lb-follow">Not playing? Follow along</button>'}`)}`;
+      ${ios ? '<button class="lb-tiny" data-act="lb-find">or join in Safari</button>' : '<button class="btn ghost block lb-quiet" data-act="lb-follow">Not playing? Follow along</button>'}`)}`;
 }
 
 /** The handicap invite (#/e/CODE/hcp, every player has a handicap): one line, one primary. */
@@ -111,7 +110,13 @@ function invite(app, st) {
  *  shows, so the icon opens straight into this round as this phone. No primary: Safari's ⋯ is the action. */
 function guide(app, st) {
   const hcp = hasHandicaps(app.event.roster);
-  return `${head(hcp ? 'Step 1 of 2 · reveal your handicap' : `${esc(app.event.name)} · add Golf Board`, hcp ? 'Your handicap opens in the app' : 'Golf Board opens from your home screen', 'Put Golf Board on your home screen. 30 seconds.')}
+  const g = app.ui.guideAt?.code === app.code ? app.ui.guideAt : (app.ui.guideAt = { code: app.code, at: Date.now() });
+  const late = guideEscape(g.at, Date.now()); // the home screen is the way in; the escape only after 3 minutes
+  // Opened by a tap (invite / landing / the lobby's Add row): Back. Held there (joined in Safari, reveal unseen): no Back.
+  const tapped = app.ui.lobbyGuide === app.code;
+  const back = tapped ? `<button class="link-btn lb-back" data-act="lb-back">${icon('back', 20)} Back</button>` : '';
+  const escape = late && !(app.me && tapped); // from the lobby's Add row, Back is the way out
+  return `${back}${head(hcp ? 'Step 1 of 2 · reveal your handicap' : `${esc(app.event.name)} · add Golf Board`, hcp ? 'Your handicap opens in the app' : 'Golf Board opens from your home screen', 'Put Golf Board on your home screen. 30 seconds.')}
     <ol class="hs-steps lb-steps">
       <li><span class="hs-n">1</span><span>Tap <b>•••</b> below</span></li>
       <li><span class="hs-n">2</span><span>Tap <b>Share</b></span></li>
@@ -120,8 +125,8 @@ function guide(app, st) {
     </ol>
     <p class="meta lb-note">${inAppBrowser() ? 'Not in Safari (Partiful, another app)? Tap <b>•••</b> → <b>Open in Safari</b> first. ' : ''}Already have Golf Board? Open it and tap <b>Join with code</b> · <b class="mono">${esc(app.code)}</b>.</p>
     <p class="meta lb-note">This link signs in as you: use Add to Home Screen only, don’t send it.</p>
-    ${foot(`<button class="btn ghost block lb-quiet lb-left" data-act="lb-here">${hcp ? 'Can’t add it? Reveal it here' : 'Can’t add it? Join here'}</button>`)}
-    <div class="lb-point" aria-hidden="true"><span class="lbl">Start here</span>${icon('fwd', 22)}</div>`;
+    ${escape ? foot(`<button class="lb-tiny lb-left" data-act="lb-here">Can’t add it? ${hcp ? 'Reveal it here' : app.me ? 'Carry on here' : 'Join here'}</button>`) : ''}
+    <div class="lb-point" aria-hidden="true"><span class="lb-badge">Tap ••• here</span>${icon('fwd', 26)}</div>`;
 }
 
 function whoRows(app, q) {
@@ -300,6 +305,7 @@ function restoreHash(app) {
 
 /** Reveal frames between renders: only the number, the kicker and the fades change (no full redraws). */
 let revealRaf = 0;
+let guideTimer = null;
 function runReveal(app) {
   cancelAnimationFrame(revealRaf);
   const h = hcpOf(app.event.roster, app.me);
@@ -322,6 +328,11 @@ function runReveal(app) {
 export default {
   mount(root, app) {
     const v = app.lobbyView();
+    if (v === 'guide') {
+      const g = app.ui.guideAt;
+      clearTimeout(guideTimer);
+      if (g?.code === app.code && !guideEscape(g.at, Date.now())) guideTimer = setTimeout(() => app.render(), g.at + GUIDE_ESCAPE_MS - Date.now() + 50);
+    }
     if (v === 'guide' && !/^#move=/.test(location.hash)) {
       // The steps work from the move link with the round in it (024): the icon opens straight into this round.
       history.replaceState(null, '', `${location.pathname}${location.search}${db.moveLink(app.code)}`);
@@ -395,9 +406,10 @@ export default {
       app.render();
     },
     'lb-add': (el, ev, app) => {
-      history.replaceState(null, '', `${location.pathname}${location.search}${db.moveLink(app.code)}`);
-      db.local.set('glb.hasApp', true);
-      app.openSheet('homescreen', { round: app.event?.name || app.code });
+      // The same Add to Home Screen steps as the invite (full screen, the ••• badge), not a different sheet.
+      app.ui.lobbyGuide = app.code;
+      app.render();
+      document.getElementById('content').scrollTop = 0;
     },
   },
 };

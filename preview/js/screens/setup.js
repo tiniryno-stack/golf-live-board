@@ -832,7 +832,7 @@ function ryCartsView(s) {
   return `${topBar(s)}${head}
     <div class="nr-line"><span class="meta">${s.swapSel != null ? 'Now tap who to swap with.' : 'Tap two names to swap.'}</span><button class="btn small" data-act="setup-shuffle">Shuffle</button></div>
     ${rows}
-    ${lob ? bottom(s.saving ? 'Saving…' : lob.fromSetup ? 'Open the lobby' : 'Save the carts', 'setup-lobby-save', { busy: s.saving })
+    ${lob ? bottom(s.saving ? 'Saving…' : lob.fromSetup ? 'Next: handicaps' : 'Save the carts', 'setup-lobby-save', { busy: s.saving, arrow: !!lob.fromSetup && !s.saving })
     : bottom('Next: pick sides', 'setup-go', { v: 'draft', arrow: true })}`;
 }
 
@@ -1899,7 +1899,8 @@ export default {
         db.recent.remember({ code: res.code, name: round.name, played_on: round.playedOn, crew_id: res.crew_id, course: round.course, settings: round.settings });
         app.setup = null;
         app.ui.lobbyShare = res.code;
-        app.ui.lobbyCarts = res.code; // 025 rev: Who rides together? first (Skip allowed), then the share sheet
+        app.ui.lobbyCarts = res.code; // 025 rev: Who rides together? first (Skip allowed),
+        app.ui.lobbyHcp = res.code; // then everyone's handicap (required), then the share sheet
         app.go(`#/e/${res.code}/host`);
         return;
       }
