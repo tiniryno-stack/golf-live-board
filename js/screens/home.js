@@ -5,7 +5,7 @@
 // lives in a round's ⋯ menu. Everything here comes from this phone (glb.recent), no network.
 
 import { esc, icon, prettyDate, initials, empty } from '../ui.js';
-import { recent, normCode, STANDALONE, moveLink, syncMyRounds } from '../db.js';
+import { recent, normCode, STANDALONE, moveLink, syncMyRounds, local } from '../db.js';
 import { homeCrew } from './crew.js';
 import { fmtPts, fmtToPar, playerLeaderboard } from '../scoring.js';
 
@@ -186,6 +186,7 @@ export default {
     'home-add': (el, ev, app) => {
       // Put this phone's keys in the link iPhone saves with the icon (see db.moveLink).
       history.replaceState(null, '', `${location.pathname}${location.search}${moveLink()}`);
+      local.set('glb.hasApp', true); // 024 §6: 025 says "open Golf Board from your home screen"
       app.openSheet('homescreen', {});
     },
     'home-joinsheet': (el, ev, app) => app.openSheet('join', {}),

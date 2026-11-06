@@ -710,6 +710,11 @@ a { color: inherit; }
 @media (prefers-reduced-motion: reduce) { .panel { transition: none; } }
 .panel .card { background: var(--surface-2); }
 .who-group { margin: 0 0 14px; }
+/* 024 §5: Who are you? by tee time (header) → cart; the You sheet's quiet playing-as line. */
+.who-tee-h { margin: 2px 0 8px 2px; color: var(--text-muted); }
+.who-tee + .who-tee { margin-top: 6px; }
+.you-as { margin: -6px 0 14px; }
+.you-not { font: inherit; font-weight: 600; color: var(--text); background: none; border: 0; padding: 14px 0; margin: -14px 0; }
 .who-group .micro { margin: 0 0 6px 2px; display: block; }
 .who-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .who-grid.one { grid-template-columns: 1fr; }
