@@ -1,0 +1,46 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>
+@font-face{font-family:Geist;src:url(../../../../../node_modules/geist/dist/fonts/geist-sans/Geist-Variable.woff2) format('woff2');font-weight:100 900}
+@font-face{font-family:"Geist Mono";src:url(../../../../../node_modules/geist/dist/fonts/geist-mono/GeistMono-Variable.woff2) format('woff2');font-weight:100 900}
+body{margin:0;background:#0a0b0d;color:#f4f5f7;font-family:Geist,system-ui,sans-serif}
+.wrap{width:2600px;box-sizing:border-box;padding:56px;display:flex;flex-direction:column;gap:22px}
+.lbl{font-family:"Geist Mono",monospace;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#a7acb4}
+.lane{display:grid;grid-template-columns:280px 1fr;gap:20px;align-items:center;padding:16px 0;border-top:1px solid #1f2227}
+.who b{font-size:17px;display:block}.who span{font-size:13px;color:#a7acb4;line-height:18px;display:block;margin-top:4px}
+.steps{display:flex;align-items:center;gap:10px;flex-wrap:nowrap}
+.node{display:flex;flex-direction:column;gap:6px;align-items:center;width:110px}
+.node img{width:98px;height:213px;border-radius:12px;box-shadow:0 0 0 1px #2b2f36;display:block}
+.node span{font-size:12px;line-height:15px;color:#a7acb4;text-align:center}
+.act{font-size:13px;line-height:17px;color:#f4f5f7;background:#16181c;border-radius:12px;padding:10px 12px;max-width:150px;text-align:center}
+.act.sys{color:#a7acb4;background:transparent;box-shadow:inset 0 0 0 1.5px #2b2f36}
+.go{color:#3ddc84;font-size:13px;font-weight:600;text-align:center;max-width:140px;box-shadow:inset 0 0 0 1.5px #3ddc84;border-radius:12px;padding:10px 12px;background:rgba(61,220,132,.06)}
+.ar{color:#a7acb4;font-size:17px}
+</style></head><body><div class="wrap" id="w"></div>
+<script>
+const R = (new URLSearchParams(location.search).get('r')) || 'r1';
+const N = { landing: '01-landing', who: '02-who', welcome: '03-welcome', early: '04-early', drafted: '05-drafted', teetimes: '06-teetimes', satwait: '07-satwait', changed: '08-changed', home: '09-home', removed: '10-removed', calledoff: '11-calledoff', preview: '12-preview', gameday: '13-gameday', cohost: '14-cohost', setupchoice: '15-setupchoice', hostearly: '16-hostearly', hostreplace: '17-hostreplace', replaceshare: '18-replaceshare', hostdrafted: '19-hostdrafted', hostoptions: '20-hostoptions', calloff: '21-calloff', removeconfirm: '22-removeconfirm', hostchanged: '23-hostchanged', hostearlyday: '24-hostearlyday', openconfirm: '25-openconfirm', hostnotimes: '26-hostnotimes', hostday: '27-hostday', noshow: '28-noshow', confirm: 'o-confirm', guide: 'o-guide', hasapp: 'o-hasapp', inapp: 'o-inapp', back: 'o-back' };
+const T = { landing: '1 Lobby landing', who: '2 Which one are you?', welcome: '3 See you Saturday', early: '4 Before the draft', drafted: '5 Teams are set', teetimes: '6 Start times are set', satwait: '7 Saturday: start times coming', changed: '8 Changed (note)', home: '9 Home · coming up', removed: '10 Spot given to a sub', calledoff: '11 Called off', preview: '12 Example round', gameday: '13 Scoring is open', cohost: '14 Josh: co-host', setupchoice: '15 Invite now?', hostearly: '16 Host · before the draft', hostreplace: '17 Replace a player', replaceshare: '18 Send the sub the link', hostdrafted: '19 Host · teams set', hostoptions: '20 Round options', calloff: '21 Call it off?', removeconfirm: '22 Remove after draft?', hostchanged: '23 Tell the group', hostearlyday: '24 Host · Sat, before 7:30', openconfirm: '25 Open scoring now?', hostnotimes: '26 Host · waiting on start times', hostday: '27 Host · Sat, scoring open', noshow: '28 No-show: sub or play without', confirm: 'You’re Baker? (onb 4)', guide: 'Add to home screen (onb 5)', hasapp: 'You have the app (onb 12)', inapp: 'Open in Safari (onb 13)', back: 'Welcome back (onb 11)' };
+const scr = (k) => `<div class="node"><img src="../screenshots/${N[k]}.png"><span>${T[k]}</span></div>`;
+const act = (t) => `<div class="act">${t}</div>`, sys = (t) => `<div class="act sys">${t}</div>`, go = (t) => `<div class="go">${t}</div>`;
+const L = [
+  ['Organizer · Wednesday', 'Has the 16 names; teams and start times later.', [scr('setupchoice'), act('Invite now, draft later'), sys('Share → Partiful / group text'), scr('hostearly'), go('Lobby open')]],
+  ['New player · Wed–Fri evening', 'Never used it; taps the Partiful link.', [sys('Partiful’s browser → Open in Safari first'), scr('landing'), scr('who'), scr('confirm'), scr('guide'), act('Adds it, opens the icon'), scr('welcome'), scr('early'), go('Joined')]],
+  ['Curious', 'Wants to see it without a real round.', [scr('welcome'), act('Show me an example round'), scr('preview'), sys('3 pages, made-up names, nothing saved'), scr('early')]],
+  ['Returning · has the app', 'Played before, has the icon.', [scr('hasapp'), act('Opens the icon'), scr('home'), act('Open'), scr('early'), go('Joined as you (024)')]],
+  ['Joined in Safari only', 'Picked a name, never added the app.', [sys('Host: “picked a name in Safari” · Share'), sys('Opens the link again'), scr('back'), scr('guide'), go('In the app')]],
+  ['Replace a player', 'Someone drops out (sorted off the app); Andrew swaps in a sub.', [scr('hostearly'), act('Players → Replace'), scr('hostreplace'), scr('replaceshare'), scr('removed'), go('Kyle joins with the link')]],
+  ['Draft day (Thu)', 'Andrew or Josh drafts; then tells everyone.', [scr('hostearly'), act('Start the draft (existing snake draft)'), scr('hostdrafted'), act('Share the teams'), sys('Players open the icon'), scr('drafted'), go('“You’re on Team Josh”')]],
+  ['Co-host (Josh)', 'Can do everything Andrew can.', [scr('cohost'), act('Host'), sys('Same host screens')]],
+  ['Plans change', 'Start time, course, date; or a rain-out.', [scr('hostoptions'), act('Date and start time'), scr('hostchanged'), act('Tell the group'), scr('changed'), act('or Call it off'), scr('calloff'), scr('calledoff')]],
+  ['Start times (Fri)', 'Andrew or Josh sets them.', [scr('hostdrafted'), act('Set start times (existing)'), sys('Players open the icon'), scr('teetimes'), go('8:20 with Mitch · 3 matches')]],
+  ['Saturday · not ready', 'Opens at 7:40; start times still missing.', [scr('satwait'), act('Text Andrew'), sys('Start times saved → opens at once'), scr('gameday'), go('Enter')]],
+  ['Saturday · organizer', 'Scoring opens itself at 7:30.', [scr('hostearlyday'), sys('or Open scoring now (day only)'), scr('openconfirm'), scr('hostday'), act('Marks Justin not here'), scr('noshow'), go('Sub, or Marcus plays alone')]],
+  ['Saturday · no start times yet', 'Nothing can open until they exist.', [scr('hostnotimes'), act('Set start times'), go('Scoring opens at once')]],
+  ['Remove after the draft', 'Would break the teams.', [scr('hostoptions'), scr('removeconfirm'), go('Replace instead (default)')]],
+  ['Saturday · player', 'Scoring is open.', [act('Taps the icon'), scr('gameday'), act('Go to hole 1'), go('Enter')]],
+  ['Spectator', 'Chuck’s family, a plus-one.', [scr('landing'), act('Not playing? Follow along'), sys('Board, read-only (onboarding Watching)'), go('Following')]],
+  ['Late joiner · after scoring opens', 'Didn’t join the lobby.', [sys('Same link → normal onboarding'), go('Enter')]],
+];
+document.getElementById('w').innerHTML = `<div style="display:flex;flex-direction:column;gap:8px"><span class="lbl">Lobby · flow map · ${R}</span><span style="font-size:40px;font-weight:800;letter-spacing:-1.2px">The lobby: join days ahead, play on Saturday</span><span style="font-size:17px;color:#a7acb4">Phones = screens (numbered as in the screen set) · the lobby reuses the onboarding screens for the install · filled boxes = what the person does · outlined = what the system does · green = playing.</span></div>` +
+  L.map(([w, sub, steps]) => `<div class="lane"><div class="who"><b>${w}</b><span>${sub}</span></div><div class="steps">${steps.map((x, i) => (i ? '<span class="ar">→</span>' : '') + x).join('')}</div></div>`).join('');
+</script></body></html>
