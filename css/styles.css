@@ -1811,11 +1811,8 @@ html.light .rm-t, [data-theme="light"] .rm-t { opacity: .55; }
 .rs-slot { height: 16px; color: var(--text-muted); }
 .rs .rs-slot.up { color: var(--cart-you-text); } /* your margin is green only when you're up */
 .rs.plain .rm-side .rs-slot { color: var(--text); }
-.ry-sheet.rs.plain .rm-side.hi .rm-cn, .ry-sheet.rs.plain .rm-side.hi .rm-pts { color: var(--text); }
-.ry-sheet.rs.plain .rm-side.lo .rm-cn, .ry-sheet.rs.plain .rm-side.lo .rm-pts { color: var(--text-muted); }
-.rs.plain .rm-u.hi, .rs.plain .rm-t.hi { background: var(--text); opacity: 1; }
-.rm-tile i.split { color: var(--text); letter-spacing: -.5px; }
-.rs.plain .rm-u.lo, .rs.plain .rm-t.lo { background: var(--text-muted); opacity: .7; }
+.rs.plain .rm-side.them .rs-slot { color: var(--text-muted); }
+.rm-tile i.sp-us { color: var(--text); } .rm-tile i.sp-them, .rm-tile i.sp-as { color: var(--text-muted); }
 .rm.plain .rm-k.up, .rm.plain .rm-side.us .rm-cn, .rm.plain .rm-side.us .rm-pts, .rm.plain .rm-tile i.win,
 .rm.plain .rm-cnm.me, .rm.plain .rm-rw.me, .rm.plain .rm-rp.me { color: var(--text); }
 .rm.plain .rm-u { background: var(--text); }

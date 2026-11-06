@@ -237,7 +237,8 @@ export function ryderPlayers(app) {
  * The sheet's score card (council, Nov 6): the names show once. One top line = state (holes · LIVE / FINAL /
  * UP NEXT, and THRU n / ALL SQUARE / HALVED on the right); both sides on one baseline, each with a reserved
  * label row under its points: your margin under your pair on your match (2 UP / 2 DN), else 1 UP under
- * the leader; WON under the winner. Someone else's match: leader bright, trailer muted, bars included.
+ * the leader; WON under the winner. Someone else's match: fixed colours by side, left pair white (your side
+ * in Team Ryder Cup), right pair grey, bars and tiles included; only the label moves with the lead.
  */
 function rsCard(m, snap, mine) {
   const ncomp = snap.game?.ncomp || 2;
@@ -258,13 +259,11 @@ function rsCard(m, snap, mine) {
     if (mine) return side === 'us' ? `${margin} ${lead === 'us' ? 'UP' : 'DN'}` : '';
     return lead === side ? `${margin} UP` : '';
   };
-  const tone = (side) => (mine ? '' : !lead || lead === side ? ' hi' : ' lo');
-  const sideHtml = (side, cart, pts) => `<div class="rm-side ${side}${tone(side)}"><span class="rm-cn ellipsis">${esc(cartTitle(cart))}</span><span class="rm-pts mono">${fmtPts(pts)}</span><span class="rs-slot lbl${mine && side === 'us' && lead === 'us' ? ' up' : ''}">${slot(side)}</span></div>`;
-  const barTone = (side) => (mine ? '' : !lead || lead === side ? ' hi' : ' lo');
+  const sideHtml = (side, cart, pts) => `<div class="rm-side ${side}"><span class="rm-cn ellipsis">${esc(cartTitle(cart))}</span><span class="rm-pts mono">${fmtPts(pts)}</span><span class="rs-slot lbl${mine && side === 'us' && lead === 'us' ? ' up' : ''}">${slot(side)}</span></div>`;
   return `<div class="rs-top"><span class="lbl">HOLES ${esc(holes)} · <b>${state}</b></span><span class="lbl">${right}</span></div>
     <section class="rm-card">
       <div class="rm-sides">${sideHtml('us', m.us, u)}${sideHtml('them', m.them, t)}</div>
-      <div class="rm-bar"><span class="rm-u${barTone('us')}" style="width:${Math.min(100, (u / max) * 100)}%"></span><span class="rm-t${barTone('them')}" style="width:${Math.min(100, (t / max) * 100)}%"></span><span class="rm-tick" style="left:${tickPct}%"></span></div>
+      <div class="rm-bar"><span class="rm-u" style="width:${Math.min(100, (u / max) * 100)}%"></span><span class="rm-t" style="width:${Math.min(100, (t / max) * 100)}%"></span><span class="rm-tick" style="left:${tickPct}%"></span></div>
       ${done ? '' : `<div class="rm-foot"><span>${fmtPts((m.total - m.thru) * ncomp)} pts left</span><span class="rm-cl" style="left:${tickPct}%">${fmtPts(clinch)} wins</span></div>`}
     </section>`;
 }
@@ -421,8 +420,14 @@ function rmCard(m, snap, { mine = true } = {}) {
 /** Six hole tiles with your points (023 §1.4). `motion` = the new-since rings + pop (Matches only). */
 function rmStrip(m, selHole, act, motion = null, { split = false } = {}) {
   const { newHoles = [], popHoles = [], t0 = 0 } = motion || {};
-  // Someone else's match (Board sheet): "your points" means nothing, so a counted tile shows the split, left–right.
-  const val = (h) => (split && h.points ? `<i class="split">${fmtPts(h.points.us) || '0'}–${fmtPts(h.points.them) || '0'}</i>` : rmTileVal(h));
+  // Someone else's match (Board sheet): colour is the key (left pair white, right pair grey, as in the card),
+  // so a counted tile shows the winning side's points in that side's colour; a split hole is AS.
+  const val = (h) => {
+    if (!split || !h.points) return rmTileVal(h);
+    const { us, them } = h.points;
+    if (us === them) return '<i class="sp-as">AS</i>';
+    return us > them ? `<i class="sp-us">+${fmtPts(us)}</i>` : `<i class="sp-them">+${fmtPts(them)}</i>`;
+  };
   return `<div class="rm-strip">${m.holes.map((h) => {
     const isNew = newHoles.includes(h.hole);
     const pop = popHoles.indexOf(h.hole);
