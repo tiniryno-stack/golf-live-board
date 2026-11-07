@@ -401,6 +401,7 @@ function letGo(app, e) {
   r.holding = false;
   r.nudged = Date.now() - r.downAt < TAP_MS; // a quick tap says "Keep holding"; a longer early let-go, "Press and hold"
   app.render(); // anything held back while the finger was down (first, so the nudge runs on the disc that stays)
+  if (r.nudged) setTimeout(() => app.render(), 650); // the redraw held back while the nudge played
   if (r.nudged) document.getElementById('lbr-disc')?.animate?.([{ transform: 'none' }, { transform: 'translateX(-6px)' }, { transform: 'translateX(6px)' }, { transform: 'none' }], { duration: 350, easing: 'ease' });
   revealLoop(app);
 }
@@ -458,6 +459,8 @@ export default {
       if (r.fast) root.querySelector('.lb-rv .nr-title')?.focus({ preventScroll: true });
       else announce(`${st?.hostName && st.hostName !== 'The organizer' ? st.hostName : 'Your organizer'} has you at ${h?.strokes ?? ''}`);
     }
+    // The final frame's redraw replaces the focused title: put focus back on the new one.
+    if (r.fast && (phase === 'burst' || phase === 'final') && (!document.activeElement || document.activeElement === document.body)) root.querySelector('.lb-rv .nr-title')?.focus({ preventScroll: true });
     if ((phase === 'burst' || phase === 'final') && !r.replay && !r.marked) { r.marked = true; app.markHcpSeen(); }
     if (Number.isFinite(r.doneAt) && phase !== 'final') revealLoop(app);
     else if (phase === 'final' && finalFades(Date.now() - landsAt(r) - LAND_MS, reduced())[3] < 1) revealLoop(app);
