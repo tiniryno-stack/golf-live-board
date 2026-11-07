@@ -578,4 +578,4 @@ live in memory, so a reload skips the step (Host → Handicaps still covers it) 
   the tiny link. The round card is gone.
 - The round's top bar ("Watching · course · date · ⋯") is hidden on the pre-join screens (invite, landing, steps, name
   list); it comes back once you've joined.
-- Open for the designer (owner): the player side should lean into "you're invited" and use the screen better.
+- Open for the designer (owner): the player side should lean into "you're invited" and use the screen better. Brief for the designer: https://claude.ai/artifact/Ew7y1HcrC5Vae3JdCtvzKg ("025 player join flow: design brief").
