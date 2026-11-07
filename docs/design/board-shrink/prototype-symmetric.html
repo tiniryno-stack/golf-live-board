@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ryder Board · shrinking cup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400..800&family=Geist+Mono:wght@500..700&display=swap" rel="stylesheet">
+<style>
+:root{--font-sans:Geist,system-ui,-apple-system,sans-serif;--font-mono:"Geist Mono",ui-monospace,monospace;--bg:#0a0b0d;--surface-1:#15171b;--surface-2:#1f2227;--surface-3:#2a2e35;--text:#f4f5f7;--text-muted:#a7acb4;--line:#2b2f36;--cart-you:#3ddc84;--cart-you-text:#3ddc84;--glass:rgba(21,23,27,.92);--glass-line:rgba(255,255,255,.09);--shadow-float:0 8px 24px rgba(0,0,0,.45);--shadow-dock:inset 0 1px 0 rgba(255,255,255,.10),0 0 28px rgba(255,255,255,.06)}
+html,body{margin:0;background:#050607;color:var(--text);font-family:var(--font-sans)}
+.wrap{display:flex;flex-direction:column;align-items:center;gap:14px;padding:20px 12px}
+.modes{display:flex;gap:6px;background:#15171b;padding:4px;border-radius:12px}
+.modes button{font:inherit;font-size:13px;font-weight:600;color:var(--text-muted);background:none;border:0;padding:9px 12px;border-radius:9px;cursor:pointer}
+.modes button.on{background:var(--surface-3);color:var(--text)}
+.hint{font-size:13px;color:var(--text-muted);text-align:center;max-width:393px}
+.ph{width:393px;height:659px;position:relative;overflow:hidden;background:var(--bg);border-radius:28px;box-shadow:0 0 0 1px #22252b}
+.sc{position:absolute;inset:0;overflow-y:auto;scrollbar-width:none}
+.sc::-webkit-scrollbar{display:none}
+.top{height:56px;display:flex;align-items:center;gap:12px;padding:0 8px 0 12px}
+.av{width:32px;height:32px;border-radius:16px;background:var(--surface-2);display:grid;place-items:center;font-size:13px;font-weight:700}
+.top b{font-size:17px;font-weight:600;flex:1}.top .rn{font-size:15px;color:var(--text-muted)}
+.ib{width:44px;height:44px;display:grid;place-items:center;color:var(--text-muted);border-radius:22px;background:var(--surface-1)}
+/* the cup (C · stacked, mirrored): one element that morphs on --p (0 = full, 1 = slim), transforms only */
+.cupwrap{position:absolute;left:0;right:0;top:0;z-index:5;padding:calc(8px - 4px * var(--p)) 16px calc(12px * var(--p));background:var(--bg);contain:layout}
+.cupwrap.slim .cup{cursor:pointer}
+.cup{position:relative;border-radius:calc(24px - 6px * var(--p));padding:calc(16px - 6px * var(--p)) 16px calc(16px - 6px * var(--p));background:var(--surface-1);
+  box-shadow:0 0 0 calc(1px * var(--p)) var(--line), 0 calc(8px * var(--p)) calc(24px * var(--p)) rgba(0,0,0,calc(.45 * var(--p)))}
+.k{font-family:var(--font-mono);font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:center;
+  height:calc(16px * (1 - var(--k)));margin-bottom:calc(8px * (1 - var(--k)));opacity:calc(1 - var(--k) * 1.5);overflow:hidden;white-space:nowrap}
+.sides{position:relative;height:calc(86px - 47px * var(--s) - 17px * var(--y))}
+.side{position:absolute;top:0;width:calc(50% - 6px)}
+.side.l{left:0}.side.r{right:0}
+.sn{position:absolute;top:0;font-size:17px;line-height:22px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.side.l .sn{left:0;transform-origin:left top;transform:translate(calc((var(--nwl) * .265625 + 12px) * var(--x)), calc(-1px * var(--x))) scale(calc(1 - 2 / 17 * var(--x)));max-width:calc(100% + (var(--mwl) - 100%) * var(--x))}
+.side.r .sn{right:0;transform-origin:right top;transform:translate(calc((var(--nwr) * -.265625 - 12px) * var(--x)), calc(-1px * var(--x))) scale(calc(1 - 2 / 17 * var(--x)));max-width:calc(100% + (var(--mwr) - 100%) * var(--x))}
+.tot{position:absolute;top:0;font-family:var(--font-mono);font-weight:700;font-size:64px;line-height:64px;letter-spacing:-3px;white-space:nowrap}
+.side.l .tot{left:-3px;transform-origin:left top;transform:translateY(calc(24px - 25px * var(--y))) scale(calc(1 - .734375 * var(--s)))}
+.side.r .tot{right:0;transform-origin:right top;transform:translateY(calc(24px - 25px * var(--y))) scale(calc(1 - .734375 * var(--s)))}
+.k2{position:absolute;left:50%;top:3px;transform:translateX(-50%);font-family:var(--font-mono);font-size:12px;font-weight:600;letter-spacing:1px;color:var(--text-muted);opacity:var(--k2);white-space:nowrap}
+.you{color:var(--cart-you-text)}.them{color:var(--text)}
+.bar{display:flex;align-items:center;gap:3px;margin-top:calc(12px - 4px * var(--p))}
+.grp{display:flex;gap:3px;flex:1}.mid{width:2px;height:calc(22px - 12px * var(--p));background:var(--text);border-radius:1px;flex:none}
+.seg{flex:1;height:calc(14px - 8px * var(--p));border-radius:calc(5px - 2px * var(--p));background:var(--surface-2);position:relative;overflow:hidden}
+.seg b{position:absolute;top:0;bottom:0}.seg b.us{left:0;background:var(--cart-you)}.seg b.th{right:0;background:var(--text-muted)}
+.cont{padding:12px 16px 120px}
+.segctl{height:44px;border-radius:16px;background:var(--surface-1);display:grid;grid-template-columns:1fr 1fr;padding:3px;gap:3px;margin-top:8px}
+.segctl div{display:grid;place-items:center;border-radius:12px;font-size:15px;font-weight:600;color:var(--text-muted)}.segctl div.on{background:var(--surface-3);color:var(--text)}
+.rot{margin-top:16px;border-radius:18px;box-shadow:inset 0 0 0 1.5px var(--line);height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;font-family:var(--font-mono);font-size:13px;font-weight:700;letter-spacing:1px}
+.mrow{display:grid;grid-template-columns:1fr 100px 1fr;align-items:center;min-height:76px;border-bottom:1px solid rgba(255,255,255,.05)}
+.mrow .l{font-size:17px;font-weight:600;line-height:21px}.mrow .r{text-align:right;font-size:17px;font-weight:600;line-height:21px;color:var(--text-muted)}
+.flag{justify-self:center;font-family:var(--font-mono);font-size:13px;font-weight:700;background:var(--text);color:var(--bg);border-radius:8px;padding:7px 12px}
+.tabs{position:absolute;left:16px;right:16px;bottom:24px;height:64px;border-radius:24px;background:var(--glass);box-shadow:var(--shadow-dock),inset 0 0 0 1px var(--glass-line);display:grid;grid-template-columns:repeat(4,1fr);padding:6px;z-index:6}
+.tabs div{display:grid;place-items:center;border-radius:20px;color:var(--text-muted)}.tabs div.cur{background:var(--surface-3);color:var(--text)}
+
+[data-theme=light]{--bg:#f2f3f5;--surface-1:#ffffff;--surface-2:#e8eaee;--surface-3:#ffffff;--text:#0b0d10;--text-muted:#4f555e;--line:#d5d9df;--cart-you:#12a35c;--cart-you-text:#0a7a43;--glass:rgba(255,255,255,.92)}
+[data-theme=light] .cup{box-shadow:0 0 0 calc(1px * var(--p)) var(--line), 0 calc(8px * var(--p)) calc(24px * var(--p)) rgba(0,0,0,calc(.12 * var(--p)))}
+[data-theme=light] .ph{background:var(--bg)}
+</style></head><body>
+<div class="wrap">
+  
+  <div class="ph"><div class="sc" id="sc">
+    <div class="top"><span class="av">A</span><b>Andrew</b><span class="rn">Ryder · Sat</span><span class="ib">⇪</span><span class="ib">⋯</span></div>
+    <div id="spacer"></div>
+    <div class="cont">
+      <div class="segctl"><div class="on">Cup</div><div>Players</div></div>
+      <div id="rows"></div>
+    </div>
+  </div>
+  <div class="cupwrap" id="cw"><div class="cup">
+      <div class="k">8 left · 6½ wins</div>
+      <div class="sides" id="sides"></div>
+      <div class="bar"><span class="grp" id="g1"></span><span class="mid"></span><span class="grp" id="g2"></span></div>
+    </div></div>
+    <nav class="tabs"><div>⚑</div><div>∞</div><div class="cur">≡</div><div>▦</div></nav></div>
+  <p class="hint">Scroll inside the phone: the cup morphs into a slim bar as you scroll and grows back only at the top. It never rests halfway.</p>
+</div>
+<script>
+const g1 = document.getElementById('g1'), g2 = document.getElementById('g2');
+g1.innerHTML = '<i class="seg"><b class="us" style="width:100%"></b></i>' + '<i class="seg"></i>'.repeat(5);
+g2.innerHTML = '<i class="seg"></i>'.repeat(3) + '<i class="seg"><b class="th" style="width:100%"></b></i>'.repeat(3);
+const R = [['HOLES 7–12', '0 – 0', 'LIVE', [['Andrew<br>Alex', '2 UP', 'Josh<br>Brandon', 1], ['Ant<br>Steve', '1 UP', 'Joseph<br>Jay', 0], ['Justin<br>Chuck', '3-3', 'Elijah<br>Marcus', 0], ['Mitch<br>Peter', '3-3', 'Sean<br>Baker', 0]]],
+  ['HOLES 1–6', '1 – 3', 'DONE', [['Andrew<br>Alex', '✓ 7-5', 'Sean<br>Baker', 1], ['Ant<br>Steve', '5-7', 'Josh<br>Brandon', 0], ['Justin<br>Chuck', '4-8', 'Joseph<br>Jay', 0], ['Mitch<br>Peter', '5½-6½', 'Elijah<br>Marcus', 0]]],
+  ['HOLES 13–18', '', '›', [['Andrew<br>Alex', '–', 'Joseph<br>Jay', 1], ['Ant<br>Steve', '–', 'Elijah<br>Marcus', 0], ['Justin<br>Chuck', '–', 'Sean<br>Baker', 0], ['Mitch<br>Peter', '–', 'Josh<br>Brandon', 0]]]];
+document.getElementById('rows').innerHTML = R.map(([h, t, st, ms]) => `<div class="rot"><span>${h}</span><span style="color:var(--cart-you-text)">${t}</span><span style="color:${st === 'LIVE' ? 'var(--cart-you-text)' : 'var(--text-muted)'}">${st}</span></div>` + ms.map(([l, f, r, me]) => `<div class="mrow"><span class="l"${me ? ' style="color:var(--cart-you-text)"' : ''}>${l}</span><span class="flag">${f}</span><span class="r">${r}</span></div>`).join('')).join('');
+const sc = document.getElementById('sc'), cw = document.getElementById('cw');
+const Q = new URLSearchParams(location.search), U = Q.get('u') || '1', T2 = Q.get('t') || '3', N1 = Q.get('n1') || 'Team Andrew', N2 = Q.get('n2') || 'Team Josh';
+if (Q.get('theme') === 'light') document.documentElement.dataset.theme = 'light';
+const sides = document.getElementById('sides');
+sides.innerHTML = `<div class="side l"><span class="sn you">${N1}</span><span class="tot you" id="tl">${U}</span></div><div class="side r"><span class="sn them">${N2}</span><span class="tot them" id="tr">${T2}</span></div>`;
+// Re-run on every change of the names or totals, and on resize (one rAF): the slim layout depends on their widths.
+const measure = () => {
+  const nl = document.getElementById('tl').offsetWidth, nr = document.getElementById('tr').offsetWidth;
+  cw.style.setProperty('--nwl', nl + 'px'); cw.style.setProperty('--nwr', nr + 'px');
+  // Slim: names are 15/17 of their 17 size; each may grow until it comes within 16px of the other (max-width is in the
+  // name's own unscaled px, hence / (15/17)).
+  const inner = cw.querySelector('.sides').offsetWidth, k = 15 / 17;
+  const room = inner - (nl + nr) * .265625 - 24 - 16;
+  const [a, b] = [...cw.querySelectorAll('.sn')].map((e) => { const m = e.style.maxWidth; e.style.maxWidth = 'none'; const w = e.scrollWidth * k; e.style.maxWidth = m; return w; });
+  let ml = room / 2, mr = room / 2; if (a < ml) mr = room - a; else if (b < mr) ml = room - b;
+  cw.style.setProperty('--mwl', Math.floor(ml / k) + 'px'); cw.style.setProperty('--mwr', Math.floor(mr / k) + 'px');
+};
+let p = 0, idle = 0;
+const RANGE = 140;
+const clamp = (v) => Math.max(0, Math.min(1, v));
+const set = (v) => { p = clamp(v); cw.classList.toggle('slim', p > 0.5); cw.style.setProperty('--p', p.toFixed(3)); cw.style.setProperty('--k', clamp(p / 0.3).toFixed(3)); cw.style.setProperty('--s', clamp(p / 0.45).toFixed(3)); cw.style.setProperty('--x', clamp((p - 0.45) / 0.25).toFixed(3)); cw.style.setProperty('--y', clamp((p - 0.7) / 0.3).toFixed(3)); };
+// In order, so nothing ever overlaps: 0–0.45 the number shrinks in place under its name (64 → 17) and the kicker fades;
+// 0.45–0.7 the name slides in toward the center (17 → 15); 0.7–1 the number rises into the gap it left.
+measure(); set(0); document.fonts?.ready.then(() => { measure(); sizes(); place(); });
+// The card is laid over the list (a spacer holds its full height), so shrinking it never changes the list's layout or
+// scroll position. It rides up with the top bar, then shrinks exactly as fast as the list scrolls: its bottom edge
+// stays on the first row. F = full height, S = slim height, TOP = the top bar.
+const TOP = 56; let F = 0, S = 0, H = [];
+// The height isn't linear in p (the kicker and the number collapse at different times), so p comes from the measured
+// heights: the p whose card height equals the space left above the list.
+let pFor = (want) => { if (want >= F) return 0; if (want <= S) return 1; let i = 0; while (i < 100 && H[i + 1] > want) i++; const a = H[i], b = H[i + 1]; return (i + (a - want) / Math.max(1, a - b)) / 100; };
+const sizes = () => { set(1); S = cw.offsetHeight; set(0); F = cw.offsetHeight; H = []; for (let i = 0; i <= 100; i++) { set(i / 100); H.push(cw.offsetHeight); } set(0); document.getElementById('spacer').style.height = F + 'px'; };
+const place = () => { const y = sc.scrollTop; cw.style.transform = `translateY(${Math.max(0, TOP - y)}px)`; set(pFor(F - Math.max(0, y - TOP))); };
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches || Q.get('rm') === '1';
+if (reduce) { const p0 = pFor; pFor = (want) => (p0(want) < 0.5 ? 0 : 1); } // reduced motion: full or slim, no morph
+sizes(); place();
+cw.addEventListener('click', () => { if (p > 0.5) sc.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' }); }); // the slim bar (44pt+) = back to the top
+let rq = 0; addEventListener('resize', () => { cancelAnimationFrame(rq); rq = requestAnimationFrame(() => { measure(); sizes(); place(); }); });
+sc.addEventListener('scroll', () => {
+  place();
+  clearTimeout(idle); // never rest mid-morph: 150 ms after scrolling stops, ease to the nearer end
+  idle = setTimeout(() => { if (!reduce && p > 0.15 && p < 0.85 && !window.__noSnap) sc.scrollTo({ top: p < 0.5 ? TOP : TOP + F - S, behavior: 'smooth' }); }, 150);
+}, { passive: true });
+window.__setP = set; window.__sc = sc;
+</script>
+</body></html>
