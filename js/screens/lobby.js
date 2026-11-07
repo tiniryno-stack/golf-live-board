@@ -304,6 +304,8 @@ function dayWait(app, st) {
       drafting ? 'Keep this open: your team, start time and matches show up here.' : 'Teams are set. Keep this open: scoring opens the moment start times are in.')}
     ${noticeCard(st)}
     ${hostRow(app, st)}
+    ${hcpCard(app, st)}
+    ${st.paired && myCart(app.event, app.me) ? cartCard(app) : ''}
     ${addRow()}
     ${foot(`${note('Running late? Give them a nudge.')}<button class="btn block nr-cta" data-act="lb-text">Text ${esc(st.hostName)}</button>`)}`;
 }
