@@ -358,6 +358,22 @@ export async function syncMyRounds() {
   return rows.length;
 }
 
+/**
+ * Home, once per open: rounds in this phone's Recent list that no longer exist (deleted by the organizer, or a cleanup)
+ * are forgotten, so Home never lists a round that opens on "No round". Only on a successful answer from the server:
+ * no signal (select throws) changes nothing. Returns how many were dropped.
+ */
+export async function pruneGoneRounds() {
+  const codes = [...new Set(recent.all().map((r) => r.code).filter((c) => /^[A-Z0-9]{4,8}$/.test(String(c || ''))))];
+  if (!codes.length) return 0;
+  const rows = await select(sb().from('events').select('code').in('code', codes));
+  if (!Array.isArray(rows)) return 0;
+  const alive = new Set(rows.map((r) => r.code));
+  const gone = codes.filter((c) => !alive.has(c));
+  gone.forEach(forgetRound);
+  return gone.length;
+}
+
 /** Forget everything this phone kept about a round (after it's deleted). */
 export function forgetRound(code) {
   if (!code) return;

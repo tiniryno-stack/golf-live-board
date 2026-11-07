@@ -5,7 +5,7 @@
 // lives in a round's ⋯ menu. Everything here comes from this phone (glb.recent), no network.
 
 import { esc, icon, prettyDate, initials, empty } from '../ui.js';
-import { recent, normCode, STANDALONE, moveLink, syncMyRounds, local, refreshLobbies, owner, clock } from '../db.js';
+import { recent, normCode, STANDALONE, moveLink, syncMyRounds, pruneGoneRounds, local, refreshLobbies, owner, clock } from '../db.js';
 import { lobbyState, homeCard } from '../lobby.js';
 import { homeCrew } from './crew.js';
 import { fmtPts, fmtToPar, playerLeaderboard } from '../scoring.js';
@@ -171,6 +171,7 @@ export default {
     if (!synced) {
       synced = true;
       syncMyRounds().then((n) => { if (n) app.render(); }).catch(() => { /* offline: next open */ });
+      pruneGoneRounds().then((n) => { if (n) app.render(); }).catch(() => { /* offline: next open */ }); // deleted rounds leave Recent
       refreshLobbies(clock.now()).then((n) => { if (n) app.render(); }).catch(() => { /* offline: next open */ }); // 025
     }
     const rounds = recent.all();
