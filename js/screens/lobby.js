@@ -55,17 +55,18 @@ function hostRow(app, st) {
   return `<div class="card lb-card lb-rows">${row('Host', app.adminPin ? 'draft, start times, players' : 'enter the organizer PIN', { act: 'lb-host', chev: true })}</div>`;
 }
 
-function whoPlaying(app, st) {
+function whoPlaying(app, st, { all = false } = {}) {
   // Lowest handicap first (owner, Nov 6); joinList is A–Z, so ties stay A–Z.
   const meFirst = byHandicap(app.event.roster, joinList(app.event.roster, app.claimed, '', app.me));
   const ps = meFirst;
   const c = counts(app);
   const missing = c ? Math.max(0, c.total - c.in_app) : null;
-  const more = ps.length - 4;
+  const shown = all ? ps.length : 4; // the day-of "drafting" screen lists everyone (owner, Nov 7)
+  const more = ps.length - shown;
   const hcp = hasHandicaps(app.event.roster) || (app.event.roster?.players || []).some((p) => hcpOf(app.event.roster, p.id));
   const right = (id) => { const h = hcpOf(app.event.roster, id); return h ? { text: h.strokes, mono: true } : ''; };
   const tag = (id) => (id === app.me ? 'you' : id === st.hostId ? 'organizer' : '');
-  const rows = meFirst.slice(0, 4).map((p) => row(esc(p.name), tag(p.id), { cls: p.id === app.me ? 'you' : '', right: right(p.id) })).join('');
+  const rows = meFirst.slice(0, shown).map((p) => row(esc(p.name), tag(p.id), { cls: p.id === app.me ? 'you' : '', right: right(p.id) })).join('');
   return `<div class="lbl lb-k">Who’s playing${hcp ? ' · handicap' : ''}</div>
     <div class="card lb-card lb-rows">${rows}${more > 0 ? row(`${more} more${missing ? ` · ${missing} haven’t added Golf Board` : ''}`, '', { act: 'lb-all', chev: true, cls: 'muted' }) : ''}</div>`;
 }
@@ -306,6 +307,7 @@ function dayWait(app, st) {
     ${hostRow(app, st)}
     ${hcpCard(app, st)}
     ${st.paired && myCart(app.event, app.me) ? cartCard(app) : ''}
+    ${drafting ? whoPlaying(app, st, { all: true }) : ''}
     ${addRow()}
     ${foot(`${note('Running late? Give them a nudge.')}<button class="btn block nr-cta" data-act="lb-text">Text ${esc(st.hostName)}</button>`)}`;
 }
