@@ -86,13 +86,13 @@ function invitation(app, st, { lineText, primary, quiet }) {
   const own = ownRoundName(ev);
   const big = own || course || 'Team Ryder Cup';
   const what = ['Team Ryder Cup', own ? course : ''].filter(Boolean).join(' · ');
-  const when = [inviteDate(st.date), st.startLabel ? `${st.startLabel} start` : ''].filter(Boolean).join(' · ');
+  const when = st.date ? [inviteDate(st.date), st.startLabel ? `${st.startLabel} start` : ''].filter(Boolean).join(' · ') : '';
   const f = inviteFaces(ev.roster, app.claimed);
   return `<div class="lb-inv">
     <div class="lb-inv-who">${host ? `<span class="lb-av" aria-hidden="true">${esc(host.charAt(0).toUpperCase())}</span><span><b>${esc(host)}</b> invited you</span>` : '<span>You’re invited</span>'}</div>
     <h1 class="lb-inv-name">${esc(big)}</h1>
     <div class="lbl lb-inv-what">${esc(what)}</div>
-    <div class="mono lb-inv-when">${esc(when)}</div>
+    ${when ? `<div class="mono lb-inv-when">${esc(when)}</div>` : ''}
     <div class="lbl lb-inv-k">${f.in} of ${f.total} are in</div>
     <div class="lb-faces" role="img" aria-label="${f.in} of ${f.total} players have joined">${f.faces.map((x) => `<span class="lb-face${x.in ? '' : ' out'}">${esc(x.initial)}</span>`).join('')}</div>
     ${noticeCard(st)}
@@ -106,7 +106,7 @@ function landing(app, st) {
   return invitation(app, st, {
     lineText: ios ? 'Your team and start time open in Golf Board on your home screen. About a minute.' : '',
     primary: ios ? '<button class="btn primary nr-cta" data-act="lb-guide">Add Golf Board to my home screen</button>' : '<button class="btn primary nr-cta" data-act="lb-find">Find my name</button>',
-    quiet: ios ? '<button class="lb-tiny" data-act="lb-find">or join in Safari</button>' : '<button class="lb-tiny" data-act="lb-follow">Not playing? Follow along</button>',
+    quiet: ios ? '<button class="lb-tiny" data-act="lb-find">or join in Safari</button>' : '<button class="lb-just block" data-act="lb-follow">Not playing? Follow along</button>',
   });
 }
 
@@ -116,7 +116,7 @@ function invite(app, st) {
   return invitation(app, st, {
     lineText: ios ? 'Your handicap opens in Golf Board on your home screen. About a minute.' : '',
     primary: `<button class="btn primary nr-cta" data-act="${ios ? 'lb-guide' : 'lb-find'}">Reveal my handicap</button>`,
-    quiet: '<button class="lb-tiny" data-act="lb-follow">Not playing? Follow along</button>',
+    quiet: '<button class="lb-just block" data-act="lb-follow">Not playing? Follow along</button>',
   });
 }
 
@@ -179,19 +179,18 @@ function revealState(app) {
 }
 function reveal(app, st) {
   const h = hcpOf(app.event.roster, app.me);
-  if (!h) return early(app, st);
+  if (!h) { app.ui.reveal = null; return early(app, st); } // the organizer cleared it meanwhile: the lobby
   const r = revealState(app) || { v: 0, holding: false, shownAt: Date.now() };
   const rm = reduced();
   const phase = revealPhase(r, Date.now(), rm);
   const host = st.hostName && st.hostName !== 'The organizer' ? st.hostName : 'Your organizer';
   const kicker = `${esc(ownRoundName(app.event) || app.event.course?.shortName || app.event.name)} · ${esc(first(app.myPlayer()))}`;
   const done = phase === 'burst' || phase === 'final';
-  const sr = `<span class="lb-sr" aria-live="polite" id="lbr-live">${done ? `${esc(host)} has you at ${esc(h.strokes)}` : ''}</span>`;
   if (!done) {
     const v = phase === 'freeze' ? 1 : r.v || 0;
     const disc = rm
       ? `<div class="lb-disc still"><span class="lb-q small">Tap to reveal</span></div><button class="btn block lb-rv-btn" data-act="lb-rv-now">Reveal</button>`
-      : `<button class="lb-disc${!r.holding && phase === 'idle' ? ' breathe' : ''}${r.holding && v > 0.35 ? ' shake' : ''}" id="lbr-disc" aria-label="Reveal your handicap">
+      : `<button class="lb-disc${!r.holding && phase === 'idle' ? ' breathe' : ''}${r.holding && v > 0.35 ? ' shake' : ''}" id="lbr-disc" data-t0="${r.shownAt || Date.now()}" aria-label="Reveal your handicap">
           <svg viewBox="0 0 240 240" aria-hidden="true"><circle id="lbr-ring" cx="120" cy="120" r="118" fill="none" stroke="var(--cart-you)" stroke-width="4" stroke-linecap="round" stroke-dasharray="${RING}" stroke-dashoffset="${RING * (1 - v)}" transform="rotate(-90 120 120)" style="opacity:${v > 0.01 ? 1 : 0}"/></svg>
           <span class="lb-q" aria-hidden="true">?</span></button>
         <p class="lb-hold${phase === 'idle' && !r.holding ? ' cue' : ''}" id="lbr-l" data-t0="${r.shownAt || Date.now()}" style="${phase === 'freeze' ? 'opacity:0' : ''}">${r.holding || r.nudged ? 'Keep holding' : 'Press and hold'}</p>
@@ -199,7 +198,7 @@ function reveal(app, st) {
     return `<div class="lb-rv">
       <div class="nr-head"><div class="nr-k"><span class="lbl">${kicker}</span></div>
         <h1 class="nr-title" id="lbr-t" style="opacity:${r.holding ? 1 - v * 0.6 : 1}">${esc(host)} set your handicap</h1></div>
-      <div class="lb-stage">${disc}</div>${sr}</div>`;
+      <div class="lb-stage">${disc}</div></div>`;
   }
   const t = fieldTicks(app.event.roster, app.me);
   const fades = phase === 'final' ? finalFades(Date.now() - landsAt(r) - LAND_MS, rm) : [0, 0, 0, 0];
@@ -207,17 +206,16 @@ function reveal(app, st) {
   const line = strokesLine(h.strokes);
   const lands = landsAt(r);
   return `<div class="lb-rv">
-    <div class="nr-head"><div class="nr-k"><span class="lbl you">${kicker}</span></div><h1 class="nr-title">${esc(host)} has you at</h1></div>
+    <div class="nr-head"><div class="nr-k"><span class="lbl you">${kicker}</span></div><h1 class="nr-title" tabindex="-1">${esc(host)} has you at</h1></div>
     <div class="lb-stage">
-      <div class="lb-disc done"><span class="lb-num mono${rm ? '' : ' land'}" data-t0="${lands}">${esc(h.strokes)}</span>${rm ? '' : `<span class="lb-burst" data-t0="${lands}" aria-hidden="true"></span>`}</div>
+      <div class="lb-disc done">${rm ? '' : `<svg viewBox="0 0 240 240" aria-hidden="true"><circle class="lb-ringout" data-t0="${lands}" cx="120" cy="120" r="118" fill="none" stroke="var(--cart-you)" stroke-width="4"/></svg>`}<span class="lb-num mono${rm ? '' : ' land'}" data-t0="${lands}">${esc(h.strokes)}</span>${rm ? '' : `<span class="lb-burst" data-t0="${lands}" aria-hidden="true"></span>`}</div>
       ${line ? `<p class="lb-strokes" id="lbr-f0" ${op(0)}>${esc(line)}</p>` : ''}
     </div>
-    ${t.ticks.length > 1 ? `<div class="lb-field" id="lbr-f1" ${op(1)} aria-label="${esc(rankLabel(h))}, the field runs ${t.min} to ${t.max}">
-      <span class="lb-field-me mono" style="left:${t.mine}%">${esc(rankLabel(h))}</span>
+    ${t.ticks.length > 1 ? `<div class="lb-field" id="lbr-f1" ${op(1)} role="img" aria-label="${esc(rankLabel(h))}, the field runs ${t.min} to ${t.max}">
+      <span class="lb-field-me mono" style="${t.mine < 16 ? 'left:0;transform:none' : t.mine > 84 ? 'left:auto;right:0;transform:none' : `left:${t.mine}%`}">${esc(rankLabel(h))}</span>
       <div class="lb-rail"></div>${t.ticks.map((x) => `<i class="${x.me ? 'me' : ''}" style="left:${x.pct}%"></i>`).join('')}
       <div class="lb-ends mono"><span>${t.min}</span><span>${t.max}</span></div></div>` : ''}
     <p class="meta lb-off" id="lbr-f2" ${op(2)}>Think it’s off? Text ${esc(host)}.</p>
-    ${sr}
     ${foot(`<button class="btn primary nr-cta" data-act="lb-revealed" id="lbr-f3" ${op(3)}>See who you’re up against</button>`)}
   </div>`;
 }
@@ -357,16 +355,18 @@ function restoreHash(app) {
 
 /** The frames between draws: the ring, shake, title and label while held; then the phase changes (a draw each) and the
  *  final fades. Real elapsed time (rAF timestamps), so a slow frame never changes the 1.4 s. */
-let revealRaf = 0, revealLast = 0;
+let revealRaf = 0, revealLast = 0, revealGen = 0;
 let guideTimer = null;
 function revealLoop(app) {
   cancelAnimationFrame(revealRaf);
   revealLast = 0;
+  const gen = ++revealGen; // one loop at a time: an older one stops at its next frame
   let lastPhase = revealPhase(app.ui.reveal, Date.now(), reduced());
   const tick = (ts) => {
     const r = revealState(app);
-    if (!r || app.lobbyView() !== 'reveal') return; // the screen moved on: stop
-    const dt = revealLast ? ts - revealLast : 16;
+    if (gen !== revealGen || !r || app.lobbyView() !== 'reveal') return; // superseded, or the screen moved on
+    // Real elapsed time, but never more than 100 ms in one frame: a phone that slept mid-hold doesn't fill the ring.
+    const dt = revealLast ? Math.min(100, ts - revealLast) : 16;
     revealLast = ts;
     const now = Date.now();
     if (!Number.isFinite(r.doneAt)) {
@@ -376,12 +376,13 @@ function revealLoop(app) {
       if (ring) { ring.setAttribute('stroke-dashoffset', String(RING * (1 - r.v))); ring.style.opacity = r.v > 0.01 ? '1' : '0'; }
       disc?.classList.toggle('shake', r.holding && r.v > 0.35);
       disc?.classList.toggle('breathe', !r.holding && r.v === 0);
+      if (r.holding) document.getElementById('lbr-l')?.classList.remove('cue');
       const t = document.getElementById('lbr-t'); if (t) t.style.opacity = String(r.holding ? 1 - r.v * 0.6 : 1);
       const j = document.getElementById('lbr-j'); if (j) { j.style.opacity = r.holding ? '0' : '1'; j.style.pointerEvents = r.holding ? 'none' : ''; }
       const l = document.getElementById('lbr-l'); if (l) l.textContent = r.holding || r.nudged ? 'Keep holding' : 'Press and hold';
     }
     const phase = revealPhase(r, now, reduced());
-    if (phase !== lastPhase) { lastPhase = phase; app.render({ force: true }); }
+    if (phase !== lastPhase) { app.render({ force: true }); return; } // the redraw's mount starts the next loop
     if (phase === 'final') {
       const f = finalFades(now - landsAt(r) - LAND_MS, reduced());
       f.forEach((o, i) => { const el = document.getElementById(`lbr-f${i}`); if (el) el.style.opacity = String(o); });
@@ -396,16 +397,22 @@ function revealLoop(app) {
 /** Let go (pointer up, cancel or leaving the disc): drain; a quick tap nudges sideways (SPEC 026 §2, 03). */
 function letGo(app, e) {
   const r = revealState(app);
-  if (!r?.holding || (e && r.pointerId != null && e.pointerId !== r.pointerId)) return;
+  if (!r?.holding || (e?.pointerId != null && r.pointerId != null && e.pointerId !== r.pointerId)) return;
   r.holding = false;
-  if (Date.now() - r.downAt < TAP_MS) {
-    r.nudged = true;
-    document.getElementById('lbr-disc')?.animate?.([{ transform: 'none' }, { transform: 'translateX(-6px)' }, { transform: 'translateX(6px)' }, { transform: 'none' }], { duration: 350, easing: 'ease' });
-  }
+  r.nudged = Date.now() - r.downAt < TAP_MS; // a quick tap says "Keep holding"; a longer early let-go, "Press and hold"
+  app.render(); // anything held back while the finger was down (first, so the nudge runs on the disc that stays)
+  if (r.nudged) document.getElementById('lbr-disc')?.animate?.([{ transform: 'none' }, { transform: 'translateX(-6px)' }, { transform: 'translateX(6px)' }, { transform: 'none' }], { duration: 350, easing: 'ease' });
   revealLoop(app);
-  app.render(); // anything held back while the finger was down
 }
 let letGoBound = null;
+
+/** One live region for the whole app, outside #content, so a redraw never replaces it before VoiceOver reads it. */
+function announce(text) {
+  let n = document.getElementById('lb-live');
+  if (!n) { n = document.createElement('div'); n.id = 'lb-live'; n.className = 'lb-sr'; n.setAttribute('aria-live', 'polite'); document.body.appendChild(n); }
+  n.textContent = '';
+  setTimeout(() => { n.textContent = text; }, 50);
+}
 
 /** Just show me / Enter / Space / Reveal (reduced motion): straight to the burst, no freeze. */
 function revealNow(app) {
@@ -438,6 +445,12 @@ export default {
     const r = app.ui.reveal;
     syncMotion(root); // the burst, the landing and the cue keep their place through a redraw
     const phase = revealPhase(r, Date.now(), reduced());
+    if ((phase === 'burst' || phase === 'final') && !r.announced) {
+      r.announced = true;
+      const h = hcpOf(app.event.roster, app.me), st = app.lobby();
+      announce(`${st?.hostName && st.hostName !== 'The organizer' ? st.hostName : 'Your organizer'} has you at ${h?.strokes ?? ''}`);
+      if (r.fast) root.querySelector('.lb-rv .nr-title')?.focus({ preventScroll: true }); // the button that had focus is gone
+    }
     if ((phase === 'burst' || phase === 'final') && !r.replay && !r.marked) { r.marked = true; app.markHcpSeen(); }
     if (Number.isFinite(r.doneAt) && phase !== 'final') revealLoop(app);
     else if (phase === 'final' && finalFades(Date.now() - landsAt(r) - LAND_MS, reduced())[3] < 1) revealLoop(app);
@@ -446,6 +459,7 @@ export default {
       window.addEventListener('pointerup', letGoBound);
       window.addEventListener('pointercancel', letGoBound);
       window.addEventListener('blur', letGoBound);
+      document.addEventListener('visibilitychange', () => { if (document.hidden) letGo(app); });
     }
     const disc = root.querySelector('#lbr-disc');
     if (!disc) return;
@@ -463,7 +477,10 @@ export default {
       e.preventDefault();
       revealNow(app);
     });
-    disc.addEventListener('click', (e) => e.preventDefault()); // a tap is a press, never a reveal
+    disc.addEventListener('click', (e) => {
+      e.preventDefault(); // a finger's tap is a press, never a reveal…
+      if (e.detail === 0) revealNow(app); // …but VoiceOver's double-tap (a click with no touch behind it) reveals
+    });
   },
   render(app) {
     const st = app.lobby();

@@ -2186,7 +2186,7 @@ html.light .ce-mine.ce-card, [data-theme="light"] .ce-mine.ce-card { box-shadow:
 .lb-inv-who { display: flex; align-items: center; gap: var(--space-3); min-height: 44px; font-size: 17px; line-height: 24px; color: var(--text-muted); }
 .lb-inv-who b { color: var(--text); font-weight: 600; }
 .lb-av { width: 44px; height: 44px; border-radius: 50%; background: var(--surface-2); color: var(--text); display: grid; place-items: center; font-size: 17px; font-weight: 700; flex: none; }
-.lb-inv-name { font-size: 64px; font-weight: 800; letter-spacing: -2.5px; line-height: 64px; margin: var(--space-6) 0 var(--space-3); overflow-wrap: anywhere; }
+.lb-inv-name { font-size: 64px; font-weight: 800; letter-spacing: -2.5px; line-height: 64px; margin: var(--space-6) 0 var(--space-3); overflow-wrap: break-word; hyphens: auto; }
 .lb-inv-what { color: var(--text); }
 .lb-inv-when { font-size: 17px; line-height: 24px; font-weight: 600; margin-top: var(--space-5); }
 .lb-inv-k { margin: var(--space-6) 0 var(--space-3); }
@@ -2217,8 +2217,6 @@ html.light .ce-mine.ce-card, [data-theme="light"] .ce-mine.ce-card { box-shadow:
 .lb-field i { position: absolute; top: 23px; width: 4px; height: 16px; border-radius: 2px; background: var(--text-muted); opacity: .55; transform: translateX(-50%); }
 .lb-field i.me { top: 17px; width: 6px; height: 28px; background: var(--cart-you); opacity: 1; box-shadow: 0 0 16px var(--cart-you); }
 .lb-field-me { position: absolute; top: 0; transform: translateX(-50%); font-size: 12px; font-weight: 600; color: var(--cart-you-text); white-space: nowrap; }
-.lb-field-me[style*="left:0%"], .lb-field-me[style*="left:0."] { transform: none; }
-.lb-field-me[style*="left:100%"] { transform: translateX(-100%); }
 .lb-ends { position: absolute; left: 0; right: 0; top: 44px; display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); }
 .lb-off { margin: 0 0 var(--space-2); }
 .lb-again { padding-left: 0; margin-top: var(--space-1); align-self: flex-start; font-size: 15px; color: var(--text-muted); }
@@ -2236,3 +2234,10 @@ html.light .ce-mine.ce-card, [data-theme="light"] .ce-mine.ce-card { box-shadow:
 @keyframes lb-land { 0% { transform: scale(.85); } 60% { transform: scale(1.06); } 100% { transform: scale(1); } }
 /* The pop: full strength and already spreading in the first 100 ms (SPEC: a pop, not a soft ripple), then gone. */
 @keyframes lb-burst { 0% { opacity: 1; transform: scale(1); } 16% { opacity: 1; transform: scale(1.22); } 100% { opacity: 0; transform: scale(1.6); } }
+/* 026 round 1: 15px lines (SPEC 01 / 06), the quiet Follow along line, the ring fading out at the burst */
+.lb-inv ~ .nr-foot .lb-note, .lb-off { font-size: 15px; line-height: 20px; }
+.lb-just.block { display: block; width: 100%; margin-top: var(--space-1); }
+.lb-ringout { opacity: 0; }
+@media (prefers-reduced-motion: no-preference) { .lb-ringout { animation: lb-ringout .6s ease-out both; } }
+@keyframes lb-ringout { from { opacity: 1; } to { opacity: 0; } }
+.lb-rv .nr-title:focus { outline: none; }
