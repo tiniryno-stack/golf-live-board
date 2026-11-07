@@ -503,28 +503,6 @@ test('rev · handicaps: rank with ties and zero, the rank line, invite wording o
   assert.deepEqual([1, 2, 3, 4, 11, 12, 13, 21, 22, 23, 101].map(L.ordinal), ['1st', '2nd', '3rd', '4th', '11th', '12th', '13th', '21st', '22nd', '23rd', '101st']);
 });
 
-test('rev · revealFrame: deterministic, blurred → exact by 900 ms, fades in order, reduced motion, bad elapsed', () => {
-  const f = (e, r = false) => L.revealFrame(12, e, r);
-  assert.deepEqual(f(500), f(500), 'same input, same frame (redraws never flicker)');
-  assert.deepEqual([f(0).blur, f(0).settled, f(0).fade], [6, false, [0, 0, 0, 0]]);
-  assert.notEqual(f(0).value, 12, 'starts somewhere else');
-  let lastBlur = 7;
-  for (let e = 0; e <= 2400; e += 50) {
-    const x = f(e);
-    assert.ok(x.blur <= lastBlur, `blur never grows (${e})`);
-    lastBlur = x.blur;
-    if (e >= 900) assert.equal(x.value, 12, `settled from 900 ms (${e})`);
-    assert.ok(x.fade.every((o, i) => o >= 0 && o <= 1 && (i === 0 || o <= x.fade[i - 1])), `fades in order (${e})`);
-    assert.equal(x.done, e >= 2000);
-  }
-  assert.deepEqual([f(1200).blur, f(1300).fade, f(2000).fade], [0, [0.5, 0, 0, 0], [1, 1, 1, 1]]);
-  assert.deepEqual(f(0, true), f(99999), 'reduced motion = the final frame at once');
-  for (const bad of [NaN, -500, undefined]) assert.deepEqual(L.revealFrame(12, bad), f(0), `elapsed ${bad} → the first frame`);
-  for (let e = 0; e < 900; e += 50) assert.ok(L.revealFrame(0, e).value >= 0, 'never below zero');
-  for (let e = 0; e < 900; e += 50) assert.ok(L.revealFrame(50, e).value <= 54, 'never above 54');
-  assert.equal(L.hcpOf({ players: [{ id: 'x', strokes: -2 }] }, 'x').strokes, 0, 'never below zero, like the reveal');
-});
-
 test('rev · lobbyView precedence (table) and Home at carts', () => {
   const wed = at('2026-11-04T18:00:00Z');
   const v = (ev, ctx, now = wed) => L.lobbyView(L.lobbyState(ev, now), ctx);

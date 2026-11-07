@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Handicap reveal · three ways</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400..800&family=Geist+Mono:wght@500..700&display=swap" rel="stylesheet">
+<style>
+:root{--font-sans:Geist,system-ui,-apple-system,sans-serif;--font-mono:"Geist Mono",ui-monospace,monospace;--bg:#0a0b0d;--surface-1:#15171b;--surface-2:#1f2227;--surface-3:#2a2e35;--text:#f4f5f7;--text-muted:#a7acb4;--line:#2b2f36;--you:#3ddc84;--button:#f4f5f7;--on-button:#0a0b0d}
+*{box-sizing:border-box}
+html,body{margin:0;background:#050607;color:var(--text);font-family:var(--font-sans)}
+.wrap{display:flex;flex-direction:column;align-items:center;gap:14px;padding:18px 12px 40px}
+.modes{display:flex;gap:6px;background:var(--surface-1);padding:4px;border-radius:12px;flex-wrap:wrap;justify-content:center}
+.modes button{font:inherit;font-size:13px;font-weight:600;color:var(--text-muted);background:none;border:0;padding:9px 12px;border-radius:9px;cursor:pointer}
+.modes button.on{background:var(--surface-3);color:var(--text)}
+.hint{font-size:13px;color:var(--text-muted);text-align:center;max-width:393px;line-height:19px;margin:0}
+.ph{width:393px;height:780px;position:relative;overflow:hidden;background:var(--bg);border-radius:32px;box-shadow:0 0 0 1px #22252b;user-select:none;-webkit-user-select:none}
+.pg{position:absolute;inset:0;display:flex;flex-direction:column;padding:70px 20px 28px}
+.lbl{font-family:var(--font-mono);font-size:12px;line-height:16px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted)}
+.h1{font-size:32px;line-height:36px;font-weight:700;letter-spacing:-.8px;margin:0}
+.p{font-size:17px;line-height:24px;color:var(--text-muted);margin:0}
+.pri{height:56px;border-radius:16px;background:var(--button);color:var(--on-button);font:inherit;font-size:17px;font-weight:600;width:100%;border:0;cursor:pointer}
+.fade{opacity:0;transform:translateY(8px);transition:opacity .35s ease,transform .35s ease}
+.fade.in{opacity:1;transform:none}
+.num{font-family:var(--font-mono);font-weight:700;letter-spacing:-6px;line-height:1}
+.track{position:relative;height:44px;margin-top:8px}
+.track .rail{position:absolute;left:0;right:0;top:20px;height:2px;background:var(--line)}
+.track i{position:absolute;top:13px;width:4px;height:16px;border-radius:2px;background:var(--text-muted);transform:translateX(-50%);opacity:.55}
+.track i.me{background:var(--you);opacity:1;height:28px;top:7px;width:6px;box-shadow:0 0 16px rgba(61,220,132,.55)}
+.track .ends{position:absolute;left:0;right:0;top:32px;display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:12px;color:var(--text-muted)}
+/* concept 1 · hold (r2) */
+.disc{width:240px;height:240px;border-radius:50%;margin:0 auto;position:relative;display:grid;place-items:center;cursor:pointer;touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;border:0;padding:0;font:inherit;color:inherit;
+  background:var(--surface-2);box-shadow:inset 0 0 40px rgba(255,255,255,.05),inset 0 0 0 1px rgba(255,255,255,.06);animation:breathe 2.6s ease-in-out infinite}
+@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.025)}}
+.disc.holding{animation:none}
+.disc svg{position:absolute;inset:0;width:240px;height:240px}
+.disc .q{font-family:var(--font-mono);font-size:64px;font-weight:700;color:var(--text-muted)}
+.disc.shake{animation:shake .1s linear infinite}
+.disc.nudge{animation:nudge .35s ease}
+@keyframes nudge{0%,100%{transform:none}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.burst2{position:absolute;left:50%;top:50%;width:240px;height:240px;margin:-120px 0 0 -120px;border-radius:50%;box-shadow:0 0 0 4px rgba(61,220,132,1),0 0 60px rgba(61,220,132,.6),inset 0 0 40px rgba(61,220,132,.35);opacity:0;pointer-events:none}
+.burst2.go{animation:burst2 .6s cubic-bezier(.2,.7,.2,1) forwards}
+@keyframes burst2{0%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1.6)}}
+.ttl{transition:color .3s,opacity .3s}
+.hold-lbl.cue{animation:cue 1.2s ease 2}
+@keyframes cue{50%{color:var(--text)}}
+.hold-lbl{font-family:var(--font-mono);font-size:13px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:center;margin-top:22px;min-height:18px}
+.quiet{font:inherit;font-size:15px;color:var(--text-muted);background:none;border:0;min-height:44px;cursor:pointer;margin-top:6px}
+.track2 .lab{position:absolute;top:-14px;transform:translateX(-50%);font-family:var(--font-mono);font-size:12px;font-weight:700;color:var(--you)}
+/* old */
+.seal{width:220px;height:220px;border-radius:50%;margin:0 auto;position:relative;display:grid;place-items:center;cursor:pointer;touch-action:none}
+.seal svg{position:absolute;inset:0}
+.seal .q{font-family:var(--font-mono);font-size:64px;font-weight:700;color:var(--text-muted)}
+.seal.shake{animation:shake .12s linear infinite}
+@keyframes shake{0%{transform:translate(0,0)}25%{transform:translate(1px,-1px)}50%{transform:translate(-1px,1px)}75%{transform:translate(1px,1px)}}
+.burst{position:absolute;left:50%;top:50%;width:220px;height:220px;margin:-110px 0 0 -110px;border-radius:50%;border:2px solid var(--you);opacity:0;pointer-events:none}
+.burst.go{animation:burst .7s cubic-bezier(.2,.7,.2,1) forwards}
+@keyframes burst{0%{opacity:.9;transform:scale(.9)}100%{opacity:0;transform:scale(2.2)}}
+.land{animation:land .7s cubic-bezier(.18,1.4,.4,1) forwards}
+@keyframes land{0%{opacity:0;transform:scale(.4);filter:blur(10px)}60%{opacity:1;filter:blur(0)}100%{transform:scale(1)}}
+/* concept 2 · reel */
+.dim{position:absolute;inset:0;background:#000;opacity:0;transition:opacity .5s;pointer-events:none}
+.reelbox{height:150px;overflow:hidden;position:relative;margin:20px auto 0;width:220px;-webkit-mask-image:linear-gradient(transparent,#000 30%,#000 70%,transparent);mask-image:linear-gradient(transparent,#000 30%,#000 70%,transparent)}
+.reel{position:absolute;left:0;right:0;top:0;display:flex;flex-direction:column;align-items:center}
+.reel span{height:150px;display:grid;place-items:center;font-family:var(--font-mono);font-size:128px;font-weight:700;letter-spacing:-6px}
+.dots{display:flex;gap:8px;justify-content:center;margin-top:18px;height:10px}
+.dots i{width:8px;height:8px;border-radius:4px;background:var(--text-muted);opacity:.25}
+.dots i.on{opacity:1}
+.flash{position:absolute;left:50%;top:50%;width:10px;height:10px;border-radius:50%;background:radial-gradient(circle,rgba(61,220,132,.55),transparent 70%);transform:translate(-50%,-50%) scale(0);opacity:0;pointer-events:none}
+.flash.go{animation:flash .9s ease-out forwards}
+@keyframes flash{0%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(60)}}
+/* concept 3 · the field */
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:18px}
+.chip{height:62px;border-radius:14px;background:var(--surface-1);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;perspective:400px;transition:background .3s,opacity .4s,transform .4s}
+.chip b{font-size:13px;font-weight:600;color:var(--text-muted)}
+.chip span{font-family:var(--font-mono);font-size:20px;font-weight:700;display:inline-block}
+.chip span.flip{animation:flip .32s ease}
+@keyframes flip{0%{transform:rotateX(90deg);opacity:0}100%{transform:none;opacity:1}}
+.chip.me{box-shadow:inset 0 0 0 1.5px var(--line)}
+.chip.me.wait{animation:pulse 1s ease-in-out infinite}
+@keyframes pulse{0%,100%{box-shadow:inset 0 0 0 1.5px var(--line)}50%{box-shadow:inset 0 0 0 1.5px var(--text)}}
+.chip.done{opacity:.45}
+.big{position:absolute;left:0;right:0;top:210px;text-align:center;pointer-events:none}
+.replay{font:inherit;font-size:13px;font-weight:600;color:var(--text-muted);background:var(--surface-1);border:0;border-radius:9px;padding:9px 14px;cursor:pointer}
+</style></head><body>
+<div class="wrap">
+  <div class="modes"><button data-c="1" class="on">1 · Press and hold</button><button data-c="2" >2 · The reel</button><button data-c="3">3 · The field</button></div>
+  <div class="ph" id="ph"></div>
+  <button class="replay" id="replay">Replay</button>
+  <p class="hint" id="hint"></p>
+</div>
+<script>
+const ME = 12, NAME = 'Baker';
+const FIELD = [['Josh', 4], ['Sean', 5], ['Ant', 6], ['Mitch', 7], ['Andrew', 8], ['Jay', 9], ['Brandon', 10], ['Joseph', 11], ['Baker', 12], ['Steve', 12], ['Marcus', 13], ['Elijah', 14], ['Alex', 15], ['Justin', 16], ['Chuck', 18], ['Peter', 20]];
+const rank = FIELD.filter(([, h]) => h < ME).length + 1;
+const ord = (n) => n + (['th', 'st', 'nd', 'rd'][(n % 100 - 20) % 10] || ['th', 'st', 'nd', 'rd'][n % 100] || 'th');
+const ph = document.getElementById('ph'), hint = document.getElementById('hint');
+const HINTS = {
+  1: 'Press and hold the circle. It shakes as it fills; let go early and it drains back. At full: a green ring bursts, the number lands with a bounce, and your spot on the field lights up.',
+  2: 'Tap Reveal. The screen dims, three beats count down, then a reel spins and slows down number by number until it stops on yours, with a green flash.',
+  3: 'Tap Reveal. Everyone’s handicap flips in, highest first. Yours is held back to last, pulsing, then it takes the whole screen.',
+};
+const track = () => `<div class="track"><div class="rail"></div>${FIELD.map(([n, h]) => `<i class="${n === NAME ? 'me' : ''}" style="left:${((h - 4) / 16) * 100}%"></i>`).join('')}<div class="ends"><span>4</span><span>20</span></div></div>`;
+const after = (top = 'auto') => `<div class="fade" id="f1" style="margin-top:${top}"><p class="p" style="color:var(--text)"><b>${ord(rank)} lowest of 16</b></p><p class="p">The field runs 4 to 20.</p>${track()}</div>
+  <div style="flex:1"></div><p class="fade p" id="f2" style="font-size:15px;margin:0 0 12px">Think it’s off? Text Andrew.</p><button class="pri fade" id="f3">See who you’re up against</button>`;
+const show = (...ids) => ids.forEach((id, i) => setTimeout(() => document.getElementById(id)?.classList.add('in'), i * 220));
+let timers = [];
+const T = (fn, ms) => timers.push(setTimeout(fn, ms));
+const clear = () => { timers.forEach(clearTimeout); timers = []; };
+
+function c1() {
+  ph.innerHTML = `<div class="pg"><p class="lbl" id="kk">Chuck’s Bday · ${NAME}</p><h1 class="h1 ttl" id="ttl" style="margin-top:6px">Andrew set your handicap</h1>
+    <div style="flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;position:relative;margin-top:-20px" id="stage">
+      <button class="disc" id="seal" aria-label="Reveal your handicap"><svg viewBox="0 0 240 240" aria-hidden="true"><circle id="ring" cx="120" cy="120" r="118" fill="none" stroke="var(--you)" stroke-width="4" stroke-linecap="round" stroke-dasharray="741" stroke-dashoffset="741" transform="rotate(-90 120 120)" style="opacity:0"/></svg><span class="q" id="q">?</span><div class="burst2" id="burst"></div></button>
+      <p class="hold-lbl" id="holdtxt">Press and hold</p>
+      <button class="quiet" id="just">Just show me</button>
+    </div></div>`;
+  const seal = document.getElementById('seal'), ring = document.getElementById('ring'), ttl = document.getElementById('ttl'), txt = document.getElementById('holdtxt');
+  let v = 0, holding = false, raf = 0, done = false, last = 0, downAt = 0;
+  const HOLD = 1400, DRAIN = 400;
+  const tick = (t) => {
+    const dt = last ? t - last : 16; last = t;
+    v = Math.max(0, Math.min(1, v + (holding ? dt / HOLD : -dt / DRAIN)));
+    ring.style.strokeDashoffset = 741 * (1 - v); ring.style.opacity = v > 0.01 ? 1 : 0;
+    seal.classList.toggle('shake', holding && v > 0.35);
+    ttl.style.opacity = holding ? 1 - v * 0.6 : 1;
+    if (v >= 1 && !done) { done = true; return finish(); }
+    if (holding || v > 0) raf = requestAnimationFrame(tick); else last = 0;
+  };
+  const down = (e) => { if (done) return; e.preventDefault(); holding = true; document.getElementById('just').style.opacity = 0; downAt = performance.now(); last = 0; seal.classList.add('holding'); txt.textContent = 'Keep holding'; cancelAnimationFrame(raf); raf = requestAnimationFrame(tick); };
+  const up = () => { if (!holding) return; holding = false; seal.classList.remove('holding'); if (!done) { document.getElementById('just').style.opacity = 1; txt.textContent = 'Press and hold'; if (performance.now() - downAt < 250) { seal.classList.remove('nudge'); void seal.offsetWidth; seal.classList.add('nudge'); txt.textContent = 'Keep holding'; } } };
+  seal.addEventListener('pointerdown', down); window.addEventListener('pointerup', up); window.addEventListener('pointercancel', up); seal.addEventListener('pointerleave', up);
+  T(() => { if (!done && !holding) txt.classList.add('cue'); }, 3000);
+  seal.addEventListener('contextmenu', (e) => e.preventDefault());
+  seal.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); quick(); } });
+  document.getElementById('just').onclick = () => quick();
+  const quick = () => { if (done) return; done = true; ring.style.strokeDashoffset = 0; finish(true); };
+  const finish = (fast) => {
+    holding = false; seal.classList.remove('shake', 'holding'); seal.style.animation = 'none';
+    txt.style.opacity = 0; document.getElementById('just').style.opacity = 0;
+    ttl.style.opacity = 1;
+    T(() => {   // a 150 ms freeze, then the burst
+      document.getElementById('burst').classList.add('go');
+      const q = document.getElementById('q'); q.textContent = ME; q.style.color = 'var(--text)'; q.classList.add('land');
+      seal.style.background = 'transparent'; seal.style.boxShadow = 'none'; ring.style.transition = 'opacity .6s'; ring.style.opacity = 0;
+      document.getElementById('kk').style.color = 'var(--you)'; ttl.textContent = 'Andrew has you at';
+    }, fast ? 0 : 150);
+    T(() => {  // hold the beat, then the rest fades in around the number (nothing resizes)
+      txt.textContent = 'You get 12 strokes: one on each of the 12 hardest holes.'; txt.style.cssText = 'font-family:var(--font-sans);font-size:17px;line-height:24px;letter-spacing:0;text-transform:none;color:var(--text-muted);text-align:center;margin-top:20px;max-width:300px;opacity:0;transition:opacity .35s';
+      requestAnimationFrame(() => { txt.style.opacity = 1; });
+      document.getElementById('just').remove();
+      ph.querySelector('.pg').insertAdjacentHTML('beforeend', `<div class="fade" id="f1"><div class="track track2" style="margin-top:0"><div class="rail"></div>${FIELD.map(([n, h]) => `<i class="${n === NAME ? 'me' : ''}" style="left:${((h - 4) / 16) * 100}%"></i>`).join('')}<span class="lab" style="left:${((ME - 4) / 16) * 100}%">You · ${ord(rank)} of 16</span><div class="ends"><span>4</span><span>20</span></div></div></div>
+        <p class="fade p" id="f2" style="font-size:15px;margin:22px 0 12px">Think it’s off? Text Andrew.</p><button class="pri fade" id="f3">See who you’re up against</button>`);
+      show('f1', 'f2'); T(() => show('f3'), 800);
+    }, (fast ? 0 : 150) + 900);
+  };
+  window.__auto = () => { seal.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); T(() => up(), HOLD + 300); };
+  window.__tap = () => { seal.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); T(() => up(), 120); };
+}
+
+function c2() {
+  ph.innerHTML = `<div class="pg"><p class="lbl">Chuck’s Bday · ${NAME}</p><h1 class="h1" style="margin-top:6px">Andrew set your handicap</h1>
+    <div style="flex:1"></div><button class="pri" id="go">Reveal</button></div>`;
+  const go = document.getElementById('go');
+  go.onclick = () => {
+    const seq = []; for (let k = 0; k < 4; k++) for (const [, h] of FIELD) seq.push(h);
+    seq.push(ME);
+    ph.innerHTML = `<div class="dim" id="dim"></div><div class="pg" style="z-index:1"><p class="lbl" id="kk">Chuck’s Bday · ${NAME}</p><h1 class="h1" style="margin-top:6px">Andrew has you at</h1>
+      <div class="dots" id="dots"><i></i><i></i><i></i></div>
+      <div class="reelbox" id="rbox" style="opacity:0;transition:opacity .25s"><div class="reel" id="reel">${seq.map((h) => `<span>${h}</span>`).join('')}</div></div>
+      <div class="flash" id="flash"></div>
+      <div id="rest" style="display:flex;flex-direction:column;flex:1"></div></div>`;
+    document.getElementById('dim').style.opacity = .55;
+    const dots = [...document.querySelectorAll('#dots i')];
+    dots.forEach((d, i) => T(() => d.classList.add('on'), 350 + i * 450));
+    const reel = document.getElementById('reel'), N = seq.length - 1, H = 150;
+    T(() => {
+      document.getElementById('rbox').style.opacity = 1;
+      const t0 = performance.now(), D = 2600;
+      const step = (t) => {
+        const x = Math.min(1, (t - t0) / D), e = 1 - Math.pow(1 - x, 4);
+        reel.style.transform = `translateY(${-e * N * H}px)`;
+        if (x < 1) requestAnimationFrame(step);
+        else {
+          reel.lastElementChild.style.color = 'var(--you)';
+          reel.animate([{ transform: `translateY(${-N * H - 18}px)` }, { transform: `translateY(${-N * H}px)` }], { duration: 260, easing: 'cubic-bezier(.2,1.6,.4,1)' });
+          document.getElementById('flash').classList.add('go'); document.getElementById('dim').style.opacity = 0;
+          document.getElementById('kk').style.color = 'var(--you)'; document.getElementById('dots').style.opacity = 0;
+          T(() => { document.getElementById('rest').innerHTML = after('12px'); show('f1', 'f2', 'f3'); }, 500);
+        }
+      };
+      requestAnimationFrame(step);
+    }, 1750);
+  };
+  window.__auto = () => go.click();
+}
+
+function c3() {
+  ph.innerHTML = `<div class="pg"><p class="lbl">Chuck’s Bday · ${NAME}</p><h1 class="h1" style="margin-top:6px">Andrew set the field</h1>
+    <p class="p" style="margin-top:8px">16 handicaps. Yours comes last.</p>
+    <div class="grid" id="grid">${FIELD.map(([n]) => `<div class="chip${n === NAME ? ' me' : ''}" data-n="${n}"><b>${n === NAME ? 'You' : n}</b><span>?</span></div>`).join('')}</div>
+    <div style="flex:1"></div><button class="pri" id="go">Reveal</button></div>`;
+  const go = document.getElementById('go');
+  go.onclick = () => {
+    go.style.opacity = 0; go.disabled = true;
+    const others = FIELD.filter(([n]) => n !== NAME).sort((a, b) => b[1] - a[1]);
+    const chip = (n) => document.querySelector(`.chip[data-n="${n}"]`);
+    const me = chip(NAME); me.classList.add('wait');
+    others.forEach(([n, h], i) => T(() => { const c = chip(n); const s = c.querySelector('span'); s.textContent = h; s.classList.add('flip'); }, 200 + i * (i < 10 ? 130 : 190)));
+    const tEnd = 200 + 10 * 130 + 5 * 190 + 300;
+    T(() => document.querySelectorAll('.chip:not(.me)').forEach((c) => c.classList.add('done')), tEnd);
+    T(() => {
+      me.classList.remove('wait');
+      const grid = document.getElementById('grid'); grid.style.transition = 'opacity .4s'; grid.style.opacity = 0;
+      document.querySelector('.h1').textContent = 'Andrew has you at'; document.querySelector('.p').style.opacity = 0;
+      document.querySelector('.lbl').style.color = 'var(--you)';
+      ph.querySelector('.pg').insertAdjacentHTML('beforeend', `<div class="big"><div class="num land" style="font-size:128px">${ME}</div></div>`);
+      T(() => { grid.remove(); ph.querySelector('.pg div[style*="flex:1"]').remove(); go.remove(); ph.querySelector('.pg').insertAdjacentHTML('beforeend', `<div style="height:200px"></div>` + after('0')); show('f1', 'f2', 'f3'); }, 800);
+    }, tEnd + 900);
+  };
+  window.__auto = () => go.click();
+}
+const C = { 1: c1, 2: c2, 3: c3 };
+let cur = 1;
+const run = () => { clear(); C[cur](); hint.textContent = HINTS[cur]; };
+document.querySelectorAll('.modes button').forEach((b) => b.addEventListener('click', () => { document.querySelectorAll('.modes button').forEach((x) => x.classList.toggle('on', x === b)); cur = +b.dataset.c; run(); }));
+document.getElementById('replay').onclick = run;
+run();
+</script>
+</body></html>

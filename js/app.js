@@ -1309,7 +1309,9 @@ function draw(opts) {
 
   const active = document.activeElement;
   const typing = active && content.contains(active) && /^(INPUT|TEXTAREA|SELECT)$/.test(active.tagName);
-  if (typing && !opts.force && !userAction) {
+  // 026: a finger on the reveal's disc: background redraws wait until it lets go (the disc is never replaced under it).
+  const held = !opts.force && !!screen.keepContent?.(app);
+  if ((typing && !opts.force && !userAction) || held) {
     pendingContent = true; // background update: don't wipe what someone is typing
   } else {
     pendingContent = false;
