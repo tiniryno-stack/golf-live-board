@@ -650,7 +650,7 @@ app.relevantRequests = () => {
 
 // ───────────────────────────────────────────── organizer
 
-app.saveEvent = async ({ course, roster, settings, name }) => {
+app.saveEvent = async ({ course, roster, settings, name, quiet = false }) => {
   app.savingEvent = Date.now();
   let res;
   try {
@@ -669,7 +669,7 @@ app.saveEvent = async ({ course, roster, settings, name }) => {
   app.event = { ...app.event, course: course ?? app.event.course, roster: roster ?? app.event.roster, settings: settings ?? app.event.settings, name: name || app.event.name };
   recompute();
   render();
-  app.toast({ title: 'Saved', sub: res.changes ? `${res.changes} change${res.changes === 1 ? '' : 's'} logged` : 'No changes' });
+  if (!quiet) app.toast({ title: 'Saved', sub: res.changes ? `${res.changes} change${res.changes === 1 ? '' : 's'} logged` : 'No changes' });
   return true;
 };
 

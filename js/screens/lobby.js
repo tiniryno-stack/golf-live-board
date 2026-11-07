@@ -55,6 +55,13 @@ function hostRow(app, st) {
   return `<div class="card lb-card lb-rows">${row('Host', app.adminPin ? 'draft, start times, players' : 'enter the organizer PIN', { act: 'lb-host', chev: true })}</div>`;
 }
 
+/** The captains' matchup draft, while it's running: one row to watch the board fill in (owner, Nov 7). */
+function mdCard(app) {
+  const md = app.event.settings?.matchupDraft;
+  if (!md || md.done) return '';
+  return `<div class="card lb-card lb-rows">${row('Matchup draft · live', `${(md.picks || []).length} of 12 matches picked`, { act: 'lb-md', chev: true, cls: 'you' })}</div>`;
+}
+
 function whoPlaying(app, st, { all = false } = {}) {
   // Lowest handicap first (owner, Nov 6); joinList is A–Z, so ties stay A–Z.
   const meFirst = byHandicap(app.event.roster, joinList(app.event.roster, app.claimed, '', app.me));
@@ -248,6 +255,7 @@ function early(app, st, { watching = false } = {}) {
     ${howLink()}
     ${noticeCard(st)}
     ${hostRow(app, st)}
+    ${mdCard(app)}
     ${watching ? '' : hcpCard(app, st)}
     ${watching ? '' : st.paired && myCart(app.event, app.me) ? cartCard(app) : comingUp(st)}
     ${whoPlaying(app, st)}
@@ -270,6 +278,7 @@ function drafted(app, st) {
   return `${head(`${esc(ev.name)} · teams are set`, `You’re on ${esc(m.side?.name || 'a team')}`, `${esc(dayName(st.date, app.now(), st.tz))} ${esc(st.startLabel)} · ${esc(ev.course?.shortName || ev.course?.name || '')}`)}
     ${noticeCard(st)}
     ${hostRow(app, st)}
+    ${mdCard(app)}
     ${teamCard(m.side, true)}
     ${teamCard(m.other, open, 'lb-other')}
     ${howLink()}
@@ -288,6 +297,7 @@ function ready(app, st) {
   return `${head(`${esc(ev.name)} · ${esc(m.side?.name || '')}`, `${esc(day)} · ${esc(m.tee || st.startLabel)}${m.mate ? ` with ${esc(m.mate)}` : ''}`, `${esc(ev.course?.shortName || ev.course?.name || '')} · Team Ryder Cup`)}
     ${noticeCard(st)}
     ${hostRow(app, st)}
+    ${mdCard(app)}
     <div class="card lb-card lb-rows">${m.matches.map((x) => row(`Holes ${esc(x.holes)}`, x.vs ? `vs ${esc(x.vs)}` : '')).join('')}</div>
     ${note(`Scoring opens by itself at ${esc(st.opensLabel)}${st.day ? '' : ` on ${esc(day)}`}. Just tap Golf Board.${soon}`)}
     ${howLink()}
@@ -305,6 +315,7 @@ function dayWait(app, st) {
       drafting ? 'Keep this open: your team, start time and matches show up here.' : 'Teams are set. Keep this open: scoring opens the moment start times are in.')}
     ${noticeCard(st)}
     ${hostRow(app, st)}
+    ${mdCard(app)}
     ${hcpCard(app, st)}
     ${st.paired && myCart(app.event, app.me) ? cartCard(app) : ''}
     ${drafting ? whoPlaying(app, st, { all: true }) : ''}
@@ -546,6 +557,7 @@ export default {
     'lb-notlisted': (el, ev, app) => textHost(app, app.lobby()),
     'lb-text': (el, ev, app) => textHost(app, app.lobby()),
     'lb-all': (el, ev, app) => app.openSheet('lobby-all', {}),
+    'lb-md': (el, ev, app) => app.openSheet('lobby-md', {}),
     'lb-other': (el, ev, app) => { app.ui.lbOther = app.ui.lbOther === app.code ? null : app.code; app.render(); },
     'lb-host': (el, ev, app) => app.go(app.tabHash('host')),
     'lb-how': (el, ev, app) => {

@@ -2252,3 +2252,15 @@ html.light .ce-mine.ce-card, [data-theme="light"] .ce-mine.ce-card { box-shadow:
 .lb-oc-k { background: none; border: 0; padding: 0; min-height: var(--tap-min); text-align: left; color: var(--ink-soft); }
 .lb-oc-k.sel { color: var(--text); text-decoration: underline; text-underline-offset: 3px; }
 .lb-oc .swap-name { margin-top: 0; height: 48px; font-size: 15px; background: var(--surface-1); }
+
+/* Matchup draft board (owner, Nov 7): two slots per match, the lit slot = whose pick it is. Existing tokens only. */
+.md-set { padding: var(--space-2); }
+.md-row { display: grid; grid-template-columns: 1fr 28px 1fr; align-items: center; gap: var(--space-2); padding: 4px 0; }
+.md-head { padding: 0 var(--space-2) 4px; }
+.md-head .lbl:last-child { text-align: right; }
+.md-vs { text-align: center; color: var(--text-muted); font-size: 13px; }
+.md-slot { min-height: 56px; border-radius: var(--radius-md); border: 1.5px dashed var(--line); padding: 8px 10px; display: flex; flex-direction: column; justify-content: center; text-align: left; color: var(--text-muted); font: inherit; background: none; }
+.md-slot.set { border-style: solid; border-color: transparent; background: var(--surface-2); color: inherit; }
+.md-slot.set .lb-rt { font-size: 15px; line-height: 19px; }
+.md-slot.now { border: 2px solid var(--cart-you); color: var(--cart-you-text); font-weight: 600; }
+.md-pick { margin: 4px 0 8px; }
