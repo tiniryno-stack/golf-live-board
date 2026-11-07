@@ -83,11 +83,16 @@ const OSM_HEADERS = {
 };
 const osmQuery = (lat: number, lng: number) =>
   `[out:json][timeout:25];(way["golf"="green"](around:1500,${lat},${lng});way["golf"="hole"](around:1500,${lat},${lng});way["golf"="tee"](around:1500,${lat},${lng}););out geom;`;
+// OSM gets at most OSM_BUDGET_MS in all (Nov 7: three dead mirrors took ~45 s and left no time for the AI tracing).
+const OSM_BUDGET_MS = 14000;
 async function overpassRaw(q: string, log?: string[]) {
+  const until = Date.now() + OSM_BUDGET_MS;
+  const wait = () => Math.max(1000, Math.min(8000, until - Date.now()));
   for (const url of OVERPASS) {
+    if (Date.now() >= until) { log?.push('osm: out of time'); break; }
     try {
-      let r = await fetch(url, { method: 'POST', body: `data=${encodeURIComponent(q)}`, signal: AbortSignal.timeout(15000), headers: OSM_HEADERS });
-      if (r.status === 406 || r.status === 405) r = await fetch(`${url}?data=${encodeURIComponent(q)}`, { signal: AbortSignal.timeout(15000), headers: OSM_HEADERS }); // some mirrors dislike the POST form
+      let r = await fetch(url, { method: 'POST', body: `data=${encodeURIComponent(q)}`, signal: AbortSignal.timeout(wait()), headers: OSM_HEADERS });
+      if ((r.status === 406 || r.status === 405) && Date.now() < until) r = await fetch(`${url}?data=${encodeURIComponent(q)}`, { signal: AbortSignal.timeout(wait()), headers: OSM_HEADERS }); // some mirrors dislike the POST form
       if (!r.ok) { log?.push(`${url}: ${r.status}`); continue; }
       return await r.json();
     } catch (e) { log?.push(`${url}: ${String(e).slice(0, 60)}`); }
@@ -107,7 +112,9 @@ async function satellite(lat: number, lng: number, img: typeof OVERVIEW): Promis
   const buf = new Uint8Array(await r.arrayBuffer());
   let bin = '';
   for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
-  return btoa(bin);
+  // Satellite tiles come back as JPEG; say what it really is (Nov 7: "image/png" for a JPEG was a 400 from the API).
+  const type = buf[0] === 0xff && buf[1] === 0xd8 ? 'image/jpeg' : buf[0] === 0x89 && buf[1] === 0x50 ? 'image/png' : buf[0] === 0x52 && buf[1] === 0x49 ? 'image/webp' : 'image/jpeg';
+  return `${type};${btoa(bin)}`;
 }
 
 async function trace(b64: string, prompt: string, maxTokens: number): Promise<Record<string, unknown> | null> {
@@ -119,12 +126,12 @@ async function trace(b64: string, prompt: string, maxTokens: number): Promise<Re
       model: MODEL, max_tokens: maxTokens,
       system: 'You trace golf course features from satellite imagery and answer with JSON only: no prose, no code fences.',
       messages: [{ role: 'user', content: [
-        { type: 'image', source: { type: 'base64', media_type: 'image/png', data: b64 } },
+        { type: 'image', source: { type: 'base64', media_type: b64.slice(0, b64.indexOf(';')), data: b64.slice(b64.indexOf(';') + 1) } },
         { type: 'text', text: prompt },
       ] }],
     }),
   });
-  if (!r.ok) throw new Error(`anthropic ${r.status} ${(await r.text()).slice(0, 200)}`);
+  if (!r.ok) throw new Error(`anthropic ${r.status} ${(await r.text()).slice(0, 400)}`);
   const j = await r.json();
   const text = (j.content || []).filter((c: { type: string }) => c.type === 'text').map((c: { text: string }) => c.text).join('');
   const m = text.match(/\{[\s\S]*\}/);
@@ -245,7 +252,7 @@ Deno.serve(async (req: Request) => {
       if (!MAPBOX || !ANTHROPIC) notes.push('no AI keys');
     }
   } catch (e) {
-    notes.push(`build error: ${String(e).slice(0, 120)}`);
+    notes.push(`build error: ${String(e).slice(0, 400)}`);
   }
 
   // 5. save
