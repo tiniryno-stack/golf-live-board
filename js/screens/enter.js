@@ -73,13 +73,17 @@ function cartsFor(app, hole) {
   if (snap.settings.solo) return [{ teamId: null, players: ids.map((id) => snap.playerById.get(id)) }];
   // 2v2: you + your partner on this hole, then the other pair.
   const side = (pid) => (snap.settings.pairs ? sideOn(snap, pid, hole) : snap.playerById.get(pid).teamId);
-  const mine = side(app.me);
-  const order = [...ids.filter((id) => side(id) === mine), ...ids.filter((id) => side(id) !== mine)];
+  // Team Ryder Cup: the two players of a side in your tee time ride together, even when the drafted partners play
+  // in different tee times (owner, Nov 7). The cart keeps the teamId of its first player (yours first).
+  const ryd = snap.settings.ryder;
+  const ride = (pid) => (ryd ? String(side(pid) || '')[0] : side(pid));
+  const mine = ride(app.me);
+  const order = [...ids.filter((id) => ride(id) === mine), ...ids.filter((id) => ride(id) !== mine)];
   const carts = [];
   for (const id of order) {
     const p = { ...snap.playerById.get(id), teamId: side(id) };
-    let c = carts.find((x) => x.teamId === p.teamId);
-    if (!c) carts.push((c = { teamId: p.teamId, players: [] }));
+    let c = carts.find((x) => x.ride === ride(id));
+    if (!c) carts.push((c = { teamId: p.teamId, ride: ride(id), players: [] }));
     c.players.push(p);
   }
   return carts;
@@ -496,7 +500,8 @@ function ryderEnterView(app, h, { gcard, carts, locked, ahead, pos, limitPos, la
       const won = pt ? `<span class="ce-won anim${pt.line.tone === 'text' ? '' : ' muted'}" data-t0="${pt.at}">${esc(pt.line.text)}${pt.named ? ` on ${pt.hole}` : ''}</span>` : '';
       right = `<span class="ce-end">${up}<span class="ce-swap"><span class="ce-vs${pt ? ' anim' : ''}"${pt ? ` data-t0="${pt.at}"` : ''}>vs ${esc(them)}</span>${won}</span></span>`;
     }
-    matchLine = `<div class="ce-match"><span class="ce-us ellipsis">${esc(names(mine.players))}</span>${right}</div>`;
+    const us = m ? m.us.playerIds.map((id) => snap.playerById.get(id)).filter(Boolean) : mine.players; // your real partner
+    matchLine = `<div class="ce-match"><span class="ce-us ellipsis">${esc(names(us))}</span>${right}</div>`;
   }
 
   // Rows: yours with pads in one card (023 §3, the green rail is gone — the card says "your team"),

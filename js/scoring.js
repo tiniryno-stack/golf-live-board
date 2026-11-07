@@ -421,10 +421,11 @@ export function sameFoursome(roster, settings, aPid, bPid, hole) {
   const st = normalizeSettings(settings);
   if (st.ryder && a.teamId && b.teamId) {
     // Team Ryder Cup: tee times, until a Host lineup puts carts together from a hole on.
-    if (a.teamId === b.teamId) return true;
     const l = lineupAt(st, posOf(st, hole));
-    if (l && Array.isArray(l.foursomes) && l.foursomes.length) return l.foursomes.some((f) => f.includes(a.teamId) && f.includes(b.teamId));
-    return !!a.groupId && a.groupId === b.groupId;
+    if (l && Array.isArray(l.foursomes) && l.foursomes.length) return a.teamId === b.teamId || l.foursomes.some((f) => f.includes(a.teamId) && f.includes(b.teamId));
+    // The tee time is the foursome (owner, Nov 7: groups can split a cart's partners across tee times).
+    if (a.groupId && b.groupId) return a.groupId === b.groupId;
+    return a.teamId === b.teamId;
   }
   if ((st.rotationMode || 'swap') === 'swap' && a.teamId && b.teamId && Array.isArray(st.rotation)) {
     if (a.teamId === b.teamId) return true;
