@@ -2180,3 +2180,75 @@ html.light .ce-mine.ce-card, [data-theme="light"] .ce-mine.ce-card { box-shadow:
 .field input[type="date"], .field input[type="time"] { display: block; width: 100%; min-width: 0; max-width: 100%; -webkit-appearance: none; appearance: none; box-sizing: border-box; line-height: 52px; text-align: left; }
 .field input[type="date"]::-webkit-date-and-time-value, .field input[type="time"]::-webkit-date-and-time-value { text-align: left; }
 .field { min-width: 0; }
+
+/* ── 026 · the invitation (SPEC 026 §1). New for this screen (flagged, owner-approved): 64/800 headline, faces grid. */
+.lb-inv { display: flex; flex-direction: column; padding-top: var(--space-6); }
+.lb-inv-who { display: flex; align-items: center; gap: var(--space-3); min-height: 44px; font-size: 17px; line-height: 24px; color: var(--text-muted); }
+.lb-inv-who b { color: var(--text); font-weight: 600; }
+.lb-av { width: 44px; height: 44px; border-radius: 50%; background: var(--surface-2); color: var(--text); display: grid; place-items: center; font-size: 17px; font-weight: 700; flex: none; }
+.lb-inv-name { font-size: 64px; font-weight: 800; letter-spacing: -2.5px; line-height: 64px; margin: var(--space-6) 0 var(--space-3); overflow-wrap: break-word; hyphens: auto; }
+.lb-inv-what { color: var(--text); }
+.lb-inv-when { font-size: 17px; line-height: 24px; font-weight: 600; margin-top: var(--space-5); }
+.lb-inv-k { margin: var(--space-6) 0 var(--space-3); }
+.lb-faces { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: var(--space-2); margin-bottom: var(--space-4); }
+.lb-face { aspect-ratio: 1; border-radius: 50%; display: grid; place-items: center; background: var(--surface-2); color: var(--text); font-size: 13px; font-weight: 700; }
+.lb-face.out { background: none; border: 1.5px dashed var(--line); color: var(--text-muted); font-weight: 500; }
+
+/* ── 026 · the reveal: press and hold (SPEC 026 §2). New for this screen (flagged): the disc, the ring, the burst
+   glow and the field rail (a 0.6 s glow, the dock rule's one exception, with the green tick's). */
+.lb-rv { display: flex; flex-direction: column; flex: 1; }
+.lb-rv .nr-title { transition: opacity .3s; }
+.lb-stage { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: var(--space-4) 0; min-height: 340px; }
+.lb-disc { width: 240px; height: 240px; border-radius: 50%; position: relative; display: grid; place-items: center; border: 0; padding: 0; color: inherit; font: inherit;
+  background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--line); touch-action: none; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; cursor: pointer; }
+.lb-disc svg { position: absolute; inset: 0; width: 240px; height: 240px; pointer-events: none; }
+.lb-disc.done { background: none; box-shadow: none; cursor: default; }
+.lb-disc.still { cursor: default; }
+.lb-q { font-family: var(--font-mono); font-size: 64px; font-weight: 700; color: var(--text-muted); }
+.lb-q.small { font-family: inherit; font-size: 17px; font-weight: 600; }
+.lb-num { font-size: 64px; line-height: 64px; font-weight: 700; letter-spacing: -2px; color: var(--text); }
+.lb-burst { position: absolute; inset: 0; border-radius: 50%; box-shadow: 0 0 0 4px var(--cart-you), 0 0 60px var(--cart-you); opacity: 0; pointer-events: none; }
+.lb-hold { font-family: var(--font-mono); font-size: 13px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); text-align: center; margin: var(--space-5) 0 0; min-height: 18px; }
+.lb-just { font-size: 15px; color: var(--text-muted); background: none; border: 0; min-height: var(--tap-min); padding: 0 var(--space-3); margin-top: var(--space-1); transition: opacity .2s; }
+.lb-rv-btn { margin-top: var(--space-5); max-width: 240px; }
+.lb-strokes { font-size: 17px; line-height: 24px; color: var(--text-muted); text-align: center; max-width: 300px; margin: var(--space-5) auto 0; }
+.lb-field { position: relative; height: 64px; margin: var(--space-4) 0 var(--space-3); }
+.lb-rail { position: absolute; left: 0; right: 0; top: 30px; height: 2px; background: var(--line); }
+.lb-field i { position: absolute; top: 23px; width: 4px; height: 16px; border-radius: 2px; background: var(--text-muted); opacity: .55; transform: translateX(-50%); }
+.lb-field i.me { top: 17px; width: 6px; height: 28px; background: var(--cart-you); opacity: 1; box-shadow: 0 0 16px var(--cart-you); }
+.lb-field-me { position: absolute; top: 0; transform: translateX(-50%); font-size: 12px; font-weight: 600; color: var(--cart-you-text); white-space: nowrap; }
+.lb-ends { position: absolute; left: 0; right: 0; top: 44px; display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); }
+.lb-off { margin: 0 0 var(--space-2); }
+.lb-again { padding-left: 0; margin-top: var(--space-1); align-self: flex-start; font-size: 15px; color: var(--text-muted); }
+.lb-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+@media (prefers-reduced-motion: no-preference) {
+  .lb-disc.breathe { animation: lb-breathe 2.6s ease-in-out infinite; }
+  .lb-disc.shake { animation: lb-shake .1s linear infinite; }
+  .lb-hold.cue { animation: lb-cue 1.2s ease 3s 2; }
+  .lb-num.land { animation: lb-land .5s cubic-bezier(.18, 1.4, .4, 1) both; }
+  .lb-burst { animation: lb-burst .6s cubic-bezier(.1, .8, .2, 1) both; }
+}
+@keyframes lb-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.025); } }
+@keyframes lb-shake { 0% { transform: translate(0, 0); } 25% { transform: translate(1px, -1px); } 50% { transform: translate(-1px, 1px); } 75% { transform: translate(1px, 1px); } }
+@keyframes lb-cue { 50% { color: var(--text); } }
+@keyframes lb-land { 0% { transform: scale(.85); } 60% { transform: scale(1.06); } 100% { transform: scale(1); } }
+/* The pop: full strength and already spreading in the first 100 ms (SPEC: a pop, not a soft ripple), then gone. */
+@keyframes lb-burst { 0% { opacity: 1; transform: scale(1); } 16% { opacity: 1; transform: scale(1.22); } 100% { opacity: 0; transform: scale(1.6); } }
+/* 026 round 1: 15px lines (SPEC 01 / 06), the quiet Follow along line, the ring fading out at the burst */
+.lb-inv ~ .nr-foot .lb-note, .lb-off { font-size: 15px; line-height: 20px; }
+.lb-just.block { display: block; width: 100%; margin-top: var(--space-1); }
+.lb-ringout { opacity: 0; }
+@media (prefers-reduced-motion: no-preference) { .lb-ringout { animation: lb-ringout .6s ease-out both; } }
+@keyframes lb-ringout { from { opacity: 1; } to { opacity: 0; } }
+.lb-rv .nr-title:focus { outline: none; }
+/* Order and carts (owner, Nov 7): existing swap-name buttons, ry-time inputs and small buttons */
+.lb-og { padding: var(--space-3); gap: var(--space-2); }
+.lb-og-h { display: flex; align-items: center; gap: var(--space-2); }
+.lb-og-h .ry-time { flex: 1; min-width: 0; }
+.lb-og-mv { display: flex; gap: var(--space-1); }
+.lb-og-carts { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: start; gap: var(--space-2); }
+.lb-og-v { align-self: center; }
+.lb-oc { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
+.lb-oc-k { background: none; border: 0; padding: 0; min-height: var(--tap-min); text-align: left; color: var(--ink-soft); }
+.lb-oc-k.sel { color: var(--text); text-decoration: underline; text-underline-offset: 3px; }
+.lb-oc .swap-name { margin-top: 0; height: 48px; font-size: 15px; background: var(--surface-1); }

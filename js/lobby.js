@@ -610,24 +610,81 @@ export function rankLine(h) {
   return `${place} of ${h.of} · the field runs ${h.min} to ${h.max}.`;
 }
 
-export const REVEAL_MS = 1200, REVEAL_FADE = 200;
-const easeOut = (t) => 1 - (1 - t) ** 3;
+// ───────────────────────────────────────────── 026 · the press-and-hold reveal (SPEC 026 §2)
+
+export const HOLD_MS = 1400, DRAIN_MS = 400, FREEZE_MS = 150, LAND_MS = 900, FADE_GAP_MS = 220, BUTTON_AFTER_MS = 800, TAP_MS = 250;
+
+/** The ring after dtMs: fills over 1.4 s while held, drains over 0.4 s once let go; always 0…1. */
+export function holdStep(v, dtMs, holding) {
+  const d = Math.max(0, Number.isFinite(Number(dtMs)) ? Number(dtMs) : 0);
+  const x = (Number.isFinite(Number(v)) ? Number(v) : 0) + (holding ? d / HOLD_MS : -d / DRAIN_MS);
+  return Math.max(0, Math.min(1, x));
+}
 
 /**
- * One frame of the reveal (SPEC §6.4), from the ms since it started. 0–1200 ms: the number rolls through a few values
- * to the real one (the last 300 ms settled on it), blur 6 px → 0 and muted → full, eased out. Then the kicker, the rank
- * line, the note and the button fade in, 200 ms each. Reduced motion = the final frame at once.
- * → { value, blur, settled, done, fade: [kicker, rank, note, button] } (opacities 0…1).
+ * Where the reveal is, from app.ui.reveal ({ v, holding, doneAt, fast }) and the time now:
+ *   idle → holding → (full) freeze 150 ms (none for Just show me / Enter) → burst (the number lands) → final (900 ms
+ *   after the burst: the strokes line, the field, the note, then the button). Reduced motion: done = final at once.
  */
-export function revealFrame(strokes, elapsed, reduced = false) {
-  const real = Math.max(0, Math.round(Number(strokes) || 0));
-  const e = reduced ? Infinity : Math.max(0, Number.isFinite(Number(elapsed)) ? Number(elapsed) : 0);
-  const roll = [real + 6, real + 4, real + 2, real + 1].map((v) => Math.min(54, v));
-  const settleAt = REVEAL_MS - 300;
-  const p = Math.min(1, e / REVEAL_MS), k = easeOut(p);
-  const value = e >= settleAt ? real : roll[Math.min(roll.length - 1, Math.floor((easeOut(e / settleAt) * roll.length)))];
-  const fade = [0, 1, 2, 3].map((i) => Math.max(0, Math.min(1, (e - REVEAL_MS - i * REVEAL_FADE) / REVEAL_FADE)));
-  return { value, blur: Math.round((1 - k) * 6 * 10) / 10, settled: e >= settleAt, done: e >= REVEAL_MS + 4 * REVEAL_FADE, fade };
+export function revealPhase(r, nowMs, reduced = false) {
+  if (!r || !Number.isFinite(r.doneAt)) return r?.holding ? 'holding' : 'idle';
+  if (reduced) return 'final';
+  const e = nowMs - r.doneAt, freeze = r.fast ? 0 : FREEZE_MS;
+  if (e < freeze) return 'freeze';
+  return e < freeze + LAND_MS ? 'burst' : 'final';
+}
+/** When the number lands (seen is written then, not on the tap): ms, or null before the hold is done. */
+export const landsAt = (r) => (r && Number.isFinite(r.doneAt) ? r.doneAt + (r.fast ? 0 : FREEZE_MS) : null);
+/** The final frame's four fades (strokes line, field, note, button) 0…1, from the ms since the final frame began. */
+export function finalFades(sinceFinalMs, reduced = false) {
+  if (reduced) return [1, 1, 1, 1];
+  const e = Math.max(0, Number(sinceFinalMs) || 0);
+  const starts = [0, FADE_GAP_MS, 2 * FADE_GAP_MS, 2 * FADE_GAP_MS + BUTTON_AFTER_MS];
+  return starts.map((t) => Math.max(0, Math.min(1, (e - t) / 350)));
+}
+
+/** "You get 12 strokes: one on each of the 12 hardest holes." (null for 0). Over 18 = two on the hardest. */
+export function strokesLine(n) {
+  const k = Math.max(0, Math.round(Number(n) || 0));
+  if (!k) return null;
+  if (k === 1) return 'You get 1 stroke: on the hardest hole.';
+  if (k <= 18) return `You get ${k} strokes: one on each of the ${k} hardest holes.`;
+  if (k === 36) return 'You get 36 strokes: two on every hole.';
+  if (k < 36) return `You get ${k} strokes: one on every hole, two on the ${k - 18} hardest.`;
+  return `You get ${k} strokes: two on every hole, three on the ${k - 36} hardest.`;
+}
+
+/** "You · 9th of 16", "You · T9th of 16" when tied. */
+export const rankLabel = (h) => (h ? `You · ${h.tied ? 'T' : ''}${ordinal(h.rank)} of ${h.of}` : '');
+
+/** The field rail: a tick per player with a handicap at its place between the field's min (0%) and max (100%). A
+ *  one-handicap field (min = max) puts everyone in the middle. */
+export function fieldTicks(roster, pid) {
+  const h = hcpOf(roster, pid);
+  const span = h ? h.max - h.min : 0;
+  const pct = (v) => (span > 0 ? Math.round(((v - h.min) / span) * 1000) / 10 : 50);
+  const ticks = (roster?.players || []).map((p) => ({ id: p.id, v: hcpOf(roster, p.id)?.strokes })).filter((t) => t.v != null)
+    .map((t) => ({ pct: pct(t.v), me: t.id === pid }));
+  return { ticks, min: h?.min ?? null, max: h?.max ?? null, mine: h ? pct(h.strokes) : null };
+}
+
+/** The invite's faces: one per player, A–Z (the join list), initial + in (claimed a spot) from claimed_players. */
+export function inviteFaces(roster, claimed = []) {
+  const has = (id) => (claimed instanceof Set ? claimed.has(id) : (claimed || []).includes(id));
+  const faces = joinList(roster, [], '').map((p) => {
+    const pl = (roster.players || []).find((x) => x.id === p.id);
+    return { initial: (firstName(pl) || '?').charAt(0).toUpperCase(), in: has(p.id) };
+  });
+  return { faces, in: faces.filter((f) => f.in).length, total: faces.length };
+}
+
+/** "Sat, Nov 14" — the invite always says the real date (never just "Saturday"). */
+export const inviteDate = (iso) => shortDate(iso).replace(/^(\w{3}) /, '$1, ');
+
+/** A round's own name, or '' when it's Setup's default "Course · date" (owner: don't say the course twice). */
+export function ownRoundName(ev) {
+  const course = ev?.course?.shortName || ev?.course?.name || '';
+  return ev?.name && !(course && String(ev.name).startsWith(course)) ? String(ev.name) : '';
 }
 
 /** Host's invite line (SPEC §6): the reveal wording when the round has handicaps, else Part 1's. */
@@ -653,3 +710,68 @@ export function byHandicap(roster, list) {
 /** The guide's "Can't add it?" escape shows only after this long on the steps (owner: the home screen is the way in). */
 export const GUIDE_ESCAPE_MS = 3 * 60000;
 export const guideEscape = (shownAt, nowMs) => Number.isFinite(shownAt) && nowMs - shownAt >= GUIDE_ESCAPE_MS;
+
+// ───────────────────────────────────────────── start order and carts, any time until the first score (owner, Nov 7)
+// Cart ids carry their place (1A = side 1, 1st start; 2C = side 2, 3rd start), so every change here moves PEOPLE between
+// carts: a player's teamId and groupId change, the carts, sides and start times stay where they are. Claims are keyed by
+// player id, so nobody loses their spot.
+
+const RYDER_CART = /^([12])([A-D])$/;
+const slotOf = (tid) => { const m = RYDER_CART.exec(String(tid || '')); return m ? `g${'ABCD'.indexOf(m[2]) + 1}` : null; };
+const cloneRoster = (r) => ({ ...r, players: (r?.players || []).map((p) => ({ ...p })), teams: (r?.teams || []).map((t) => ({ ...t })) });
+
+/** The start groups in order: [{ i, gid, carts: [side 1 cart, side 2 cart] }], each cart { id, side, players }. */
+export function startGroups(roster) {
+  const teams = (roster?.teams || []).filter((t) => RYDER_CART.test(String(t.id)));
+  const letters = [...new Set(teams.map((t) => t.id[1]))].sort();
+  return letters.map((L, i) => ({
+    i, gid: `g${'ABCD'.indexOf(L) + 1}`,
+    carts: ['1', '2'].map((sd) => {
+      const id = `${sd}${L}`;
+      return { id, side: sd, players: (roster.players || []).filter((p) => p.teamId === id) };
+    }).filter((c) => teams.some((t) => t.id === c.id)),
+  }));
+}
+
+/** Swap two players' places (any two: same cart, other cart, other team). */
+export function swapPlayers(roster, a, b) {
+  const r = cloneRoster(roster);
+  const pa = r.players.find((p) => p.id === a), pb = r.players.find((p) => p.id === b);
+  if (!pa || !pb || a === b) return r;
+  [pa.teamId, pb.teamId] = [pb.teamId, pa.teamId];
+  [pa.groupId, pb.groupId] = [slotOf(pa.teamId) || pa.groupId, slotOf(pb.teamId) || pb.groupId];
+  return r;
+}
+
+/** Swap two carts of the same team (their riders trade places, so each pair keeps riding together). */
+export function swapCarts(roster, ta, tb) {
+  const r = cloneRoster(roster);
+  if (ta === tb || !RYDER_CART.test(ta) || !RYDER_CART.test(tb) || ta[0] !== tb[0]) return r;
+  for (const p of r.players) {
+    if (p.teamId === ta) { p.teamId = tb; p.groupId = slotOf(tb); } else if (p.teamId === tb) { p.teamId = ta; p.groupId = slotOf(ta); }
+  }
+  return r;
+}
+
+/** Swap two whole start groups (both carts of each). */
+export function swapGroups(roster, i, j) {
+  const g = startGroups(roster);
+  if (!g[i] || !g[j] || i === j) return cloneRoster(roster);
+  let r = roster;
+  for (const sd of ['1', '2']) {
+    const a = g[i].carts.find((c) => c.side === sd), b = g[j].carts.find((c) => c.side === sd);
+    if (a && b) r = swapCarts(r, a.id, b.id);
+  }
+  return r;
+}
+
+/** Cart names follow their riders ("Baker + Mitch") after people move (custom names stay on unchanged carts). */
+export function renameRyderCarts(roster, before) {
+  const pair = (r, tid) => (r.players || []).filter((p) => p.teamId === tid).map((p) => p.id).sort().join('|');
+  const names = (tid) => (roster.players || []).filter((p) => p.teamId === tid).map(firstName).join(' + ').slice(0, 20);
+  return { ...roster, teams: (roster.teams || []).map((t) => (before && pair(before, t.id) === pair(roster, t.id) ? t : { ...t, name: names(t.id) || t.name })) };
+}
+
+/** May the organizer change the order and carts now? After the draft, until scoring opens; and after it opens, until
+ *  the first score is entered (someone's late at the course). */
+export const mayReorder = (state, anyScores = false) => !!state && (state.stage === 'teams' || state.stage === 'ready') && (!state.open || !anyScores);

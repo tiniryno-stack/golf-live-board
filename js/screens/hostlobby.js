@@ -111,7 +111,50 @@ function hcpStepView(app) {
   </div>`;
 }
 
+/**
+ * Order and carts (owner, Nov 7): after the draft, until the first score. Tap two names to swap players (any two, even
+ * across teams); tap two carts of the same team to swap their places; ↑ ↓ moves a whole group. Each start time stays
+ * with its place in the order. Edits stay on a copy (app.ui.orderStep) until Save.
+ */
+export function orderStepView(app) {
+  const o = app.ui.orderStep;
+  const roster = o.roster;
+  const groups = L.startGroups(roster);
+  const sideName = (sd) => (roster.sides || []).find((x) => x.id === sd)?.name || `Team ${sd}`;
+  const ord = ['1st', '2nd', '3rd', '4th'];
+  const sel = (kind, id) => (o.sel?.kind === kind && o.sel.id === id ? ' sel' : '');
+  const cart = (c) => `<div class="lb-oc"><button class="lbl lb-oc-k${sel('c', c.id)}" data-act="lh-o-cart" data-v="${esc(c.id)}" aria-pressed="${!!sel('c', c.id)}">${esc(sideName(c.side))}</button>
+    ${c.players.map((p) => `<button class="swap-name${sel('p', p.id)}" data-act="lh-o-p" data-v="${esc(p.id)}" aria-pressed="${!!sel('p', p.id)}"><span class="ellipsis">${esc(first(p))}</span></button>`).join('')}</div>`;
+  const hint = o.sel?.kind === 'p' ? 'Now tap who to swap with.' : o.sel?.kind === 'c' ? 'Now tap the other cart on that team.' : 'Tap two names to swap players. Tap two team labels to swap carts.';
+  return `<div class="plain nr-setup lb">
+    <button class="link-btn lb-back" data-act="lh-o-cancel">Back to Host</button>
+    <div class="nr-head"><div class="nr-k"><span class="lbl">${esc(app.event.name)} · start order</span></div>
+      <h1 class="nr-title">Order and carts</h1>
+      <div class="nr-sub">${o.open ? 'Scoring is open, but nobody has entered a score yet. Change it now: after the first score it’s locked.' : 'Change it any time until the first score. Phones show the new groups when they update.'}</div></div>
+    <p class="meta lb-note">${hint}</p>
+    ${groups.map((g, i) => `<div class="card lb-card lb-og">
+      <div class="lb-og-h"><span class="lbl">${ord[i] || `${i + 1}th`}</span>
+        <input class="ry-time mono${o.times[i] ? ' set' : ''}" type="time" value="${esc(o.times[i] || '')}" aria-label="${ord[i]} start time" data-input="lh-o-time" data-i="${i}">
+        <span class="lb-og-mv"><button class="btn small" data-act="lh-o-mv" data-v="${i}" data-d="-1" aria-label="Move the ${ord[i]} group earlier"${i === 0 ? ' disabled' : ''}>↑</button>
+        <button class="btn small" data-act="lh-o-mv" data-v="${i}" data-d="1" aria-label="Move the ${ord[i]} group later"${i === groups.length - 1 ? ' disabled' : ''}>↓</button></span></div>
+      <div class="lb-og-carts">${g.carts.map(cart).join('<span class="meta lb-og-v">v</span>')}</div></div>`).join('')}
+    <div class="nr-foot"><p class="meta lb-note">Your first match is the other cart in your group, so moving carts changes who plays whom.</p>
+      <button class="btn primary nr-cta" data-act="lh-o-save"${o.saving ? ' aria-busy="true"' : ''}>${o.saving ? 'Saving…' : 'Save the order'}</button></div>
+  </div>`;
+}
+
+/** Scores entered on this round yet? (the order locks at the first one) */
+const anyScores = (app) => [...(app.scores?.values?.() || [])].some((x) => x?.strokes != null);
+
+/** Host after scoring opens, before the first score: one row into Order and carts (27). */
+export function orderRow(app) {
+  const st = app.lobby();
+  if (!st || !st.open || !L.mayReorder(st, anyScores(app))) return '';
+  return `<div class="card lb-card lb-rows" style="margin:0 0 14px">${row('Order and carts', 'until the first score', 'lh-order')}</div>`;
+}
+
 export function hostLobbyView(app) {
+  if (app.ui.orderStep?.code === app.code) return orderStepView(app);
   if (app.setup?.lobby?.code === app.code) return lobbyStepView(app); // Start the draft / Set start times
   if (app.ui.hcpStep?.code === app.code) return hcpStepView(app);
   const ev = app.event, st = app.lobby();
@@ -174,6 +217,7 @@ export function hostLobbyView(app) {
     <div class="card lb-card lb-rows">
       ${st.stage === 'lobby' || st.stage === 'carts' ? row('Carts', st.paired ? '8 paired' : 'not paired yet', 'lh-carts') : ''}
       ${st.stage === 'teams' ? row('Teams', 'redo the draft', 'lh-draft') : ''}
+      ${L.mayReorder(st) ? row('Order and carts', 'swap players, move groups', 'lh-order') : ''}
       ${row('Players', st.stage === 'off' ? `${n} players` : 'replace a player', 'lh-players')}
       ${st.stage === 'off' ? '' : row('Handicaps', L.handicapCount(ev.roster) < n ? `${L.handicapCount(ev.roster)} of ${n} set · invite needs all ${n}` : `all ${n} set`, 'lh-hstep')}
       ${row('Co-host', esc(cohost), 'lh-cohost')}
@@ -493,6 +537,64 @@ export const lobbyActions = {
     doReplace(app, props.pid, { personId, first: f, last, nickname: nick, strokes: typedHcp() });
   },
   'lh-hcp': (el, ev, app) => app.openSheet('lobby-hcp', { pid: el.dataset.v }),
+  'lh-order': (el, ev, app) => {
+    const ev0 = app.event, st = app.lobby();
+    const times = [0, 1, 2, 3].map((i) => (ev0.settings?.teeTimes || [])[i] || '');
+    app.ui.orderStep = { code: app.code, key: L.rosterKey(ev0.roster), roster: clone(ev0.roster), before: clone(ev0.roster), times, sel: null, open: !!st?.open };
+    app.render();
+    document.getElementById('content').scrollTop = 0;
+  },
+  'lh-o-cancel': (el, ev, app) => { app.ui.orderStep = null; app.render(); },
+  'lh-o-p': (el, ev, app) => {
+    const o = app.ui.orderStep; if (!o) return;
+    const id = el.dataset.v;
+    if (o.sel?.kind === 'p' && o.sel.id !== id) { o.roster = L.swapPlayers(o.roster, o.sel.id, id); o.sel = null; }
+    else o.sel = o.sel?.kind === 'p' && o.sel.id === id ? null : { kind: 'p', id };
+    app.render();
+  },
+  'lh-o-cart': (el, ev, app) => {
+    const o = app.ui.orderStep; if (!o) return;
+    const id = el.dataset.v;
+    if (o.sel?.kind === 'c' && o.sel.id !== id && o.sel.id[0] === id[0]) { o.roster = L.swapCarts(o.roster, o.sel.id, id); o.sel = null; }
+    else o.sel = o.sel?.kind === 'c' && o.sel.id === id ? null : { kind: 'c', id };
+    app.render();
+  },
+  'lh-o-mv': (el, ev, app) => {
+    const o = app.ui.orderStep; if (!o) return;
+    const i = Number(el.dataset.v), j = i + Number(el.dataset.d);
+    o.roster = L.swapGroups(o.roster, i, j);
+    o.sel = null;
+    app.render();
+  },
+  'lh-o-time': (el, ev, app) => { const o = app.ui.orderStep; if (o) o.times[Number(el.dataset.i)] = el.value; },
+  'lh-o-save': async (el, ev, app) => {
+    const o = app.ui.orderStep;
+    if (!o || o.saving) return;
+    let fresh;
+    try { fresh = await db.fetchEvent(app.code); } catch { fresh = null; }
+    if (!fresh) { app.toast({ title: 'No signal', sub: 'Not saved. Try again.', error: true }); return; }
+    const st = L.lobbyState(fresh, app.now());
+    if (L.rosterKey(fresh.roster) !== o.key || !L.mayReorder(st, anyScores(app))) {
+      app.ui.orderStep = null;
+      app.event = { ...app.event, ...fresh };
+      app.render();
+      app.toast({ title: 'The round changed meanwhile', sub: anyScores(app) ? 'A score is in: the order is locked now.' : 'Nothing saved. Open Order and carts again.', error: true });
+      return;
+    }
+    const roster = L.renameRyderCarts(L.mergeStep(o.roster, fresh.roster), fresh.roster); // names / handicaps as they are now
+    const times = o.times.map((t) => (/^\d{1,2}:\d{2}$/.test(t || '') ? t : ''));
+    const settings = !st.open && L.allTimesSet(times, 4) ? L.withStartTimes(fresh.settings, fresh.played_on, times, app.now()) : { ...fresh.settings, teeTimes: times };
+    o.saving = true;
+    app.render();
+    app.event = { ...app.event, ...fresh };
+    const ok = await app.saveEvent({ course: fresh.course, roster, settings, name: fresh.name });
+    o.saving = false;
+    if (!ok) { app.render(); return; }
+    app.ui.orderStep = null;
+    app.render();
+    document.getElementById('content').scrollTop = 0;
+    app.toast({ title: 'Order saved', sub: 'Every phone shows the new groups when it updates.' });
+  },
   'lh-hstep': (el, ev, app) => { app.ui.hcpStep = { code: app.code, fromSetup: false, vals: {} }; app.render(); document.getElementById('content').scrollTop = 0; },
   'lh-hstep-cancel': (el, ev, app) => { app.ui.hcpStep = null; app.render(); },
   // Typing in the list: keep the value, update the count and the button in place (no redraw while typing).

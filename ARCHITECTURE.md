@@ -831,6 +831,21 @@ Still open: nothing blocking. Design direction (section 9) is final.
   round only when it's in this phone's Recent rounds. `pick_team_name` isn't refused at `carts` (the lobby never offers it
   and the draft renames every cart), so don't "fix" it by gating anything else. Plan, council, open questions: BUILD-PLAN.md Part 2.
 
+- **026 · the invitation and the press-and-hold reveal (Nov 7, front end only):** `invite()` and the plain
+  `landing()` share `invitation()` in `js/screens/lobby.js` (who invited you + avatar, the round's own name at 64/800 or the
+  course when it has none, Team Ryder Cup · course, the real date + start, a faces grid from `claimed_players`, one line,
+  the primary). The reveal is press and hold: state in `app.ui.reveal` (`{ code, pid, v, holding, downAt, doneAt, fast,
+  shownAt, replay }`), pure `holdStep` / `revealPhase` / `landsAt` / `finalFades` / `strokesLine` / `rankLabel` /
+  `fieldTicks` / `inviteFaces` in `js/lobby.js` (`tests/reveal026.test.mjs`); `revealLoop` runs the frames, `syncMotion`
+  keeps the burst through redraws, and `draw()` holds background redraws while a finger is down (`screen.keepContent`).
+  Seen (`glb.seen.CODE.hcp` = pid) is written when the number lands; the lobby's handicap card has See it again ›.
+  025's `revealFrame` is gone.
+- **Order and carts (owner, Nov 7):** Host → **Order and carts** (`orderStepView` in `js/screens/hostlobby.js`) after the draft,
+  until scoring opens, and after it opens until the first score (`lobby.mayReorder`; Host's open view shows `orderRow`).
+  Tap two names = swap any two players (`swapPlayers`), two team labels = swap carts on a team (`swapCarts`), ↑ ↓ = move a
+  whole group (`swapGroups`); people move between carts, cart ids / sides / start times stay; cart names follow
+  (`renameRyderCarts`); saves refuse when the roster changed meanwhile or a score is in. Tested in `tests/lobby025.test.mjs`.
+
 ## 13. V2 backlog (running list)
 
 - **Carryovers (skins-style):** a tied point rolls onto the next hole instead of halving, so the next hole can be worth 3–4 points. Open design question: does an unresolved carry die at the end of a 6-hole rotation, or roll into the next opponent?

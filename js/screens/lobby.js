@@ -3,9 +3,9 @@
 // stage (4–8, 14), called off, spot given to a sub (10) and Scoring is open (13). The view comes from app.lobbyView() (pure js/lobby.js); this file only draws it.
 // Words: players never see "lobby" or "tee time": Coming up, start time, Open.
 
-import { esc, icon } from '../ui.js';
+import { esc, icon, syncMotion } from '../ui.js';
 import * as db from '../db.js';
-import { notSafari, byHandicap, guideEscape, GUIDE_ESCAPE_MS, joinList, myLobby, myCart, dayName, shortDate, hostLine, clock12, wallClock, hasHandicaps, hcpOf, rankLine, revealFrame } from '../lobby.js';
+import { notSafari, byHandicap, guideEscape, GUIDE_ESCAPE_MS, joinList, myLobby, myCart, dayName, shortDate, hostLine, clock12, wallClock, hasHandicaps, hcpOf, holdStep, revealPhase, landsAt, finalFades, strokesLine, rankLabel, fieldTicks, inviteFaces, inviteDate, ownRoundName, HOLD_MS, TAP_MS, FREEZE_MS, LAND_MS } from '../lobby.js';
 import { playOrder } from '../scoring.js';
 
 const safariPhone = () => !db.STANDALONE && db.isIOS();
@@ -74,38 +74,50 @@ const comingUp = (st) => `<div class="lbl lb-k">Coming up</div>
   <div class="card lb-card lb-rows">${row('Teams', `After ${esc(st.hostName)}’s draft`)}${row('Your start time and matches', 'After the draft')}</div>`;
 
 /**
- * Who invited you, said once (owner: the pre-join screens repeated the course and date four times). A round with no
- * name of its own is named "Course · date" by Setup, so it adds nothing: then only the organizer is named.
+ * 026 · the invitation (SPEC 026 §1): who invited you, the round's name big, what and where, the real date and start,
+ * who's in (faces from claimed_players: no names, no green), then one line, the primary and a quiet way out. A round
+ * with no name of its own (Setup's "Course · date") shows the course big instead and doesn't say it twice (owner).
+ * The plain landing uses the same layout with its own primary.
  */
-function invitedBy(app, st) {
+function invitation(app, st, { lineText, primary, quiet }) {
   const ev = app.event;
+  const host = st.hostName && st.hostName !== 'The organizer' ? st.hostName : '';
   const course = ev.course?.shortName || ev.course?.name || '';
-  const own = ev.name && !(course && String(ev.name).startsWith(course)) ? ev.name : '';
-  const host = st.hostName && st.hostName !== 'The organizer' ? `${st.hostName} invited you` : 'You’re invited';
-  return [own, host].filter(Boolean).map(esc).join(' · ');
+  const own = ownRoundName(ev);
+  const big = own || course || 'Team Ryder Cup';
+  const what = ['Team Ryder Cup', own ? course : ''].filter(Boolean).join(' · ');
+  const when = st.date ? [inviteDate(st.date), st.startLabel ? `${st.startLabel} start` : ''].filter(Boolean).join(' · ') : '';
+  const f = inviteFaces(ev.roster, app.claimed);
+  return `<div class="lb-inv">
+    <div class="lb-inv-who">${host ? `<span class="lb-av" aria-hidden="true">${esc(host.charAt(0).toUpperCase())}</span><span><b>${esc(host)}</b> invited you</span>` : '<span>You’re invited</span>'}</div>
+    <h1 class="lb-inv-name">${esc(big)}</h1>
+    <div class="lbl lb-inv-what">${esc(what)}</div>
+    ${when ? `<div class="mono lb-inv-when">${esc(when)}</div>` : ''}
+    <div class="lbl lb-inv-k">${f.in} of ${f.total} are in</div>
+    <div class="lb-faces" role="img" aria-label="${f.in} of ${f.total} players have joined">${f.faces.map((x) => `<span class="lb-face${x.in ? '' : ' out'}">${esc(x.initial)}</span>`).join('')}</div>
+    ${noticeCard(st)}
+  </div>
+  ${foot(`${lineText ? note(lineText) : ''}${primary}${quiet}`)}`;
 }
-/** The one line about the round: game, players, where, first start (never "tee"). */
-const roundLine = (app, st) => `Team Ryder Cup · ${(app.event.roster?.players || []).length} players · ${esc(app.event.course?.shortName || app.event.course?.name || '')} · first start ${esc(st.startLabel)}`;
 
-/** 1 · the lobby landing for a plain link: one headline, one round line, one primary (owner, Nov 6: less to read). */
+/** 1 · the lobby landing for a plain link (no handicaps yet): the invitation, Add Golf Board first on iPhone. */
 function landing(app, st) {
   const ios = safariPhone();
-  return `${head(invitedBy(app, st), `You’re on the list for ${esc(dayName(st.date, app.now(), st.tz))}`, roundLine(app, st))}
-    ${noticeCard(st)}
-    ${foot(`${note(ios ? 'Add Golf Board to your home screen to see your team, start time and handicap.' : 'Pick your name to see your team, start time and handicap.')}
-      ${ios ? '<button class="btn primary nr-cta" data-act="lb-guide">Add Golf Board to my home screen</button>' : '<button class="btn primary nr-cta" data-act="lb-find">Find my name</button>'}
-      ${ios ? '<button class="lb-tiny" data-act="lb-find">or join in Safari</button>' : '<button class="lb-tiny" data-act="lb-follow">Not playing? Follow along</button>'}`)}`;
+  return invitation(app, st, {
+    lineText: ios ? 'Your team and start time open in Golf Board on your home screen. About a minute.' : '',
+    primary: ios ? '<button class="btn primary nr-cta" data-act="lb-guide">Add Golf Board to my home screen</button>' : '<button class="btn primary nr-cta" data-act="lb-find">Find my name</button>',
+    quiet: ios ? '<button class="lb-tiny" data-act="lb-find">or join in Safari</button>' : '<button class="lb-just block" data-act="lb-follow">Not playing? Follow along</button>',
+  });
 }
 
-/** The handicap invite (#/e/CODE/hcp, every player has a handicap): one line, one primary. */
+/** The handicap invite (#/e/CODE/hcp, every player has a handicap). */
 function invite(app, st) {
-  const ev = app.event;
-  const n = (ev.roster?.players || []).length;
-  const who = st.hostName && st.hostName !== 'The organizer' ? st.hostName : 'Your organizer';
-  return `${head(invitedBy(app, st), `${esc(who)} set your handicap`, `${n} players. Two teams. One cup. ${esc(dayName(st.date, app.now(), st.tz))}.`)}
-    ${noticeCard(st)}
-    ${foot(`<button class="btn primary nr-cta" data-act="${safariPhone() ? 'lb-guide' : 'lb-find'}">Reveal my handicap</button>
-      <button class="lb-tiny" data-act="lb-follow">Not playing? Follow along</button>`)}`;
+  const ios = safariPhone();
+  return invitation(app, st, {
+    lineText: ios ? 'Your handicap opens in Golf Board on your home screen. About a minute.' : '',
+    primary: `<button class="btn primary nr-cta" data-act="${ios ? 'lb-guide' : 'lb-find'}">Reveal my handicap</button>`,
+    quiet: '<button class="lb-just block" data-act="lb-follow">Not playing? Follow along</button>',
+  });
 }
 
 /** Add to Home Screen, step 1 of 2 (iPhone Safari). The move link (with the round) is in the address bar while this
@@ -155,22 +167,56 @@ function who(app) {
     ${foot(`<button class="btn ghost block" data-act="lb-notlisted">I’m not on the list</button><button class="btn ghost block lb-quiet" data-act="lb-follow">Not playing? Follow along</button>`)}`;
 }
 
-/** The reveal (once per phone per round): blurred, rolling, then the number; the rest fades in. Drawn from
- *  revealFrame(now − t0) on every render, so a redraw never restarts it; mount() runs the frames in between. */
+/**
+ * 026 · the reveal: press and hold (SPEC 026 §2). State lives in app.ui.reveal ({ code, pid, v, holding, downAt,
+ * doneAt, fast, shownAt, replay }); every draw is made from it and the clock (revealPhase), and mount() runs the frames
+ * in between, so a redraw never restarts or drops a hold (the content isn't even redrawn while a finger is down).
+ */
+const RING = 741; // 2π × 118
+function revealState(app) {
+  const r = app.ui.reveal;
+  return r?.code === app.code && r.pid === app.me ? r : null;
+}
 function reveal(app, st) {
   const h = hcpOf(app.event.roster, app.me);
-  if (!h) return early(app, st);
-  const r = app.ui.reveal?.code === app.code && app.ui.reveal.pid === app.me ? app.ui.reveal : null;
-  const f = revealFrame(h.strokes, r ? Date.now() - r.t0 : 0, reduced());
-  const rank = rankLine(h);
-  const fade = (i) => `style="opacity:${f.fade[i]}"`;
-  return `<div class="lb-reveal">
-    <div class="nr-head"><div class="nr-k"><span class="lbl${f.fade[0] >= 1 ? ' you' : ''}" id="lbr-k">${esc(app.event.name)} · ${esc(first(app.myPlayer()))}</span></div>
-      <h1 class="nr-title">${esc(st.hostName)} has you at</h1></div>
-    <div class="lb-hcp mono${f.settled ? '' : ' rolling'}" id="lbr-n" style="filter:blur(${f.blur}px)">${esc(f.value)}</div>
-    ${rank ? `<p class="nr-sub lb-fade" id="lbr-1" ${fade(1)}>${esc(rank)}</p>` : ''}
-    <p class="meta lb-fade" id="lbr-2" ${fade(2)}>Think it’s off? Text ${esc(st.hostName)}.</p>
-    ${foot(`<button class="btn primary nr-cta lb-fade" id="lbr-3" data-act="lb-revealed" ${fade(3)}>See who you’re up against</button>`)}
+  if (!h) return early(app, st); // (lobbyView already leaves the reveal when there's no handicap)
+  const r = revealState(app) || { v: 0, holding: false, shownAt: Date.now() };
+  const rm = reduced();
+  const phase = revealPhase(r, Date.now(), rm);
+  const host = st.hostName && st.hostName !== 'The organizer' ? st.hostName : 'Your organizer';
+  const kicker = `${esc(ownRoundName(app.event) || app.event.course?.shortName || app.event.name)} · ${esc(first(app.myPlayer()))}`;
+  const done = phase === 'burst' || phase === 'final';
+  if (!done) {
+    const v = phase === 'freeze' ? 1 : r.v || 0;
+    const disc = rm
+      ? `<div class="lb-disc still"><span class="lb-q small">Tap to reveal</span></div><button class="btn block lb-rv-btn" data-act="lb-rv-now">Reveal</button>`
+      : `<button class="lb-disc${!r.holding && phase === 'idle' && !(r.v > 0) ? ' breathe' : ''}${r.holding && v > 0.35 ? ' shake' : ''}" id="lbr-disc" data-t0="${r.shownAt || Date.now()}" aria-label="Reveal your handicap">
+          <svg viewBox="0 0 240 240" aria-hidden="true"><circle id="lbr-ring" cx="120" cy="120" r="118" fill="none" stroke="var(--cart-you)" stroke-width="4" stroke-linecap="round" stroke-dasharray="${RING}" stroke-dashoffset="${RING * (1 - v)}" transform="rotate(-90 120 120)" style="opacity:${v > 0.01 ? 1 : 0}"/></svg>
+          <span class="lb-q" aria-hidden="true">?</span></button>
+        <p class="lb-hold${phase === 'idle' && !r.holding && !r.touched ? ' cue' : ''}" id="lbr-l" data-t0="${r.shownAt || Date.now()}" style="${phase === 'freeze' ? 'opacity:0' : ''}">${r.holding || r.nudged ? 'Keep holding' : 'Press and hold'}</p>
+        <button class="lb-just" data-act="lb-rv-now" id="lbr-j" style="${r.holding || phase === 'freeze' ? 'opacity:0;pointer-events:none' : ''}">Just show me</button>`;
+    return `<div class="lb-rv">
+      <div class="nr-head"><div class="nr-k"><span class="lbl">${kicker}</span></div>
+        <h1 class="nr-title" id="lbr-t" style="opacity:${r.holding ? 1 - v * 0.6 : 1}">${esc(host)} set your handicap</h1></div>
+      <div class="lb-stage">${disc}</div></div>`;
+  }
+  const t = fieldTicks(app.event.roster, app.me);
+  const fades = phase === 'final' ? finalFades(Date.now() - landsAt(r) - LAND_MS, rm) : [0, 0, 0, 0];
+  const op = (i) => `style="opacity:${fades[i]}"`;
+  const line = strokesLine(h.strokes);
+  const lands = landsAt(r);
+  return `<div class="lb-rv">
+    <div class="nr-head"><div class="nr-k"><span class="lbl you">${kicker}</span></div><h1 class="nr-title" tabindex="-1" aria-describedby="lbr-num">${esc(host)} has you at</h1></div>
+    <div class="lb-stage">
+      <div class="lb-disc done">${rm ? '' : `<svg viewBox="0 0 240 240" aria-hidden="true"><circle class="lb-ringout" data-t0="${lands}" cx="120" cy="120" r="118" fill="none" stroke="var(--cart-you)" stroke-width="4"/></svg>`}<span class="lb-num mono${rm ? '' : ' land'}" id="lbr-num" data-t0="${lands}">${esc(h.strokes)}</span>${rm ? '' : `<span class="lb-burst" data-t0="${lands}" aria-hidden="true"></span>`}</div>
+      ${line ? `<p class="lb-strokes" id="lbr-f0" ${op(0)}>${esc(line)}</p>` : ''}
+    </div>
+    ${t.ticks.length > 1 ? `<div class="lb-field" id="lbr-f1" ${op(1)} role="img" aria-label="${esc(rankLabel(h))}, the field runs ${t.min} to ${t.max}">
+      <span class="lb-field-me mono" style="${t.mine < 20 ? 'left:0;transform:none' : t.mine > 80 ? 'left:auto;right:0;transform:none' : `left:${t.mine}%`}">${esc(rankLabel(h))}</span>
+      <div class="lb-rail"></div>${t.ticks.map((x) => `<i class="${x.me ? 'me' : ''}" style="left:${x.pct}%"></i>`).join('')}
+      <div class="lb-ends mono"><span>${t.min}</span><span>${t.max}</span></div></div>` : ''}
+    <p class="meta lb-off" id="lbr-f2" ${op(2)}>Think it’s off? Text ${esc(host)}.</p>
+    ${foot(`<button class="btn primary nr-cta" data-act="lb-revealed" id="lbr-f3" ${op(3)}>See who you’re up against</button>`)}
   </div>`;
 }
 const reduced = () => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch { return false; } };
@@ -179,8 +225,10 @@ const reduced = () => { try { return matchMedia('(prefers-reduced-motion: reduce
 function hcpCard(app, st) {
   const h = hcpOf(app.event.roster, app.me);
   if (!h) return '';
+  const again = app.me !== st.hostId; // never on the organizer's own phone: he set it
   return `<div class="card lb-card"><b class="lb-rt">Your handicap · <span class="mono">${esc(h.strokes)}</span></b>
-    <span class="detail lb-wrap">${esc(st.hostName)} sets these. Think it’s off? Text ${esc(st.hostName)}.</span></div>`;
+    <span class="detail lb-wrap">${esc(st.hostName)} sets these. Think it’s off? Text ${esc(st.hostName)}.</span>
+    ${again ? '<button class="link-btn lb-again" data-act="lb-rv-again">See it again ›</button>' : ''}</div>`;
 }
 
 /** Your cart (stage carts): your cart in green, the team after the draft. */
@@ -305,32 +353,86 @@ function restoreHash(app) {
   if (/^#move=/.test(location.hash)) history.replaceState(null, '', `${location.pathname}${location.search}#/e/${app.code}`);
 }
 
-/** Reveal frames between renders: only the number, the kicker and the fades change (no full redraws). */
-let revealRaf = 0;
+/** The frames between draws: the ring, shake, title and label while held; then the phase changes (a draw each) and the
+ *  final fades. Real elapsed time (rAF timestamps), so a slow frame never changes the 1.4 s. */
+let revealRaf = 0, revealLast = 0, revealGen = 0;
 let guideTimer = null;
-function runReveal(app) {
+function revealLoop(app) {
   cancelAnimationFrame(revealRaf);
-  const h = hcpOf(app.event.roster, app.me);
-  const r = app.ui.reveal;
-  if (!h || !r) return;
-  const tick = () => {
-    const n = document.getElementById('lbr-n');
-    if (!n || app.ui.reveal !== r) return; // the screen moved on: stop
-    const f = revealFrame(h.strokes, Date.now() - r.t0, reduced());
-    n.textContent = String(f.value);
-    n.style.filter = `blur(${f.blur}px)`;
-    n.classList.toggle('rolling', !f.settled);
-    document.getElementById('lbr-k')?.classList.toggle('you', f.fade[0] >= 1);
-    [1, 2, 3].forEach((i) => { const el = document.getElementById(`lbr-${i}`); if (el) el.style.opacity = String(f.fade[i]); });
-    if (!f.done) revealRaf = requestAnimationFrame(tick);
+  revealLast = 0;
+  const gen = ++revealGen; // one loop at a time: an older one stops at its next frame
+  let lastPhase = revealPhase(app.ui.reveal, Date.now(), reduced());
+  const tick = (ts) => {
+    const r = revealState(app);
+    if (gen !== revealGen || !r || app.lobbyView() !== 'reveal') return; // superseded, or the screen moved on
+    // Real elapsed time, but never more than 250 ms in one frame: a phone that slept mid-hold doesn't fill the ring.
+    const dt = revealLast ? Math.min(250, ts - revealLast) : 16;
+    revealLast = ts;
+    const now = Date.now();
+    if (!Number.isFinite(r.doneAt)) {
+      r.v = holdStep(r.v, dt, r.holding);
+      if (r.v >= 1) { r.v = 1; r.holding = false; r.doneAt = now; }
+      const ring = document.getElementById('lbr-ring'), disc = document.getElementById('lbr-disc');
+      if (ring) { ring.setAttribute('stroke-dashoffset', String(RING * (1 - r.v))); ring.style.opacity = r.v > 0.01 ? '1' : '0'; }
+      disc?.classList.toggle('shake', r.holding && r.v > 0.35);
+      disc?.classList.toggle('breathe', !r.holding && r.v === 0);
+      if (r.holding) document.getElementById('lbr-l')?.classList.remove('cue');
+      const t = document.getElementById('lbr-t'); if (t) t.style.opacity = String(r.holding ? 1 - r.v * 0.6 : 1);
+      const j = document.getElementById('lbr-j'); if (j) { j.style.opacity = r.holding ? '0' : '1'; j.style.pointerEvents = r.holding ? 'none' : ''; }
+      const l = document.getElementById('lbr-l'); if (l) l.textContent = r.holding || r.nudged ? 'Keep holding' : 'Press and hold';
+    }
+    const phase = revealPhase(r, now, reduced());
+    if (phase !== lastPhase) { app.render({ force: true }); return; } // the redraw's mount starts the next loop
+    if (phase === 'final') {
+      const f = finalFades(now - landsAt(r) - LAND_MS, reduced());
+      f.forEach((o, i) => { const el = document.getElementById(`lbr-f${i}`); if (el) el.style.opacity = String(o); });
+      if (f[3] >= 1) return; // all in: nothing left to move
+    }
+    if (!Number.isFinite(r.doneAt) && !r.holding && r.v === 0) return; // drained back to idle
+    revealRaf = requestAnimationFrame(tick);
   };
   revealRaf = requestAnimationFrame(tick);
+}
+
+/** Let go (pointer up, cancel or leaving the disc): drain; a quick tap nudges sideways (SPEC 026 §2, 03). */
+function letGo(app, e) {
+  const r = revealState(app);
+  if (!r?.holding || (e?.pointerId != null && r.pointerId != null && e.pointerId !== r.pointerId)) return;
+  r.holding = false;
+  r.nudged = Date.now() - r.downAt < TAP_MS; // a quick tap says "Keep holding"; a longer early let-go, "Press and hold"
+  app.render(); // anything held back while the finger was down (first, so the nudge runs on the disc that stays)
+  if (r.nudged) setTimeout(() => app.render(), 650); // the redraw held back while the nudge played
+  if (r.nudged) document.getElementById('lbr-disc')?.animate?.([{ transform: 'none' }, { transform: 'translateX(-6px)' }, { transform: 'translateX(6px)' }, { transform: 'none' }], { duration: 350, easing: 'ease' });
+  revealLoop(app);
+}
+let letGoBound = null;
+
+/** One live region for the whole app, outside #content, so a redraw never replaces it before VoiceOver reads it. */
+function liveRegion() {
+  let n = document.getElementById('lb-live');
+  if (!n) { n = document.createElement('div'); n.id = 'lb-live'; n.className = 'lb-sr'; n.setAttribute('aria-live', 'polite'); document.body.appendChild(n); }
+  return n;
+}
+function announce(text) {
+  const n = liveRegion();
+  n.textContent = '';
+  setTimeout(() => { n.textContent = text; }, 50);
+}
+
+/** Just show me / Enter / Space / Reveal (reduced motion): straight to the burst, no freeze. */
+function revealNow(app) {
+  const r = revealState(app);
+  if (!r || Number.isFinite(r.doneAt)) return;
+  Object.assign(r, { v: 1, holding: false, doneAt: Date.now(), fast: true });
+  app.render({ force: true });
 }
 
 export default {
   // Before you've joined (invite, landing, steps, the name list) the round's top bar only repeats what the screen says
   // ("Watching · Bridlewood · Sat Nov 7"): hide it. Once you're in, the name pill and ⋯ come back.
   hideTop(app) { return ['invite', 'landing', 'guide', 'who'].includes(app.lobbyView()); },
+  // While a finger is on the disc, background redraws wait (the disc under the finger is never replaced).
+  keepContent(app) { const r = revealState(app); return !!r?.holding || (!!r?.nudged && Date.now() - r.downAt < 600); }, // and while the nudge plays
   mount(root, app) {
     const v = app.lobbyView();
     if (v === 'guide') {
@@ -343,15 +445,52 @@ export default {
       history.replaceState(null, '', `${location.pathname}${location.search}${db.moveLink(app.code)}`);
     }
     if (v !== 'reveal') { cancelAnimationFrame(revealRaf); return; }
-    if (app.ui.reveal?.code === app.code && app.ui.reveal.pid === app.me) { runReveal(app); return; }
-    // Wait for the "You're Baker?" confirm (or any sheet): the number is never spent behind it. The confirm opens
-    // right after this draw (app.claim), so look again on the next tick; closing the sheet redraws and lands here.
-    setTimeout(() => {
-      if (app.sheet || app.lobbyView() !== 'reveal' || app.ui.reveal?.code === app.code) return;
-      app.ui.reveal = { code: app.code, pid: app.me, t0: Date.now() };
-      app.markHcpSeen(); // once per phone: a reload goes to the lobby
-      runReveal(app);
-    }, 0);
+    // Idle costs nothing (seen is written only when the number lands), so the disc can wait under a sheet.
+    if (!revealState(app)) app.ui.reveal = { code: app.code, pid: app.me, v: 0, holding: false, shownAt: Date.now() };
+    const r = app.ui.reveal;
+    liveRegion(); // empty, before the number lands: iOS reads a region's first change only if it already existed
+    syncMotion(root); // the burst, the landing and the cue keep their place through a redraw
+    const phase = revealPhase(r, Date.now(), reduced());
+    if ((phase === 'burst' || phase === 'final') && !r.announced) {
+      r.announced = true;
+      const h = hcpOf(app.event.roster, app.me), st = app.lobby();
+      // Just show me / Enter: focus moves to the title, which reads the number with it (aria-describedby), so no second
+      // announcement. A hold: the live region says it.
+      if (r.fast) root.querySelector('.lb-rv .nr-title')?.focus({ preventScroll: true });
+      else announce(`${st?.hostName && st.hostName !== 'The organizer' ? st.hostName : 'Your organizer'} has you at ${h?.strokes ?? ''}`);
+    }
+    // The final frame's redraw replaces the focused title: put focus back on the new one.
+    if (r.fast && (phase === 'burst' || phase === 'final') && (!document.activeElement || document.activeElement === document.body)) root.querySelector('.lb-rv .nr-title')?.focus({ preventScroll: true });
+    if ((phase === 'burst' || phase === 'final') && !r.replay && !r.marked) { r.marked = true; app.markHcpSeen(); }
+    if (Number.isFinite(r.doneAt) && phase !== 'final') revealLoop(app);
+    else if (phase === 'final' && finalFades(Date.now() - landsAt(r) - LAND_MS, reduced())[3] < 1) revealLoop(app);
+    if (!letGoBound) {
+      letGoBound = (e) => letGo(app, e);
+      window.addEventListener('pointerup', letGoBound);
+      window.addEventListener('pointercancel', letGoBound);
+      window.addEventListener('blur', letGoBound);
+      document.addEventListener('visibilitychange', () => { if (document.hidden) letGo(app); });
+    }
+    const disc = root.querySelector('#lbr-disc');
+    if (!disc) return;
+    disc.addEventListener('contextmenu', (e) => e.preventDefault());
+    disc.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      const s2 = revealState(app);
+      if (!s2 || Number.isFinite(s2.doneAt) || s2.holding || e.isPrimary === false) return; // a second finger changes nothing
+      Object.assign(s2, { holding: true, touched: true, downAt: Date.now(), pointerId: e.pointerId }); // touched: no more cue
+      revealLoop(app);
+    });
+    disc.addEventListener('pointerleave', (e) => letGo(app, e));
+    disc.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      e.preventDefault();
+      revealNow(app);
+    });
+    disc.addEventListener('click', (e) => {
+      e.preventDefault(); // a finger's tap is a press, never a reveal…
+      if (e.detail === 0) revealNow(app); // …but VoiceOver's double-tap (a click with no touch behind it) reveals
+    });
   },
   render(app) {
     const st = app.lobby();
@@ -381,6 +520,13 @@ export default {
       app.markLobbySeen('here'); // a reload keeps the choice
       if (!app.me) { app.ui.lobbyPick = app.code; app.ui.lobbyQ = ''; app.refreshClaimed(); }
       app.render();
+    },
+    'lb-rv-now': (el, ev, app) => revealNow(app),
+    'lb-rv-again': (el, ev, app) => {
+      // Replays the whole screen from idle; seen doesn't change.
+      app.ui.reveal = { code: app.code, pid: app.me, v: 0, holding: false, shownAt: Date.now(), replay: true };
+      app.render();
+      document.getElementById('content').scrollTop = 0;
     },
     'lb-revealed': (el, ev, app) => { app.ui.reveal = null; app.markHcpSeen(); app.render(); document.getElementById('content').scrollTop = 0; },
     'lb-q': (el, ev, app) => {
