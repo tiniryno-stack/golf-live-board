@@ -5,6 +5,7 @@
 // Raw strokes are the only stored truth; everything here is recomputed.
 
 export const HOLES = 18;
+import { draftedAt } from './mdraft.js';
 
 export const DEFAULT_ROTATION = [
   { holes: [1, 6], matches: [['A', 'B'], ['C', 'D']] },
@@ -134,6 +135,8 @@ function ryderPairsAt(roster, settings, pos) {
   const n = Math.min(a.length, b.length);
   const ranges = settings.rotation.map((r) => r.holes);
   const i = Math.max(0, ranges.findIndex((h) => pos >= h[0] && pos <= h[1]));
+  const drafted = ranges.length === 3 ? draftedAt(settings, i, a, b) : null; // the captains' matchup draft (Nov 7)
+  if (drafted) return drafted;
   return a.slice(0, n).map((x, k) => [x, b[(k + i) % n]]);
 }
 

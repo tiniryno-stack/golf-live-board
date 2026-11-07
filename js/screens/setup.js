@@ -1052,7 +1052,7 @@ async function saveLobbyStep(app) {
   const rules = Object.fromEntries(RULE_KEYS.filter((k) => k in s.settings).map((k) => [k, s.settings[k]]));
   const base = { ...fresh.settings, ...rules };
   const settings = mode === 'tee' ? withStartTimes(base, fresh.played_on, times, app.now())
-    : mode === 'carts' ? toCartsStage(fresh.settings) : { ...toTeamsStage(base), teeTimes: [] };
+    : mode === 'carts' ? toCartsStage(fresh.settings) : { ...toTeamsStage(base), teeTimes: [], ryderMatchups: undefined }; // a new team draft = matchups drafted again
   s.saving = true;
   app.render();
   app.event = { ...app.event, ...fresh };

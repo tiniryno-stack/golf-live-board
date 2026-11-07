@@ -9,6 +9,8 @@ import * as db from '../db.js';
 import * as names from '../names.js';
 import * as L from '../lobby.js';
 import { startLobbyEdit, lobbyStepView } from './setup.js';
+import * as M from '../mdraft.js';
+import { holesLabel, normalizeSettings } from '../scoring.js';
 
 const clone = (x) => JSON.parse(JSON.stringify(x));
 const hostKey = (app) => `glb.lobbyhost.${app.code}`;
@@ -155,7 +157,49 @@ export function orderRow(app) {
   return `<div class="card lb-card lb-rows" style="margin:0 0 14px">${row('Order and carts', 'until the first score', 'lh-order')}</div>`;
 }
 
+/**
+ * The matchup draft (owner, Nov 7): after the team draft, captains build the 12 matches. One side puts up a cart,
+ * the other answers with one of theirs; the offer snakes (mdraft.offerSide). Carts are listed lowest strokes first.
+ * Save → settings.ryderMatchups (the engine reads it); Skip → the standard rotation.
+ */
+function mdraftView(app) {
+  const d = app.ui.mdraft;
+  const ev = app.event, roster = ev.roster || {};
+  const sideOf = (id) => (roster.sides || []).find((x) => x.id === id) || { id, name: `Team ${id}`, teamIds: [] };
+  const c1 = sideOf('1').teamIds || [], c2 = sideOf('2').teamIds || [];
+  const ps = roster.players || [];
+  const cartName = (tid) => ps.filter((p) => p.teamId === tid).map(first).join(' + ') || tid;
+  const cartStrokes = (tid) => ps.filter((p) => p.teamId === tid).reduce((t, p) => t + (Number(p.strokes) || 0), 0);
+  const st = normalizeSettings(ev.settings);
+  const holes = (r) => holesLabel(st, r * 6 + 1, r * 6 + 6).replace(/^Holes /, '');
+  const s = M.draftState(d.picks, d.pending, c1, c2, d.first);
+  const title = s.done ? 'All 12 matches are set' : `${esc(sideOf(s.side).name)} ${s.offering ? 'puts up a cart' : 'answers'}`;
+  const sub = s.done ? 'Save to send them to every phone.'
+    : `Holes ${esc(holes(s.rotation))} · match ${(s.k % 4) + 1} of 4${s.offering ? '' : ` · against ${esc(cartName(d.pending))}`}`;
+  const opts = [...s.options].sort((a, b) => cartStrokes(a) - cartStrokes(b) || a.localeCompare(b));
+  const firstRow = !d.picks.length && d.pending == null
+    ? `<div class="card lb-card lb-rows">${row('First to put up a cart', esc(sideOf(d.first).name), 'lh-md-first')}</div>` : '';
+  const pick = s.done ? '' : `<div class="lbl lb-k">${s.offering ? 'Put up a cart' : 'Answer with'} · strokes</div>
+    <div class="card lb-card lb-rows">${opts.map((id) => row(esc(cartName(id)), `${cartStrokes(id)}`, 'lh-md-pick', id)).join('')}</div>`;
+  const made = [0, 1, 2].map((r) => {
+    const list = d.picks.slice(r * 4, r * 4 + 4);
+    if (!list.length) return '';
+    return `<div class="lbl lb-k">Holes ${esc(holes(r))}</div><div class="card lb-card lb-rows">${list.map(([a, b]) => check(`${esc(cartName(a))} vs ${esc(cartName(b))}`, '', false)).join('')}</div>`;
+  }).join('');
+  return `<div class="plain nr-setup lb">
+    <button class="link-btn lb-back" data-act="lh-md-cancel">Back to Host</button>
+    <div class="nr-head"><div class="nr-k"><span class="lbl">${esc(ev.name)} · matchup draft</span></div>
+      <h1 class="nr-title">${title}</h1><div class="nr-sub">${sub}</div></div>
+    ${firstRow}${pick}${made}
+    <div class="nr-foot">
+      ${s.done ? '<button class="btn primary nr-cta" data-act="lh-md-save">Save matchups</button>' : ''}
+      ${d.picks.length || d.pending != null ? '<button class="btn block lb-second" data-act="lh-md-undo">Undo</button>' : ''}
+      <button class="btn ghost block lb-quiet" data-act="lh-md-skip">Skip · use the standard rotation</button></div>
+  </div>`;
+}
+
 export function hostLobbyView(app) {
+  if (app.ui.mdraft?.code === app.code) return mdraftView(app);
   if (app.ui.orderStep?.code === app.code) return orderStepView(app);
   if (app.setup?.lobby?.code === app.code) return lobbyStepView(app); // Start the draft / Set start times
   if (app.ui.hcpStep?.code === app.code) return hcpStepView(app);
@@ -225,6 +269,7 @@ export function hostLobbyView(app) {
       ${st.stage === 'lobby' || st.stage === 'carts' ? row('Carts', st.paired ? '8 paired' : 'not paired yet', 'lh-carts') : ''}
       ${st.stage === 'teams' ? row('Teams', 'redo the draft', 'lh-draft') : ''}
       ${L.mayReorder(st) ? row('Order and carts', 'swap players, move groups', 'lh-order') : ''}
+      ${L.mayReorder(st) ? row('Matchups', Array.isArray(ev.settings?.ryderMatchups) ? 'drafted · redo or skip' : 'standard · or snake draft', 'lh-mdraft') : ''}
       ${row('Players', st.stage === 'off' ? `${n} players` : 'replace a player', 'lh-players')}
       ${st.stage === 'off' ? '' : row('Handicaps', L.handicapCount(ev.roster) < n ? `${L.handicapCount(ev.roster)} of ${n} set · invite needs all ${n}` : `all ${n} set`, 'lh-hstep')}
       ${row('Co-host', esc(cohost), 'lh-cohost')}
@@ -467,6 +512,38 @@ async function removePlayer(app, pid) {
 }
 
 export const lobbyActions = {
+  'lh-mdraft': (el, ev, app) => { app.ui.mdraft = { code: app.code, first: '1', picks: [], pending: null }; app.render(); document.getElementById('content').scrollTop = 0; },
+  'lh-md-cancel': (el, ev, app) => { app.ui.mdraft = null; app.render(); },
+  'lh-md-first': (el, ev, app) => { const d = app.ui.mdraft; if (d) { d.first = d.first === '1' ? '2' : '1'; app.render(); } },
+  'lh-md-pick': (el, ev, app) => {
+    const d = app.ui.mdraft; if (!d) return;
+    const r = app.event.roster || {};
+    const ids = (sid) => ((r.sides || []).find((x) => x.id === sid)?.teamIds) || [];
+    const s = M.draftState(d.picks, d.pending, ids('1'), ids('2'), d.first);
+    const id = el.dataset.v;
+    if (s.done || !s.options.includes(id)) return;
+    if (s.offering) d.pending = id;
+    else { d.picks.push(s.side === '2' ? [d.pending, id] : [id, d.pending]); d.pending = null; }
+    app.render(); document.getElementById('content').scrollTop = 0;
+  },
+  'lh-md-undo': (el, ev, app) => { const d = app.ui.mdraft; if (!d) return; if (d.pending != null) d.pending = null; else d.picks.pop(); app.render(); },
+  'lh-md-save': async (el, ev, app) => {
+    const d = app.ui.mdraft; if (!d || d.picks.length !== M.PICKS) return;
+    const ok = await saveLobby(app, ({ settings }) => ({ settings: { ...settings, ryderMatchups: M.toMatchups(d.picks), matchupDraftFirst: d.first } }));
+    if (!ok) return;
+    app.ui.mdraft = null;
+    app.toast({ title: 'Matchups saved', sub: 'Every phone shows them next time it opens.' });
+    app.render();
+  },
+  'lh-md-skip': async (el, ev, app) => {
+    if (Array.isArray(app.event.settings?.ryderMatchups)) {
+      const ok = await saveLobby(app, ({ settings }) => { const next = { ...settings }; delete next.ryderMatchups; delete next.matchupDraftFirst; return { settings: next }; });
+      if (!ok) return;
+    }
+    app.ui.mdraft = null;
+    app.toast({ title: 'Standard rotation', sub: 'Carts swap opponents every 6 holes.' });
+    app.render();
+  },
   'lh-invite': (el, ev, app) => share(app, 'invite'),
   'lh-draft': (el, ev, app) => startLobbyEdit(app, 'draft'),
   'lh-carts': (el, ev, app) => startLobbyEdit(app, 'carts'),
