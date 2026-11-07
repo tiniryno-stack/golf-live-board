@@ -79,6 +79,12 @@ export const STANDALONE = (() => {
   }
 })();
 
+/** iPhone / iPad (Safari's Add to Home Screen steps). Tests set `__GLB_IOS`. */
+export function isIOS() {
+  if (typeof globalThis.__GLB_IOS === 'boolean') return globalThis.__GLB_IOS;
+  try { return /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); } catch { return false; }
+}
+
 /** An iPhone or Android phone (not an iPad or a computer): the app-only gate's devices (024 §6).
  *  Tests set `__GLB_PHONE` (or `__GLB_IOS`). */
 export function isPhone() {
@@ -95,7 +101,13 @@ const fromB64 = (s) => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/
  *  `round` (024 §6) = a round code: the home screen app then opens straight into that round. */
 export function moveLink(round = null) {
   const keys = {};
-  for (const k of local.keys()) if (MOVE_KEYS.test(k)) keys[k] = local.get(k);
+  for (const k of local.keys()) {
+    if (!MOVE_KEYS.test(k)) continue;
+    // 025 rev: a link made for one round (the lobby's Add to Home Screen steps show it in the address bar) carries no
+    // organizer PIN for any other round.
+    if (round && k.startsWith('glb.admin.') && k !== `glb.admin.${round}`) continue;
+    keys[k] = local.get(k);
+  }
   return `#move=${toB64(JSON.stringify({ v: 1, keys, ...(round ? { round } : {}) }))}`;
 }
 
@@ -105,7 +117,16 @@ export const moved = (() => {
     const m = /^#move=([A-Za-z0-9_-]+)$/.exec(location.hash);
     if (!m) return false;
     history.replaceState(null, '', `${location.pathname}${location.search}#/`);
-    if (!STANDALONE) return false;
+    if (!STANDALONE) {
+      // 025 rev: a reload in Safari while the Add to Home Screen steps show the move link goes back to that round,
+      // but only on the phone that made it (the round is in its own Recent rounds). A mis-sent link still does nothing.
+      try {
+        const r = JSON.parse(fromB64(m[1]))?.round;
+        const mine = (local.get('glb.recent') || []).some((x) => x?.code === r);
+        if (typeof r === 'string' && /^[A-Z0-9]{4,8}$/.test(r) && mine) history.replaceState(null, '', `${location.pathname}${location.search}#/e/${r}`);
+      } catch { /* Home */ }
+      return false;
+    }
     const data = JSON.parse(fromB64(m[1]));
     // 024 §6: a move link made for one round opens the home screen app straight into it.
     const round = typeof data?.round === 'string' && /^[A-Z0-9]{4,8}$/.test(data.round) ? data.round : null;

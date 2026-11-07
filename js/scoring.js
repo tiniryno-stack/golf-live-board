@@ -148,8 +148,9 @@ const sameSet = (x, y) => JSON.stringify([...x].map((p) => p.join('v')).sort()) 
 /** The engine's view of a Team Ryder Cup: a rotation per run of holes with the same matches. */
 export function ryderView(roster, settings) {
   const st = { ...settings, game: 'rotationMatch', rotationMode: 'fixed', solo: false, pairs: false, matchBonus: 0 };
-  // 025: a lobby round before the draft has no carts or sides yet: no matches, a safe snapshot (game: null).
-  if (!(roster?.teams || []).length) return { roster, settings: { ...st, rotation: DEFAULT_ROTATION.map((r) => ({ holes: [...r.holes], matches: [] })) } };
+  // 025: a lobby round before the draft has no real carts yet (none, or temporary C1…C8 at stage 'carts'): no
+  // matches, a safe snapshot. Real cart ids (1A…2D) carry their side, so old rosters without `sides` still score.
+  if (!(roster?.teams || []).some((t) => sideOf(t.id))) return { roster, settings: { ...st, rotation: DEFAULT_ROTATION.map((r) => ({ holes: [...r.holes], matches: [] })) } };
   const starts = new Set([1, ...st.rotation.map((r) => r.holes[0])]);
   const pairs = Array.from({ length: HOLES + 1 }, (_, p) => (p ? ryderPairsAt(roster, st, p) : null));
   for (let p = 2; p <= HOLES; p++) if (!sameSet(pairs[p], pairs[p - 1])) starts.add(p);

@@ -234,6 +234,10 @@ call off. 6. Countdown + Scoring is open. Then: live DB (rollback test → apply
 
 | Round | Architect | Database | Frontend | Tests | Product QA | Red team | What changed |
 |---|---|---|---|---|---|---|---|
+| 0 · plan | 7.5 | 8 | 7 | 7 | 6.5 | 7 | Plan reviewed; every point in P2.8 folded in (QA's 6.5 items were built before code review). |
+| 1 · code | 8 | 8.5 | 7.5 | 8 | 8 | 8 | Code reviewed (fb1e670); fixes in P2.10. |
+| 2 · code | 9 | 9 | 8.5 | 9 | 9 | 8.5 | Round-1 fixes reviewed (c0ad4f0); P2.11. |
+| 3 · code | 9 | 9 | 9 | 9 | 9 | 9 | Round-2 fixes reviewed (5733931). All six at 9 in the same round: done. Copy nits after it: “invite needs all 16”, “Not in Safari (Partiful, another app)?”; the browser check is pure (`notSafari`, tested). |
 | 0 · plan | 6.5 | 7 | 6.5 | 7 | 7 | 6 | Plan reviewed; every point below folded into §12 before code. |
 | 1 · code | 8 | 8 | 8 | 8 | 8 | 7 | Code reviewed after the build; every confirmed bug fixed the same night (§14). Owner asked for two rounds, so no third round. |
 
@@ -316,3 +320,262 @@ call off. 6. Countdown + Scoring is open. Then: live DB (rollback test → apply
   (no "opened early" wording); `_lobby_gate` could be SECURITY INVOKER (it's already not callable by anon, verified
   live); "organizer" tag in Who's playing (the round stores the organizer's name, not his player); `lobby_counts` with
   a non-array roster would error (the app never writes one). Each would be a small follow-up migration.
+
+---
+
+# Part 2 · SPEC revision (Nov 6 evening): carts before the draft + the handicap reveal
+
+The owner sent a revised 025 zip (same folder, now in the repo). Part 1 above is built and live on `main`
+(`33708fe`). Part 2 builds only what the revision changes. Branch: `claude/new-session-a0hcnv` (the session's branch,
+off `main`).
+
+## P2.1 · What the revision changes (diff of SPEC.md)
+
+1. **New stage `carts`** between `lobby` and `teams`: carts are paired before the draft. `roster.teams` = 8 carts with
+   temporary ids `C1`…`C8`, no `sides`, no `groups`; every player sees who they ride with. The draft gives each cart
+   its real id (`1A`…`2D`). Player ids never change (claims are keyed by player id). `compute` / `ryderState` ignore
+   carts without sides.
+2. **Setup:** Invite now → When → create → **Who rides together?** (`ryCartsView`, handicaps beside names, **Skip**
+   allowed) → Host lobby with the invite share sheet.
+3. **Host primary:** `lobby` (carts skipped) → **Pair the carts**; `carts` → **Enter the draft** = two steps on the open
+   round: `ryDraftView` ("draft · 1 of 2 · Drafting in person? Tap each cart as it's picked.") then `ryTeeView` ("draft ·
+   2 of 2", Start times). New Host row **Carts · 8 paired ›** (the carts step reopens only from there).
+4. **Players, the handicap flow** (invite links): invite (“Andrew set your handicap”) → guide (Add to Home Screen, Step 1
+   of 2, pointer at Safari's ⋯, “Can't add it? Reveal it here”) → in the app: 024 auto-join or the A–Z list (“Step 2 of
+   2 · reveal your handicap”) → 024 confirm → **the reveal** (blur → roll → number, rank line, once per phone,
+   `glb.seen.CODE.hcp`) → the lobby. “See you Saturday” (3) leaves this path.
+5. **Lobby before the draft (4):** **Your handicap · 12** card (“Andrew sets these. Think it's off? Text Andrew.”, text
+   only), **Your cart · Baker + Mitch** (green, “team after the draft”) once paired (else Coming up), **Who's playing ·
+   handicap** with each handicap on the right.
+6. **Landing (1)** for a plain lobby link: “Add Golf Board to my home screen” first, “Join in Safari for now”.
+7. **Share message:** “You're on the list for Chuck's Bday on Saturday. Tap this to reveal your handicap.”
+
+No database change: the server gate already refuses every stage but an open `ready`; `update_event` takes any roster.
+
+## P2.2 · Data shapes
+
+```
+settings.lobby.stage: 'lobby' | 'carts' | 'teams' | 'ready' | 'off'      (prevStage may be 'carts')
+settings.lobby.hostId: playerId | null    // NEW, optional: the organizer's own player (024 owner on the roster at
+                                          // creation) → "organizer" tag in Who's playing. Absent on Part 1 rounds.
+roster at 'carts': { groups: [], sides: [], teams: [{ id:'C1', name:'Baker + Mitch' } … 'C8'],
+                     players: [{ …, teamId:'C1', groupId:null }] }
+localStorage (new): glb.seen.CODE.hcp (the reveal was shown on this phone). glb.seen.CODE.welcome is no longer read.
+route (new): #/e/CODE/hcp = the invite link (opens the round like #/e/CODE; marks this load as an invite).
+```
+
+`lobbyState()` gains `paired` (stage `carts`) and checks the stage against the roster: `carts` needs C-carts and no
+sides (else `lobby`); `teams`/`ready` need two sides (else `lobby`). Old rounds: `lobbyState` = null, nothing changes.
+
+## P2.3 · Pure additions in `js/lobby.js` (all tested)
+
+- `STAGES` + `'carts'`; `lobbyOf` keeps `hostId`; `lobbyState` → `paired`, `hostId`.
+- `pairedRoster(roster, order)`: `order` = player ids, pairs in order → carts `C1`…`C8` (name "A + B"), `teamId` set,
+  `groupId` null, sides/groups empty. Refuses (null) unless exactly 16 known, distinct ids.
+- `cartOrder(roster)`: the player ids in cart order (C1's pair, C2's…), or roster order when unpaired: what the carts
+  and draft steps start from.
+- `toCartsStage(settings)`: stage `carts`, opensAt null, teeTimes [].
+- `nextHostStep`: `lobby` → `pair` (16) / `need16`; `carts` → `draft`.
+- `maySaveStep`: `carts` mode in `lobby`|`carts`; `draft` mode in `carts` only; `tee` in `teams`|`ready`.
+- `myCart(event, pid)`: `{ id, names, mate }` for the player's cart at any stage with carts (C or real).
+- `hcpOf(roster, pid)` → `{ strokes, rank, tied, of, min, max }` (rank = 1 + number strictly lower, among players with a
+  handicap; null when the player has none). `ordinal(n)`.
+- `revealFrame(strokes, elapsedMs, reduced)` → `{ value, blur, opacity, done, fade: [kicker, rank, note, button] }`:
+  1.2 s ease-out roll through ~4 values ending on the real one (last 300 ms settled), then four 200 ms fade-ins.
+  Reduced motion = the final frame at once.
+- `lobbyView(state, ctx)`: ctx gains `invite`, `guide`, `standalone`, `revealing`, `seenHcp`, `hasHcp`; drops
+  `seenWelcome`. Order: open → gameday · removed · off · not joined: picking → who, watching → watch, standalone → who,
+  guide → guide, invite (and the roster has handicaps) → invite, else landing · joined: revealing or (hasHcp and not
+  seenHcp) → reveal · ready → ready · day → dayWait · teams → drafted · lobby/carts → early.
+- `homeCard` at `carts`: “Riding with Mitch · teams after Andrew’s draft”.
+- `inviteText(ev, day, hcp)`: the share line (reveal wording only when the roster has handicaps; else Part 1's).
+
+## P2.4 · Screens
+
+- **Setup (`setup.js`)**: after create, Host opens the carts step in lobby mode with `fromSetup` (kicker “New round ·
+  NAME · carts”, top link **Skip**, primary **Open the lobby**). Skip or save → Host lobby → the invite share sheet
+  (`host.mount` waits until no lobby step is open). `ryCartsView` shows each handicap beside the name (also in the
+  normal Setup flow: `swapBtn` extra, mono muted).
+- **Lobby edit mode** (`startLobbyEdit(app, mode, opts)`): `carts` (screen `teams`, players in `cartOrder`), `draft`
+  (screen `draft`, players in cart order: captains = carts 1 and 2 as today), `tee` (screen `tee`). Draft done →
+  **Next: start times** saves the draft (stage `teams`) and opens the tee step on the fresh round (`chain`: kicker
+  “draft · 2 of 2”); its top link “Back to Host” leaves start times for later. The Host’s own Set start times = kicker
+  “start times”. Headlines say “Start times” (organizer screens) in lobby mode.
+- **Host lobby (`hostlobby.js`)**: primaries `pair` (“Pair the carts”) and `draft` (“Enter the draft”); row **Carts ·
+  8 paired / not paired** in lobby/carts (hidden after the draft and when off); Remove at `carts` = confirm “Removing
+  him unpairs the carts. Replacing him keeps his cart.” (primary Replace … instead, alt Remove); Replace blurb at
+  `carts` = “with his cart”. Invite/person/sub share messages use `#/e/CODE/hcp` + the reveal line.
+- **Player lobby (`screens/lobby.js`)**: new views `invite`, `guide`, `reveal`; `landing` reworded; `who` kicker
+  “Step 2 of 2 · reveal your handicap” (handicap flow) / “NAME · in Golf Board” (app) / “NAME” (Safari); `early` = handicap
+  card, Your cart (stage carts) or Coming up, Who's playing · handicap (numbers right, “organizer” tag via `hostId`);
+  `lobby-all` sheet shows handicaps; `dayWait` says “drafting” at lobby/carts. `welcome` (3) is removed.
+- **Reveal motion**: drawn from `revealFrame(now − t0)` every render (redraw-safe, like `data-t0`), and while it runs a
+  rAF loop in `mount` updates only the number/blur/opacity nodes (no full redraws). `t0` in `app.ui.reveal`;
+  `glb.seen.CODE.hcp` is written on the first frame, so a reload never replays it.
+- **Guide pointer** (new pattern, flagged): “Start here ↓”, fixed bottom-right above Safari's toolbar, existing label
+  type + `icon('down')`-style arrow, no new colour or size.
+- **Engine**: `ryderView` returns the safe empty view when there are carts but no two sides (stage `carts`).
+
+## P2.5 · Tests (`tests/lobby025.test.mjs`, extended; one file)
+
+`pairedRoster` (ids/personIds kept, C1…C8, refuses 15/dupes) · `lobbyState` at carts, carts without carts → lobby,
+lobby with C-carts stays lobby · `nextHostStep` pair/need16/draft · `maySaveStep` per mode × stage · draft from carts
+keeps every player id and gives real cart ids (claims survive) · `compute` + `ryderState` + headlines on a carts roster
+don't throw, no matches · mock gate: carts = not_open, admin ok · `hcpOf` ranks with ties, nobody set, me unset ·
+`revealFrame` (start blurred, ends exact at 1.2 s, fades in order, reduced motion) · `lobbyView` order incl. invite
+without handicaps → landing, standalone → who, reveal once · `homeCard` carts line · `withWhen`/callOff/bringBack keep
+`carts` · old rounds (`lobby: null`) unchanged.
+
+## P2.6 · Decided overnight (Part 2)
+
+- No SQL: the gate already treats `carts` as not open, and `update_event` takes any roster. So nothing to apply to
+  the live database this time (no migration, no rollback file).
+- The invite link is `#/e/CODE/hcp`; Host's invite / person / sub messages use it. The teams / tell / co-host
+  messages keep the plain link (those people already joined).
+- The handicap screens show only when the roster has at least one handicap; otherwise the plain landing (1) and the
+  Part 1 wording. A player with no handicap skips the reveal (SPEC).
+- Not iPhone Safari (Android, desktop): “Reveal my handicap” goes straight to the A–Z list (the guide is iOS Safari steps).
+- The home screen app with no claim on a lobby round shows the A–Z list at once (whoapp), never the Safari landing.
+- “See you Saturday” (3) is removed from every path: after joining, the reveal (or the lobby).
+- After the draft, carts are fixed: the Carts row disappears (Remove and redraft is the way back).
+- Enter the draft's step 2 has no “later” button: “Back to Host” at the top leaves start times for later (Host then
+  offers Share the teams, as in Part 1).
+- `settings.lobby.hostId` added (optional) for the “organizer” tag; Part 1 rounds simply don't show the tag.
+
+## P2.7 · Council scores (Part 2)
+
+| Round | Architect | Database | Frontend | Tests | Product QA | Red team | What changed |
+|---|---|---|---|---|---|---|---|
+| 0 · plan | 7.5 | 8 | 7 | 7 | 6.5 | 7 | Plan reviewed; every point in P2.8 folded in (QA's 6.5 items were built before code review). |
+| 1 · code | 8 | 8.5 | 7.5 | 8 | 8 | 8 | Code reviewed (fb1e670); fixes in P2.10. |
+| 2 · code | 9 | 9 | 8.5 | 9 | 9 | 8.5 | Round-1 fixes reviewed (c0ad4f0); P2.11. |
+| 3 · code | 9 | 9 | 9 | 9 | 9 | 9 | Round-2 fixes reviewed (5733931). All six at 9 in the same round: done. Copy nits after it: “invite needs all 16”, “Not in Safari (Partiful, another app)?”; the browser check is pure (`notSafari`, tested). |
+
+## P2.8 · Round 0 changes (what the council asked for, as built)
+
+- **Handicaps editable before scoring opens** (QA, red team): lobby Players → a player → **Handicap · 12** (sheet, blank =
+  not set, saved through `saveLobby`). **Replace / Add** ask for the sub's handicap and never keep the old player's
+  number (Undo restores it).
+- **The reveal** (QA, red team, tests): `glb.seen.CODE.hcp` holds the **player id** it was shown to (a wrong pick, then
+  "I'm not Baker", still gives the right person theirs). It starts only once no sheet is open (024's "You're Baker?"
+  opens right after the pick), so the number is never spent behind it. `revealing` beats `seenHcp`, so writing the key
+  on the first frame can't cut it short. No reveal for the organizer (`lobby.hostId`).
+- **iPhone Safari, already joined** (QA): a joined player with an unseen handicap on iPhone Safari (024 auto-join
+  included) gets the Add to Home Screen steps first; **Can't add it? Reveal it here** carries on in Safari.
+- **Move link lifecycle** (frontend, QA, red team): the guide puts `db.moveLink(code)` in the address bar while it
+  shows (and sets `glb.hasApp`), with the "don't send this link" line from 024's sheet; leaving it (Back / Can't add it)
+  puts `#/e/CODE` back. A Safari reload of a move link returns to its round only on the phone that made it (the round is
+  in its own Recent rounds); a mis-sent link still does nothing (`db.moved`).
+- **The handicap wording only when everyone has one** (QA): `hasHandicaps` = all players; otherwise the invite link shows
+  the plain landing and Part 1's share wording. A player with no handicap: no reveal, no card.
+- **Stages** (architect, tests, red team): `isPaired` is strict (8 C-carts × 2, every player in one, 16 players, no
+  sides). A stage the roster doesn't support falls back to the highest one it does, never above the saved stage
+  (`teams`/`ready` with C-carts → `carts`; `carts` without them → `lobby`). `nextHostStep('carts')` needs 16.
+- **Redo the draft** (architect): `maySaveStep('draft')` at `carts` or `teams`; Host at `teams` has **Teams · redo the
+  draft**; the draft step starts from the drafted carts (`cartOrder`). `undraft()` (pure, tested) for the same pairs as
+  C-carts.
+- **Stale steps** (architect, red team): `rosterKey` includes `teamId`, so a re-pair or redraft by a co-host makes an
+  open step refuse to save.
+- **Remove keeps a call-off** (architect, red team): `toLobbyStage` on an `off` round keeps `off` and sets `prevStage:
+  'lobby'` (a Part 1 bug too). Remove at `carts` has its own confirm ("unpairs the carts", Replace … instead).
+- **Cart names follow the players** (architect): `renameCarts` on every lobby roster save; screens build names from
+  the players (`myCart`, you first).
+- **Captains** (architect, QA, red team): the carts step labels **Cart 1 · captain** / **Cart 2 · captain** (also in the
+  normal Setup flow: it was always true there). Choosing captains in the draft is left for the owner (P2.9).
+- **Draft step can't wander** (red team): draft mode's first screen is the draft (Back to Host); `saveLobbyStep`
+  branches carts / draft / tee explicitly.
+- **Share the teams after chained start times** (red team): saving start times straight after the draft opens the
+  Share the teams sheet once.
+- **Engine guard** (red team): `ryderView` returns the empty view when no cart id carries a side (`/^[12][A-D]$/`),
+  not on `sides.length`, so an old roster without `sides` still scores (tested).
+- **Words** (found in the build check): 024's "You're Baker?" sheet said "1st tee time" in a lobby; before scoring opens
+  it now says "with Mitch" (and "8:20 start time" once start times are set).
+- **Mock** `pick_team_name` guards a missing `teams` list. Cart naming isn't offered in a lobby (Part 1's `afterJoin`
+  returns before the cart-name picker), and the draft names carts afresh, so a C-cart name never carries over.
+- **Not changed, on purpose:** start times keep their own cart order (side 1 by start time, then side 2), which is a
+  different order from the carts/draft steps (`cartOrder`); unifying them would change which carts are captains.
+- Handicaps are public roster data (anyone with the code can read `events`); the reveal is a display rule, not access
+  control (database).
+
+## P2.10 · Round 1 fixes (code council)
+
+- **Redo the draft captains** (tests, architect): `cartOrder` puts drafted carts side by side (1A, 2A, 1B, 2B…), so
+  carts 1 and 2 are one from each side; tested on `undraft`.
+- **Steps keep edits made meanwhile** (red team): `mergeStep` takes only carts / groups from the draft or start-times
+  step; names and handicaps come from the round as it is now (tested).
+- **Join in Safari for now** no longer loops back to the steps after the pick (red team); "Step 2 of 2" shows only to
+  people who came the handicap way (frontend).
+- **Reveal**: its inputs are pure (`revealCtx`, tested: none for the organizer, seen key per player); the "You're
+  Baker?" close redraws so it starts at once; the rolling number is `--text-muted` (class), the kicker turns green
+  (`.lb .lbl.you`, an existing token).
+- **Andrew sees the handicap invite's state** (QA): Host row **Handicaps · 14 of 16 set**; the invite / person / sub
+  share sheet says when a blank handicap turns the reveal off; Replace / Add warn that a blank turns it off.
+- **Home screen app, not playing** (QA): Follow along on the A–Z list. **Partiful** (QA): one line on the guide, “Opened
+  inside Partiful or another app? Tap ••• → Open in Safari first.”
+- **Captains** (QA): the draft's sub-line names them (“Captains: Baker (cart 1) and Josh (cart 2). Wrong? Back to Host →
+  Carts.”). Leaving a draft with picks asks first (frontend).
+- **Landing words** follow the handicap rule; iPhone gets one ghost (Join in Safari for now), other phones Follow along
+  (frontend). Who's playing = organizer, you, then A–Z. `row()` takes a `right` value (no markup patching).
+- **Move link** (database, red team): a link made for one round carries no organizer PIN for any other round; the
+  guide no longer marks `glb.hasApp` (architect). `parseHash` notes that `#move=` is never parsed there.
+- **Mock** `pick_team_name` with a cart missing from `teams` returns ok like the SQL; the carts test asserts its
+  actual result. `hcpOf` clamps at 0 like the reveal.
+- **Known limits (noted, not changed):** `pick_team_name` is client-gated in a lobby (cosmetic: the next save renames
+  the cart); `update_event` has no version check, so two organizers saving in the same second: last write wins (V2).
+
+## P2.11 · Round 2 fixes
+
+- Redo the draft no longer says “Wrong? Back to Host → Carts.” (the Carts row is gone after the draft); the captains
+  line shows only when both captains exist (QA, red team, frontend).
+- The guide has two notes, not three: the Partiful hint shows only inside an app's own browser (no “Safari/” in the
+  user agent), joined to the Join-with-code line (frontend).
+- Replace's handicap warning is a hint under the field, not a long label (frontend). Host: “Handicaps · 0 of 16 set ·
+  all 16 for the handicap invite” (QA).
+- “Not playing? Follow along” is on the A–Z list for everyone (red team: an iPhone spectator on a plain link);
+  the iPhone landing keeps one ghost.
+- Staying in Safari (Can't add it / Join in Safari for now) is kept per round in `glb.seen.CODE.here`, so a reload
+  doesn't show the steps again (red team).
+- Tests: the duplicate lobbyView row is gone; `mergeStep` never drops a player.
+
+## P2.9 · Open questions for the owner (Part 2)
+
+1. **Captains:** carts 1 and 2 are the captains' carts (as in Setup since 015). Want a "Who are the captains?" pick at
+   the start of Enter the draft instead?
+2. **Partiful's in-app browser:** the steps are Safari's. Players who open the link inside Partiful may need an "Open
+   in Safari" screen first (the handoff's flow shows one); not built in this push.
+3. **Players who already have the icon** (o-hasapp, "Open Golf Board from your home screen"): not built; the guide's
+   note ("Already have Golf Board? Open it, tap Join with code …") covers it for now.
+
+**Follow-ups the council left (not blockers):** a test that Redo the draft keeps both team names; the start-times step
+could use `cartOrder`; refuse `pick_team_name` before the draft and give `update_event` a version check in the next SQL
+pass; show the move link only on the Add to Home Screen step itself; a practice walk on a real iPhone (Partiful → Safari
+→ Add to Home Screen → icon → reveal; the “Start here” arrow against iOS 26's ⋯).
+
+## P2.12 · Owner's preview notes (Nov 6, evening) — built
+
+- **Handicaps before the invite:** a required **Everyone's handicap** step right after Who rides together? (or its
+  Skip): 16 rows with a number field each, "N still to set", **Open the lobby** stays off until all 16 are set; then
+  the invite share sheet. Host → **Handicaps** opens the same list any time before scoring opens (Save, partial allowed).
+- **When:** the native date / time fields are held inside the field (iPhone gives them an intrinsic width).
+- **"Join in Safari"** is a small muted text link ("or join in Safari") under the primary.
+- **"Can't add it?"** shows only after 3 minutes on the steps (`GUIDE_ESCAPE_MS`), as a small text link that leaves
+  room for the badge. From the lobby's Add row, Back is the way out instead.
+- **Who's playing** (lobby and the full list) is lowest handicap first (`byHandicap`).
+- **The later "Add Golf Board to your home screen"** (the lobby row) opens the same full-screen steps with the badge;
+  the Home / app-only sheet uses the same four steps (••• → Share → Add to Home Screen → the icon).
+- **"Start here"** is now a bold inverse badge, **Tap ••• here**, with a gently bobbing arrow (still with reduced
+  motion: no bob), bottom-right over Safari's •••.
+
+Light check after the owner's notes (red team 9 · frontend 9 · product QA 9, owner asked for one pass): no breaks. Added
+the "Not sure of one? Put your best guess…" hint on the handicap step. Known: the required step and the 3-minute timer
+live in memory, so a reload skips the step (Host → Handicaps still covers it) and restarts the timer.
+
+## P2.13 · Owner's note: the landing was too much to read (Nov 6) — built
+
+- The landing and the invite say the round once: kicker = the round's own name (only when it has one; Setup's default
+  "Course · date" name is left out) + "Andrew invited you" (or "You're invited" when the organizer's name isn't known),
+  headline, one round line ("Team Ryder Cup · 16 players · Bridlewood · first start 8:00"), one note, the primary and
+  the tiny link. The round card is gone.
+- The round's top bar ("Watching · course · date · ⋯") is hidden on the pre-join screens (invite, landing, steps, name
+  list); it comes back once you've joined.
+- Open for the designer (owner): the player side should lean into "you're invited" and use the screen better. Brief for the designer: https://claude.ai/artifact/Ew7y1HcrC5Vae3JdCtvzKg ("025 player join flow: design brief").

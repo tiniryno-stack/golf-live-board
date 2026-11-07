@@ -87,7 +87,7 @@ test('lobbyState: every stage, sanity against the roster, opening to the millise
 test('nextHostStep: the one primary for each stage, in priority order', () => {
   const wed = at('2026-11-04T18:00:00Z');
   const st = (ev, now = wed) => L.lobbyState(ev, now);
-  assert.equal(L.nextHostStep(st(lobbyEvent())), 'draft');
+  assert.equal(L.nextHostStep(st(lobbyEvent())), 'pair', '025 rev: carts come before the draft');
   assert.equal(L.nextHostStep(st(lobbyEvent()), { count: 15 }), 'need16');
   assert.equal(L.nextHostStep(st(drafted())), 'shareTeams');
   assert.equal(L.nextHostStep(st(drafted()), { teamsShared: true }), 'setTimes');
@@ -143,7 +143,9 @@ test('the draft keeps every player id (claims survive), names survive Set start 
   assert.equal(kept.sides.find((s) => s.id === '2').name, 'Team Josh');
   const where = kept.teams.find((t) => kept.players.filter((p) => p.teamId === t.id).map((p) => p.personId).sort().join() === pair);
   assert.equal(where.name, 'Fore Play');
-  assert.equal(L.rosterKey(swapped), L.rosterKey(ev.roster));
+  const who = (r) => r.players.map((p) => `${p.id}:${p.personId}`).sort().join();
+  assert.equal(who(swapped), who(ev.roster), 'start times move carts, never people or ids');
+  assert.notEqual(L.rosterKey(swapped), L.rosterKey(ev.roster), 'rosterKey sees carts move (a stale step refuses)');
   assert.equal(L.nextPlayerId({ players: [{ id: 'p1' }, { id: 'p16' }, { id: 'p3' }] }), 'p17');
   assert.equal(L.allTimesSet(['08:00', '08:10', '', '08:30'], 4), false);
   assert.equal(L.allTimesSet(['08:00', '08:10', '08:20', '08:30'], 4), true);
@@ -164,15 +166,14 @@ test('myLobby, lobbyView and Home\'s cards', () => {
   assert.equal(v(lobbyEvent(), {}), 'landing');
   assert.equal(v(lobbyEvent(), { picking: true }), 'who');
   assert.equal(v(lobbyEvent(), { watching: true }), 'watch');
-  assert.equal(v(lobbyEvent(), { me: 'p1' }), 'welcome');
-  assert.equal(v(lobbyEvent(), { me: 'p1', seenWelcome: true }), 'early');
-  assert.equal(v(drafted(), { me: 'p1', seenWelcome: true }), 'drafted');
-  assert.equal(v(drafted(), { me: 'p1', seenWelcome: true }, at('2026-11-07T13:00:00Z')), 'dayWait');
-  assert.equal(v(ev, { me: 'p1', seenWelcome: true }), 'ready');
-  assert.equal(v(ev, { me: 'p1', seenWelcome: true }, at('2026-11-07T14:00:00Z')), 'gameday');
+  assert.equal(v(lobbyEvent(), { me: 'p1' }), 'early', '025 rev: See you Saturday is gone (no handicap → no reveal)');
+  assert.equal(v(drafted(), { me: 'p1' }), 'drafted');
+  assert.equal(v(drafted(), { me: 'p1' }, at('2026-11-07T13:00:00Z')), 'dayWait');
+  assert.equal(v(ev, { me: 'p1' }), 'ready');
+  assert.equal(v(ev, { me: 'p1' }, at('2026-11-07T14:00:00Z')), 'gameday');
   assert.equal(v(ev, { me: 'p1', seenOpen: true }, at('2026-11-07T14:00:00Z')), null, 'open + seen: the normal round');
   assert.equal(v(ev, {}, at('2026-11-07T14:00:00Z')), null, 'late joiner after it opens: normal joining');
-  assert.equal(v(drafted({ stage: 'off' }), { me: 'p1', seenWelcome: true }), 'off');
+  assert.equal(v(drafted({ stage: 'off' }), { me: 'p1' }), 'off');
   assert.equal(v(lobbyEvent(), { removed: true }), 'removed');
   assert.equal(L.homeCard(lobbyEvent(), { pid: 'p1', personId: 'person-andrew' }, wed).line, 'Teams after Andrew’s draft');
   assert.match(L.homeCard(drafted(), { personId: baker.personId }, wed).line, /^You’re on Team .+ · start times not set yet$/);
@@ -209,8 +210,8 @@ test('writers: start times (late on the day opens at once), moving the start, op
   assert.equal(ev.settings.lobby.stage, 'teams', 'writers never mutate');
   // A step opened earlier never undoes a call-off or closes an opened round.
   const st = (e2, now = at('2026-11-04T18:00:00Z')) => L.lobbyState(e2, now);
-  assert.equal(L.maySaveStep('draft', st(lobbyEvent())), true);
-  assert.equal(L.maySaveStep('draft', st(drafted())), true, 'redraft over teams');
+  assert.equal(L.maySaveStep('draft', st(lobbyEvent())), false, '025 rev: the draft starts from paired carts');
+  assert.equal(L.maySaveStep('draft', st(drafted())), true, 'redo the draft over teams');
   assert.equal(L.maySaveStep('tee', st(lobbyEvent())), false, 'no carts yet');
   assert.equal(L.maySaveStep('tee', st(drafted())), true);
   assert.equal(L.maySaveStep('draft', st(drafted({ stage: 'off' }))), false, 'called off meanwhile');
@@ -334,4 +335,252 @@ test('engine: a lobby roster gives a safe snapshot; old rounds are identical wit
   assert.deepEqual(seasonStandings([played, unplayed]), seasonStandings([played]));
   assert.equal(L.countsAsPlayed(lobbyEvent(), []), false);
   assert.equal(L.countsAsPlayed(rider, scores), true);
+});
+
+// ───────────────────────────────────────────── 025 rev (Part 2): carts before the draft + the handicap reveal
+
+const ORDER = ['p10', 'p11', 'p3', 'p4', 'p1', 'p2', 'p5', 'p6', 'p7', 'p8', 'p9', 'p12', 'p13', 'p14', 'p15', 'p16'];
+/** Stage 'carts': C1 = Baker + Mitch, C2 = Josh + Brandon, … (the order Andrew paired them in). */
+function paired(lobby = {}) {
+  const ev = lobbyEvent({ stage: 'carts', ...lobby });
+  ev.roster = L.pairedRoster(ev.roster, ORDER);
+  return ev;
+}
+const withHcp = (ev, list = [8, 15, 4, 10, 6, 12, 11, 9, 5, 12, 7, 20, 16, 18, 14, 13]) => {
+  ev.roster.players.forEach((p, i) => { p.strokes = list[i]; });
+  return ev;
+};
+
+test('rev · pairedRoster / isPaired / cartOrder / undraft / renameCarts: C1…C8, ids and people kept, strict shape', () => {
+  const base = lobbyEvent().roster;
+  const r = L.pairedRoster(base, ORDER);
+  assert.deepEqual(r.teams.map((t) => t.id), ['C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'C8']);
+  assert.equal(r.teams[0].name, 'Baker + Mitch');
+  assert.deepEqual([r.sides, r.groups], [[], []]);
+  assert.ok(r.players.every((p) => /^C[1-8]$/.test(p.teamId) && p.groupId === null));
+  assert.deepEqual(r.players.map((p) => `${p.id}:${p.personId}:${p.strokes}`), base.players.map((p) => `${p.id}:${p.personId}:${p.strokes}`));
+  assert.ok(L.isPaired(r));
+  assert.ok(!base.players[0].teamId, 'never mutates');
+  // Refusals: 15, 17, a dupe, an unknown id.
+  assert.equal(L.pairedRoster(base, ORDER.slice(1)), null);
+  assert.equal(L.pairedRoster(base, [...ORDER, 'p1']), null);
+  assert.equal(L.pairedRoster(base, [...ORDER.slice(1), 'p11']), null);
+  assert.equal(L.pairedRoster(base, [...ORDER.slice(1), 'p99']), null);
+  assert.equal(L.pairedRoster({ ...base, players: base.players.slice(1) }, ORDER.slice(1)), null);
+  // isPaired is strict: 7 carts, a cart of 3, someone in no cart, real carts → false.
+  assert.equal(L.isPaired({ ...r, teams: r.teams.slice(1) }), false);
+  const three = structuredClone(r); three.players[2].teamId = 'C1';
+  assert.equal(L.isPaired(three), false);
+  const loose = structuredClone(r); loose.players[0].teamId = null;
+  assert.equal(L.isPaired(loose), false);
+  assert.equal(L.isPaired(drafted().roster), false);
+  // cartOrder round-trips; unpaired = roster order.
+  assert.deepEqual(L.cartOrder(r), ORDER);
+  assert.deepEqual(L.cartOrder(base), base.players.map((p) => p.id));
+  const again = L.pairedRoster(r, L.cartOrder(r));
+  assert.deepEqual(again.players.map((p) => p.teamId), r.players.map((p) => p.teamId));
+  // Re-pairing after a draft (Redo the draft): the same pairs, back to C ids, no sides.
+  const d = drafted();
+  const u = L.undraft(d.roster);
+  assert.ok(L.isPaired(u));
+  const pairs = (ro) => new Set(ro.teams.map((t) => ro.players.filter((p) => p.teamId === t.id).map((p) => p.id).sort().join('+')));
+  assert.deepEqual(pairs(u), pairs(d.roster));
+  const pairOf = (ro, tid) => ro.players.filter((p) => p.teamId === tid).map((p) => p.id).sort().join('+');
+  assert.deepEqual([pairOf(u, 'C1'), pairOf(u, 'C2')], [pairOf(d.roster, '1A'), pairOf(d.roster, '2A')], 'redo: carts 1 and 2 = one cart from each side (the captains)');
+  assert.equal(L.pairedRoster(base, ['p1', 'p2', ...ORDER.filter((x) => x !== 'p1' && x !== 'p2')]).teams.length, 8);
+  const longName = structuredClone(r); longName.players.find((p) => p.id === 'p10').firstName = 'Bartholomew-Maximilian';
+  assert.equal(L.renameCarts(longName).teams[0].name.length, 20, 'cart names stay within 20 characters');
+  // Cart names follow a Replace.
+  const sub = structuredClone(r); sub.players.find((p) => p.id === 'p10').firstName = 'Kyle';
+  assert.equal(L.renameCarts(sub).teams[0].name, 'Kyle + Mitch');
+  assert.equal(L.renameCarts(d.roster), d.roster, 'real carts keep their names');
+});
+
+test('rev · stages: carts checked against the roster; next step, saves allowed, writers, Remove keeps a call-off', () => {
+  const wed = at('2026-11-04T18:00:00Z');
+  const st = (ev) => L.lobbyState(ev, wed);
+  assert.deepEqual([st(paired()).stage, st(paired()).paired], ['carts', true]);
+  assert.equal(st(lobbyEvent({ stage: 'carts' })).stage, 'lobby', 'carts without carts → lobby');
+  assert.equal(st(paired({ stage: 'teams' })).stage, 'carts', 'teams with only C-carts → carts (the highest the roster supports)');
+  const fifteen = paired(); fifteen.roster.players.pop();
+  assert.equal(st(fifteen).stage, 'lobby', 'a 15-player C roster is not paired');
+  const realAtCarts = drafted({ stage: 'carts' });
+  assert.equal(st(realAtCarts).stage, 'lobby', 'never above the saved stage');
+  assert.equal(st(paired({ stage: 'lobby' })).stage, 'lobby');
+  assert.equal(L.nextHostStep(st(paired())), 'draft');
+  assert.equal(L.nextHostStep(st(paired()), { count: 15 }), 'need16');
+  // maySaveStep: 3 modes × 5 stages, + open.
+  const evs = { lobby: lobbyEvent(), carts: paired(), teams: drafted(), ready: drafted({ stage: 'ready', opensAt: '2026-11-07T13:30:00.000Z' }, ['08:00', '08:10', '08:20', '08:30']), off: paired({ stage: 'off', prevStage: 'carts' }) };
+  const want = { carts: ['lobby', 'carts'], draft: ['carts', 'teams'], tee: ['teams', 'ready'] };
+  for (const mode of Object.keys(want)) for (const [stage, ev] of Object.entries(evs)) {
+    assert.equal(L.maySaveStep(mode, st(ev)), want[mode].includes(stage), `${mode} at ${stage}`);
+  }
+  assert.equal(L.maySaveStep('tee', L.lobbyState(evs.ready, at('2026-11-07T14:00:00Z'))), false, 'open');
+  // Writers.
+  const s = L.toCartsStage({ ...evs.ready.settings });
+  assert.deepEqual([s.lobby.stage, s.lobby.opensAt, s.lobby.openedEarly, s.teeTimes], ['carts', null, false, []]);
+  assert.equal(evs.ready.settings.lobby.stage, 'ready', 'never mutates');
+  const off = L.callOff(paired().settings);
+  assert.deepEqual([off.lobby.prevStage, L.bringBack(off).lobby.stage], ['carts', 'carts']);
+  const removedOff = L.toLobbyStage(off);
+  assert.deepEqual([removedOff.lobby.stage, removedOff.lobby.prevStage], ['off', 'lobby'], 'Remove on a called-off round keeps it off');
+  assert.equal(L.toLobbyStage(paired().settings).lobby.stage, 'lobby');
+  assert.equal(L.withWhen(paired().settings, '2026-11-08', '09:00').settings.lobby.stage, 'carts');
+  assert.equal(L.newLobby({ startTime: '08:00', tz: TZ, hostName: 'Andrew', hostId: 'p1' }).hostId, 'p1');
+  assert.equal(st(lobbyEvent({ hostId: 'p1' })).hostId, 'p1');
+});
+
+test('rev · the draft from paired carts: mates stay together, real cart ids, ids/people/handicaps kept; engine is safe at carts', () => {
+  const ev = withHcp(paired());
+  // Setup's draft reads the players in cart order; buildRyder hands draftedRoster side 1's carts, then side 2's.
+  const byId = new Map(ev.roster.players.map((p) => [p.id, p]));
+  const order = L.cartOrder(ev.roster);
+  const sideA = [0, 2, 4, 6], sideJ = [1, 3, 5, 7]; // cart indexes
+  const players = [...sideA, ...sideJ].flatMap((k) => [order[2 * k], order[2 * k + 1]]).map((id) => byId.get(id));
+  const { roster } = L.draftedRoster(players);
+  assert.ok(roster.players.every((p) => /^[12][A-D]$/.test(p.teamId)), 'no C ids left');
+  const mates = (ro) => new Set(ro.teams.map((t) => ro.players.filter((p) => p.teamId === t.id).map((p) => p.id).sort().join('+')));
+  assert.deepEqual(mates(roster), mates(ev.roster), 'every C pair lands in one real cart');
+  assert.deepEqual(roster.players.map((p) => `${p.id}:${p.personId}:${p.strokes}`).sort(), ev.roster.players.map((p) => `${p.id}:${p.personId}:${p.strokes}`).sort());
+  // A Handicap edit made while the draft step was open survives its save (only carts / groups come from the step).
+  const fresh = structuredClone(ev.roster); fresh.players.find((p) => p.id === 'p10').strokes = 3; fresh.players.find((p) => p.id === 'p11').name = 'Mitchell';
+  const merged = L.mergeStep(roster, fresh);
+  assert.deepEqual([merged.players.find((p) => p.id === 'p10').strokes, merged.players.find((p) => p.id === 'p11').name], [3, 'Mitchell']);
+  assert.deepEqual(merged.players.map((p) => `${p.id}:${p.teamId}:${p.groupId}`), roster.players.map((p) => `${p.id}:${p.teamId}:${p.groupId}`));
+  assert.equal(merged.teams, roster.teams);
+  const gone = structuredClone(fresh); gone.players = gone.players.filter((p) => p.id !== 'p16');
+  assert.equal(L.mergeStep(roster, gone).players.length, 16, 'never drops a player (rosterKey refuses such a save anyway)');
+  // Engine: a carts roster scores nothing and never throws; season and crew skip it.
+  const snap = compute(ev, [{ player_id: 'p10', hole: 1, strokes: 4, updated_at: '2026-11-07T14:00:00Z', updated_by: 'Baker' }]);
+  assert.equal(snap.game ?? null, null);
+  assert.equal(ryderState(snap, 'C1'), null);
+  assert.doesNotThrow(() => replayHeadlines(ev, []));
+  assert.equal(L.countsAsPlayed(ev, []), false);
+  // Old Ryder rosters with real cart ids but no sides still score (the guard reads cart ids, not sides).
+  const d = drafted();
+  const noSides = { ...d, roster: { ...d.roster, sides: [] } };
+  assert.ok(compute(noSides, []).game?.matches?.length > 0);
+});
+
+test('rev · the mock at carts: not_open, admin ok; a cart-mate can approve an ask (as at teams), not at lobby', () => {
+  const be = createBackend();
+  const rpc = be.rpc;
+  const ev = paired();
+  const made = rpc.create_event({ p_name: 'Chuck’s Bday', p_course: ev.course, p_roster: ev.roster, p_settings: ev.settings, p_played_on: '2026-11-07' });
+  const code = made.code, pin = made.admin_pin;
+  be.clock = at('2026-11-07T15:00:00Z'); // after the would-be opening: still not open (stage carts)
+  rpc.claim_player({ p_code: code, p_player_id: 'p10', p_device_id: 'dev-baker' });
+  const res = rpc.upsert_score({ p_code: code, p_device_id: 'dev-baker', p_player_id: 'p10', p_hole: 1, p_strokes: 4 });
+  assert.deepEqual([res.error, res.stage], ['not_open', 'carts']);
+  assert.equal(rpc.fill_score({ p_code: code, p_device_id: 'dev-baker', p_player_id: 'p11', p_hole: 1, p_strokes: 4 }).error, 'not_open');
+  assert.equal(rpc.admin_upsert_score({ p_code: code, p_admin_pin: pin, p_player_id: 'p10', p_hole: 1, p_strokes: 5 }).ok, true);
+  // pick_team_name isn't gated (SQL and mock alike): it would rename C1, but the lobby never offers it, and the draft
+  // names every cart afresh, so the temporary name never carries over.
+  assert.deepEqual(rpc.pick_team_name({ p_code: code, p_device_id: 'dev-baker', p_name: 'Fore Play' }), { ok: true, team: 'C1', name: 'Fore Play' });
+  // Mitch (p11, Baker's cart-mate) is taken on another phone; his new phone asks; Baker's phone may let him in.
+  rpc.claim_player({ p_code: code, p_player_id: 'p11', p_device_id: 'dev-mitch-old' });
+  const ask = rpc.request_join({ p_code: code, p_player_id: 'p11', p_device_id: 'dev-mitch-new' });
+  assert.equal(ask.ok, true);
+  assert.equal(rpc.approve_join({ p_code: code, p_approver_device_id: 'dev-baker', p_request_id: ask.request_id }).ok, true);
+});
+
+test('rev · handicaps: rank with ties and zero, the rank line, invite wording only when everyone has one', () => {
+  const ev = withHcp(lobbyEvent());
+  const h = L.hcpOf(ev.roster, 'p10'); // Baker 12 (Steve too)
+  assert.deepEqual(h, { strokes: 12, rank: 9, tied: true, of: 16, min: 4, max: 20 });
+  assert.equal(L.rankLine(h), 'Tied 9th lowest of 16 · the field runs 4 to 20.');
+  assert.equal(L.rankLine(L.hcpOf(ev.roster, 'p3')), 'Lowest of 16 · the field runs 4 to 20.');
+  assert.equal(L.rankLine(L.hcpOf(ev.roster, 'p11')), '4th lowest of 16 · the field runs 4 to 20.');
+  const zero = withHcp(lobbyEvent(), [0, '12', null, ...Array(13).fill(null)]);
+  assert.deepEqual(L.hcpOf(zero.roster, 'p1'), { strokes: 0, rank: 1, tied: false, of: 2, min: 0, max: 12 }, 'a scratch golfer is a handicap');
+  assert.equal(L.hcpOf(zero.roster, 'p2').strokes, 12, 'the string "12" counts');
+  assert.equal(L.hcpOf(zero.roster, 'p3'), null, 'not set');
+  assert.equal(L.rankLine({ strokes: 3, rank: 1, tied: false, of: 1, min: 3, max: 3 }), null, 'nobody to compare with');
+  assert.deepEqual([L.hasHandicaps(ev.roster), L.hasHandicaps(zero.roster), L.handicapCount(zero.roster)], [true, false, 2]);
+  assert.equal(L.inviteText('Chuck’s Bday', 'Saturday', true), 'You’re on the list for Chuck’s Bday on Saturday. Tap this to reveal your handicap.');
+  assert.equal(L.inviteText('Chuck’s Bday', 'Saturday', false), 'You’re on the list for Chuck’s Bday on Saturday. Tap to join.');
+  assert.equal(L.inviteText('Chuck’s Bday', 'Saturday', true, 'Kyle'), 'Kyle, you’re on the list for Chuck’s Bday on Saturday. Tap this to reveal your handicap.');
+  assert.deepEqual([1, 2, 3, 4, 11, 12, 13, 21, 22, 23, 101].map(L.ordinal), ['1st', '2nd', '3rd', '4th', '11th', '12th', '13th', '21st', '22nd', '23rd', '101st']);
+});
+
+test('rev · revealFrame: deterministic, blurred → exact by 900 ms, fades in order, reduced motion, bad elapsed', () => {
+  const f = (e, r = false) => L.revealFrame(12, e, r);
+  assert.deepEqual(f(500), f(500), 'same input, same frame (redraws never flicker)');
+  assert.deepEqual([f(0).blur, f(0).settled, f(0).fade], [6, false, [0, 0, 0, 0]]);
+  assert.notEqual(f(0).value, 12, 'starts somewhere else');
+  let lastBlur = 7;
+  for (let e = 0; e <= 2400; e += 50) {
+    const x = f(e);
+    assert.ok(x.blur <= lastBlur, `blur never grows (${e})`);
+    lastBlur = x.blur;
+    if (e >= 900) assert.equal(x.value, 12, `settled from 900 ms (${e})`);
+    assert.ok(x.fade.every((o, i) => o >= 0 && o <= 1 && (i === 0 || o <= x.fade[i - 1])), `fades in order (${e})`);
+    assert.equal(x.done, e >= 2000);
+  }
+  assert.deepEqual([f(1200).blur, f(1300).fade, f(2000).fade], [0, [0.5, 0, 0, 0], [1, 1, 1, 1]]);
+  assert.deepEqual(f(0, true), f(99999), 'reduced motion = the final frame at once');
+  for (const bad of [NaN, -500, undefined]) assert.deepEqual(L.revealFrame(12, bad), f(0), `elapsed ${bad} → the first frame`);
+  for (let e = 0; e < 900; e += 50) assert.ok(L.revealFrame(0, e).value >= 0, 'never below zero');
+  for (let e = 0; e < 900; e += 50) assert.ok(L.revealFrame(50, e).value <= 54, 'never above 54');
+  assert.equal(L.hcpOf({ players: [{ id: 'x', strokes: -2 }] }, 'x').strokes, 0, 'never below zero, like the reveal');
+});
+
+test('rev · lobbyView precedence (table) and Home at carts', () => {
+  const wed = at('2026-11-04T18:00:00Z');
+  const v = (ev, ctx, now = wed) => L.lobbyView(L.lobbyState(ev, now), ctx);
+  const lob = lobbyEvent(), car = paired();
+  const ready = drafted({ stage: 'ready', opensAt: '2026-11-07T13:30:00.000Z' }, ['08:00', '08:10', '08:20', '08:30']);
+  const me = { me: 'p10', hasHcp: true };
+  const rows = [
+    [lob, {}, 'landing'],
+    [lob, { invite: true }, 'landing', 'invite without everyone’s handicap → the plain landing'],
+    [lob, { invite: true, hcpFlow: true }, 'invite'],
+    [lob, { invite: true, hcpFlow: true, guide: true }, 'guide'],
+    [lob, { guide: true, standalone: true }, 'who', 'the home screen app goes straight to the list'],
+    [lob, { standalone: true, watching: true }, 'watch'],
+    [lob, { picking: true, watching: true, guide: true }, 'who'],
+    [lob, me, 'reveal'],
+    [lob, { ...me, seenHcp: true }, 'early'],
+    [lob, { ...me, seenHcp: true, revealing: true }, 'reveal', 'seen is written on the first frame: still revealing'],
+    [lob, { ...me, safariPhone: true }, 'guide', 'joined in Safari (024 auto-join): the steps before the reveal'],
+    [lob, { ...me, safariPhone: true, revealHere: true }, 'reveal', 'Can’t add it? Reveal it here'],
+    [lob, { me: 'p10', hasHcp: false }, 'early', 'no handicap: no reveal'],
+    [car, { ...me, seenHcp: true }, 'early'],
+    [car, { ...me, seenHcp: true }, 'dayWait', at('2026-11-07T13:00:00Z')],
+    [paired({ stage: 'off' }), me, 'off', 'off beats the reveal'],
+    [lob, { ...me, removed: true }, 'removed'],
+    [ready, me, 'gameday', at('2026-11-07T14:00:00Z')],
+    [ready, { ...me, seenOpen: true }, null, at('2026-11-07T14:00:00Z')],
+  ];
+  for (const [ev, ctx, want, why, now] of rows.map((r) => (typeof r[3] === 'number' ? [r[0], r[1], r[2], '', r[3]] : r))) {
+    assert.equal(v(ev, ctx, now), want, why || JSON.stringify(ctx));
+  }
+  assert.equal(L.homeCard(car, { pid: 'p10', personId: 'person-baker' }, wed).line, 'Riding with Mitch · teams after Andrew’s draft');
+  assert.deepEqual(L.myCart(car, 'p11'), { id: 'C1', names: 'Mitch + Baker', mate: 'Baker' }, 'you first');
+  assert.equal(L.myCart(lob, 'p11'), null);
+  assert.equal(L.myCart(drafted(), 'p10').id.length, 2);
+  // The reveal's inputs (app.lobbyView): none for the organizer; the seen key is per player.
+  const hst = L.lobbyState(withHcp(lobbyEvent({ hostId: 'p1' })), wed), hro = withHcp(lobbyEvent()).roster;
+  assert.deepEqual(L.revealCtx(hst, hro, { me: 'p1' }), { hasHcp: false, seenHcp: false }, 'the organizer set them: no reveal');
+  assert.deepEqual(L.revealCtx(hst, hro, { me: 'p10', seenPid: 'p9' }), { hasHcp: true, seenHcp: false }, 'shown to someone else (I’m not Sean): still yours to see');
+  assert.deepEqual(L.revealCtx(hst, hro, { me: 'p10', seenPid: 'p10' }), { hasHcp: true, seenHcp: true });
+  assert.deepEqual(L.revealCtx(hst, lobbyEvent().roster, { me: 'p10' }), { hasHcp: false, seenHcp: false }, 'no handicap');
+  assert.deepEqual(L.revealCtx(hst, hro, {}), { hasHcp: false, seenHcp: false });
+  // Who's playing: lowest handicap first, no handicap last, ties keep A–Z; the guide's escape after 3 minutes.
+  const sorted = withHcp(lobbyEvent(), [8, 15, 4, 10, 6, 12, 11, 9, 5, 12, 7, 20, null, 18, 14, 13]).roster;
+  const order = L.byHandicap(sorted, L.joinList(sorted)).map((p) => p.name);
+  assert.deepEqual([order[0], order[1], order.at(-1)], ['Josh', 'Sean', 'Kyle']);
+  assert.ok(order.indexOf('Baker') < order.indexOf('Steve'), 'ties (12) stay A–Z');
+  assert.deepEqual([L.guideEscape(0, 179999), L.guideEscape(0, 180000), L.guideEscape(undefined, 1e12)], [false, true, false]);
+  assert.equal(v(lob, { me: 'p10', guide: true, safariPhone: true, seenHcp: true, hasHcp: true }), 'guide', 'the lobby’s Add row opens the same steps');
+  assert.equal(v(lob, { me: 'p10', guide: true, standalone: true, seenHcp: true }), 'early', 'never in the app');
+  // The guide's "Open in Safari first" line: only off Safari.
+  const SAFARI = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1';
+  assert.equal(L.notSafari(SAFARI), false);
+  assert.equal(L.notSafari('Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148'), true, 'an app web view (Partiful)');
+  assert.equal(L.notSafari(SAFARI.replace('Version/18.0', 'CriOS/130.0')), true, 'Chrome on iPhone');
+  assert.equal(L.notSafari(`${SAFARI} Instagram 300.0`), true);
+  // Old rounds: no lobby → no view, whatever the phone says.
+  const old = { ...lob, settings: { ...lob.settings, lobby: null } };
+  assert.equal(L.lobbyView(L.lobbyState(old, wed), { ...me, invite: true, hcpFlow: true }), null);
 });
