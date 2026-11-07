@@ -390,6 +390,10 @@ npm run test:smoke     # 283 checks (incl. crews): multi-phone flows against the
   left off). Function v5 deployed. Still unverified on a real course (secrets).
   Dev check page: `docs/design/yardages/geo-check.html` (also published as an artifact).
   **013 also removed the rotation strip from team Enter (live).**
+  **Adding a course's greens (Nov 7, the way that works): `docs/design/yardages/NOTES.md` §9** — scorecard from the
+  printed card into `js/courses.js`, then `NODE_USE_ENV_PROXY=1 node tools/osm-greens.mjs <course id>` (main
+  OpenStreetMap API, hole-numbered greens + tees, checked against the card) → paste into `js/geodata.js`. Firewheel Lakes
+  built in this way. The AI build is a fallback draft only. Mapbox + Anthropic secrets are set on the functions.
 - Other open items (Oct 22): standings rework (ELO-style across games, needs design), `FLAGS.crewHandicaps`
   off until Andrew asks, practice rounds HXPY4 / B5PGH to delete in-app, neutral recap images,
   "hasn't entered" chip (awaiting handoff), multi-course club warning, merged branches

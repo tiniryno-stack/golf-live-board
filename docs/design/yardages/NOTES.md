@@ -266,3 +266,43 @@ Bridlewood and Indian Creek (Indian Creek is a 36-hole club: the yardage match s
 - Organizer page under Host settings: `geo-check.html` promoted into the app (`#/geo/<course_key>`): every
   green numbered on satellite, drag to fix, "looks wrong" flags from `partial` rows.
 - Then re-check accuracy at Twin Creeks against the markers before calling it done.
+
+## 9. Adding a course's greens — what actually works (Firewheel Lakes, Nov 7, 2026)
+
+**The playbook, in order. Stop at the first step that gives all 18 holes, and check every hole before shipping.**
+
+1. **The scorecard first.** Pars, handicaps and every tee's yardage per hole, from the printed card (a photo from the
+   owner beats any website: GolfPass/GolfAdvisor had the wrong handicaps and a hole-7 par conflict for Firewheel).
+   Add it to `js/courses.js` as a built-in (`yards: [{ gold, blue, white, red } × 18]`), with the course's lat/lng.
+   OpenGolfAPI is the app's usual source but was down (Cloudflare 522) all evening, and the course-search backup
+   route calls it too.
+2. **OpenStreetMap through the MAIN API, not Overpass.** `NODE_USE_ENV_PROXY=1 node tools/osm-greens.mjs <course id>`
+   reads everything mapped around the course from `api.openstreetmap.org/api/0.6/map.json?bbox=…`. Many courses
+   have greens and tee boxes drawn **with hole numbers (`ref` 1–18)**; the tool checks each hole against the card
+   (green present, 12–50 yd deep, tee lengths within −20 % / +6 % of the card: straight lines run short on doglegs)
+   and prints the block for `js/geodata.js`. Firewheel: 18 numbered greens + 71 tees, all 18 holes passed.
+3. **Ship it as a built-in** (`js/geodata.js`, keyed by the course id): it beats the `course_geo` table, needs no
+   network on the course, and `loadGeo` never calls the build function for it. Delete any half-built `course_geo`
+   row for that key so nothing contradicts it. Stamp + push.
+4. **Only if OSM has nothing:** the `course-geo` function's AI path (Mapbox + Claude). Treat its output as a draft:
+   it saw 9 of Firewheel's 18 greens in one 2 km image and numbered 8 holes, 5 of them by guesswork. Don't ship
+   holes with no `fit` (no tee boxes matched the card). Better next step: zoom-17/18 tiles over the course's real
+   extent, then the same card check.
+
+**What failed on the way (so the next session doesn't repeat it):**
+
+| Tried | What happened | Lesson |
+|---|---|---|
+| OpenGolfAPI search from the sandbox | 403 from the proxy, then (host allowed) 522 from OpenGolfAPI itself | Outage on their side; the scorecard photo is the fallback |
+| Web scorecard listings | Handicaps differed from the real card; par of hole 7 contradicted itself | Trust the printed card |
+| Overpass (3 mirrors) | 406 / timeouts from the sandbox and from Supabase | Use the main OSM API (`map.json?bbox=`) instead |
+| `course-geo` build #1 | Spent ~45 s waiting on dead Overpass mirrors; the AI step never ran (needs 20 s left) | OSM is now capped at 14 s in total (`OSM_BUDGET_MS`) |
+| `course-geo` build #2 | Anthropic 400: the Mapbox satellite image is JPEG, the request said `image/png` | The function now sends the real type (magic bytes) |
+| `course-geo` build #3 | Worked, but 9 greens seen, 8 holes, only 3 checked by yardage | AI output is a draft, never shipped as is |
+| `geobuild.numberHoles` on the OSM greens without their refs | Holes 1–4 right, 5–18 shuffled (similar lengths) | When the mapper numbered the holes, use the refs; check every hole |
+| A failed `course_geo` row | Blocks a rebuild for an hour (`FAILED_RETRY_MS`) | Delete the row to retry right away |
+
+**Cloud session network:** the repo's environment ("golf-live-board") allows `api.opengolfapi.org`,
+`api.openstreetmap.org`, `overpass-api.de`, `server.arcgisonline.com` (Esri satellite tiles, free, for looking at a
+course) and the project's Supabase host (to call the functions). Node's `fetch` needs `NODE_USE_ENV_PROXY=1`.
+Secrets `MAPBOX_TOKEN` and `ANTHROPIC_API_KEY` are set on the Supabase functions since Nov 7 (`?diag=1` shows them).
