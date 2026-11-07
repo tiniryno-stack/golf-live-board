@@ -1,6 +1,6 @@
 # 026 · The invite and the press-and-hold reveal
 
-Status: designed Nov 7 (council round 3: Interaction 9, Visual 8, Product 8, Red team 8). Not built.
+Status: built in 415229e (branch claude/new-session-a0hcnv; preview, not merged to main). Council: frontend 7 → 9 → 9, interaction 6 → 8 → 9, red team 6 → 8 → 9.
 
 **What this changes:** two player screens from handoff 025 (§6 "Join: the handicap flow"), and nothing else.
 1. The **invite** (025 step 1, `invite()` in `js/screens/lobby.js`) gets a new layout.
