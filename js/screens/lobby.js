@@ -179,7 +179,7 @@ function revealState(app) {
 }
 function reveal(app, st) {
   const h = hcpOf(app.event.roster, app.me);
-  if (!h) { app.ui.reveal = null; return early(app, st); } // the organizer cleared it meanwhile: the lobby
+  if (!h) return early(app, st); // (lobbyView already leaves the reveal when there's no handicap)
   const r = revealState(app) || { v: 0, holding: false, shownAt: Date.now() };
   const rm = reduced();
   const phase = revealPhase(r, Date.now(), rm);
@@ -190,10 +190,10 @@ function reveal(app, st) {
     const v = phase === 'freeze' ? 1 : r.v || 0;
     const disc = rm
       ? `<div class="lb-disc still"><span class="lb-q small">Tap to reveal</span></div><button class="btn block lb-rv-btn" data-act="lb-rv-now">Reveal</button>`
-      : `<button class="lb-disc${!r.holding && phase === 'idle' ? ' breathe' : ''}${r.holding && v > 0.35 ? ' shake' : ''}" id="lbr-disc" data-t0="${r.shownAt || Date.now()}" aria-label="Reveal your handicap">
+      : `<button class="lb-disc${!r.holding && phase === 'idle' && !(r.v > 0) ? ' breathe' : ''}${r.holding && v > 0.35 ? ' shake' : ''}" id="lbr-disc" data-t0="${r.shownAt || Date.now()}" aria-label="Reveal your handicap">
           <svg viewBox="0 0 240 240" aria-hidden="true"><circle id="lbr-ring" cx="120" cy="120" r="118" fill="none" stroke="var(--cart-you)" stroke-width="4" stroke-linecap="round" stroke-dasharray="${RING}" stroke-dashoffset="${RING * (1 - v)}" transform="rotate(-90 120 120)" style="opacity:${v > 0.01 ? 1 : 0}"/></svg>
           <span class="lb-q" aria-hidden="true">?</span></button>
-        <p class="lb-hold${phase === 'idle' && !r.holding ? ' cue' : ''}" id="lbr-l" data-t0="${r.shownAt || Date.now()}" style="${phase === 'freeze' ? 'opacity:0' : ''}">${r.holding || r.nudged ? 'Keep holding' : 'Press and hold'}</p>
+        <p class="lb-hold${phase === 'idle' && !r.holding && !r.touched ? ' cue' : ''}" id="lbr-l" data-t0="${r.shownAt || Date.now()}" style="${phase === 'freeze' ? 'opacity:0' : ''}">${r.holding || r.nudged ? 'Keep holding' : 'Press and hold'}</p>
         <button class="lb-just" data-act="lb-rv-now" id="lbr-j" style="${r.holding || phase === 'freeze' ? 'opacity:0;pointer-events:none' : ''}">Just show me</button>`;
     return `<div class="lb-rv">
       <div class="nr-head"><div class="nr-k"><span class="lbl">${kicker}</span></div>
@@ -206,13 +206,13 @@ function reveal(app, st) {
   const line = strokesLine(h.strokes);
   const lands = landsAt(r);
   return `<div class="lb-rv">
-    <div class="nr-head"><div class="nr-k"><span class="lbl you">${kicker}</span></div><h1 class="nr-title" tabindex="-1">${esc(host)} has you at</h1></div>
+    <div class="nr-head"><div class="nr-k"><span class="lbl you">${kicker}</span></div><h1 class="nr-title" tabindex="-1" aria-describedby="lbr-num">${esc(host)} has you at</h1></div>
     <div class="lb-stage">
-      <div class="lb-disc done">${rm ? '' : `<svg viewBox="0 0 240 240" aria-hidden="true"><circle class="lb-ringout" data-t0="${lands}" cx="120" cy="120" r="118" fill="none" stroke="var(--cart-you)" stroke-width="4"/></svg>`}<span class="lb-num mono${rm ? '' : ' land'}" data-t0="${lands}">${esc(h.strokes)}</span>${rm ? '' : `<span class="lb-burst" data-t0="${lands}" aria-hidden="true"></span>`}</div>
+      <div class="lb-disc done">${rm ? '' : `<svg viewBox="0 0 240 240" aria-hidden="true"><circle class="lb-ringout" data-t0="${lands}" cx="120" cy="120" r="118" fill="none" stroke="var(--cart-you)" stroke-width="4"/></svg>`}<span class="lb-num mono${rm ? '' : ' land'}" id="lbr-num" data-t0="${lands}">${esc(h.strokes)}</span>${rm ? '' : `<span class="lb-burst" data-t0="${lands}" aria-hidden="true"></span>`}</div>
       ${line ? `<p class="lb-strokes" id="lbr-f0" ${op(0)}>${esc(line)}</p>` : ''}
     </div>
     ${t.ticks.length > 1 ? `<div class="lb-field" id="lbr-f1" ${op(1)} role="img" aria-label="${esc(rankLabel(h))}, the field runs ${t.min} to ${t.max}">
-      <span class="lb-field-me mono" style="${t.mine < 16 ? 'left:0;transform:none' : t.mine > 84 ? 'left:auto;right:0;transform:none' : `left:${t.mine}%`}">${esc(rankLabel(h))}</span>
+      <span class="lb-field-me mono" style="${t.mine < 20 ? 'left:0;transform:none' : t.mine > 80 ? 'left:auto;right:0;transform:none' : `left:${t.mine}%`}">${esc(rankLabel(h))}</span>
       <div class="lb-rail"></div>${t.ticks.map((x) => `<i class="${x.me ? 'me' : ''}" style="left:${x.pct}%"></i>`).join('')}
       <div class="lb-ends mono"><span>${t.min}</span><span>${t.max}</span></div></div>` : ''}
     <p class="meta lb-off" id="lbr-f2" ${op(2)}>Think it’s off? Text ${esc(host)}.</p>
@@ -365,8 +365,8 @@ function revealLoop(app) {
   const tick = (ts) => {
     const r = revealState(app);
     if (gen !== revealGen || !r || app.lobbyView() !== 'reveal') return; // superseded, or the screen moved on
-    // Real elapsed time, but never more than 100 ms in one frame: a phone that slept mid-hold doesn't fill the ring.
-    const dt = revealLast ? Math.min(100, ts - revealLast) : 16;
+    // Real elapsed time, but never more than 250 ms in one frame: a phone that slept mid-hold doesn't fill the ring.
+    const dt = revealLast ? Math.min(250, ts - revealLast) : 16;
     revealLast = ts;
     const now = Date.now();
     if (!Number.isFinite(r.doneAt)) {
@@ -407,9 +407,13 @@ function letGo(app, e) {
 let letGoBound = null;
 
 /** One live region for the whole app, outside #content, so a redraw never replaces it before VoiceOver reads it. */
-function announce(text) {
+function liveRegion() {
   let n = document.getElementById('lb-live');
   if (!n) { n = document.createElement('div'); n.id = 'lb-live'; n.className = 'lb-sr'; n.setAttribute('aria-live', 'polite'); document.body.appendChild(n); }
+  return n;
+}
+function announce(text) {
+  const n = liveRegion();
   n.textContent = '';
   setTimeout(() => { n.textContent = text; }, 50);
 }
@@ -427,7 +431,7 @@ export default {
   // ("Watching · Bridlewood · Sat Nov 7"): hide it. Once you're in, the name pill and ⋯ come back.
   hideTop(app) { return ['invite', 'landing', 'guide', 'who'].includes(app.lobbyView()); },
   // While a finger is on the disc, background redraws wait (the disc under the finger is never replaced).
-  keepContent(app) { return !!revealState(app)?.holding; },
+  keepContent(app) { const r = revealState(app); return !!r?.holding || (!!r?.nudged && Date.now() - r.downAt < 600); }, // and while the nudge plays
   mount(root, app) {
     const v = app.lobbyView();
     if (v === 'guide') {
@@ -443,13 +447,16 @@ export default {
     // Idle costs nothing (seen is written only when the number lands), so the disc can wait under a sheet.
     if (!revealState(app)) app.ui.reveal = { code: app.code, pid: app.me, v: 0, holding: false, shownAt: Date.now() };
     const r = app.ui.reveal;
+    liveRegion(); // empty, before the number lands: iOS reads a region's first change only if it already existed
     syncMotion(root); // the burst, the landing and the cue keep their place through a redraw
     const phase = revealPhase(r, Date.now(), reduced());
     if ((phase === 'burst' || phase === 'final') && !r.announced) {
       r.announced = true;
       const h = hcpOf(app.event.roster, app.me), st = app.lobby();
-      announce(`${st?.hostName && st.hostName !== 'The organizer' ? st.hostName : 'Your organizer'} has you at ${h?.strokes ?? ''}`);
-      if (r.fast) root.querySelector('.lb-rv .nr-title')?.focus({ preventScroll: true }); // the button that had focus is gone
+      // Just show me / Enter: focus moves to the title, which reads the number with it (aria-describedby), so no second
+      // announcement. A hold: the live region says it.
+      if (r.fast) root.querySelector('.lb-rv .nr-title')?.focus({ preventScroll: true });
+      else announce(`${st?.hostName && st.hostName !== 'The organizer' ? st.hostName : 'Your organizer'} has you at ${h?.strokes ?? ''}`);
     }
     if ((phase === 'burst' || phase === 'final') && !r.replay && !r.marked) { r.marked = true; app.markHcpSeen(); }
     if (Number.isFinite(r.doneAt) && phase !== 'final') revealLoop(app);
@@ -468,7 +475,7 @@ export default {
       e.preventDefault();
       const s2 = revealState(app);
       if (!s2 || Number.isFinite(s2.doneAt) || s2.holding || e.isPrimary === false) return; // a second finger changes nothing
-      Object.assign(s2, { holding: true, downAt: Date.now(), pointerId: e.pointerId });
+      Object.assign(s2, { holding: true, touched: true, downAt: Date.now(), pointerId: e.pointerId }); // touched: no more cue
       revealLoop(app);
     });
     disc.addEventListener('pointerleave', (e) => letGo(app, e));
