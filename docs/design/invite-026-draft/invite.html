@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Handicap reveal · three ways</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400..800&family=Geist+Mono:wght@500..700&display=swap" rel="stylesheet">
+<style>
+:root{--font-sans:Geist,system-ui,-apple-system,sans-serif;--font-mono:"Geist Mono",ui-monospace,monospace;--bg:#0a0b0d;--surface-1:#15171b;--surface-2:#1f2227;--surface-3:#2a2e35;--text:#f4f5f7;--text-muted:#a7acb4;--line:#2b2f36;--you:#3ddc84;--button:#f4f5f7;--on-button:#0a0b0d}
+*{box-sizing:border-box}
+html,body{margin:0;background:#050607;color:var(--text);font-family:var(--font-sans)}
+.wrap{display:flex;flex-direction:column;align-items:center;gap:14px;padding:18px 12px 40px}
+.modes{display:flex;gap:6px;background:var(--surface-1);padding:4px;border-radius:12px;flex-wrap:wrap;justify-content:center}
+.modes button{font:inherit;font-size:13px;font-weight:600;color:var(--text-muted);background:none;border:0;padding:9px 12px;border-radius:9px;cursor:pointer}
+.modes button.on{background:var(--surface-3);color:var(--text)}
+.hint{font-size:13px;color:var(--text-muted);text-align:center;max-width:393px;line-height:19px;margin:0}
+.ph{width:393px;height:780px;position:relative;overflow:hidden;background:var(--bg);border-radius:32px;box-shadow:0 0 0 1px #22252b;user-select:none;-webkit-user-select:none}
+.pg{position:absolute;inset:0;display:flex;flex-direction:column;padding:70px 20px 28px}
+.lbl{font-family:var(--font-mono);font-size:12px;line-height:16px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted)}
+.h1{font-size:32px;line-height:36px;font-weight:700;letter-spacing:-.8px;margin:0}
+.p{font-size:17px;line-height:24px;color:var(--text-muted);margin:0}
+.pri{height:56px;border-radius:16px;background:var(--button);color:var(--on-button);font:inherit;font-size:17px;font-weight:600;width:100%;border:0;cursor:pointer}
+.fade{opacity:0;transform:translateY(8px);transition:opacity .35s ease,transform .35s ease}
+.fade.in{opacity:1;transform:none}
+.num{font-family:var(--font-mono);font-weight:700;letter-spacing:-6px;line-height:1}
+.track{position:relative;height:44px;margin-top:8px}
+.track .rail{position:absolute;left:0;right:0;top:20px;height:2px;background:var(--line)}
+.track i{position:absolute;top:13px;width:4px;height:16px;border-radius:2px;background:var(--text-muted);transform:translateX(-50%);opacity:.55}
+.track i.me{background:var(--you);opacity:1;height:28px;top:7px;width:6px;box-shadow:0 0 16px rgba(61,220,132,.55)}
+.track .ends{position:absolute;left:0;right:0;top:32px;display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:12px;color:var(--text-muted)}
+/* concept 1 · hold */
+.seal{width:220px;height:220px;border-radius:50%;margin:0 auto;position:relative;display:grid;place-items:center;cursor:pointer;touch-action:none}
+.seal svg{position:absolute;inset:0}
+.seal .q{font-family:var(--font-mono);font-size:64px;font-weight:700;color:var(--text-muted)}
+.seal.shake{animation:shake .12s linear infinite}
+@keyframes shake{0%{transform:translate(0,0)}25%{transform:translate(1px,-1px)}50%{transform:translate(-1px,1px)}75%{transform:translate(1px,1px)}}
+.burst{position:absolute;left:50%;top:50%;width:220px;height:220px;margin:-110px 0 0 -110px;border-radius:50%;border:2px solid var(--you);opacity:0;pointer-events:none}
+.burst.go{animation:burst .7s cubic-bezier(.2,.7,.2,1) forwards}
+@keyframes burst{0%{opacity:.9;transform:scale(.9)}100%{opacity:0;transform:scale(2.2)}}
+.land{animation:land .7s cubic-bezier(.18,1.4,.4,1) forwards}
+@keyframes land{0%{opacity:0;transform:scale(.4);filter:blur(10px)}60%{opacity:1;filter:blur(0)}100%{transform:scale(1)}}
+/* concept 2 · reel */
+.dim{position:absolute;inset:0;background:#000;opacity:0;transition:opacity .5s;pointer-events:none}
+.reelbox{height:150px;overflow:hidden;position:relative;margin:20px auto 0;width:220px;-webkit-mask-image:linear-gradient(transparent,#000 30%,#000 70%,transparent);mask-image:linear-gradient(transparent,#000 30%,#000 70%,transparent)}
+.reel{position:absolute;left:0;right:0;top:0;display:flex;flex-direction:column;align-items:center}
+.reel span{height:150px;display:grid;place-items:center;font-family:var(--font-mono);font-size:128px;font-weight:700;letter-spacing:-6px}
+.dots{display:flex;gap:8px;justify-content:center;margin-top:18px;height:10px}
+.dots i{width:8px;height:8px;border-radius:4px;background:var(--text-muted);opacity:.25}
+.dots i.on{opacity:1}
+.flash{position:absolute;left:50%;top:50%;width:10px;height:10px;border-radius:50%;background:radial-gradient(circle,rgba(61,220,132,.55),transparent 70%);transform:translate(-50%,-50%) scale(0);opacity:0;pointer-events:none}
+.flash.go{animation:flash .9s ease-out forwards}
+@keyframes flash{0%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(60)}}
+/* concept 3 · the field */
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:18px}
+.chip{height:62px;border-radius:14px;background:var(--surface-1);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;perspective:400px;transition:background .3s,opacity .4s,transform .4s}
+.chip b{font-size:13px;font-weight:600;color:var(--text-muted)}
+.chip span{font-family:var(--font-mono);font-size:20px;font-weight:700;display:inline-block}
+.chip span.flip{animation:flip .32s ease}
+@keyframes flip{0%{transform:rotateX(90deg);opacity:0}100%{transform:none;opacity:1}}
+.chip.me{box-shadow:inset 0 0 0 1.5px var(--line)}
+.chip.me.wait{animation:pulse 1s ease-in-out infinite}
+@keyframes pulse{0%,100%{box-shadow:inset 0 0 0 1.5px var(--line)}50%{box-shadow:inset 0 0 0 1.5px var(--text)}}
+.chip.done{opacity:.45}
+.big{position:absolute;left:0;right:0;top:210px;text-align:center;pointer-events:none}
+.replay{font:inherit;font-size:13px;font-weight:600;color:var(--text-muted);background:var(--surface-1);border:0;border-radius:9px;padding:9px 14px;cursor:pointer}
+
+.av{border-radius:50%;display:grid;place-items:center;font-weight:700;flex:none}
+.faces{display:grid;grid-template-columns:repeat(8,1fr);gap:8px}
+.face{aspect-ratio:1;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:700;background:var(--surface-2);color:var(--text)}
+.face.out{background:transparent;box-shadow:inset 0 0 0 1.5px var(--line);color:var(--text-muted);font-weight:500}
+.safari{position:absolute;left:0;right:0;bottom:0;height:86px;background:var(--surface-1);display:flex;align-items:flex-start;gap:10px;padding:10px 14px 0;box-shadow:0 -1px 0 var(--line)}
+.safari .sb{width:44px;height:44px;border-radius:22px;background:var(--surface-2);display:grid;place-items:center;color:var(--text-muted);font-size:20px}
+.safari .addr{flex:1;height:44px;border-radius:22px;background:var(--surface-2);display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--text-muted)}
+</style></head><body style="display:flex;gap:32px;padding:20px;background:#050607"><div class="ph" style="height:852px"><div class="pg" style="padding:72px 20px 110px">
+  <div style="display:flex;align-items:center;gap:12px"><span class="av" style="width:44px;height:44px;background:var(--surface-2);font-size:17px">A</span><span class="p" style="color:var(--text)"><b>Andrew</b> invited you</span></div>
+  <h1 style="margin:28px 0 0;font-size:64px;line-height:64px;font-weight:800;letter-spacing:-2.5px">Chuck’s<br>Bday</h1>
+  <p class="lbl" style="margin-top:14px;color:var(--text)">Team Ryder Cup · Twin Creeks</p>
+  <div style="display:flex;gap:24px;margin-top:28px">
+    <div><p class="lbl">Saturday</p><div class="num" style="font-size:32px;letter-spacing:-1px;margin-top:4px">Nov 9</div></div>
+    <div><p class="lbl">Start</p><div class="num" style="font-size:32px;letter-spacing:-1px;margin-top:4px">8:00</div></div>
+  </div>
+  <div style="flex:1"></div>
+  <p class="lbl" style="margin-bottom:10px">10 of 16 are in</p>
+  <div class="faces"><span class="face">J</span><span class="face">S</span><span class="face">A</span><span class="face">M</span><span class="face">A</span><span class="face">J</span><span class="face">B</span><span class="face">J</span><span class="face out">B</span><span class="face">S</span><span class="face out">M</span><span class="face out">E</span><span class="face">A</span><span class="face out">J</span><span class="face out">C</span><span class="face out">P</span></div>
+  <button class="pri" style="margin-top:24px">Reveal my handicap</button>
+  <p class="p" style="font-size:15px;text-align:center;margin-top:12px">Not playing? Follow along</p>
+</div><div class="safari"><span class="sb">‹</span><span class="addr">golfboard · Chuck’s Bday</span><span class="sb">⋯</span></div></div></body></html>
