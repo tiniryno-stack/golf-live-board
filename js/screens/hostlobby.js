@@ -206,6 +206,11 @@ export function hostLobbyView(app) {
     else footNote = 'Open scoring now shows up here on the day.';
   }
   const notYet = c && st.stage !== 'off' ? c.notYet : [];
+  // All 16 (owner, Nov 7): who to chase on top (not yet, then Safari), home screen app players under them in green.
+  const waiting = new Map(notYet.map((p) => [p.id, p]));
+  const everyone = c && st.stage !== 'off'
+    ? [...notYet.filter((p) => p.why !== 'safari'), ...notYet.filter((p) => p.why === 'safari'), ...L.joinList(ev.roster, [], '').filter((p) => !waiting.has(p.id)).map((p) => ({ ...p, home: true }))]
+    : [];
   const asks = app.relevantRequests();
   const cohost = st.cohostName || 'none';
   return `<div class="plain nr-setup lb">
@@ -213,9 +218,9 @@ export function hostLobbyView(app) {
     ${body}
     ${asks.length ? `<div class="lbl lb-k">Waiting to be let in</div><div class="card lb-card lb-rows">${asks.map((q) => `<div class="row lb-row"><span class="body"><b class="lb-rt">${esc(app.snapshot.playerById.get(q.player_id)?.name || q.player_id)}</b></span>
         <button class="btn small" data-act="join-deny" data-v="${esc(q.id)}">Not them</button><button class="btn small primary" data-act="join-approve" data-v="${esc(q.id)}">Let in</button></div>`).join('')}</div>` : ''}
-    ${notYet.length && step !== 'tell' ? `<div class="lbl lb-k">Not in the app yet · ${notYet.length} ${notYet.length === 1 ? 'person' : 'people'}</div>
-      <div class="card lb-card lb-rows">${notYet.map((p) => `<div class="row lb-row"><span class="body"><b class="lb-rt">${esc(p.name)}</b><span class="detail">${p.why === 'safari' ? 'picked a name in Safari' : 'not yet'}</span></span>
-        <button class="btn small" data-act="lh-share-person" data-v="${esc(p.id)}">Share</button></div>`).join('')}</div>` : ''}
+    ${everyone.length && step !== 'tell' ? `<div class="lbl lb-k">Everyone · ${everyone.length - notYet.length} of ${everyone.length} on their home screen</div>
+      <div class="card lb-card lb-rows">${everyone.map((p) => `<div class="row lb-row"><span class="body"><b class="lb-rt${p.home ? ' you' : ''}">${esc(p.name)}</b><span class="detail">${p.home ? 'added to home screen' : p.why === 'safari' ? 'picked a name in Safari' : 'not yet'}</span></span>
+        ${p.home ? '' : `<button class="btn small" data-act="lh-share-person" data-v="${esc(p.id)}">Share</button>`}</div>`).join('')}</div>` : ''}
     <div class="card lb-card lb-rows">
       ${st.stage === 'lobby' || st.stage === 'carts' ? row('Carts', st.paired ? '8 paired' : 'not paired yet', 'lh-carts') : ''}
       ${st.stage === 'teams' ? row('Teams', 'redo the draft', 'lh-draft') : ''}
