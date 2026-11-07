@@ -840,6 +840,11 @@ Still open: nothing blocking. Design direction (section 9) is final.
   keeps the burst through redraws, and `draw()` holds background redraws while a finger is down (`screen.keepContent`).
   Seen (`glb.seen.CODE.hcp` = pid) is written when the number lands; the lobby's handicap card has See it again ›.
   025's `revealFrame` is gone.
+- **Order and carts (owner, Nov 7):** Host → **Order and carts** (`orderStepView` in `js/screens/hostlobby.js`) after the draft,
+  until scoring opens, and after it opens until the first score (`lobby.mayReorder`; Host's open view shows `orderRow`).
+  Tap two names = swap any two players (`swapPlayers`), two team labels = swap carts on a team (`swapCarts`), ↑ ↓ = move a
+  whole group (`swapGroups`); people move between carts, cart ids / sides / start times stay; cart names follow
+  (`renameRyderCarts`); saves refuse when the roster changed meanwhile or a score is in. Tested in `tests/lobby025.test.mjs`.
 
 ## 13. V2 backlog (running list)
 

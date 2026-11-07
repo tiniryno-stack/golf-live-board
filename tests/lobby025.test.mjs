@@ -562,3 +562,43 @@ test('rev · lobbyView precedence (table) and Home at carts', () => {
   const old = { ...lob, settings: { ...lob.settings, lobby: null } };
   assert.equal(L.lobbyView(L.lobbyState(old, wed), { ...me, invite: true, hcpFlow: true }), null);
 });
+
+test('order and carts: swap any two players, swap carts on a team, move whole groups; ids and times stay; until the first score', () => {
+  const ev = drafted({ stage: 'ready', opensAt: '2026-11-07T13:30:00.000Z' }, ['08:00', '08:10', '08:20', '08:30']);
+  const r = ev.roster;
+  const g = L.startGroups(r);
+  assert.deepEqual(g.map((x) => x.carts.map((c) => c.id)), [['1A', '2A'], ['1B', '2B'], ['1C', '2C'], ['1D', '2D']]);
+  const where = (ro, pid) => { const p = ro.players.find((x) => x.id === pid); return `${p.teamId}/${p.groupId}`; };
+  // Any two players, even across teams: they trade carts (and start groups).
+  const a = g[0].carts[0].players[0].id, b = g[2].carts[1].players[1].id;
+  const s1 = L.swapPlayers(r, a, b);
+  assert.deepEqual([where(s1, a), where(s1, b)], [where(r, b), where(r, a)]);
+  assert.equal(where(r, a), '1A/g1', 'never mutates');
+  // Two carts on one team trade places: each pair keeps riding together; a cart on the other team can't be swapped in.
+  const pair = (ro, tid) => ro.players.filter((p) => p.teamId === tid).map((p) => p.id).sort().join('+');
+  const s2 = L.swapCarts(r, '1A', '1C');
+  assert.deepEqual([pair(s2, '1A'), pair(s2, '1C')], [pair(r, '1C'), pair(r, '1A')]);
+  assert.ok(s2.players.filter((p) => p.teamId === '1C').every((p) => p.groupId === 'g3'));
+  assert.deepEqual(L.swapCarts(r, '1A', '2B').players.map((p) => p.teamId), r.players.map((p) => p.teamId));
+  // A whole group moves (both carts): the late group goes 4th, the times stay with their places.
+  const s3 = L.swapGroups(r, 0, 3);
+  assert.deepEqual([pair(s3, '1D'), pair(s3, '2D'), pair(s3, '1A')], [pair(r, '1A'), pair(r, '2A'), pair(r, '1D')]);
+  assert.deepEqual(s3.players.map((p) => p.id).sort(), r.players.map((p) => p.id).sort(), 'player ids never change (claims survive)');
+  assert.equal(L.swapGroups(r, 0, 9).players.length, 16, 'out of range: nothing moves');
+  // The engine follows: the first match is the other cart in your group.
+  const before = ryderSetup(people()).settings;
+  assert.doesNotThrow(() => compute({ ...ev, roster: s3 }, []));
+  assert.ok(before);
+  // Cart names follow their riders; unchanged carts keep theirs.
+  r.teams.find((t) => t.id === '1B').name = 'Fore Play';
+  const named = L.renameRyderCarts(L.swapPlayers(r, a, b), r);
+  assert.equal(named.teams.find((t) => t.id === '1B').name, 'Fore Play');
+  assert.notEqual(named.teams.find((t) => t.id === '1A').name, r.teams.find((t) => t.id === '1A').name);
+  // When: after the draft until scoring opens, then until the first score.
+  const st = (e2, now) => L.lobbyState(e2, now);
+  const wed = at('2026-11-04T18:00:00Z'), sat = at('2026-11-07T14:00:00Z');
+  assert.deepEqual([L.mayReorder(st(lobbyEvent(), wed)), L.mayReorder(st(drafted(), wed)), L.mayReorder(st(ev, wed))], [false, true, true]);
+  assert.deepEqual([L.mayReorder(st(ev, sat), false), L.mayReorder(st(ev, sat), true)], [true, false], 'open: only until the first score');
+  assert.equal(L.mayReorder(st(drafted({ stage: 'off', prevStage: 'teams' }), wed)), false);
+  assert.equal(L.mayReorder(null), false);
+});

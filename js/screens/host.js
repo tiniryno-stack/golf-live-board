@@ -9,7 +9,7 @@ import { esc, icon, seg, clock, copyText, roundLink } from '../ui.js';
 import * as db from '../db.js';
 import { teeTimeName, ryderMatchupsAt, normalizeSettings, playOrder, sideOf } from '../scoring.js';
 import { sideColor } from '../teams.js';
-import { hostLobbyView, lobbyActions, openedLine } from './hostlobby.js';
+import { hostLobbyView, lobbyActions, openedLine, orderStepView, orderRow } from './hostlobby.js';
 import { startLobbyEdit } from './setup.js';
 import * as L from '../lobby.js';
 
@@ -256,6 +256,7 @@ export default {
     // 025: a Team Ryder Cup lobby that isn't open yet (or is called off): the lobby view replaces the tabs.
     const lst = app.lobby();
     if (lst && !lst.open) return hostLobbyView(app);
+    if (app.ui.orderStep?.code === app.code) return orderStepView(app); // opened, no score yet: Order and carts
     const d = draft(app);
     const tab = app.ui.hostTab;
     const body = tab === 'players' ? players(app, d) : tab === 'activity' ? activity(app) : rules(app, d);
@@ -265,6 +266,7 @@ export default {
     return `<div class="plain" style="padding-bottom:0">
       <h1 class="title">Host</h1>
       ${openedLine(app)}
+      ${orderRow(app)}
       <div class="segs">${seg('host-tab', [['rules', 'Rules'], ['players', 'Players'], ['activity', 'Activity']], tab)}</div>
       ${body}${save}
     </div>`;

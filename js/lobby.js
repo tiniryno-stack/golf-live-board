@@ -710,3 +710,68 @@ export function byHandicap(roster, list) {
 /** The guide's "Can't add it?" escape shows only after this long on the steps (owner: the home screen is the way in). */
 export const GUIDE_ESCAPE_MS = 3 * 60000;
 export const guideEscape = (shownAt, nowMs) => Number.isFinite(shownAt) && nowMs - shownAt >= GUIDE_ESCAPE_MS;
+
+// ───────────────────────────────────────────── start order and carts, any time until the first score (owner, Nov 7)
+// Cart ids carry their place (1A = side 1, 1st start; 2C = side 2, 3rd start), so every change here moves PEOPLE between
+// carts: a player's teamId and groupId change, the carts, sides and start times stay where they are. Claims are keyed by
+// player id, so nobody loses their spot.
+
+const RYDER_CART = /^([12])([A-D])$/;
+const slotOf = (tid) => { const m = RYDER_CART.exec(String(tid || '')); return m ? `g${'ABCD'.indexOf(m[2]) + 1}` : null; };
+const cloneRoster = (r) => ({ ...r, players: (r?.players || []).map((p) => ({ ...p })), teams: (r?.teams || []).map((t) => ({ ...t })) });
+
+/** The start groups in order: [{ i, gid, carts: [side 1 cart, side 2 cart] }], each cart { id, side, players }. */
+export function startGroups(roster) {
+  const teams = (roster?.teams || []).filter((t) => RYDER_CART.test(String(t.id)));
+  const letters = [...new Set(teams.map((t) => t.id[1]))].sort();
+  return letters.map((L, i) => ({
+    i, gid: `g${'ABCD'.indexOf(L) + 1}`,
+    carts: ['1', '2'].map((sd) => {
+      const id = `${sd}${L}`;
+      return { id, side: sd, players: (roster.players || []).filter((p) => p.teamId === id) };
+    }).filter((c) => teams.some((t) => t.id === c.id)),
+  }));
+}
+
+/** Swap two players' places (any two: same cart, other cart, other team). */
+export function swapPlayers(roster, a, b) {
+  const r = cloneRoster(roster);
+  const pa = r.players.find((p) => p.id === a), pb = r.players.find((p) => p.id === b);
+  if (!pa || !pb || a === b) return r;
+  [pa.teamId, pb.teamId] = [pb.teamId, pa.teamId];
+  [pa.groupId, pb.groupId] = [slotOf(pa.teamId) || pa.groupId, slotOf(pb.teamId) || pb.groupId];
+  return r;
+}
+
+/** Swap two carts of the same team (their riders trade places, so each pair keeps riding together). */
+export function swapCarts(roster, ta, tb) {
+  const r = cloneRoster(roster);
+  if (ta === tb || !RYDER_CART.test(ta) || !RYDER_CART.test(tb) || ta[0] !== tb[0]) return r;
+  for (const p of r.players) {
+    if (p.teamId === ta) { p.teamId = tb; p.groupId = slotOf(tb); } else if (p.teamId === tb) { p.teamId = ta; p.groupId = slotOf(ta); }
+  }
+  return r;
+}
+
+/** Swap two whole start groups (both carts of each). */
+export function swapGroups(roster, i, j) {
+  const g = startGroups(roster);
+  if (!g[i] || !g[j] || i === j) return cloneRoster(roster);
+  let r = roster;
+  for (const sd of ['1', '2']) {
+    const a = g[i].carts.find((c) => c.side === sd), b = g[j].carts.find((c) => c.side === sd);
+    if (a && b) r = swapCarts(r, a.id, b.id);
+  }
+  return r;
+}
+
+/** Cart names follow their riders ("Baker + Mitch") after people move (custom names stay on unchanged carts). */
+export function renameRyderCarts(roster, before) {
+  const pair = (r, tid) => (r.players || []).filter((p) => p.teamId === tid).map((p) => p.id).sort().join('|');
+  const names = (tid) => (roster.players || []).filter((p) => p.teamId === tid).map(firstName).join(' + ').slice(0, 20);
+  return { ...roster, teams: (roster.teams || []).map((t) => (before && pair(before, t.id) === pair(roster, t.id) ? t : { ...t, name: names(t.id) || t.name })) };
+}
+
+/** May the organizer change the order and carts now? After the draft, until scoring opens; and after it opens, until
+ *  the first score is entered (someone's late at the course). */
+export const mayReorder = (state, anyScores = false) => !!state && (state.stage === 'teams' || state.stage === 'ready') && (!state.open || !anyScores);

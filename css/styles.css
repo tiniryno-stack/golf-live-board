@@ -2241,3 +2241,14 @@ html.light .ce-mine.ce-card, [data-theme="light"] .ce-mine.ce-card { box-shadow:
 @media (prefers-reduced-motion: no-preference) { .lb-ringout { animation: lb-ringout .6s ease-out both; } }
 @keyframes lb-ringout { from { opacity: 1; } to { opacity: 0; } }
 .lb-rv .nr-title:focus { outline: none; }
+/* Order and carts (owner, Nov 7): existing swap-name buttons, ry-time inputs and small buttons */
+.lb-og { padding: var(--space-3); gap: var(--space-2); }
+.lb-og-h { display: flex; align-items: center; gap: var(--space-2); }
+.lb-og-h .ry-time { flex: 1; min-width: 0; }
+.lb-og-mv { display: flex; gap: var(--space-1); }
+.lb-og-carts { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: start; gap: var(--space-2); }
+.lb-og-v { align-self: center; }
+.lb-oc { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
+.lb-oc-k { background: none; border: 0; padding: 0; min-height: var(--tap-min); text-align: left; color: var(--ink-soft); }
+.lb-oc-k.sel { color: var(--text); text-decoration: underline; text-underline-offset: 3px; }
+.lb-oc .swap-name { margin-top: 0; height: 48px; font-size: 15px; background: var(--surface-1); }
