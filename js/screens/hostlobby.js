@@ -97,7 +97,9 @@ function hcpStepView(app) {
   const step = app.ui.hcpStep;
   const roster = app.event.roster;
   const ps = L.joinList(roster, [], '');
-  const val = (p) => (p.id in step.vals ? step.vals[p.id] : (p.strokes == null || p.strokes === '' ? '' : String(p.strokes)));
+  // joinList rows carry only id + name: read the saved number from the roster player (blank boxes bug, Nov 7).
+  const saved = (id) => (roster?.players || []).find((x) => x.id === id)?.strokes;
+  const val = (p) => (p.id in step.vals ? step.vals[p.id] : (saved(p.id) == null || saved(p.id) === '' ? '' : String(saved(p.id))));
   const left = ps.filter((p) => !/^\d{1,2}$/.test(val(p))).length;
   return `<div class="plain nr-setup lb">
     ${step.fromSetup ? '' : '<button class="link-btn lb-back" data-act="lh-hstep-cancel">Back to Host</button>'}
