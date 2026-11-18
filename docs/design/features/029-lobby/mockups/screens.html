@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>029 · A lobby for every round</title>
+<link rel="stylesheet" href="../../027-feel/mockups/kit.css">
+<style>
+  .tt { padding: 12px 16px; border-radius: var(--radius-xl); background: var(--surface-1); box-shadow: var(--shadow-card); display: grid; gap: 8px; }
+  .tt .names { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 17px; font-weight: 600; }
+  .tt.lit { background: var(--tint-you); }
+  .game3 { display: grid; gap: 2px; }
+  .hostrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 64px; padding: 10px 16px; background: var(--surface-1); border-radius: var(--radius-xl); box-shadow: var(--shadow-card); }
+  .hostrow .ghost { white-space: nowrap; flex: none; }
+  .hostrow small { display: block; font-size: 13px; color: var(--text-muted); font-weight: 500; line-height: 18px; }
+  .confirm { display: grid; gap: 10px; padding: 14px 16px 16px; background: var(--surface-1); border-radius: var(--radius-xl); box-shadow: inset 0 0 0 1.5px var(--line), var(--shadow-card); }
+  .confirm .two .btn { height: 48px; font-size: 15px; border-radius: var(--radius-md); }
+  .preview .pads { grid-template-columns: repeat(4, minmax(0,1fr)); }
+  .mrow2 { display: flex; align-items: center; min-height: 44px; gap: 12px; border-top: 1px solid var(--line-faint); }
+  .mrow2:first-child { border-top: 0; }
+  .mrow2 .mono { width: 56px; color: var(--text-muted); font-weight: 600; }
+  .mrow2 b { flex: 1; font-weight: 600; font-size: 17px; }
+  .mrow2 .r { color: var(--text-muted); font-size: 13px; }
+</style>
+</head><body>
+<script type="module">
+import * as K from '../../027-feel/mockups/kit.js';
+const { i, mark, tbar } = K;
+
+// Sean's phone. Match play, 8 players, 8:40 and 8:50 start times, Twin Creeks, Saturday Nov 22.
+const faces = (ins) => `<div class="faces">${[['S', 1, 1], ['A', 1], ['S', 1], ['J', 0], ['M', 1], ['T', 1], ['C', 1], ['M', 1]].map(([l, x, me], k) => `<i class="${me ? 'me' : ''} ${k < ins || me ? '' : 'no'}">${l}</i>`).join('')}</div>`;
+const facesN = (n) => `<div class="faces">${'SASJMTCM'.split('').map((l, k) => `<i class="${k === 0 ? 'me' : k < n ? '' : 'no'}">${l}</i>`).join('')}</div>`;
+const yourTT = (time, names, lit) => `<div class="tt ${lit ? 'lit' : ''}"><span class="t-label ${lit ? 'you' : 'muted'}">Your start time · ${time}</span><div class="names"><span class="you">Sean</span>${names.map((n) => `<span>${n}</span>`).join('')}</div></div>`;
+const otherTT = (time, names) => `<div class="tt peek" style="padding:10px 16px"><span class="t-label">${time} · ${names}</span></div>`;
+const game = (name, lines) => `<span class="t-label muted">Today's game</span><div class="gap8"></div><div class="box game3" style="padding:12px 16px"><span class="t-row">${name}</span><span class="t-body muted">${lines}</span></div>`;
+const MATCH = 'Match play: 1 point a hole to the low net score. A tie for low splits it. Most points after 18 wins.';
+
+function lobby({ kicker, hero, sub, lit = false, ins = 7, slot = '', bottom, single = false, gameBox = true, whoLabel }) {
+  return `<div class="scr">${tbar('S', 'Sean', 'Saturday · Twin Creeks')}
+    <span class="t-label muted">${kicker}</span><div class="gap4"></div>
+    <div class="t-xl">${hero}</div><div class="t-body muted" style="margin-top:6px">${sub}</div><div class="gap16"></div>
+    ${slot || yourTT('8:40', ['Andrew', 'Sam', 'Jake'], lit)}
+    ${single ? '' : `<div class="gap8"></div>${otherTT('8:50', 'Mike · Tyler · Chris · Matt')}`}
+    <div class="gap16"></div>${gameBox ? game('Match play', '1 point a hole to the low net score. A tie for low splits it. Most points after 18 wins.') : ''}
+    <div class="gap16"></div><span class="t-label muted">${whoLabel || `Who has Golf Board · ${ins} of 8`}</span><div class="gap8"></div>${facesN(ins)}
+    <div class="bot">${bottom}</div></div>`;
+}
+const opensNote = (t) => `<div class="note">Scoring opens by itself at ${t}.</div><div class="btn s">Text Andrew</div>`;
+
+const S = {};
+S['player-days'] = () => lobby({ kicker: 'Saturday · Nov 22 · Twin Creeks', hero: '8:40', sub: 'your start time · 4 days away', bottom: opensNote('8:10 on Saturday') });
+S['player-tomorrow'] = () => lobby({ kicker: 'Tomorrow · Twin Creeks', hero: '8:40', sub: 'your start time, Saturday', bottom: opensNote('8:10 tomorrow') });
+S['player-today'] = () => lobby({ kicker: 'Today · Twin Creeks', hero: '2h 10m', sub: 'to your 8:40 start time', lit: true, bottom: opensNote('8:10') });
+S['player-hour'] = () => lobby({ kicker: 'Today · Twin Creeks', hero: '42 min', sub: 'to your 8:40 start time', lit: true, bottom: opensNote('8:10') });
+// who's in: nobody / some / all
+S['player-nobody'] = () => lobby({ kicker: 'Saturday · Nov 22 · Twin Creeks', hero: '8:40', sub: 'your start time · 4 days away', ins: 1, whoLabel: 'Who has Golf Board · just you so far', bottom: `<div class="note">Andrew is sending the link to everyone.</div><div class="btn s">Share the link</div>` });
+S['player-all'] = () => lobby({ kicker: 'Today · Twin Creeks', hero: '42 min', sub: 'to your 8:40 start time', lit: true, ins: 8, whoLabel: 'Who has Golf Board · all 8', bottom: opensNote('8:10') });
+// one start time only (a single foursome)
+S['player-single'] = () => lobby({ kicker: 'Today · Twin Creeks', hero: '42 min', sub: 'to your 8:40 start time', lit: true, single: true, ins: 3, whoLabel: 'Who has Golf Board · 3 of 4',
+  bottom: opensNote('8:10') }).replace(/facesN\(3\)/, '').replace(/<div class="faces">.*?<\/div>/, `<div class="faces"><i class="me">S</i><i>A</i><i>S</i><i class="no">J</i></div>`);
+// no date or time set yet
+S['player-nodate'] = () => `<div class="scr">${tbar('S', 'Sean', 'Twin Creeks')}
+  <span class="t-label muted">Coming up · Twin Creeks</span><div class="gap4"></div><div class="t-title">Andrew hasn't set the day yet</div>
+  <div class="t-body muted" style="margin-top:6px">The day and your start time show up here as soon as he does.</div><div class="gap16"></div>
+  <div class="tt"><span class="t-label muted">Your group</span><div class="names"><span class="you">Sean</span><span>Andrew</span><span>Sam</span><span>Jake</span></div></div>
+  <div class="gap16"></div>${game('Match play', '1 point a hole to the low net score. A tie for low splits it. Most points after 18 wins.')}
+  <div class="gap16"></div><span class="t-label muted">Who has Golf Board · 5 of 8</span><div class="gap8"></div>${facesN(5)}
+  <div class="bot"><div class="btn s">Text Andrew</div></div></div>`;
+
+// game slots: Rider Cup (your cart, named as the last row) and 2v2 (your partner)
+S['slot-rider'] = () => `<div class="scr">${tbar('A', 'Andrew', 'Friday Rider Cup')}
+  <span class="t-label muted">Tomorrow · Twin Creeks · Rider Cup</span><div class="gap4"></div><div class="t-xl">8:40</div><div class="t-body muted" style="margin-top:6px">your start time, Saturday</div><div class="gap16"></div>
+  <div class="tt"><span class="t-label you">Your cart</span><div class="names"><span class="you">Andrew + Sean</span></div>
+    <div class="add-row typing addrow" style="background:var(--surface-1)"><span>Hogan's Her</span><span class="caret"></span></div>
+    <span class="t-small muted">Name your cart, or tap one: Snorlax · Eevee · Gengar</span></div>
+  <div class="gap16"></div><span class="t-label muted">Your matches</span><div class="gap8"></div>
+  <div class="box tight"><div class="mrow2"><span class="mono">1–6</span><b>vs <span class="cc">Sam + Jake</span></b><span class="r">same start time</span></div>
+   <div class="mrow2 peek"><span class="mono">7–12</span><b>vs Mike + Tyler</b><span class="r">8:50 group</span></div><div class="mrow2 peek"><span class="mono">13–18</span><b>vs Chris + Matt</b><span class="r">8:50 group</span></div></div>
+  <div class="kbd">KEYBOARD</div></div>`;
+S['slot-rider-named'] = () => `<div class="scr">${tbar('A', 'Andrew', 'Friday Rider Cup')}
+  <span class="t-label muted">Tomorrow · Twin Creeks · Rider Cup</span><div class="gap4"></div><div class="t-xl">8:40</div><div class="t-body muted" style="margin-top:6px">your start time, Saturday</div><div class="gap16"></div>
+  <div class="tt"><span class="t-label you">Your cart</span><div class="names" style="display:grid;gap:2px"><span class="you">Hogan's Heroes</span><span class="t-body muted">Andrew + Sean · <b style="color:var(--text)">Rename</b></span></div></div>
+  <div class="gap16"></div><span class="t-label muted">Your matches</span><div class="gap8"></div>
+  <div class="box tight"><div class="mrow2"><span class="mono">1–6</span><b>vs <span class="cc">Fore Play</span></b><span class="r">same start time</span></div>
+   <div class="mrow2 peek"><span class="mono">7–12</span><b>vs Shank Redemption</b><span class="r">8:50 group</span></div><div class="mrow2 peek"><span class="mono">13–18</span><b>vs Bogey Boys</b><span class="r">8:50 group</span></div></div>
+  <div class="gap16"></div>${game('Partner “Rider” Cup', 'Carts of 2. You play the other carts in turn, 6 holes each. Low ball 1 point, low total 1 point.')}
+  <div class="bot"><div class="note">Scoring opens by itself at 8:10 tomorrow.</div></div></div>`;
+S['slot-2v2'] = () => `<div class="scr">${tbar('S', 'Sean', 'Sunday 2v2')}
+  <span class="t-label muted">Today · Twin Creeks · 2v2</span><div class="gap4"></div><div class="t-xl">42 min</div><div class="t-body muted" style="margin-top:6px">to your 9:10 start time</div><div class="gap16"></div>
+  <div class="tt lit"><span class="t-label you">Your start time · 9:10</span><div class="names"><span class="you">Sean + Jake</span><span class="muted" style="font-weight:500">vs</span><span>Andrew + Sam</span></div>
+   <span class="t-small muted">Partners switch at the turn: with Andrew on 10–18.</span></div>
+  <div class="gap16"></div>${game('2v2', 'Two pairs, one foursome. Low ball 1 point and low total 1 point a hole. A tie halves it.')}
+  <div class="gap16"></div><span class="t-label muted">Who has Golf Board · 3 of 4</span><div class="gap8"></div><div class="faces"><i class="me">S</i><i>J</i><i>A</i><i class="no">S</i></div>
+  <div class="bot">${opensNote('8:40')}</div></div>`;
+
+// scoring is open: your start time card grows into hole 1
+const openScreen = (growing) => `<div class="scr">${tbar('S', 'Sean', 'Saturday · Twin Creeks')}
+  <span class="t-label you">Scoring is open</span><div class="gap4"></div><div class="t-title">8:40 with Andrew, Sam and Jake</div>
+  <div class="t-body muted" style="margin-top:6px">Match play · 1 point a hole to the low net score.</div><div class="gap16"></div>
+  <div class="grow ${growing ? '' : 'open'}" id="g"><div class="g-row">${yourTT('8:40', ['Andrew', 'Sam', 'Jake'], true)}</div>
+   <div class="g-card"><div class="tt lit preview"><span class="t-label you">Hole 1 · par 4 · 382 yd</span>
+     ${['Sean', 'Andrew', 'Sam', 'Jake'].map((n, k) => `<div class="mrow2"><b class="${k ? '' : 'you'}">${n}</b><span class="r">${k ? '' : 'you'}</span>${mark(null, 4)}</div>`).join('')}</div></div></div>
+  <div class="gap8"></div>${otherTT('8:50', 'Mike · Tyler · Chris · Matt')}
+  <div class="bot"><div class="btn p">Go to hole 1</div><div class="btn o">How today's game works</div></div></div>`;
+S['open'] = () => openScreen(false);
+S['open-grow-090'] = { html: () => openScreen(true), frame: () => K.freezeGrow(document.getElementById('g'), 90, 'open') };
+S['open-on-spot'] = () => openScreen(false).replace('8:40 with Andrew, Sam and Jake', 'You, Andrew, Sam and Jake').replace(/<div class="gap8"><\/div><div class="tt peek".*?<\/div><\/div>/, '').replace('Hole 1 · par 4 · 382 yd', 'Hole 1 · par 4 · 382 yd · starting now');
+
+// someone opens the link who isn't playing
+S['follow'] = () => `<div class="scr">${tbar('', 'Watching', 'Saturday · Twin Creeks', { watch: true })}
+  <span class="t-label muted">Andrew's Saturday round · Match play</span><div class="gap4"></div><div class="t-title">8 playing at Twin Creeks</div>
+  <div class="t-body muted" style="margin-top:6px">Saturday, start times 8:40 and 8:50. The Board goes live with the first score.</div><div class="gap16"></div>
+  <div class="tt"><span class="t-label muted">8:40</span><div class="names"><span>Andrew</span><span>Sean</span><span>Sam</span><span>Jake</span></div></div><div class="gap8"></div>
+  <div class="tt"><span class="t-label muted">8:50</span><div class="names"><span>Mike</span><span>Tyler</span><span>Chris</span><span>Matt</span></div></div>
+  <div class="bot"><div class="btn p">Follow along</div><div class="btn o">I'm playing · find my name</div></div></div>`;
+
+// ───────── organizer ─────────
+const everyone = (all) => { const rows = all.slice(0, 4), more = all.length > 4 ? all.length - 4 : 0, moreNo = all.slice(4).filter(([, s]) => s === 'share').length;
+  return `<span class="t-label muted">Everyone · not in the app first</span><div class="gap8"></div><div class="box tight">${rows.map(([n, s]) => `<div class="lrow"><b>${n}</b>${s === 'share' ? `<span class="ghost fill">Share</span>` : `<span class="r">${i('check', 's16')}${s}</span>`}</div>`).join('')}${more ? `<div class="lrow"><b class="muted" style="font-weight:500;font-size:15px">${more} more${moreNo ? ` · ${moreNo} not in the app yet` : ' have it'}</b>${i('down', 's20')}</div>` : ''}</div>`; };
+const host = ({ title, sub = 'Saturday 8:40 · Twin Creeks · Match play', opens, rows, primary = 'Share the invite' }) => `<div class="scr" style="overflow:hidden">${tbar('A', 'Andrew', 'Saturday · Twin Creeks')}
+  <span class="t-label muted">Saturday · host</span><div class="gap4"></div><div class="t-title">${title}</div><div class="t-body muted" style="margin-top:4px">${sub}</div><div class="gap16"></div>
+  ${opens}<div class="gap8"></div>
+  <div class="hostrow"><div class="t-row">Tee times and teams<small>change them until the first score</small></div>${i('right', 's20')}</div><div class="gap16"></div>
+  <div style="flex:1;min-height:0;overflow:hidden">${everyone(rows)}</div><div class="bot" style="padding-top:12px"><div class="btn p">${primary}</div></div></div>`;
+const opensRow = `<div class="hostrow"><div class="t-row">Scoring opens at 8:10<small>by itself, 30 min before the first tee time</small></div><span class="ghost fill">Open now</span></div>`;
+const R7 = [['Jake', 'share'], ['Andrew', 'organizer'], ['Sean', 'has it'], ['Sam', 'has it'], ['Mike', 'has it'], ['Tyler', 'has it'], ['Chris', 'has it'], ['Matt', 'has it']];
+S['host'] = () => host({ title: '7 of 8 have Golf Board', opens: opensRow, rows: R7 });
+S['host-nobody'] = () => host({ title: '1 of 8 have Golf Board', opens: opensRow, rows: [['Sean', 'share'], ['Sam', 'share'], ['Jake', 'share'], ['Mike', 'share'], ['Tyler', 'share'], ['Chris', 'share'], ['Matt', 'share'], ['Andrew', 'organizer']] });
+S['host-all'] = () => host({ title: 'All 8 have Golf Board', opens: opensRow, rows: [['Andrew', 'organizer'], ['Sean', 'has it'], ['Sam', 'has it'], ['Jake', 'has it'], ['Mike', 'has it'], ['Tyler', 'has it'], ['Chris', 'has it'], ['Matt', 'has it']], primary: 'Share the invite again' });
+S['host-confirm'] = () => host({ title: '7 of 8 have Golf Board', rows: R7,
+  opens: `<div class="confirm"><div class="t-row">Open scoring now?</div><div class="t-body muted">Everyone can enter scores from now on, 30 min early. It can't be closed again.</div><div class="two"><span class="btn s">Not yet</span><span class="btn p">Open now</span></div></div>` });
+S['host-opened'] = () => host({ title: '7 of 8 have Golf Board', rows: R7, primary: 'Go to hole 1',
+  opens: `<div class="hostrow"><div class="t-row">Scoring is open<small>opened by you at 7:40</small></div><span class="muted">${i('check', 's20')}</span></div>` });
+S['host-nodate'] = () => host({ title: '5 of 8 have Golf Board', sub: 'No date yet · Twin Creeks · Match play', rows: [['Jake', 'share'], ['Mike', 'share'], ['Tyler', 'share'], ['Andrew', 'organizer'], ['Sean', 'has it'], ['Sam', 'has it'], ['Chris', 'has it'], ['Matt', 'has it']],
+  opens: `<div class="hostrow" style="box-shadow:inset 0 0 0 1.5px var(--warn);background:var(--warn-bg)"><div class="t-row">Set the day and first tee time<small>scoring opens 30 min before it</small></div>${i('right', 's20')}</div>` });
+K.boot(S);
+</script>
+</body></html>
