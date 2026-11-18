@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>030 · One setup</title>
+<link rel="stylesheet" href="../../027-feel/mockups/kit.css">
+<style>
+  .hd { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .rows { display: grid; gap: 8px; }
+  .crt { display: grid; grid-template-columns: 28px 1fr 1fr; gap: 8px; align-items: center; }
+  .crt .n { font: 600 13px var(--font-mono); color: var(--text-muted); text-align: center; }
+  .crt .chip { background: var(--surface-1); box-shadow: var(--shadow-card); }
+  .setrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 60px; padding: 8px 16px; background: var(--surface-1); border-radius: var(--radius-xl); box-shadow: var(--shadow-card); }
+  .setrow small { display: block; font-size: 13px; line-height: 18px; color: var(--text-muted); font-weight: 500; }
+  .tg .names { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 6px; }
+  .tg .names .chip { padding: 0 8px; font-size: 15px; justify-content: center; }
+  .tg .names.carts { grid-template-columns: 1fr 1fr; }
+  .tg .names .chip { background: var(--surface-2); }
+  html.light .tg .names .chip { background: var(--bg); }
+  .tg .names .chip.pick { background: var(--surface-3); }
+  html.light .tg .names .chip.pick { background: var(--surface-1); }
+  .tg .names .chip.cart { font-size: 15px; }
+  .tg .names .chip.you { background: var(--tint-you); box-shadow: inset 0 0 0 1.5px var(--cart-you); color: var(--cart-you-text); }
+  .tg .names .chip.b { background: var(--tint-b); box-shadow: inset 0 0 0 1.5px var(--cart-b); color: var(--cart-b); }
+  .tg .names .chip.c { background: var(--tint-c); box-shadow: inset 0 0 0 1.5px var(--cart-c); color: var(--cart-c); }
+  .tg .names .chip.d { background: var(--tint-d); box-shadow: inset 0 0 0 1.5px var(--cart-d); color: var(--cart-d); }
+  .tg.target { box-shadow: inset 0 0 0 1.5px var(--text), var(--shadow-card); }
+  .wheel { position: absolute; left: 0; right: 0; bottom: 0; height: 236px; background: var(--surface-2); z-index: 6; display: grid; grid-template-columns: 1fr 1fr 1fr; align-items: center; justify-items: center; font: 500 22px var(--font-sans); color: var(--text-muted); }
+  html.light .wheel { background: #d1d4da; }
+  .wheel b { color: var(--text); font-weight: 600; }
+</style>
+</head><body>
+<script type="module">
+import * as K from '../../027-feel/mockups/kit.js';
+const { i, su } = K;
+
+const head = (back, step, of, kicker, title, hint, right = '') => `${su(back, step, of)}<div class="gap8"></div>
+  <span class="t-label muted">${kicker}</span><div class="t-title">${title}</div><div class="gap8"></div>
+  <div class="hd"><span class="t-body muted">${hint}</span>${right}</div><div class="gap12"></div>`;
+const shuffle = `<span class="ghost fill">${i('shuffle', 's16')}Shuffle</span>`;
+const tcard = (cls, k, names, pick = -1, kr = '') => `<div class="tcard ${cls}"><span class="k"><span>${k}</span><span>${kr}</span></span>${names.map((n, j) => `<span class="chip ${j === pick ? 'pick' : ''}">${n}</span>`).join('')}</div>`;
+const scr = (body, primary, extra = '') => `<div class="scr">${body}<div class="bot" style="padding-top:12px">${primary}</div>${extra}</div>`;
+const P = (label) => `<div class="btn p" style="display:flex;gap:6px;justify-content:center">${label}${i('right', 's20')}</div>`;
+
+const S = {};
+// ───── Teams: one frame ─────
+const twovtwo = (pick) => scr(head('Game', 4, 5, 'Step 4 · Teams · 2v2', 'Who’s partners?', pick ? 'Now tap a name on the other team.' : 'Tap two names to swap.', shuffle)
+  + `<div class="two">${tcard('you', 'TEAM 1', ['Andrew', 'Sam'], pick ? 1 : -1)}${tcard('b', 'TEAM 2', ['Sean', 'Jake'])}</div><div class="gap24"></div>
+  <span class="t-label muted">Switch partners</span><div class="gap8"></div>${K.seg(['Never', 'Every 6', 'At the turn'], 2)}<div class="gap8"></div>
+  <div class="t-small muted">Andrew + Sean and Sam + Jake on 10–18. Everyone plays with two partners.</div>`, P('Next: tee times'));
+S['teams-2v2'] = () => twovtwo(false);
+S['teams-2v2-pick'] = () => twovtwo(true);
+S['teams-rider8'] = () => scr(head('Game', 4, 5, 'Step 4 · Teams · Partner “Rider” Cup', 'Who rides together?', 'Tap two names to swap. Carts name themselves in the lobby.', shuffle)
+  + `<div class="two">${tcard('you', 'CART A', ['Andrew', 'Sean'], -1, 'YOU')}${tcard('b', 'CART B', ['Mike', 'Tyler'])}${tcard('c', 'CART C', ['Sam', 'Jake'])}${tcard('d', 'CART D', ['Chris', 'Matt'])}</div>
+  <div class="gap12"></div><div class="setrow"><div class="t-row">Matchups<small>standard · everyone plays everyone · optional</small></div>${i('right', 's20')}</div>
+`, P('Next: tee times'));
+S['teams-rider6'] = () => scr(head('Game', 4, 5, 'Step 4 · Teams · Partner “Rider” Cup · 6', 'Who rides together?', 'Tap two names to swap.', shuffle)
+  + `<div class="rows">${tcard('you', 'CART A', ['Andrew', 'Sean'], -1, 'YOU').replace('class="tcard you"', 'class="tcard you" style="grid-template-columns:1fr 1fr"').replace('<span class="k">', '<span class="k" style="grid-column:1/-1">')}
+  ${tcard('b', 'CART B', ['Mike', 'Tyler']).replace('class="tcard b"', 'class="tcard b" style="grid-template-columns:1fr 1fr"').replace('<span class="k">', '<span class="k" style="grid-column:1/-1">')}
+  ${tcard('c', 'CART C', ['Sam', 'Jake']).replace('class="tcard c"', 'class="tcard c" style="grid-template-columns:1fr 1fr"').replace('<span class="k">', '<span class="k" style="grid-column:1/-1">')}</div>
+  <div class="gap12"></div><div class="t-small muted">3 carts: every cart plays both others on every hole, 18 holes. Carts name themselves in the lobby.</div>`, P('Next: tee times'));
+S['teams-ryder'] = () => scr(head('Game', 4, 5, 'Step 4 · Teams · Team Ryder Cup', 'Who rides together?', '8 carts of 2. Tap two names to swap.', shuffle)
+  + `<div class="rows" style="overflow:hidden;flex:1;min-height:0;align-content:start">${[['Andrew', 8, 'Alex', 15], ['Josh', 4, 'Brandon', 10], ['Ant', 6, 'Steve', 12], ['Joseph', 11, 'Jay', 9], ['Sean', 5, 'Baker', 12], ['Mitch', 7, 'Peter', 20], ['Justin', 3, 'Chuck', 14], ['Kyle', 9, 'Elijah', 13]]
+    .map(([a, ha, b, hb], k) => `<div class="crt"><span class="n">${k + 1}</span><span class="chip ${k ? '' : 'you'}">${k ? a : `<span class="you">${a}</span>`}<span class="h">${ha}</span></span><span class="chip">${b}<span class="h">${hb}</span></span></div>`).join('')}</div>
+  <div class="gap8"></div><div class="setrow" style="flex:none"><div class="t-row">Teams: the captains draft<small>in the lobby, once everyone's in</small></div>${i('right', 's20')}</div>`, P('Next: tee times'));
+
+// ───── Tee times: every game ─────
+const nm = (n, cls = '') => `<span class="chip ${cls}">${n}</span>`;
+const group = (ord, time, names, { target = false, warn = '', cart = false } = {}) => `<div class="tg ${target ? 'target' : ''}"><div class="th"><span class="t-label muted">${ord}</span>
+  ${time ? `<span class="time">${i('clock', 's16')}${time}</span>` : `<span class="time empty">${i('clock', 's16')}Add time</span>`}</div>
+  <div class="names ${cart ? 'carts' : ''}">${names.join('')}</div>${warn ? `<div class="warnline">${warn}</div>` : ''}</div>`;
+const add = `<div class="add-row addrow">${i('plus', 's20')}Add a tee time</div>`;
+const tee = (step, of, kicker, title, hint, body, extra = '') => scr(head(step === 4 ? 'Game' : 'Teams', step, of, kicker, title, hint) + body, P('Next: invite'), extra);
+const four = ['Andrew', 'Sean', 'Sam', 'Jake'].map((n) => nm(n));
+
+S['tee-3'] = () => tee(4, 4, 'Step 4 · Tee time · Scorecard · 3', 'What time do you tee off?', 'One group. The time lets everyone see a countdown.',
+  group('Your group', '9:10', ['Andrew', 'Sean', 'Sam'].map((n) => nm(n))));
+S['tee-4-unset'] = () => tee(4, 4, 'Step 4 · Tee time · Scorecard · 4', 'What time do you tee off?', 'One group. The time lets everyone see a countdown.',
+  group('Your group', '', four) + `<div class="gap8"></div><div class="t-small muted">No time? Scoring opens as soon as you invite.</div>`);
+S['tee-6'] = () => tee(4, 4, 'Step 4 · Tee times · Match play · 6', 'Who tees off together?', 'Tap two names to swap. Times are optional.',
+  group('1st', '8:40', ['Andrew', 'Sean', 'Sam', 'Jake', 'Chris', 'Mike'].map((n) => nm(n))) + `<div class="gap8"></div>${add}<div class="gap8"></div><div class="t-small muted">6 in one group is fine for Match play. Add a tee time to split it.</div>`);
+const eight = (t1, t2, opts = {}) => tee(4, 4, 'Step 4 · Tee times · Match play · 8', 'Who tees off together?', opts.hint || 'Tap two names to swap. Times are optional.',
+  group('1st', t1, ['Andrew', 'Sean', opts.pick ? null : 'Sam', 'Jake'].map((n) => n ? nm(n) : nm('Sam', 'pick')))
+  + '<div class="gap8"></div>' + group('2nd', t2, ['Mike', 'Tyler', 'Chris', 'Matt'].map((n) => nm(n)), { target: !!opts.pick }) + '<div class="gap8"></div>' + add);
+S['tee-8-none'] = () => eight('', '');
+S['tee-8-one'] = () => eight('8:40', '');
+S['tee-8-all'] = () => eight('8:40', '8:50');
+S['tee-8-pick'] = () => eight('8:40', '8:50', { pick: true, hint: 'Now tap who Sam swaps with.' });
+S['tee-alone'] = () => tee(4, 4, 'Step 4 · Tee times · Match play · 8', 'Who tees off together?', 'Tap two names to swap. Times are optional.',
+  group('1st', '8:40', ['Andrew', 'Sean', 'Jake'].map((n) => nm(n)).concat(nm('', 'slot')))
+  + '<div class="gap8"></div>' + group('2nd', '8:50', ['Mike', 'Tyler', 'Chris', 'Matt'].map((n) => nm(n)))
+  + '<div class="gap8"></div>' + group('3rd', '9:00', [nm('Sam'), nm('Move here', 'slot'), nm('', 'slot'), nm('', 'slot')], { warn: 'Sam is alone at 9:00' }));
+S['tee-add-typing'] = () => tee(4, 4, 'Step 4 · Tee times · Match play · 8', 'Who tees off together?', 'Tap two names to swap. Times are optional.',
+  group('1st', '8:40', ['Andrew', 'Sean', 'Sam', 'Jake'].map((n) => nm(n))) + '<div class="gap8"></div>' + group('2nd', '8:50', ['Mike', 'Tyler', 'Chris', 'Matt'].map((n) => nm(n)))
+  + `<div class="gap8"></div><div class="add-row addrow typing" style="background:var(--surface-1)"><span class="t-label muted" style="margin-right:auto">3rd</span><span class="mono" style="font-weight:600">9:00</span><span class="caret"></span></div>`,
+  `<div class="wheel"><span>8</span><span>59</span><span>AM</span><b style="grid-row:2">9</b><b style="grid-row:2">00</b><b style="grid-row:2">AM</b><span style="grid-row:3">10</span><span style="grid-row:3">01</span><span style="grid-row:3">PM</span></div>`);
+S['tee-carts'] = () => tee(5, 5, 'Step 5 · Tee times · Partner “Rider” Cup', 'Who tees off together?', 'Tap two carts to swap. Your first match is the other cart in your group.',
+  group('1st', '8:40', [nm('Cart A · You', 'cart you'), nm('Cart B', 'cart b')], { cart: true }) + '<div class="gap8"></div>' + group('2nd', '8:50', [nm('Cart C', 'cart c'), nm('Cart D', 'cart d')], { cart: true })
+  + '<div class="gap8"></div>' + add + `<div class="gap16"></div><div class="box peek" style="padding:12px 16px;display:grid;gap:4px"><span class="t-label">Your matches · Cart A</span><span class="t-body">1–6 Cart B · 7–12 Cart C · 13–18 Cart D</span></div>`);
+S['tee-ryder'] = () => tee(5, 5, 'Step 5 · Tee times · Team Ryder Cup · 16', 'When do the groups go off?', 'Four groups of two carts. Who plays who is set by the draft.',
+  ['1st', '2nd', '3rd', '4th'].map((o, k) => `<div class="tg" style="padding:6px 12px"><div class="th"><span class="t-label muted">${o}</span><span class="t-small muted" style="flex:1;margin-left:12px">a cart from each side</span><span class="time">${i('clock', 's16')}${['8:00', '8:10', '8:20', '8:30'][k]}</span></div></div>`).join('<div class="gap8"></div>')
+  + '<div class="gap8"></div><div class="t-small muted">Each new time is 10 min after the last. Tap one to change it.</div>');
+K.boot(S);
+</script>
+</body></html>
