@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>027 · The feel</title>
+<link rel="stylesheet" href="kit.css">
+</head><body>
+<script type="module">
+import * as K from './kit.js';
+const { i, mark, prow, crow, qrow, foot, tabbar, enterHead, green, mline, tbar, seg } = K;
+
+// Rider Cup, hole 8, par 4. Your cart Andrew + Sean, theirs Sam + Jake.
+const P = 4;
+const yours = (a = 4, s = 5) => `<div class="card mine">${prow('Andrew', P, a)}${prow('Sean', P, s)}</div>`;
+const yoursRow = (a = 4, s = 5) => K.qrow([['Andrew', a], ['Sean', s]], P, '', { mine: true, first: true });
+const theirsCard = (j = null) => `<div class="card">${crow('Sam', 4, P, 'from his phone')}${prow('Jake', P, j, '', j == null ? 'waiting · tap a score' : 'entered by you')}</div>`;
+const theirsRow = (j = null) => qrow([['Sam', 4], ['Jake', j]], P, j == null ? 'Enter' : 'Edit');
+
+// one slot for each cart: closed face (.g-row) and open face (.g-card), both in the DOM
+const slotYours = (open, a, s) => `<div class="grow ${open ? 'open' : ''}" id="yours"><div class="g-row">${yoursRow(a, s)}</div><div class="g-card">${yours(a, s)}</div></div>`;
+const slotTheirs = (open, j) => `<div class="grow ${open ? 'open' : ''}" id="theirs" style="margin-top:4px"><div class="g-row">${theirsRow(j)}</div><div class="g-card">${theirsCard(j)}</div></div>`;
+
+function enter({ theirsOpen = false, j = null, matchSwap = theirsOpen, next = 'Next hole · 1 to go', go = false } = {}) {
+  return `<div class="scr enter">${enterHead(8, P)}${green(142, 151, 160)}
+    ${matchSwap ? mline('Entering for Sam + Jake', '', false, '', 'Done') : mline('Andrew + Sean', '1 UP', true, 'vs Sam + Jake')}
+    ${slotYours(!theirsOpen)}${slotTheirs(theirsOpen, j)}
+    <div class="flex"></div>${foot(go ? 'Next hole' : next, go)}${tabbar(0)}
+    ${K.pin(1, 'left:356px;top:198px')}${K.pin(2, 'left:356px;top:420px')}</div>`;
+}
+// a frame of the grow: both slots move at once (theirs opens, yours folds); t = ms since the tap
+const frame = (t, dir, reduced = false) => () => {
+  const open = dir === 'open';
+  K.freezeGrow(document.getElementById('theirs'), t, open ? 'open' : 'close', 300, reduced);
+  K.freezeGrow(document.getElementById('yours'), t, open ? 'close' : 'open', 300, reduced);
+  // the match line swaps with the same blur timing
+  const ml = document.querySelector('.mline');
+  // the match line is one face swapping in place: dimmest/blurriest at ~90ms
+  if (!reduced && t < 300) { const q = t < 90 ? t / 90 : 1 - (t - 90) / 210; ml.style.filter = `blur(${8 * q}px)`; ml.style.opacity = 1 - .85 * q; }
+};
+// states are drawn as the *start* layout (so the freeze interpolates from it)
+const S = {
+  'grow-rest': () => enter(),
+  'grow-090': { html: () => enter({ matchSwap: true }), frame: frame(90, 'open') },
+  'grow-150': { html: () => enter({ matchSwap: true }), frame: frame(150, 'open') },
+  'grow-open': () => enter({ theirsOpen: true }),
+  'grow-open-picked': () => enter({ theirsOpen: true, j: 5, next: 'Next hole', go: true }),
+  'fold-150': { html: () => enter({ theirsOpen: true, j: 5, matchSwap: false, go: true }), frame: frame(150, 'close') },
+  'fold-done': () => enter({ j: 5, go: true }),
+  'reduced-075': { html: () => enter({ matchSwap: true }), frame: frame(75, 'open', true) },
+  // Matches: lit live hole + the next rotation peeking
+  'lit-peek': () => matches(),
+  'nothing-live': () => matches({ before: true }),
+};
+
+function matches({ before = false } = {}) {
+  const tiles = before
+    ? [7, 8, 9, 10, 11, 12].map((h) => `<div class="htile fut"><b>${h}</b><span class="dots"><i class="none"></i><i class="none"></i></span></div>`).join('')
+    : [[7, 'us', 'them'], [8, 'half', 'half'], [9, 'us', 'us']].map(([h, a, b]) => `<div class="htile"><b>${h}</b><span class="dots"><i class="${a}"></i><i class="${b}"></i></span></div>`).join('')
+      + `<div class="htile lit"><b>10</b><span class="dots"><i class="one"></i><i class="one"></i></span></div>`
+      + [11, 12].map((h) => `<div class="htile fut"><b>${h}</b><span class="dots"><i class="none"></i><i class="none"></i></span></div>`).join('');
+  const card = before
+    ? `<div class="hero" style="padding:16px"><div class="t-label muted">Holes 7–12 · starts on 7</div><div class="gap8"></div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="t-row you">Hogan's Heroes</span><span class="muted">vs</span><span class="t-row">Fore Play</span></div>
+        <div class="gap8"></div><div class="t-body muted">Waiting for the first scores</div></div>`
+    : `<div class="hero" style="padding:16px"><div class="t-label you">Thru 3 · 1 up</div><div class="gap8"></div>
+        <div style="display:flex;justify-content:space-between"><span class="t-body you" style="font-weight:600">Hogan's Heroes</span><span class="t-body muted" style="font-weight:600">Fore Play</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:flex-end"><span class="t-xl you">3½</span><span class="t-xl">2½</span></div></div>`;
+  return `<div class="scr pad-tab">${tbar('A', 'Andrew', 'Twin Creeks · Sat')}
+    <div class="t-title">vs <span class="cc">Fore Play</span></div>
+    <div class="t-small muted">${before ? 'Sam + Jake · holes 7–12' : 'they’re on 11 · you’re on 10'}</div><div class="gap12"></div>
+    ${seg(['1–6<small>WON 4–2</small>', '7–12<small>' + (before ? 'NEXT' : 'LIVE') + '</small>', '13–18<small>&nbsp;</small>'], 1)}<div class="gap12"></div>
+    ${card}<div class="gap12"></div>
+    <div class="hstrip">${tiles}</div>
+    <div class="gap8"></div><div class="t-small muted">${before ? 'Nobody’s in on hole 7 yet' : 'Hole 10 · live · Sam and Jake are in'}</div>
+    <div class="flex"></div>
+    <div class="box peek" style="padding:12px 16px;display:grid;gap:4px"><span class="t-label">Up next · holes 13–18 · 2nd tee time</span><span class="t-row">vs Shank Redemption</span></div>
+    ${tabbar(1, true)}
+    ${K.pin(1, 'left:290px;top:418px')}${K.pin(2, 'left:356px;top:500px')}</div>`;
+}
+K.boot(S);
+</script>
+</body></html>
