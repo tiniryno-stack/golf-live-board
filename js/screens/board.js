@@ -397,6 +397,9 @@ export default {
   mount(root, app) {
     const chip = root.querySelector('[data-prov]');
     if (chip) app.coach('prov2', chip, 'These points already count. They’re provisional until the other foursome plays these holes.');
+    // 031 §2.5: the first visit, one tip on a name (the round card opens from it).
+    const name = root.querySelector('.p31 [data-act="board-player"], .ry-prow[data-act="board-player"]');
+    if (!chip && name && !document.querySelector('.coach')) app.coach('board1', name, 'Tap a name to see their round.');
   },
 
   actions: {

@@ -276,7 +276,7 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
 - All storage goes through `db.local` (never `localStorage` directly) so `?sim=N` test phones stay
   separate. localStorage keys: `glb.device`, `glb.me.CODE`, `glb.admin.CODE`, `glb.recent`,
   `glb.queue.CODE`, `glb.seen.CODE`, `glb.alert.CODE.H`, `glb.switch.CODE.H`, `glb.brief.CODE`,
-  `glb.who.CODE`, `glb.cardOpen.CODE`, `glb.coach.{tile5,oppcart3,prov2,pad1}`, `glb.setupDraft`,
+  `glb.who.CODE`, `glb.cardOpen.CODE`, `glb.coach.{tile5,oppcart3,prov2,pad1}` (031: `pad3`, `quiet1`, `matches1`, `board1`), `glb.setupDraft`,
   `glb.theme`, `glb.people`, `glb.crews`, `glb.crew`, (024) `glb.owner` (`{ personId, name }` = the one person this
   device belongs to; `{ personId: null }` = cleared by "I'm not X"), `glb.hasApp` (Add to Home Screen was tapped).
   (025) `glb.seen.CODE.open` (Scoring is open shown once), `glb.seen.CODE.hcp` (= the player id the handicap reveal was shown to; `.welcome` is no longer read), `glb.seen.CODE.here` (chose to stay in Safari: Can't add it / Join in Safari for now), `glb.inapp.CODE` (= the player id

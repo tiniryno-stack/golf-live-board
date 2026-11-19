@@ -432,6 +432,9 @@ export default {
   // have now been shown (2s after they appear, or at once on the first visit) so they stop ringing.
   mount(root, app) {
     syncMotion(root);
+    // 031 §2.5: the first visit, one tip on the hole tiles.
+    const tiles = root.querySelector('.p31-hg, .rm-strip');
+    if (tiles && !document.querySelector('.coach')) app.coach('matches1', tiles, 'Tap a hole to see everyone’s score on it.');
     const rm = app.ui.rm;
     if (!rm || !root.querySelector('.rm-strip')) return;
     const key = `glb.seen.${app.code}.mx`;

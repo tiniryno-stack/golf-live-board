@@ -92,7 +92,7 @@ async function phone({ me = true, flags = null, geo = null } = {}) {
     if (localStorage.getItem('__seeded')) return;
     localStorage.setItem('__seeded', '1');
     if (me) localStorage.setItem('glb.device', JSON.stringify(dev));
-    for (const k of ['tile5', 'prov2', 'oppcart3', 'pad1']) localStorage.setItem('glb.coach.' + k, 'true');
+    for (const k of ['tile5', 'prov2', 'oppcart3', 'pad1', 'pad3', 'quiet1', 'matches1', 'board1']) localStorage.setItem('glb.coach.' + k, 'true');
     for (const [code, pin] of rounds) {
       localStorage.setItem('glb.who.' + code, 'true');
       localStorage.setItem('glb.brief.' + code, 'true');

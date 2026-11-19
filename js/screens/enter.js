@@ -784,9 +784,9 @@ export default {
       if (document.querySelector('.coach')) return; // one tip at a time
       const mineRows = ce.querySelector('.ce-mine.rail'), theirs = ce.querySelector('.ce-line');
       if (mineRows && !mineRows.querySelector('.ce-pad.sel') && mineRows.querySelector('.ce-pads')) {
-        app.coach('pad2', mineRows.querySelector('.ce-pads'), 'Tap the score you made. ⋯ has every other score.');
+        app.coach('pad3', mineRows.querySelector('.ce-pads'), 'Tap the score you made. ⋯ has every other score.'); // 031 §2.5
       } else if (mineRows && theirs && !theirs.querySelector('.ce-sm') && mineRows.querySelectorAll('.ce-pad.sel').length >= 2) {
-        app.coach('oppcart4', theirs, 'You can enter scores for the other cart in your group too. Tap their row.');
+        app.coach('quiet1', theirs, 'Tap here to enter scores for the rest of your group.'); // 031 §2.5
       }
       return;
     }
@@ -1018,13 +1018,26 @@ function nextHole(app) {
       });
       return;
     }
+    // 031 §2.5: once per switch, who you're with and who you're playing now. 2v2 switching partners: your pairing
+    // changes with the stretch, so "you" before and after are different teams.
     const swap = (st.rotationMode || 'swap') === 'swap';
+    const meBefore = st.pairs ? sideOn(snap, app.me, h) : myTeam, meAfter = st.pairs ? sideOn(snap, app.me, nh) : myTeam;
+    const was = st.pairs ? matchFor(snap, meBefore, h) : done, now = st.pairs ? matchFor(snap, meAfter, nh) : next;
+    const firsts = (t, skipMe = false) => (snap.teamById.get(t)?.playerIds || []).filter((id) => !skipMe || id !== app.me)
+      .map((id) => { const p = snap.playerById.get(id); return p?.firstName || String(p?.name || '').split(' ')[0]; }).join(' + ');
+    const other = (m, t) => (m ? m.teams.find((x) => x !== t) : null);
+    let last = '';
+    if (was) {
+      const u = was.points[meBefore], t = was.points[other(was, meBefore)];
+      last = snap.game.type === 'rotationPlusMinus' ? `Last stretch: ${fmtSigned(was.margin[meBefore], 'E')}`
+        : `Last stretch: ${!was.final ? `${fmtPts(u)}–${fmtPts(t)} so far` : u > t ? `you won ${fmtPts(u)}–${fmtPts(t)}` : u < t ? `lost ${fmtPts(u)}–${fmtPts(t)}` : `halved ${fmtPts(u)}–${fmtPts(t)}`}`;
+    }
     app.showCard({
       kicker: 'Switch it up',
-      big: done?.final ? `Rotation ${done.rotation} is in` : `On to rotation ${(done?.rotation || 0) + 1}`,
-      result,
-      sub,
-      sub2: swap ? 'One cart waits, one moves up.' : 'Same foursome — this matchup compares scores with the other group.',
+      big: now ? (st.pairs ? `With ${firsts(meAfter, true)}` : `vs ${firsts(other(now, meAfter))}`) : `On to rotation ${(done?.rotation || 0) + 1}`,
+      result: last,
+      sub: now ? (st.pairs ? `vs ${firsts(other(now, meAfter))} · ${now.label.toLowerCase()}` : `${now.label} · with ${firsts(meAfter, true)}`) : sub,
+      sub2: st.pairs ? 'Same foursome, new partner. Each stretch is its own match.' : swap ? 'One cart waits, one moves up.' : 'Nobody moves. The app compares your scores with the other group.',
       button: `Continue to hole ${nh}`,
       onContinue: () => goHole(app, nh, h),
     });

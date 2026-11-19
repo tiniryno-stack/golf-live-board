@@ -84,7 +84,7 @@ async function phone({ me = true, flags = null, geo = null } = {}) {
     if (localStorage.getItem('__seeded')) return;
     localStorage.setItem('__seeded', '1');
     if (me) localStorage.setItem('glb.device', JSON.stringify(dev));
-    for (const k of ['tile5', 'prov2', 'oppcart3', 'pad1']) localStorage.setItem('glb.coach.' + k, 'true');
+    for (const k of ['tile5', 'prov2', 'oppcart3', 'pad1', 'pad3', 'quiet1', 'matches1', 'board1']) localStorage.setItem('glb.coach.' + k, 'true');
     for (const [code, pin] of rounds) {
       localStorage.setItem('glb.who.' + code, 'true');
       localStorage.setItem('glb.brief.' + code, 'true');
@@ -356,7 +356,7 @@ const TABS = [['enter', 'Enter', 'js/screens/enter.js'], ['matches', 'Matches', 
     await c.addInitScript(init, arg);
     return c;
   };
-  const hostCtx = await mkCtx(([c, pin]) => { localStorage.setItem('glb.admin.' + c, JSON.stringify(pin)); for (const k of ['tile5', 'prov2', 'oppcart3', 'pad1']) localStorage.setItem('glb.coach.' + k, 'true'); }, [code, made.admin_pin]);
+  const hostCtx = await mkCtx(([c, pin]) => { localStorage.setItem('glb.admin.' + c, JSON.stringify(pin)); for (const k of ['tile5', 'prov2', 'oppcart3', 'pad1', 'pad3', 'quiet1', 'matches1', 'board1']) localStorage.setItem('glb.coach.' + k, 'true'); }, [code, made.admin_pin]);
   const host = await hostCtx.newPage();
   const t = (sel) => host.locator(sel).first().tap().then(() => host.waitForTimeout(450));
   await cap(host, 'lh-lobby', { ...LH, title: 'Host lobby · before carts', how: 'Organizer opens an invite-now round' }, () => go(host, tab(code, 'host')));

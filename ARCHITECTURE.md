@@ -888,6 +888,14 @@ Still open: nothing blocking. Design direction (section 9) is final.
     (step 6) makes it Next: invite. Everyone alone with 5–6 now starts as one group (030). Home / Rules / the quick
     groups say 2v2 / Everyone alone / Stroke play.
 
+  - **Step 7 · Coach tips and Switch it up (§2.5).** Four tips, once per phone: Enter first hole `pad3` ("Tap the score
+    you made. ⋯ has every other score."), the quiet row `quiet1` ("Tap here to enter scores for the rest of your
+    group."), Matches first visit `matches1` on the hole tiles, Board first visit `board1` on a name. The old Enter
+    (2v2 / Everyone alone / Stroke play until step 5) keeps `tile5` / `oppcart3`. "Switch it up" (Enter, once per switch,
+    `glb.switch.CODE.H`) now says who you're with and who you play: 2v2 partner swaps read your pairing before and after
+    (`sideOn`), so the card is "With Sam · Last stretch: you won 6½–5½ · vs Sean + Jake · holes 7–12"; carts:
+    "vs Sam + Jake · Holes 7–12 · with Sean". The headless test lists skip the new tips.
+
 ## 13. V2 backlog (running list)
 
 - **Carryovers (skins-style):** a tied point rolls onto the next hole instead of halving, so the next hole can be worth 3–4 points. Open design question: does an unresolved carry die at the end of a 6-hole rotation, or roll into the next opponent?
