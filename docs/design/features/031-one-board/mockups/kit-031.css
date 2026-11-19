@@ -344,3 +344,25 @@
 .ptab .tr.open .rrow b { color: var(--text); }
 .form { font-size: 13px; gap: 6px; }
 .ptab.formt .th, .ptab.formt .tr { grid-template-columns: 28px minmax(0, 1fr) 72px 42px 78px; column-gap: 6px; }
+
+/* ── standings, peek options from the Anchor recordings (Nov 19) ── */
+.speek { position: absolute; left: 16px; right: 16px; bottom: 16px; background: var(--surface-1); border-radius: var(--radius-xl); padding: 12px 16px; box-shadow: var(--shadow-card); display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: 12px; }
+.speek.dim { opacity: var(--peek); }
+.speek.dim * { color: var(--text) !important; }
+.speek .t-label { grid-column: 1 / -1; color: var(--text-muted); }
+.speek b { font: 600 17px/22px var(--font-sans); }
+.speek .n { font: 700 17px var(--font-mono); display: inline-flex; align-items: center; gap: 4px; }
+.qtop { display: flex; align-items: center; justify-content: space-between; min-height: 52px; padding: 0 16px; background: var(--surface-1); border-radius: var(--radius-lg); flex: none; }
+.qtop b { font: 600 15px/20px var(--font-sans); } .qtop span { color: var(--text-muted); font-size: 13px; }
+.focus { background: var(--surface-1); border-radius: var(--radius-2xl); padding: 16px; box-shadow: var(--shadow-card); flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 10px; }
+.focus .k { color: var(--cart-you-text); }
+.focus .big { display: flex; align-items: flex-end; justify-content: space-between; }
+.focus .big .t-xl { color: var(--cart-you-text); }
+.focus .big div { display: grid; gap: 2px; text-align: right; }
+.focus .big div span { color: var(--text-muted); font-size: 13px; }
+.focus .next { border-top: 1px solid var(--line-faint); padding-top: 10px; display: grid; gap: 2px; }
+.focus .next span { color: var(--text-muted); font-size: 13px; }
+.pager { display: flex; align-items: baseline; gap: 16px; overflow: hidden; white-space: nowrap; margin-top: 4px; flex: none; }
+.pager .pk { opacity: var(--peek); color: var(--text); }
+.pager-sub { color: var(--text-muted); flex: none; }
+.focus .next, .focus .next b { text-align: left; justify-items: start; }
