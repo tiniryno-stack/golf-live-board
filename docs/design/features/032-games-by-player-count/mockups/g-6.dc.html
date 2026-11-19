@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Setup, Game step, 6 players</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="kit.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400..800&family=Geist+Mono:wght@400..700&display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div class="scr" data-theme="{{theme}}" style="width: 393px; height: 659px">
+<div class="su"><span class="back"><svg class="i s20" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>Players</span><span class="prog"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></span></div>
+<div class="kick t-label">Step 3 · Game · 6 players</div>
+<div class="q t-title">Pick a game</div>
+<div class="shape t-body">Three carts.</div>
+<div class="glist">
+<div class="gopt"><b>Everyone alone</b><span class="rad"></span><span class="d">A point a hole to the low net score.</span></div>
+<div class="gopt on"><b>2v2 with three carts</b><span class="rad"></span><span class="d">Your cart plays the other two carts at once, all 18 holes.</span>
+<div class="set"><span class="t-label">A hole is won by</span><div class="seg"><span class="on">Best ball<small>low ball</small></span><span>Ball + total<small>2 a hole</small></span><span class="later">Scramble<small>later</small></span></div><span class="hint">Your cart's low net score against each of theirs.</span></div>
+</div>
+<div class="gopt"><b>Stroke play</b><span class="rad"></span><span class="d">Just the scorecard. Lowest total wins.</span></div>
+</div>
+<div class="bot"><div class="btn p">Next: carts</div></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":393,"height":659}}'>
+class Component extends DCLogic {
+renderVals() {
+return { theme: this.props.theme ?? 'dark' };
+}
+}
+</script>
+</body>
+</html>

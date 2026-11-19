@@ -1,0 +1,141 @@
+/* Added for handoffs 031 + 032 (reference drawings only). Everything here uses design-system tokens
+   and the six type styles; no new color, size or type style. build-kit.sh appends this to the 027
+   kit to make kit.css, the one stylesheet every 031 / 032 artboard links. */
+
+/* 027's motion.css sets --glow-you to none in light, which makes the whole .lit box-shadow invalid
+   (the outline goes too). A zero shadow keeps the outline. Build note in 031 SPEC.md. */
+[data-theme="light"] { --glow-you: 0 0 0 0 transparent; }
+
+/* the frame: one phone screen, 393 × 659 (the usable area on an iPhone 15 / 16) */
+.scr { box-sizing: border-box; width: 393px; height: 659px; background: var(--bg); color: var(--text); font: 500 15px/20px var(--font-sans); -webkit-font-smoothing: antialiased; }
+.scr * { box-sizing: border-box; }
+.scr b { font-weight: 600; }
+.scr svg.i { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.scr svg.i.s20 { width: 20px; height: 20px; }
+.scroll { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+
+/* ── 031 · the score bug: one hero fact, then a short leaderboard ── */
+.bug { background: var(--surface-1); border-radius: var(--radius-2xl); padding: 14px 16px 6px; box-shadow: var(--shadow-card); flex: none; }
+.bug .k { display: flex; justify-content: space-between; color: var(--text-muted); }
+.bug .fact { display: flex; align-items: flex-end; gap: 12px; margin: 6px 0 10px; }
+.bug .fact .t-xl { flex: none; }
+.bug .fact .w { display: grid; gap: 0; padding-bottom: 6px; min-width: 0; }
+.bug .fact .w b { font: 600 17px/22px var(--font-sans); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bug .fact .w span { color: var(--text-muted); }
+.bug .hd, .bug .r { display: grid; grid-template-columns: 28px minmax(0, 1fr) 64px 44px; align-items: center; column-gap: 8px; }
+.bug .hd { height: 24px; color: var(--text-muted); }
+.bug .hd span:nth-child(n+3), .bug .r span:nth-child(n+3) { text-align: right; }
+.bug .r { height: 40px; border-top: 1px solid var(--line-faint); }
+.bug .r .pos { font: 600 15px var(--font-mono); color: var(--text-muted); }
+.bug .r b { font: 600 17px/22px var(--font-sans); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bug .r .sc { font: 700 17px var(--font-mono); }
+.bug .r .th { font: 500 15px var(--font-mono); color: var(--text-muted); }
+.bug .r.me .pos, .bug .r.me b, .bug .r.me .sc { color: var(--cart-you-text); }
+.bug .r.gapd { border-top-style: dashed; border-top-color: var(--line); }
+.bug .wait { min-height: 44px; display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--line-faint); }
+
+/* head to head (one match is the whole game): left against right */
+.h2h { background: var(--surface-1); border-radius: var(--radius-2xl); padding: 14px 16px 16px; box-shadow: var(--shadow-card); flex: none; display: grid; gap: 10px; }
+.h2h .k { text-align: center; color: var(--text-muted); }
+.h2h .sides { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: end; gap: 8px; }
+.h2h .sd { display: grid; gap: 2px; }
+.h2h .sd.r { text-align: right; }
+.h2h .sd b { font: 700 15px/20px var(--font-sans); }
+.h2h .sd span { color: var(--text-muted); font-size: 13px; line-height: 18px; }
+.h2h .t-xl { text-align: center; white-space: nowrap; }
+.hbar { display: grid; grid-template-columns: repeat(9, 1fr) 6px repeat(9, 1fr); gap: 3px; }
+.hbar i { height: 12px; border-radius: 3px; background: var(--surface-2); }
+.hbar i.us { background: var(--cart-you); } .hbar i.them { background: var(--text-muted); }
+.hbar i.half { background: linear-gradient(90deg, var(--cart-you) 50%, var(--text-muted) 50%); }
+.hbar i.fut { background: transparent; box-shadow: inset 0 0 0 1.5px var(--line); }
+.hbar i.turn { background: transparent; }
+.hbar i.live { background: var(--tint-you); box-shadow: inset 0 0 0 1.5px var(--cart-you), var(--glow-you); }
+
+/* live matches: Team Ryder Cup's rotation header + match rows, used by every game with matches */
+.rot { height: 40px; flex: none; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: space-between; padding: 0 12px; box-shadow: inset 0 0 0 1px var(--line); color: var(--text-muted); }
+.rot.lit { background: transparent; box-shadow: inset 0 0 0 1.5px var(--cart-you), var(--glow-you); }
+.mrow { min-height: 54px; flex: none; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: stretch; position: relative; }
+.mrow + .mrow { border-top: 1px solid var(--line-faint); }
+.mrow .h { display: flex; flex-direction: column; justify-content: center; padding: 6px 12px; font: 600 13px/16px var(--font-sans); }
+.mrow .h.r { text-align: right; }
+.mrow .h.up { background: var(--surface-1); border-radius: var(--radius-lg) 0 0 var(--radius-lg); }
+.mrow .h.r.up { border-radius: 0 var(--radius-lg) var(--radius-lg) 0; }
+.mrow .h.lost { color: var(--text-muted); }
+.mrow::after { content: ''; position: absolute; left: 50%; top: 8px; bottom: 8px; width: 1px; background: var(--line); }
+.flagp { position: absolute; top: 50%; margin-top: -13px; z-index: 1; width: 72px; height: 26px; border-radius: var(--radius-sm); display: grid; place-items: center; font: 700 12px var(--font-mono); background: var(--text); color: var(--bg); }
+.flagp.l { right: 50%; } .flagp.r { left: 50%; } .flagp.c { left: 50%; margin-left: -36px; }
+.flagp.done { background: var(--surface-3); color: var(--text); }
+.flagp.wait { background: var(--bg); color: var(--text-muted); outline: 1px dashed var(--line); outline-offset: -1px; }
+
+/* the Players table (Team Ryder Cup's, in every game) */
+.ptab { background: var(--surface-1); border-radius: var(--radius-xl); padding: 4px 14px; box-shadow: var(--shadow-card); flex: none; }
+.ptab .th, .ptab .tr { display: grid; grid-template-columns: 28px minmax(0, 1fr) repeat(4, 46px); align-items: center; column-gap: 4px; }
+.ptab.five .th, .ptab.five .tr { grid-template-columns: 28px minmax(0, 1fr) repeat(5, 42px); }
+.ptab.three .th, .ptab.three .tr { grid-template-columns: 28px minmax(0, 1fr) repeat(3, 52px); }
+.ptab .th { height: 32px; color: var(--text-muted); }
+.ptab .th span:nth-child(n+3), .ptab .tr span:nth-child(n+3) { text-align: right; }
+.ptab .tr { height: 44px; border-top: 1px solid var(--line-faint); font: 500 15px var(--font-mono); color: var(--text-muted); }
+.ptab .tr .pos { font-weight: 600; }
+.ptab .tr b { font: 600 17px/22px var(--font-sans); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ptab .tr .v { color: var(--text); font-weight: 700; }
+.ptab .tr small { font: 500 12px var(--font-mono); color: var(--text-muted); margin-left: 4px; }
+.ptab .tr.me .pos, .ptab .tr.me b, .ptab .tr.me .v { color: var(--cart-you-text); }
+.ptab .tr.open { height: auto; display: block; border-top: 0; margin: 4px -8px; padding: 10px 12px 12px; background: var(--surface-2); border-radius: var(--radius-lg); color: var(--text); font-family: var(--font-sans); }
+.ptab .tr.open + .tr { border-top: 0; }
+
+/* the player card (a row grown in place): the round, hole by hole */
+.pc-h { display: flex; align-items: baseline; gap: 10px; }
+.pc-h b { font: 600 17px/22px var(--font-sans); }
+.pc-h .sub { flex: 1; min-width: 0; color: var(--text-muted); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pc-h .cl { font: 600 15px var(--font-sans); height: 28px; }
+.pc-n { display: flex; align-items: baseline; gap: 10px; margin: 4px 0 10px; }
+.pc-n .t-title { font-family: var(--font-mono); }
+.pc-n span { color: var(--text-muted); }
+.nine { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 3px; }
+.nine + .nine { margin-top: 3px; }
+.ht { height: 58px; border-radius: var(--radius-sm); background: var(--surface-1); display: grid; justify-items: center; align-content: center; gap: 1px; }
+.ht u { text-decoration: none; font: 600 12px/14px var(--font-mono); color: var(--text-muted); }
+.ht em { font: 700 12px/14px var(--font-mono); font-style: normal; color: var(--text-muted); height: 14px; }
+.ht em.w { color: var(--text); }
+.ht .mk { --m: 22px; font-size: 13px; }
+.ht .mk.d, .ht .mk.cc { border-width: 3px; }
+.ht.sel { box-shadow: inset 0 0 0 2px var(--text); }
+.ht.fut { background: transparent; box-shadow: inset 0 0 0 1.5px var(--line); }
+.pc-d { margin-top: 10px; display: grid; gap: 2px; }
+.pc-d span { color: var(--text-muted); font-size: 13px; line-height: 18px; }
+.pc-f { margin-top: 10px; display: flex; justify-content: space-between; font-weight: 600; }
+
+/* the final card (019's, one for every game) */
+.fin { background: var(--surface-1); border-radius: var(--radius-2xl); box-shadow: var(--shadow-card); text-align: center; display: grid; justify-items: center; gap: 4px; padding: 16px 20px 20px; flex: none; }
+.fin .tro { color: var(--text-muted); margin: 6px 0 2px; }
+.fin .btn { margin-top: 8px; }
+.fin .btn + .btn { margin-top: 2px; }
+
+/* ── 032 · the Game step ── */
+.kick { color: var(--text-muted); margin-top: 8px; flex: none; }
+.q { margin-top: 4px; flex: none; }
+.shape { color: var(--text-muted); margin: 4px 0 16px; flex: none; }
+.glist { display: grid; gap: 8px; flex: none; }
+.gopt { background: var(--surface-1); border-radius: var(--radius-xl); padding: 14px 16px; box-shadow: var(--shadow-card); display: grid; grid-template-columns: minmax(0, 1fr) 24px; column-gap: 12px; row-gap: 2px; align-items: start; min-height: 72px; }
+.gopt b { font: 600 17px/22px var(--font-sans); }
+.gopt .d { grid-column: 1; color: var(--text-muted); }
+.gopt .rad { grid-row: 1 / span 2; grid-column: 2; width: 24px; height: 24px; border-radius: 50%; box-shadow: inset 0 0 0 2px var(--line); margin-top: 10px; }
+.gopt.on { background: var(--surface-2); box-shadow: inset 0 0 0 2px var(--text); }
+.gopt.on .rad { box-shadow: inset 0 0 0 2px var(--text); background: radial-gradient(circle, var(--text) 0 6px, transparent 6.5px); }
+.gopt .set { grid-column: 1 / -1; margin-top: 12px; display: grid; gap: 8px; }
+.gopt .set .t-label { color: var(--text-muted); }
+.gopt .set .seg { background: var(--surface-1); }
+.gopt .set .hint { color: var(--text-muted); font-size: 13px; line-height: 18px; }
+.gopt .set .seg span.later { opacity: var(--peek); }
+.gopt .set.mid { opacity: .45; filter: blur(3px); }
+.why { color: var(--text-muted); margin-top: 12px; flex: none; }
+.seg span small { text-transform: none; font-size: 12px; line-height: 16px; letter-spacing: 0; } /* 12px is the smallest text */
+.ht { height: 46px; gap: 0; }
+.ht .mk { --m: 20px; font-size: 12px; }
+.pc-h .lnk { font: 600 15px var(--font-sans); white-space: nowrap; }
+.ptab .tr.open .lnk { font-weight: 600; white-space: nowrap; }
+.pc-d { grid-template-columns: minmax(0, 1fr) auto; column-gap: 12px; align-items: end; }
+.fin .hbar { width: 100%; margin: 10px 0 4px; }
+.bug.plain { padding-top: 6px; }
+[data-theme="light"] .gopt .set .seg { background: var(--bg); }
+.gopt .why2 { grid-column: 1 / -1; margin-top: 10px; color: var(--text-muted); font-size: 13px; line-height: 18px; }

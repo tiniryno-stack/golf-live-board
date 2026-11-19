@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Setup, Game step, 4 players, Everyone alone picked</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="kit.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400..800&family=Geist+Mono:wght@400..700&display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div class="scr" data-theme="{{theme}}" style="width: 393px; height: 659px">
+<div class="su"><span class="back"><svg class="i s20" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>Players</span><span class="prog"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span></div>
+<div class="kick t-label">Step 3 · Game · 4 players</div>
+<div class="q t-title">Pick a game</div>
+<div class="shape t-body">A foursome.</div>
+<div class="glist">
+<div class="gopt on"><b>Everyone alone</b><span class="rad"></span><span class="d">A point a hole to the low net score.</span>
+<div class="set"><span class="t-label">A tie for low</span><div class="seg"><span class="on">Splits it<small>½ each</small></span><span class="later">Carries over<small>later · skins</small></span></div><span class="hint">Two tie for low: ½ a point each. Three: ⅓ each.</span></div>
+</div>
+<div class="gopt"><b>2v2 with your partner</b><span class="rad"></span><span class="d">Your cart against theirs. Win the hole, go 1 up. Ties push.</span></div>
+<div class="gopt"><b>Stroke play</b><span class="rad"></span><span class="d">Just the scorecard. Lowest total wins.</span></div>
+</div>
+<div class="bot"><div class="btn p">Next: tee times</div></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":393,"height":659}}'>
+class Component extends DCLogic {
+renderVals() {
+return { theme: this.props.theme ?? 'dark' };
+}
+}
+</script>
+</body>
+</html>
