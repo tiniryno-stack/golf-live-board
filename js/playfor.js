@@ -19,7 +19,8 @@ export function playFor(snap) {
   if (!g) return 'stroke';
   if (g.type === 'splitPoint') return 'alone';
   if (st.pairs) return st.pairSwitch === 'six' || st.pairSwitch === 'turn' ? 'partners' : 'oneMatch';
-  if (isRider(snap)) return 'cart';
+  // 031: 8 players, same opponents all 18 (one 18-hole stretch, a match in each foursome) = one match each.
+  if (isRider(snap)) return g.rotations.length === 1 && snap.teams.length === 4 ? 'oneMatch' : 'cart';
   return 'legacy';
 }
 

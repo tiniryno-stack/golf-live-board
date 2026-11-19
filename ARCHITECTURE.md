@@ -896,6 +896,17 @@ Still open: nothing blocking. Design direction (section 9) is final.
     (`sideOn`), so the card is "With Sam · Last stretch: you won 6½–5½ · vs Sean + Jake · holes 7–12"; carts:
     "vs Sam + Jake · Holes 7–12 · with Sean". The headless test lists skip the new tips.
 
+  - **Step 3 · Scoring (Andrew, Nov 19: best ball, 1 point a hole; new rounds only; 8-player partner switching stays
+    coming soon).** New settings, written by Setup on new rounds only: `holePoint: true` (normalizeSettings then forces
+    `teamScore 'bestBall'`, `matchBonus 0`, `halvedHolePoints 0.5`: a hole is one point, a tie ½ each, "9½ to win" over
+    18, "3½" over six) on every new 4-player 2v2 and on 8 players with **Same all 18**; `dayBy: 'stretches'` on new
+    partner-switch rounds (`game.people` ranked by stretches won, ½ a halved one, then points; `people[].won`; Season's
+    finishing order follows). Same all 18 = `scoring.sameOppsRotation()` (one 18-hole stretch, A v B and C v D, nobody
+    moves) → `playFor` = `oneMatch`. Setup hides Team score / Game / win bonus for these; Rules sheet says "1 a hole" and
+    "Most stretches won"; the Board's final card names the top person in 2v2. Checked live Nov 19: none of the 5 stored
+    rounds carries `holePoint` / `dayBy`, so every played round scores exactly as before. Tests in
+    `tests/playfor031.test.mjs`. One decimal: the race and the Everyone alone Board (step 2); `fmtPts` keeps ½.
+
 ## 13. V2 backlog (running list)
 
 - **Carryovers (skins-style):** a tied point rolls onto the next hole instead of halving, so the next hole can be worth 3–4 points. Open design question: does an unresolved carry die at the end of a 6-hole rotation, or roll into the next opponent?

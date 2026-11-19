@@ -83,3 +83,28 @@ test('031 Setup: games by player count (only what fits), the next step, default 
   assert.deepEqual(aloneIn([[0, 1, 2], [3], []]), [1]);
   assert.ok(groupsFit([[0, 2], [1], []], 3) && !groupsFit([[0, 1]], 3) && !groupsFit([[0, 0, 1]], 3));
 });
+
+test('031 step 3 (new rounds only): a hole is one point, stretches decide partner rounds, Same all 18 for 8; old rounds unchanged', async () => {
+  const { sameOppsRotation } = await import('../js/scoring.js');
+  const post = (ev, holes) => { const sb = scorebook(); for (const [h, sc] of holes) sb.post(h, sc); return compute(ev, sb.rows()); };
+  // One match, 4 players: Andrew 3 / Sean 5 vs Sam 4 / Jake 4 → best ball 3 beats 4: one point. Old round: 2 points (LB 1 + LT push ½ ×2).
+  const one = post(four({ pairs: true, pairSwitch: 'never', holePoint: true }), [[1, { an: 3, se: 5, sa: 4, ja: 4 }]]);
+  const m = one.game.matches[0];
+  assert.deepEqual([one.game.ncomp, m.points.AB, m.points.CD, one.game.bonus], [1, 1, 0, 0]);
+  assert.equal(matchState(one, 'an').matches[0].clinchAt, 9.5, '9½ to win over 18');
+  const old = post(four({ pairs: true, pairSwitch: 'never' }), [[1, { an: 3, se: 5, sa: 4, ja: 4 }]]);
+  assert.deepEqual([old.game.ncomp, old.game.matches[0].points.AB], [2, 1.5], 'a round made before stays low ball + low total');
+
+  // Partners every 6: Andrew + Sean win holes 1–6, every hole after is halved → stretches 2, 2, 1, 1 (½ for a halved one).
+  const holes = [];
+  for (let h = 1; h <= 18; h++) holes.push([h, h <= 6 ? { an: 3, se: 4, sa: 5, ja: 5 } : { an: 4, se: 4, sa: 4, ja: 4 }]);
+  const p = post(four({ pairs: true, pairSwitch: 'six', holePoint: true, dayBy: 'stretches' }), holes);
+  const by = (k) => Object.fromEntries(p.game.people.map((r) => [r.playerId, r[k]]));
+  assert.deepEqual(by('won'), { an: 2, se: 2, sa: 1, ja: 1 });
+  assert.deepEqual(by('points'), { an: 12, se: 12, sa: 6, ja: 6 });
+  assert.deepEqual(by('rank'), { an: 1, se: 1, sa: 3, ja: 3 });
+  // 8 players, same opponents all 18 → one match in each foursome; the Board shows one match each.
+  const ev8 = makeEvent({ holePoint: true, rotationMode: 'fixed', rotation: sameOppsRotation() });
+  const s8 = compute(ev8, []);
+  assert.deepEqual([playFor(s8), s8.game.matches.length, s8.game.matches[0].total], ['oneMatch', 2, 18]);
+});
