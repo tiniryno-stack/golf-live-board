@@ -2501,3 +2501,7 @@ html.light .gs-seg, [data-theme="light"] .gs-seg { background: var(--bg); }
 .hl-two { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
 .tt-day { margin-top: var(--space-4); display: grid; gap: var(--space-2); }
 .tt-day .ts-label { color: var(--text-muted); }
+/* 028 §2.2 (`05`): your card carries the green rail inside its left edge, so the box reads as yours. Their grown
+   card has none (no jersey colors on Enter). */
+[data-grow="ce-mine"] .ce-mine.ce-card { position: relative; padding: 6px 16px 8px 32px; }
+[data-grow="ce-mine"] .ce-mine.ce-card::before { content: ''; position: absolute; left: 14px; top: 14px; bottom: 14px; width: 3px; border-radius: 2px; background: var(--cart-you); pointer-events: none; }
