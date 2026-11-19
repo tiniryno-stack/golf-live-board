@@ -378,9 +378,9 @@ table.map tr.four th, table.map tr.four td { background: var(--tint-you); }
       <table>
         <thead><tr><th>You’re playing for</th><th>How it’s set up</th><th>The Board is about</th><th>Matches shows</th></tr></thead>
         <tbody>
-          <tr><th>Yourself</th><td>Partners switch (a foursome, or 8)</td><td>You: your place and points on a players leaderboard, then your matches</td><td>The stretch you’re in now, one tab per partner</td></tr>
-          <tr><th>Your cart</th><td>Partner fixed, opponents switch (8 players, or three carts for 6)</td><td>Your team: carts ranked, then the matches that made the score</td><td>Your match, one tab per opponent</td></tr>
-          <tr><th>Your cart, one match</th><td>Partner and opponents the same all day (a foursome, or each foursome of 8)</td><td>That match: two totals and one bar</td><td>The hole calendar</td></tr>
+          <tr><th>Yourself</th><td>2v2, partners switch (a foursome, or 8)</td><td>You: your place by stretches won on a players leaderboard, then your matches</td><td>The stretch you’re in now, one tab per partner</td></tr>
+          <tr><th>Your cart</th><td>2v2, partner fixed, opponents switch (8 players, or three carts for 6)</td><td>Your team: carts ranked, then the matches that made the score</td><td>Your match, one tab per opponent</td></tr>
+          <tr><th>Your cart, one match</th><td>2v2, partner and opponents the same all day (a foursome, or each foursome of 8)</td><td>That match: two totals and one bar</td><td>The hole calendar</td></tr>
           <tr><th>Yourself, no partner</th><td>Everyone alone (2–6)</td><td>The leaderboard, nothing above it but your place</td><td>The race</td></tr>
           <tr><th>Nobody: just your score</th><td>Stroke play (any number)</td><td>The leaderboard, to par</td><td>Your group’s last three holes</td></tr>
         </tbody>
@@ -391,6 +391,7 @@ table.map tr.four th, table.map tr.four td { background: var(--tint-you); }
     <div class="shots">
       <button class="ref" data-src="agreed/r-1.png"><img src="agreed/r-1.png" alt="After hole 1"><span><b>After hole 1</b>Just the leaderboard, plus “How it works” for the first few holes.</span></button>
       <button class="ref" data-src="agreed/r-9.png"><img src="agreed/r-9.png" alt="At the turn"><span><b>At the turn</b>Place, Pts and Back. Nothing else until it matters.</span></button>
+      <button class="ref" data-src="agreed/r-warn.png"><img src="agreed/r-warn.png" alt="One hole from out of reach"><span><b>One hole from out</b>The warning: “Lose it to Chris and you’re out of reach.”</span></button>
       <button class="ref" data-src="agreed/r-15.png"><img src="agreed/r-15.png" alt="3 holes left"><span><b>3 holes left</b>The amber card says what this hole decides. Out of reach = under the line.</span></button>
       <button class="ref" data-src="agreed/r-won.png"><img src="agreed/r-won.png" alt="Clinched"><span><b>Clinched</b>The winner is alone above the line. You’re told what you’re still playing for.</span></button>
       <button class="ref" data-src="agreed/b-player-open.png"><img src="agreed/b-player-open.png" alt="Tap a player"><span><b>Tap a player</b>The round card the app already has, with one line for the game.</span></button>
@@ -409,28 +410,31 @@ table.map tr.four th, table.map tr.four td { background: var(--tint-you); }
           <li><b>Never two scoreboards:</b> a mini leaderboard only where the matches under it make up the standings.</li>
           <li><b>The glow</b> goes on the one live thing on each screen.</li>
           <li><b>Not built yet = “coming soon”</b> (Scramble, Carries over).</li>
+          <li><b>Partners switch:</b> the day goes to whoever wins the most stretches. Points break ties.</li>
+          <li><b>Cart colors come off everything</b> for now: green for you, white or grey for everyone else. They can come back later.</li>
+          <li><b>One decimal</b> for point totals (4.3).</li>
+          <li><b>A warning before you’re out of reach:</b> the amber card, one hole earlier.</li>
+          <li><b>Names:</b> Setup still says “Pick a game” and the game names stand (2v2, Everyone alone, Stroke play, Team Ryder Cup). Keeping or switching partners and opponents are <b>settings inside 2v2</b>.</li>
+          <li><b>8 players switching partners:</b> support any kind of switching.</li>
           <li><b>How we work:</b> design on the canvas, you approve, then one brief for the engineer. The 031 and 032 folders in the repo are drafts, not to be built from.</li>
         </ul>
       </div>
       <div class="panel ask">
         <span class="kicker">Still open before the hand-off</span>
         <ul>
-          <li><b>Switch partners scoring.</b> I drew points (every hole you win or halve counts, added up over all your partners). On Nov 18 you said the day goes to whoever wins the most stretches. Which one?</li>
-          <li><b>Cart colors off everywhere?</b> Everything above is drawn green for you, white or grey for everyone else.</li>
-          <li><b>One decimal for point totals</b> (4.3, not 4⅓)?</li>
-          <li><b>A warning before you’re out?</b> Without the bar, nothing tells you you’re one hole from the line. Option: the amber card one hole earlier.</li>
-          <li><b>The names.</b> “Switch partners”, “Keep your partner”, “Everyone alone”, “Stroke play”: are these what Rules, the lobby and Home call the games?</li>
-          <li><b>8 players switching partners.</b> Do you switch within your foursome, or across both?</li>
+          <li><b>8 players switching partners, across both foursomes.</b> Switching inside your foursome is drawn. Switching across foursomes means tee times change mid-round or partners play in different groups; it needs a rule before it can be drawn. My suggestion: ship “within your foursome” first.</li>
+          <li><b>The fourth-pass screens below</b> still need your OK, one way of playing at a time.</li>
+          <li>Everything under <b>Not drawn yet</b>.</li>
         </ul>
       </div>
     </div>
 
     <h3>Drawn on the fourth pass, waiting on your OK</h3>
     <div class="shots">
-      <button class="ref" data-src="agreed/f-setup4.png"><img src="agreed/f-setup4.png" alt="Setup · 4 players"><span><b>Setup · 4 players</b>“How are you playing?” replaces “Pick a game”.</span></button>
-      <button class="ref" data-src="agreed/f-setup8.png"><img src="agreed/f-setup8.png" alt="Setup · 8 players"><span><b>Setup · 8 players</b>Keep your partner, then: opponents switch or stay.</span></button>
-      <button class="ref" data-src="agreed/f-sw-board.png"><img src="agreed/f-sw-board.png" alt="Switch partners · Board"><span><b>Switch partners · Board</b>About you: your place and points, then your matches.</span></button>
-      <button class="ref" data-src="agreed/f-sw-match.png"><img src="agreed/f-sw-match.png" alt="Switch partners · Matches"><span><b>Switch partners · Matches</b>The stretch you’re in, one tab per partner.</span></button>
+      <button class="ref" data-src="agreed/f-setup4.png"><img src="agreed/f-setup4.png" alt="Setup · 4 players"><span><b>Setup · 4 players</b>Pick 2v2, then set Partners: keep or switch.</span></button>
+      <button class="ref" data-src="agreed/f-setup8.png"><img src="agreed/f-setup8.png" alt="Setup · 8 players"><span><b>Setup · 8 players</b>2v2 with two settings: Partners and Opponents.</span></button>
+      <button class="ref" data-src="agreed/f-sw-board.png"><img src="agreed/f-sw-board.png" alt="Switch partners · Board"><span><b>Partners switch · Board</b>About you: stretches won, then your matches.</span></button>
+      <button class="ref" data-src="agreed/f-sw-match.png"><img src="agreed/f-sw-match.png" alt="Switch partners · Matches"><span><b>Partners switch · Matches</b>The stretch you’re in, one tab per partner.</span></button>
       <button class="ref" data-src="agreed/f-rot-board.png"><img src="agreed/f-rot-board.png" alt="Opponents switch · Board"><span><b>Opponents switch · Board</b>Carts ranked, then the live matches.</span></button>
       <button class="ref" data-src="agreed/f-rot-match.png"><img src="agreed/f-rot-match.png" alt="Opponents switch · Matches"><span><b>Opponents switch · Matches</b>One tab per six holes. The line says what wins.</span></button>
       <button class="ref" data-src="agreed/f-3c-board.png"><img src="agreed/f-3c-board.png" alt="Three carts · Board"><span><b>Three carts · Board</b>Same Board with three carts.</span></button>
@@ -459,7 +463,7 @@ table.map tr.four th, table.map tr.four td { background: var(--tint-you); }
           <li><b>028 Game slots:</b> Enter stands. The Board, Matches and final card are replaced by this section.</li>
           <li><b>029 Lobby:</b> stands, with the new game names.</li>
           <li><b>030 One setup:</b> Teams and Tee times stand. The Game step is replaced.</li>
-          <li><b>032 Games by player count:</b> the count still decides what’s offered. “Pick a game” becomes “How are you playing?”.</li>
+          <li><b>032 Games by player count:</b> stands, with one change: keeping or switching partners is a setting inside 2v2, next to opponents.</li>
         </ul>
       </div>
     </div>
@@ -1130,7 +1134,7 @@ table.map tr.four th, table.map tr.four td { background: var(--tint-you); }
 
   <!-- ================= 032 ================= -->
   <section class="part" id="b032">
-    <div class="panel ask"><span class="kicker">Changed Nov 19</span><p>The player count still decides what’s offered, but the step now asks “How are you playing?” (keep your partner or switch). See <a href="#agreed">Agreed · Nov 19</a>.</p></div>
+    <div class="panel ask"><span class="kicker">Changed Nov 19</span><p>This brief stands. One addition: keeping or switching partners is a setting inside 2v2, next to opponents. See <a href="#agreed">Agreed · Nov 19</a>.</p></div>
     <div class="part-head">
       <span class="badge"><span class="num">032</span><span class="covers">Changes 030’s Game step and the five games in Read first · send back as <code>features/032-games-by-player-count</code></span></span>
       <h2>Games by player count</h2>
