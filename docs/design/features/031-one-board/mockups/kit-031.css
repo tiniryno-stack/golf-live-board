@@ -216,3 +216,15 @@
 .tag { position: absolute; left: 12px; top: 12px; background: var(--warn-bg); color: var(--warn); border-radius: var(--radius-sm); padding: 4px 8px; }
 .mcard .ft span.you { color: var(--cart-you-text); }
 .tag { top: auto; bottom: 150px; }
+
+/* ── fourth pass: who you play for (Nov 19) ── */
+.place { display: flex; align-items: baseline; gap: 10px; margin: 6px 0 10px; flex-wrap: wrap; }
+.place .t-title { font-family: var(--font-sans); }
+.place span { color: var(--text-muted); }
+.hg span.fut { box-shadow: inset 0 0 0 1.5px var(--line); }
+.ptab.race .th, .ptab.race .tr { grid-template-columns: 28px minmax(0, 1fr) 46px 46px 92px; }
+.st { font: 600 13px/18px var(--font-sans); text-align: right; }
+.st.out { color: var(--text-muted); } .st.lead { color: var(--cart-you-text); } .st.can { color: var(--text); }
+.tr.out b, .tr.out .v { color: var(--text-muted); }
+.clinch { background: var(--surface-1); border-radius: var(--radius-xl); padding: 12px 16px; box-shadow: var(--shadow-card); flex: none; display: grid; gap: 2px; }
+.clinch .k { color: var(--text-muted); }
