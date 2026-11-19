@@ -941,6 +941,13 @@ Still open: nothing blocking. Design direction (section 9) is final.
     naming your cart in the lobby (cart names are off), Tee times and teams › from the host lobby, See what players see.
     **Touches joining and the scoring gate: full smoke run before it ships.**
 
+  - **Smoke (Nov 19):** `tests/smoke031.mjs` (`npm run test:smoke031`, iPhone 15/16 size): 43 checks, all passing, for
+    the lobby for every round (server `not_open`, the invite → Find my name → the lobby with the countdown, Open now in
+    place, Scoring is open → Enter), 2v2 partners on two phones (Next waits, Switch it up, stretches, 031 Board /
+    Matches, own entry wins), Everyone alone with one phone entering five (grown card folds by itself, the race, the
+    offline queue), the 8-cart round from one phone, Same all 18, Stroke play. `tests/smoke.mjs` has been stale since
+    the calm Enter (021, Nov 5): it still taps 016's `.ry-ecard` pads and stops at hole 1 (on `main` too).
+
 ## 13. V2 backlog (running list)
 
 - **Carryovers (skins-style):** a tied point rolls onto the next hole instead of halving, so the next hole can be worth 3–4 points. Open design question: does an unresolved carry die at the end of a 6-hole rotation, or roll into the next opponent?

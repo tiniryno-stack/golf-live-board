@@ -308,7 +308,9 @@ file). Token cost matters more than coverage here.
 npm install
 npm test               # 116 unit tests (incl. race.test.mjs, seasons.test.mjs, ryder.test.mjs): scoring + headlines + course data + names/crews + games (2v2, at the turn, 6-player match play, Partner “Rider” Cup for 6, Team Ryder Cup, tee times) + score marks + design tokens (drift, retired colors, type scale)
 npm run test:fit       # 160 checks: every screen at SE / 13 mini / 15-16 / Pro Max, no scroll on Enter
-npm run test:smoke     # 283 checks (incl. crews): multi-phone flows against the mock (join, swap, offline, rejoin,
+npm run test:smoke031  # 43 checks, the Nov 19 redesign on two phones: lobby gate + join + Open now, calm Enter per game
+                       # (grown card, own entry, offline queue, Switch it up), 031 Board / Matches. PW_CHROMIUM=/opt/pw-browsers/chromium here.
+npm run test:smoke     # STALE since Nov 5: still drives the 016 Enter and stops at its first hole. 283 checks (incl. crews): multi-phone flows against the mock (join, swap, offline, rejoin,
                        # reset/delete, back nine, Next waits for every score, grid/locks, recap,
                        # finalize + PIN unlock, add a course, which course?, names/nicknames/crew-mates, you-first pad,
                        # matches expand in place, 2v2, 3 carts for 6, own entry wins, Add to Home Screen move, test phones, blank-screen guards)
