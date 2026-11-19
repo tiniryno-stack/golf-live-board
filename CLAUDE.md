@@ -225,6 +225,10 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
 
 ## UI conventions (don't regress these)
 
+- **031 / 028 (Nov 19, branch `claude/magical-turing-pueufg`):** every game uses the calm Enter; the rest of your tee time
+  grows in place (no `ce-theirs` sheet). Board / Matches per `playfor.playFor` (`js/screens/play031.js`). The Enter notes
+  below describe the old Enter, now a fallback only.
+
 - **Enter (team game):** your cart's players as stacked rows (− · score mark · +, 88px / 112px on tall
   screens, shrinking by height tiers; ≥48px on an SE); the other cart = one slim row + Edit (then
   theirs is the card and yours the slim row with Back). **Individual (no carts):** "you first" hero

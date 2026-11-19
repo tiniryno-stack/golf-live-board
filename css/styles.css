@@ -2461,3 +2461,13 @@ html.light .gs-seg, [data-theme="light"] .gs-seg { background: var(--bg); }
 .tt-add { width: 100%; display: flex; align-items: center; gap: var(--space-3); padding: 0 var(--space-4); color: var(--text-muted); font-size: 15px; font-weight: 600; background: none; }
 .tt-peek { margin-top: var(--space-3); background: var(--surface-1); border-radius: var(--radius-xl); padding: var(--space-3) var(--space-4); display: grid; gap: 2px; font-size: 15px; line-height: 20px; }
 .gs-face .radio { border: 0; margin: 0; }
+
+/* 028 §2 · the same calm Enter for every game: grow slots for your card and the rest of your tee time (027). */
+.ce-slot[data-grow="ce-mine"] + .ce-slot > .g-row > .ce-line { border-top: 0; margin-top: 4px; }
+.ce-slot[data-grow="ce-mine"]:not(.open) + .ce-slot > .g-card > .ce-their { margin-top: 4px; }
+.ce-fold { position: relative; }
+.ce-fold::before { content: ''; position: absolute; left: -10px; top: 12px; bottom: 12px; width: 3px; border-radius: 2px; background: var(--cart-you); pointer-events: none; } /* 022 §1 rail, in the gutter */
+.ce-plus { font-family: var(--font-mono); font-size: 15px; font-weight: 700; color: var(--text-muted); }
+.ce-their .ce-own { height: 52px; }
+.ce-their .ce-own:first-child, .ce-their .ce-row:first-child { border-top: 0; }
+.ce-cmp { width: 100%; text-align: left; background: none; color: var(--text); padding: 0; }

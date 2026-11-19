@@ -11,6 +11,7 @@
 
 import { isRider } from './riderview.js';
 import { fmtPts } from './scoring.js';
+import { dec } from './race.js';
 
 export function playFor(snap) {
   const st = snap?.settings || {};
@@ -124,4 +125,50 @@ export function groupsFit(groups, n) {
   if (!Array.isArray(groups)) return false;
   const flat = groups.flat();
   return flat.length === n && new Set(flat).size === n && flat.every((i) => Number.isInteger(i) && i >= 0 && i < n);
+}
+
+// ───────────────────────────────────────────── 028 §2.1: Enter's line on top, for games without carts (pure)
+
+/**
+ * Everyone alone: `3½ PTS · 2ND` + `Chris +1` (you lead: `1 ahead of Chris`, tied: `level with Chris`).
+ * Stroke play: `+3 · 3RD` + `Sam +1` (you lead: `1 ahead of Sam`). Green (`you`) only when you're 1st / T1st.
+ * Returns { standing, context, you } or null (no game line: you're not on the list, or nothing posted yet).
+ */
+export function enterLine(snap, mePid) {
+  const g = snap.game;
+  const me = snap.playerById.get(mePid);
+  if (!me) return null;
+  const ORD = (n) => ordinal(n).toUpperCase();
+  if (g?.type === 'splitPoint') {
+    const st = g.liveStandings;
+    const mine = st.find((s) => snap.teamById.get(s.teamId)?.playerIds.includes(mePid));
+    if (!mine || !st.some((s) => s.holesPlayed > 0)) return null;
+    const nm = (s) => snap.teamById.get(s.teamId).name;
+    const tied = st.filter((s) => s.rank === mine.rank).length > 1;
+    const standing = `${dec(mine.points)} PTS · ${tied ? 'T' : ''}${ORD(mine.rank)}`; // 031: one decimal
+    const leaders = st.filter((s) => s.rank === 1);
+    let context;
+    if (mine.rank === 1) {
+      const others = leaders.filter((s) => s !== mine);
+      const next = st.find((s) => s.rank > 1);
+      context = others.length ? `level with ${others.map(nm).join(' + ')}` : next ? `${dec(mine.points - next.points)} ahead of ${nm(next)}` : '';
+    } else context = `${nm(leaders[0])} +${dec(leaders[0].points - mine.points)}`;
+    return { standing, context, you: mine.rank === 1 };
+  }
+  if (!g) {
+    const played = snap.players.filter((p) => p.thru > 0).sort((a, b) => a.grossToPar - b.grossToPar);
+    if (!me.thru || !played.length) return null;
+    const rank = played.findIndex((p) => p.grossToPar === me.grossToPar) + 1;
+    const tied = played.filter((p) => p.grossToPar === me.grossToPar).length > 1;
+    const top = played[0];
+    const par = (n) => (n === 0 ? 'E' : n > 0 ? `+${n}` : `−${-n}`);
+    let context;
+    if (rank === 1) {
+      const level = played.filter((p) => p !== me && p.grossToPar === me.grossToPar);
+      const next = played.find((p) => p.grossToPar > me.grossToPar);
+      context = level.length ? `level with ${level.map((p) => p.name).join(' + ')}` : next ? `${next.grossToPar - me.grossToPar} ahead of ${next.name}` : '';
+    } else context = `${top.name} ${par(top.grossToPar)}`;
+    return { standing: `${par(me.grossToPar)} · ${tied ? 'T' : ''}${ORD(rank)}`, context, you: rank === 1 };
+  }
+  return null;
 }

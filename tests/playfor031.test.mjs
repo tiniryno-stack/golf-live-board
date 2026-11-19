@@ -108,3 +108,19 @@ test('031 step 3 (new rounds only): a hole is one point, stretches decide partne
   const s8 = compute(ev8, []);
   assert.deepEqual([playFor(s8), s8.game.matches.length, s8.game.matches[0].total], ['oneMatch', 2, 18]);
 });
+
+test('028 Enter line on top: Everyone alone and Stroke play, leading, trailing and tied', async () => {
+  const { enterLine } = await import('../js/playfor.js');
+  const sb = scorebook();
+  sb.post(1, { an: 4, se: 5, sa: 3, ja: 5 });
+  sb.post(2, { an: 4, se: 4, sa: 5, ja: 4 });
+  const alone = compute(four({ solo: true }), sb.rows()); // sa 1, an ⅓, se ⅓, ja ⅓
+  assert.deepEqual(enterLine(alone, 'an'), { standing: '0.3 PTS · T2ND', context: 'SA +0.7', you: false });
+  assert.deepEqual(enterLine(alone, 'sa'), { standing: '1 PTS · 1ST', context: '0.7 ahead of AN', you: true });
+  const stroke = compute(four({}), sb.rows()); // par 4 + 4? to par from the test course
+  const line = enterLine(stroke, 'an');
+  assert.match(line.standing, /^(E|[+−]\d+) · T?\d+(ST|ND|RD|TH)$/);
+  const lead = stroke.players.filter((p) => p.thru).sort((a, b) => a.grossToPar - b.grossToPar)[0];
+  assert.equal(enterLine(stroke, lead.id).you, true);
+  assert.equal(enterLine(compute(four({}), []), 'an'), null, 'nothing posted: no line');
+});

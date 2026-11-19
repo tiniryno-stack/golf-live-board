@@ -1318,7 +1318,7 @@ function draw(opts) {
   } else {
     pendingContent = false;
     const top = content.scrollTop;
-    const grown = userAction ? growMeasure(content) : null; // 027: only a tap grows / folds; redraws jump to the end
+    const grown = userAction || opts.grow ? growMeasure(content) : null; // 027: only a tap grows / folds; redraws jump to the end
     content.innerHTML = ready ? screen.render(app) : renderRoundState();
     content.scrollTop = top;
     if (ready) screen.mount?.(content, app);

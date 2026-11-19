@@ -907,6 +907,21 @@ Still open: nothing blocking. Design direction (section 9) is final.
     rounds carries `holePoint` / `dayBy`, so every played round scores exactly as before. Tests in
     `tests/playfor031.test.mjs`. One decimal: the race and the Everyone alone Board (step 2); `fmtPts` keeps ½.
 
+  - **Step 5 · The same Enter for every game (028 §2).** 2v2, Everyone alone and Stroke play now use the calm Enter
+    (`ryderEnterView`) like the cart games and Team Ryder Cup. `ceCarts(app, h)`: you first, then your partner, then the
+    rest of your tee time; games without carts = you alone in your card + everyone else as one quiet row (`ceQuiet`:
+    names + marks, 4 or more = missing first, two names, `+N`). The line on top: 2v2 from `matchState` (first hole with
+    a new partner: `Holes 10–18 · with Sean`); Everyone alone / Stroke play from pure `playfor.enterLine` (`3.3 PTS ·
+    T2ND · Jake +0.8`, `+3 · T3RD · Sam +1`; tested). **Grow in place replaces the "Their scores" sheet (027):** your card
+    and each quiet row are `.grow` slots (`data-grow="ce-mine"` / `ce-t-<id>`), `app.ui.ceOpen = { hole, t }`; open,
+    the line reads `Entering for Sean, Sam + Jake · Done` (`Entering for N players` with 4+), your card folds into a
+    row with the green rail; `ceTheirCard`: up to two players get pads, three or more get one pad row (first missing,
+    or the one tapped: `ui.cePad`) + 52 px rows (`from their phone` / `tap to enter` / `entered by you`); a 5–6 tee
+    time folds the yardage card while open. It folds by itself 1.2 s after their last score (`app.render({ grow: true })`
+    animates it), on Done, or on a tap on your row. Next hole while only others are missing grows their card and the
+    status reads `Jake hasn’t got a score on 10 yet.` The old Enter (`individualView`, steppers) is only a fallback now.
+    **Touches score entry: smoke run before it ships.**
+
 ## 13. V2 backlog (running list)
 
 - **Carryovers (skins-style):** a tied point rolls onto the next hole instead of halving, so the next hole can be worth 3–4 points. Open design question: does an unresolved carry die at the end of a 6-hole rotation, or roll into the next opponent?
