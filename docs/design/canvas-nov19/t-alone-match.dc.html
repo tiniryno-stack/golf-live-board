@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Everyone alone, Matches, the race as built today</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="kit.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400..800&family=Geist+Mono:wght@400..700&display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div class="scr" data-theme="{{theme}}" style="width: 393px; height: 659px; padding: 0; position: relative">
+<img class="shot" src="/_blob/b5eea10d034f8ca46c31f87339245561" alt="The race on Matches, as the app shows it today: Sean leads by a half point with 11 left, a lock line, and points by hole for each player">
+<span class="tag t-label">Live app today · keep</span>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":393,"height":659}}'>
+class Component extends DCLogic {
+renderVals() {
+return { theme: this.props.theme ?? 'dark' };
+}
+}
+</script>
+</body>
+</html>

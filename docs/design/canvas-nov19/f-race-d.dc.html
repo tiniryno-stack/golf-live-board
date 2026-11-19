@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Everyone alone, Matches, option D, holes you need</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="kit.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400..800&family=Geist+Mono:wght@400..700&display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div class="scr pad-tab" data-theme="{{theme}}" style="width: 393px; height: 659px">
+<div class="tbar"><span class="av">A</span><b>Andrew</b><span class="tr">Everyone alone · Bridlewood</span><span class="ib"><svg class="i s20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.6" fill="currentColor" stroke="none"/></svg></span></div>
+<div class="kick t-label">The race · thru 15 · 3 holes left</div>
+<div class="place"><span class="t-title">2nd</span><span class="t-body">win all 3 to catch Chris</span></div>
+<div class="pips">
+<div class="pr t-label"><span>Holes you need</span><span style="text-align: right">Pts</span><span class="c">16</span><span class="c">17</span><span class="c">18</span></div>
+<div class="pr"><b>Chris</b><span class="p">5.3</span><span class="pip need"></span><span class="pip free"></span><span class="pip free"></span></div>
+<div class="pr me"><b>Andrew</b><span class="p">3.3</span><span class="pip need"></span><span class="pip need"></span><span class="pip need"></span></div>
+<div class="pr"><b>Jake</b><span class="p">2.5</span><span class="pip need"></span><span class="pip need"></span><span class="pip need"></span></div>
+<div class="pr out"><b>Sam</b><span class="p">2.0</span><span class="pip x"></span><span class="pip x"></span><span class="pip x"></span></div>
+<div class="pr out"><b>Sean</b><span class="p">1.8</span><span class="pip x"></span><span class="pip x"></span><span class="pip x"></span></div>
+</div>
+<div class="gap8"></div>
+<div class="t-small muted" style="padding: 0 4px">Filled = a hole you have to win alone. Chris needs just one more to lock it. Grey = out of it.</div>
+<div class="tabbar"><span><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 21V4"/><path d="M6 4h11l-3 4 3 4H6"/></svg></span><span class="on"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="8.5" cy="12" r="4.5"/><circle cx="15.5" cy="12" r="4.5"/></svg></span><span><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M5 12h10M5 17h7"/></svg></span><span><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 10h16M4 15h16M10 4v16M15 4v16"/></svg></span></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":393,"height":659}}'>
+class Component extends DCLogic {
+renderVals() {
+return { theme: this.props.theme ?? 'dark' };
+}
+}
+</script>
+</body>
+</html>

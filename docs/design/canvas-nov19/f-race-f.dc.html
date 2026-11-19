@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Everyone alone, Matches, option F, your number</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="kit.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400..800&family=Geist+Mono:wght@400..700&display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div class="scr pad-tab" data-theme="{{theme}}" style="width: 393px; height: 659px">
+<div class="tbar"><span class="av">A</span><b>Andrew</b><span class="tr">Everyone alone · Bridlewood</span><span class="ib"><svg class="i s20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.6" fill="currentColor" stroke="none"/></svg></span></div>
+<div class="kick t-label">The race · thru 15 · 3 holes left</div>
+<div class="place"><span class="t-title">2nd</span><span class="t-body">2 back of Chris</span></div>
+<div class="box" style="display: grid; gap: 10px">
+<span class="t-label you">You need all 3</span>
+<div class="need3">
+<div class="lit"><b>16</b><span>next</span></div>
+<div><b>17</b><span>win it</span></div>
+<div><b>18</b><span>win it</span></div>
+</div>
+<span class="t-small muted">Win each one alone. A tie on any of them and Chris has it.</span>
+</div>
+<div class="gap8"></div>
+<div class="box" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px">
+<div style="display: grid; gap: 2px"><b class="t-row">Chris needs 1</b><span class="t-small muted">Any hole alone and it's over.</span></div>
+<span class="mini"><i class="n"></i><i></i><i></i></span>
+</div>
+<div class="gap12"></div>
+<div class="chips"><span class="t-label">Alive</span><span class="pill">Chris</span><span class="pill you">Andrew</span><span class="pill">Jake</span></div>
+<div class="gap8"></div>
+<div class="chips"><span class="t-label">Out</span><span class="pill out">Sam</span><span class="pill out">Sean</span></div>
+<div class="tabbar"><span><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 21V4"/><path d="M6 4h11l-3 4 3 4H6"/></svg></span><span class="on"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="8.5" cy="12" r="4.5"/><circle cx="15.5" cy="12" r="4.5"/></svg></span><span><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M5 12h10M5 17h7"/></svg></span><span><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 10h16M4 15h16M10 4v16M15 4v16"/></svg></span></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":393,"height":659}}'>
+class Component extends DCLogic {
+renderVals() {
+return { theme: this.props.theme ?? 'dark' };
+}
+}
+</script>
+</body>
+</html>

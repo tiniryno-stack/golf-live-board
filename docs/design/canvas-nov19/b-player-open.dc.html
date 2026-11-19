@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Board, tap a player, their round card as built</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="kit.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400..800&family=Geist+Mono:wght@400..700&display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div class="scr" data-theme="{{theme}}" style="width: 393px; height: 659px">
+<div class="tbar"><span class="av">A</span><b>Andrew</b><span class="tr">Bridlewood · Sun</span></div>
+<div class="bug">
+<div class="k t-label"><span>Leaderboard · official thru 14</span><span>4 left</span></div>
+</div>
+<div class="scrim"></div>
+<div class="sheet">
+<div class="grab"></div>
+<div class="sh-h"><b class="t-row">Chris</b><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></div>
+<div class="ps-top"><div class="w"><b>1st · 4.3 points</b><span>3 holes won · 3 split · thru 14</span></div><div class="tot"><div class="t-xl">60</div><small>+3 gross</small></div></div>
+<div class="pnine">
+<div class="hd"><b>Front 9</b><span>39 · +2</span></div>
+<div class="pholes">
+<div class="ph"><u>1</u><span class="mk">5</span><small>par 5</small></div>
+<div class="ph"><u>2</u><span class="mk c">3</span><small>par 4</small></div>
+<div class="ph"><u>3</u><span class="mk s">4</span><small>par 3</small></div>
+<div class="ph"><u>4</u><span class="mk">4</span><small>par 4</small></div>
+<div class="ph"><u>5</u><span class="mk s">5</span><small>par 4</small></div>
+<div class="ph"><u>6</u><span class="mk">5</span><small>par 5</small></div>
+<div class="ph"><u>7</u><span class="mk c">2</span><small>par 3</small></div>
+<div class="ph"><u>8</u><span class="mk s">5</span><small>par 4</small></div>
+<div class="ph"><u>9</u><span class="mk s">6</span><small>par 5</small></div>
+</div>
+</div>
+<div class="pnine">
+<div class="hd"><b>Back 9</b><span>21 thru 5 · +1</span></div>
+<div class="pholes">
+<div class="ph"><u>10</u><span class="mk">4</span><small>par 4</small></div>
+<div class="ph"><u>11</u><span class="mk c">2</span><small>par 3</small></div>
+<div class="ph"><u>12</u><span class="mk s">5</span><small>par 4</small></div>
+<div class="ph"><u>13</u><span class="mk">5</span><small>par 5</small></div>
+<div class="ph"><u>14</u><span class="mk s">5</span><small>par 4</small></div>
+<div class="ph"><u>15</u><span class="mk muted">–</span><small>par 3</small></div>
+<div class="ph"><u>16</u><span class="mk muted">–</span><small>par 4</small></div>
+<div class="ph"><u>17</u><span class="mk muted">–</span><small>par 5</small></div>
+<div class="ph"><u>18</u><span class="mk muted">–</span><small>par 4</small></div>
+</div>
+</div>
+<div class="pstats">
+<div class="pstat"><b>3</b><span>Birdies</span></div>
+<div class="pstat"><b>5</b><span>Pars</span></div>
+<div class="pstat"><b>6</b><span>Bogeys</span></div>
+<div class="pstat"><b>0</b><span>Double+</span></div>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":393,"height":659}}'>
+class Component extends DCLogic {
+renderVals() {
+return { theme: this.props.theme ?? 'dark' };
+}
+}
+</script>
+</body>
+</html>

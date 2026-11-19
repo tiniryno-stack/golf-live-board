@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>2v2 Board, option C, holes won, halved, lost</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="kit.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400..800&family=Geist+Mono:wght@400..700&display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div class="scr pad-tab" data-theme="{{theme}}" style="width: 393px; height: 659px">
+<div class="tbar"><span class="av">A</span><b>Andrew</b><span class="tr">Twin Creeks · Sat</span><span class="ib"><svg class="i s20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.6" fill="currentColor" stroke="none"/></svg></span></div>
+<div class="h2h">
+<div class="k t-label">Thru 11 · 7 left</div>
+<div class="sides">
+<div class="sd"><b class="you">Andrew</b><b class="you">Sam</b></div>
+<div class="mid t-title you">2 up</div>
+<div class="sd r"><b>Sean</b><b>Jake</b></div>
+</div>
+<div class="tally"><div class="us"><b>5</b><span>holes won</span></div><div><b>3</b><span>halved</span></div><div><b>3</b><span>lost</span></div></div>
+</div>
+<div class="gap12"></div>
+<div class="scroll">
+<div class="ptab">
+<div class="th t-label"><span></span><span>Player</span><span>Thru</span><span>Gross</span><span>Proj</span><span>Net</span></div>
+<div class="tr"><span class="pos">1</span><b>Jake</b><span>11</span><span class="v">+3</span><span>77</span><span class="v">−2</span></div>
+<div class="tr me"><span class="pos">2</span><b>Andrew</b><span>11</span><span class="v">+4</span><span>79</span><span class="v">−1</span></div>
+<div class="tr"><span class="pos">T3</span><b>Sam</b><span>11</span><span class="v">+6</span><span>82</span><span class="v">+1</span></div>
+<div class="tr"><span class="pos">T3</span><b>Sean</b><span>11</span><span class="v">+6</span><span>82</span><span class="v">+2</span></div>
+</div>
+</div>
+<div class="tabbar"><span><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 21V4"/><path d="M6 4h11l-3 4 3 4H6"/></svg></span><span><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="8.5" cy="12" r="4.5"/><circle cx="15.5" cy="12" r="4.5"/></svg></span><span class="on"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M5 12h10M5 17h7"/></svg></span><span><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 10h16M4 15h16M10 4v16M15 4v16"/></svg></span></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":393,"height":659}}'>
+class Component extends DCLogic {
+renderVals() {
+return { theme: this.props.theme ?? 'dark' };
+}
+}
+</script>
+</body>
+</html>

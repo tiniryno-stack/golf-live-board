@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>2v2 for eight, opponents rotate, Board</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="kit.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400..800&family=Geist+Mono:wght@400..700&display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div class="scr pad-tab" data-theme="{{theme}}" style="width: 393px; height: 659px">
+<div class="tbar"><span class="av">A</span><b>Andrew</b><span class="tr">2v2 · Twin Creeks</span><span class="ib"><svg class="i s20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.6" fill="currentColor" stroke="none"/></svg></span></div>
+<div class="bug">
+<div class="k t-label"><span>Leaderboard · official thru 9</span><span>9 left</span></div>
+<div class="say"><div class="t-title">6 back of 1st</div><span>Mike + Tyler lead</span></div>
+<div class="hd t-label"><span>Pos</span><span>Cart</span><span>Pts</span><span>Thru</span></div>
+<div class="r"><span class="pos">1</span><b>Mike + Tyler</b><span class="sc">14</span><span class="th">10</span></div>
+<div class="r"><span class="pos">2</span><b>Chris + Matt</b><span class="sc">9</span><span class="th">9</span></div>
+<div class="r me"><span class="pos">3</span><b>Andrew + Sean</b><span class="sc">8</span><span class="th">9</span></div>
+<div class="r"><span class="pos">4</span><b>Sam + Jake</b><span class="sc">7</span><span class="th">10</span></div>
+</div>
+<div class="gap12"></div>
+<div class="seg"><span class="on">Standings</span><span>Players</span></div>
+<div class="gap8"></div>
+<div class="scroll">
+<div class="rot lit"><span class="t-label you">Holes 7–12 · live</span><span class="t-label">thru 3</span></div>
+<div class="mrow"><div class="h up"><span class="you">Andrew</span><span class="you">Sean</span></div><div class="h r"><span>Sam</span><span>Jake</span></div><span class="flagp l">4–2</span></div>
+<div class="mrow"><div class="h"><span>Chris</span><span>Matt</span></div><div class="h r up"><span>Mike</span><span>Tyler</span></div><span class="flagp r">5–1</span></div>
+</div>
+<div class="tabbar"><span><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 21V4"/><path d="M6 4h11l-3 4 3 4H6"/></svg></span><span><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="8.5" cy="12" r="4.5"/><circle cx="15.5" cy="12" r="4.5"/></svg></span><span class="on"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M5 12h10M5 17h7"/></svg></span><span><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 10h16M4 15h16M10 4v16M15 4v16"/></svg></span></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":393,"height":659}}'>
+class Component extends DCLogic {
+renderVals() {
+return { theme: this.props.theme ?? 'dark' };
+}
+}
+</script>
+</body>
+</html>
