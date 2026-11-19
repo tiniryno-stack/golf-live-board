@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>028 · Game slots</title>
+<link rel="stylesheet" href="../../027-feel/mockups/kit.css">
+<style>
+  .lead { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: end; gap: 4px 12px; }
+  .lead .k { grid-column: 1 / -1; }
+  .fin { text-align: center; display: grid; justify-items: center; gap: 4px; padding: 18px 20px 20px; }
+  .fin .btn { margin-top: 8px; }
+  .tp { display: grid; grid-template-columns: 52px minmax(0,1fr) auto; align-items: center; gap: 10px; min-height: 52px; border-top: 1px solid var(--line-faint); }
+  .tp:first-child { border-top: 0; }
+  .tp .tpar { font: 700 17px var(--font-mono); }
+  .tp .last { display: inline-flex; gap: 6px; }
+  .tp b { font-size: 17px; font-weight: 600; }
+  .rot { height: 40px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: space-between; padding: 0 12px; box-shadow: inset 0 0 0 1px var(--line); }
+  .rot.lit { box-shadow: inset 0 0 0 1.5px var(--cart-you), var(--glow-you); }
+  .gc { display: grid; gap: 8px; }
+  .gc .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .gc .stats div { background: var(--surface-2); border-radius: var(--radius-md); padding: 8px 10px; display: grid; }
+  .gc .stats b { font: 700 17px var(--font-mono); }
+  .mu { display: flex; justify-content: space-between; align-items: center; min-height: 44px; border-top: 1px solid var(--line-faint); }
+  .mu:first-child { border-top: 0; }
+</style>
+</head><body>
+<script type="module">
+import * as K from '../../027-feel/mockups/kit.js';
+const { i, mark, prow, crow, qrow, foot, tabbar, enterHead, green, mline, tbar, seg } = K;
+
+// ───────────── Enter ─────────────
+// slot: the line on top; mine: your pad rows (1 or 2); rest: the quiet row / open card
+function enter({ hole = 6, par = 4, line, mine, rest, next = 'Next hole · 2 to go', go = false, status = '', warn = false, yard = true, tab = 0, pins = '' }) {
+  return `<div class="scr enter">${enterHead(hole, par)}${yard ? green(142, 151, 160) : ''}${line}${mine}${rest}<div class="flex"></div>${foot(next, go, status, warn)}${tabbar(tab)}${pins}</div>`;
+}
+const cart = (rows) => `<div class="card mine">${rows.join('')}</div>`;
+const solo = (row) => `<div class="card mine">${row}</div>`;
+const openCard = (rows) => `<div class="card" style="margin-top:4px">${rows.join('')}</div>`;
+const folded = (ps, par) => qrow(ps, par, '', { mine: true, first: true });
+const P4 = 4, P5 = 5;
+
+const S = {};
+// the five games, mid-hole
+S['enter-ryder'] = () => enter({ hole: 8, line: mline('Andrew + Alex', '2 DN', false, 'vs Josh + Brandon'),
+  mine: cart([prow('Andrew', P4, 4), prow('Alex', P4, null)]), rest: qrow([['Josh', null], ['Brandon', null]], P4, 'Enter'), next: 'Next hole · 3 to go' });
+S['enter-rider'] = () => enter({ hole: 10, line: mline('Andrew + Sean', '1 UP', true, 'vs Sam + Jake'),
+  mine: cart([prow('Andrew', P4, 4), prow('Sean', P4, 5)]), rest: qrow([['Sam', 4], ['Jake', null]], P4, 'Enter'), next: 'Next hole · 1 to go' });
+S['enter-2v2'] = () => enter({ hole: 12, line: mline('Andrew + Sam', '1 UP', true, 'vs Sean + Jake'),
+  mine: cart([prow('Andrew', P4, 3), prow('Sam', P4, null)]), rest: qrow([['Sean', null], ['Jake', null]], P4, 'Enter'), next: 'Next hole · 3 to go' });
+S['enter-2v2-switch'] = () => enter({ hole: 10, line: mline('Holes 10–18 · with Sean', 'AS', false, 'vs Sam + Jake'),
+  mine: cart([prow('Andrew', P4, null), prow('Sean', P4, null)]), rest: qrow([['Sam', null], ['Jake', null]], P4, 'Enter'), next: 'Next hole · 4 to go',
+  pins: K.pin(1, 'left:4px;top:150px') });
+S['enter-match'] = () => enter({ line: mline('Andrew', '3½ PTS · 2ND', false, 'Chris +1'),
+  mine: solo(prow('Andrew', P4, 4, '1 stroke · net 3')), rest: qrow([['Sean', 4], ['Sam', 5], ['Jake', null]], P4, 'Enter', { grp: '' }), next: 'Next hole · 1 to go' });
+S['enter-scorecard'] = () => enter({ hole: 6, par: P5, line: mline('Andrew', '+3 · 3RD', false, 'Sam +1'),
+  mine: solo(prow('Andrew', P5, 5)), rest: qrow([['Sean', 4], ['Sam', null], ['Jake', null]], P5, 'Enter'), next: 'Next hole · 2 to go' });
+S['enter-match-lead'] = () => enter({ line: mline('Andrew', '4½ PTS · 1ST', true, '1 ahead of Chris'),
+  mine: solo(prow('Andrew', P4, null)), rest: qrow([['Sean', null], ['Sam', null], ['Jake', null]], P4, 'Enter'), next: 'Next hole · 4 to go' });
+
+// the quiet row: everyone in / some missing / grown open (4-ball, no carts)
+S['quiet-all-in'] = () => enter({ line: mline('Andrew', '3½ PTS · 2ND', false, 'Chris +1'),
+  mine: solo(prow('Andrew', P4, 4)), rest: qrow([['Sean', 4], ['Sam', 5], ['Jake', 3]], P4, 'Edit'), next: 'Next hole', go: true });
+S['quiet-open'] = () => enter({ line: mline('Entering for Sean, Sam + Jake', '', false, '', 'Done'),
+  mine: folded([['Andrew', 4]], P4), rest: openCard([crow('Sean', 4, P4, 'from his phone'), prow('Sam', P4, null, '', 'waiting · tap a score'), crow('Jake', null, P4, 'tap to enter')]),
+  next: 'Next hole · 2 to go', pins: K.pin(1, 'left:356px;top:256px') });
+S['quiet-open-next'] = () => enter({ line: mline('Entering for Sean, Sam + Jake', '', false, '', 'Done'),
+  mine: folded([['Andrew', 4]], P4), rest: openCard([crow('Sean', 4, P4, 'from his phone'), crow('Sam', 5, P4, 'entered by you'), prow('Jake', P4, null, '', 'waiting · tap a score')]),
+  next: 'Next hole · 1 to go' });
+
+// tee time sizes
+S['tee-2'] = () => enter({ line: mline('Andrew', '1 UP', true, 'vs Sean'),
+  mine: solo(prow('Andrew', P4, 4)), rest: qrow([['Sean', null]], P4, 'Enter'), next: 'Next hole · 1 to go' });
+S['tee-3-open'] = () => enter({ line: mline('Entering for Sean + Sam', '', false, '', 'Done'),
+  mine: folded([['Andrew', 4]], P4), rest: openCard([prow('Sean', P4, 5, '', 'entered by you'), prow('Sam', P4, null, '', 'waiting · tap a score')]), next: 'Next hole · 1 to go' });
+S['tee-6'] = () => enter({ line: mline('Andrew', '2 PTS · 4TH', false, 'Chris +2'),
+  mine: solo(prow('Andrew', P4, 4)), rest: qrow([], P4, 'Enter', { more: 'Chris, Jake +3' }), next: 'Next hole · 4 to go',
+  pins: K.pin(1, 'left:4px;top:290px') });
+S['tee-6-open'] = () => enter({ yard: false, line: mline('Entering for 5 players', '', false, '', 'Done'),
+  mine: folded([['Andrew', 4]], P4), rest: openCard([crow('Chris', 4, P4, 'from his phone'), prow('Jake', P4, null, '', 'waiting · tap a score'), crow('Mike', null, P4, 'tap to enter'), crow('Tyler', null, P4, 'tap to enter'), crow('Sam', 5, P4, 'from his phone')]),
+  next: 'Next hole · 3 to go', pins: K.pin(1, 'left:356px;top:58px') });
+
+// Next hole waiting, then the tap that names who's missing
+S['next-waiting'] = () => enter({ hole: 10, line: mline('Andrew + Sean', '1 UP', true, 'vs Sam + Jake'),
+  mine: cart([prow('Andrew', P4, 4), prow('Sean', P4, 5)]), rest: qrow([['Sam', 4], ['Jake', null]], P4, 'Enter'), next: 'Waiting on Jake' });
+S['next-tapped'] = () => enter({ hole: 10, line: mline('Entering for Sam + Jake', '', false, '', 'Done'),
+  mine: folded([['Andrew', 4], ['Sean', 5]], P4), rest: openCard([crow('Sam', 4, P4, 'from his phone'), prow('Jake', P4, null, '', 'missing · tap a score')]),
+  next: 'Waiting on Jake', status: 'Jake hasn’t got a score on 10 yet.' });
+
+// ───────────── Board: the leader card ─────────────
+const lbRow = (rk, nm, sub, pt, color, w, me = false) => `<div class="lb ${me ? 'me' : ''}" style="color:var(--${color})"><span class="rk">${rk}</span><span class="nm" style="color:var(--text)">${nm}${me ? '<em>YOU</em>' : ''}</span><span class="sub">${sub}</span><span class="bar"><i style="width:${w}%"></i></span><span class="pt">${pt}</span></div>`;
+const leader = (k, name, color, num, sub) => `<div class="hero lead"><span class="t-label muted k">${k}</span><div><div class="t-title" style="color:var(--${color})">${name}</div><div class="t-body muted">${sub}</div></div><div class="t-xl">${num}</div></div>`;
+const board = (right, top, list, more = '', sw = true) => `<div class="scr pad-tab" style="padding-bottom:0">${tbar('A', 'Andrew', right, { share: true })}${top}<div class="gap12"></div>${sw ? seg(['Standings', 'Players'], 0) + '<div class="gap8"></div>' : ''}<div class="box tight" style="padding:2px 0">${list}</div>${more}${tabbar(2, true)}</div>`;
+
+S['board-rider'] = () => board('Rider Cup · Sat',
+  leader('Leader · official thru 9', 'Shank Redemption', 'cart-b', '14', '6 ahead of you · Mike + Tyler'),
+  lbRow(1, 'Shank Redemption', 'Mike + Tyler · 1-0-0 · thru 10', '14', 'cart-b', 100) + lbRow(2, 'Bogey Boys', 'Chris + Matt · 1-0-0 · thru 9', '9', 'cart-d', 64)
+  + lbRow(3, "Hogan's Heroes", 'Andrew + Sean · 0-1-0 · thru 9', '8', 'cart-you', 57, true) + lbRow(4, 'Fore Play', 'Sam + Jake · 0-1-0 · thru 10', '7', 'cart-c', 50),
+  `<div class="gap12"></div><div class="rot lit"><span class="t-label you">Holes 7–12 · live</span><span class="mono" style="font-weight:700">thru 3</span></div>`);
+S['board-2v2'] = () => board('2v2 · Sat',
+  leader('Leader · thru 12', 'Jake', 'cart-c', '9½', '2 ahead of you'),
+  lbRow(1, 'Jake', 'with Sean 1–9 · with Sam 10–', '9½', 'cart-c', 100) + lbRow(2, 'Andrew', 'with Sam 1–9 · with Sean 10–', '7½', 'cart-you', 79, true)
+  + lbRow(3, 'Sean', 'with Jake 1–9 · with Andrew 10–', '7', 'cart-b', 74) + lbRow(4, 'Sam', 'with Andrew 1–9 · with Jake 10–', '5', 'cart-a', 53));
+S['board-match'] = () => board('Match play · Sun',
+  leader('Leader · official thru 14', 'Chris', 'cart-a', '4⅓', '1 ahead of you'),
+  lbRow(1, 'Chris', '3 won · 3 split · thru 14', '4⅓', 'cart-a', 100) + lbRow(2, 'Andrew', '2 won · 3 split · thru 14', '3⅓', 'cart-you', 77, true)
+  + lbRow(3, 'Jake', '1 won · 3 split · thru 14', '2½', 'cart-d', 58) + lbRow(4, 'Sam', '1 won · 2 split · thru 14', '2', 'cart-c', 46) + lbRow(5, 'Sean', '1 won · 2 split · thru 14', '1⅚', 'cart-b', 42));
+S['board-scorecard'] = () => board('Scorecard · Sun',
+  leader('Leader · low score to par', 'Sam', 'text', '+1', 'thru 5 · 2 ahead of you'),
+  lbRow(1, 'Sam', '25 thru 5 · 8:40', '+1', 'text-muted', 0) .replace('<span class="bar"><i style="width:0%"></i></span>', '<span></span>')
+  + lbRow(2, 'Jake', '26 thru 5 · 8:40', '+2', 'text-muted', 0).replace('<span class="bar"><i style="width:0%"></i></span>', '<span></span>')
+  + lbRow(3, 'Andrew', '27 thru 5 · 8:40', '+3', 'cart-you', 0, true).replace('<span class="bar"><i style="width:0%"></i></span>', '<span></span>')
+  + lbRow(4, 'Mike', '20 thru 4 · 8:50', '+4', 'text-muted', 0).replace('<span class="bar"><i style="width:0%"></i></span>', '<span></span>'),
+  '', false);
+S['board-tie'] = () => board('Match play · Sun',
+  leader('Tied for the lead · thru 14', 'Chris <span class="muted" style="font-weight:600">and</span> <span class="you">you</span>', 'text', '4⅓', 'each · Jake 1⅚ back'),
+  lbRow('T1', 'Andrew', '3 won · 3 split · thru 14', '4⅓', 'cart-you', 100, true) + lbRow('T1', 'Chris', '3 won · 3 split · thru 14', '4⅓', 'cart-a', 100)
+  + lbRow(3, 'Jake', '1 won · 3 split · thru 14', '2½', 'cart-d', 58) + lbRow(4, 'Sam', '1 won · 2 split · thru 14', '2', 'cart-c', 46) + lbRow(5, 'Sean', '1 won · 2 split · thru 14', '1⅚', 'cart-b', 42));
+S['board-before'] = () => board('Rider Cup · Sat',
+  `<div class="hero"><span class="t-label muted">First up · holes 1–6</span><div class="gap8"></div>
+   <div class="mu"><span class="t-row you">Hogan's Heroes</span><span class="muted">vs</span><span class="t-row cc">Fore Play</span></div>
+   <div class="mu"><span class="t-row cb">Shank Redemption</span><span class="muted">vs</span><span class="t-row cd">Bogey Boys</span></div>
+   <div class="gap4"></div><span class="t-body muted">Waiting for the first scores · 8:40 and 8:50</span></div>`,
+  [["Hogan's Heroes", 'Andrew + Sean', '8:40', 'cart-you', true], ['Fore Play', 'Sam + Jake', '8:40', 'cart-c'], ['Shank Redemption', 'Mike + Tyler', '8:50', 'cart-b'], ['Bogey Boys', 'Chris + Matt', '8:50', 'cart-d']]
+    .map(([n, p, t, c, me]) => lbRow('', n, p, '', c, 0, me).replace('<span class="bar"><i style="width:0%"></i></span>', '<span></span>').replace('<span class="pt"></span>', `<span class="pt mono" style="font-size:15px;color:var(--text-muted)">${t}</span>`)).join(''));
+S['board-grow'] = () => board('Match play · Sun',
+  leader('Leader · official thru 14', 'Chris', 'cart-a', '4⅓', '1 ahead of you'),
+  `<div class="lb" style="color:var(--cart-a);background:var(--surface-2);border-radius:var(--radius-lg)"><span class="rk">1</span><span class="nm" style="color:var(--text)">Chris</span><span class="sub">3 won · 3 split · thru 14 · <b style="color:var(--text)">Close</b></span><span class="bar"><i style="width:100%"></i></span><span class="pt">4⅓</span>
+    <div class="gc" style="grid-column:1/-1;margin-top:6px"><div class="stats"><div><b>3</b><span class="t-small muted">won alone</span></div><div><b>3</b><span class="t-small muted">split</span></div><div><b>+2</b><span class="t-small muted">to par</span></div></div>
+    <div class="t-small muted" style="display:flex;gap:10px;align-items:center">Last 3 · ${mark(3, 4, true)} ${mark(4, 4, true)} ${mark(5, 4, true)}<span style="margin-left:auto">Scorecard ›</span></div></div></div>`
+  + lbRow(2, 'Andrew', '2 won · 3 split · thru 14', '3⅓', 'cart-you', 77, true) + lbRow(3, 'Jake', '1 won · 3 split · thru 14', '2½', 'cart-d', 58),
+  '', true);
+
+// ───────────── Matches on a Scorecard round ─────────────
+const tp = (par, nm, cls, last) => `<div class="tp"><span class="tpar ${cls}">${par}</span><b class="${cls}">${nm}</b><span class="last">${last.map(([s, p]) => mark(s, p, true)).join('')}</span></div>`;
+S['matches-scorecard'] = () => `<div class="scr pad-tab">${tbar('A', 'Andrew', 'Scorecard · Sun')}
+  <div class="t-label muted">Matches · your group · thru 5</div><div class="t-title">2 back of Sam</div><div class="gap16"></div>
+  <div class="box tight">${tp('+1', 'Sam', '', [[4, 4], [2, 3], [5, 5]])}${tp('+2', 'Jake', '', [[5, 4], [3, 3], [5, 5]])}${tp('+3', 'Andrew', 'you', [[4, 4], [4, 3], [5, 5]])}${tp('+3', 'Sean', '', [[6, 4], [3, 3], [4, 5]])}</div>
+  <div class="gap8"></div><div class="t-small muted" style="display:flex;justify-content:space-between"><span>To par · holes 3, 4, 5</span><span style="color:var(--text);font-weight:600">Everyone on the Board ›</span></div>
+  <div class="flex"></div><div class="box peek" style="padding:12px 16px;display:grid;gap:4px"><span class="t-label">Next · hole 6 · par 5 · 512 yd</span><span class="t-row">Sam has 2 on you with 13 to play</span></div>${tabbar(1, true)}</div>`;
+S['matches-scorecard-before'] = () => `<div class="scr pad-tab">${tbar('A', 'Andrew', 'Scorecard · Sun')}
+  <div class="t-label muted">Matches · your group · 8:40</div><div class="t-title">Your group</div><div class="gap16"></div>
+  <div class="box tight">${['Andrew', 'Sean', 'Sam', 'Jake'].map((n, k) => `<div class="tp"><span class="tpar muted">E</span><b class="${k ? '' : 'you'}">${n}</b><span class="last"><span class="dash">–</span><span class="dash">–</span><span class="dash">–</span></span></div>`).join('')}</div>
+  <div class="gap8"></div><div class="t-small muted">Waiting for the first scores</div><div class="flex"></div>${tabbar(1)}</div>`;
+
+// ───────────── Final card ─────────────
+const final = (right, kicker, winner, wcolor, num, sub, list, organizer = true) => `<div class="scr pad-tab" style="padding-bottom:0">${tbar('A', 'Andrew', right, { share: true })}
+  <div class="hero fin"><span class="t-label muted">${kicker}</span><span class="muted" style="margin:6px 0 2px">${i('trophy')}</span>
+  <div class="t-title" style="color:var(--${wcolor})">${winner}</div><div class="t-xl">${num}</div><div class="t-body muted">${sub}</div>
+  <div class="btn p">Round recap</div><div class="btn o" style="margin-top:0">Share the result</div></div>
+  ${organizer ? `<div class="gap12"></div><div class="btn s" style="display:flex;gap:6px;justify-content:center">${i('lock', 's20')}Finalize round</div>` : ''}
+  <div class="gap12"></div>${list ? seg(['Standings', 'Players'], 0) + `<div class="gap8"></div><div class="box tight" style="padding:2px 0">${list}</div>` : ''}${tabbar(2)}</div>`;
+S['final-rider'] = () => final('Rider Cup · final', 'Final · 18 holes', 'Shank Redemption', 'cart-b', '24', 'points · Mike + Tyler win the day',
+  lbRow(1, 'Shank Redemption', 'Mike + Tyler · 3-0-0', '24', 'cart-b', 100) + lbRow(2, "Hogan's Heroes", 'Andrew + Sean · 2-1-0', '21½', 'cart-you', 90, true));
+S['final-2v2'] = () => final('2v2 · final', 'Final · 18 holes', 'Jake wins', 'cart-c', '15½', 'points · 3 ahead of Andrew',
+  lbRow(1, 'Jake', 'with Sean 1–9 · with Sam 10–18', '15½', 'cart-c', 100) + lbRow(2, 'Andrew', 'with Sam 1–9 · with Sean 10–18', '12½', 'cart-you', 81, true));
+S['final-match'] = () => final('Match play · final', 'Final · 18 holes', 'Chris wins', 'cart-a', '5⅓', 'points · 6 holes won outright',
+  lbRow(1, 'Chris', '6 won · 4 split', '5⅓', 'cart-a', 100) + lbRow(2, 'Andrew', '4 won · 5 split', '4⅚', 'cart-you', 90, true));
+S['final-scorecard'] = () => final('Scorecard · final', 'Final · 18 holes', 'Sam wins', 'text', '73', '+1 · 2 better than Jake', '', true)
+  .replace('</div>${tabbar', '</div>${tabbar');
+S['final-you'] = () => final('Match play · final', 'Final · 18 holes', 'You win', 'cart-you-text', '5⅓', 'points · 6 holes won outright',
+  lbRow(1, 'Andrew', '6 won · 4 split', '5⅓', 'cart-you', 100, true) + lbRow(2, 'Chris', '4 won · 5 split', '4⅚', 'cart-a', 90), false);
+S['final-shared'] = () => final('Match play · final', 'Final · 18 holes · shared', 'Chris and Andrew', 'text', '4⅓', 'each · level on holes won too, so they share it',
+  lbRow('T1', 'Andrew', '4 won · 3 split', '4⅓', 'cart-you', 100, true) + lbRow('T1', 'Chris', '4 won · 3 split', '4⅓', 'cart-a', 100));
+// the scorecard final adds the low-score list under the card instead of points
+S['final-scorecard'] = () => final('Scorecard · final', 'Final · 18 holes', 'Sam wins', 'text', '73', '+1 · 2 better than Jake',
+  lbRow(1, 'Sam', '73 · +1', '+1', 'text-muted', 0).replace(/<span class="bar">.*?<\/span><\/span>|<span class="bar"><i style="width:0%"><\/i><\/span>/, '<span></span>')
+  + lbRow(2, 'Jake', '75 · +3', '+3', 'text-muted', 0).replace('<span class="bar"><i style="width:0%"></i></span>', '<span></span>'), true)
+  .replace(`<div class="seg">`, `<div class="seg" style="display:none">`);
+K.boot(S);
+</script>
+</body></html>
