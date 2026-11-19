@@ -1,6 +1,6 @@
 # 031 · One Board
 
-Status: handed off (design), not built.
+Status: DRAFT, not approved. Do not build from this. The design is still being revised on the Claude Design canvas (second pass Nov 19); this file and the screenshots are the first pass and will be rewritten once Andrew approves the canvas.
 
 **What this is.** One Board for every game: one top card, one switch, one list, one Players table, one final card, and one color rule. It comes from the Game Screens page (`docs/design/games/`, Nov 18), which found four different tops, four switch labels, two Players tables, three sheets and three color rules. Built on **027** (grow in place, lit, one hero fact) and drawn with **032**'s games.
 

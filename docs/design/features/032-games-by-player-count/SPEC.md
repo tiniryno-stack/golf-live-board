@@ -1,6 +1,6 @@
 # 032 · Games by player count
 
-Status: handed off (design), not built.
+Status: DRAFT, not approved. Do not build from this. The design is still being revised on the Claude Design canvas (second pass Nov 19); this file and the screenshots are the first pass and will be rewritten once Andrew approves the canvas.
 
 **What this is.** Setup knows how many are playing when it reaches the Game step, so it shows only the games that fit. Five games become three, plus Team Ryder Cup for 16. How a hole is scored is a setting of the game you pick. Built on **027** (grow in place) and **030** (the step order).
 
