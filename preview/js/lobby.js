@@ -95,6 +95,29 @@ export function dayName(iso, nowMs, tz) {
   return shortDate(iso);
 }
 
+/**
+ * 029 §1.1: the lobby's hero by distance to YOUR start time. { kicker, hero, sub, lit, nodate }.
+ * 2+ days: "Saturday · Nov 22 · Twin Creeks" / "8:40" / "your start time · 4 days away"; tomorrow: "Tomorrow · …" /
+ * "8:40" / "your start time, Saturday"; today: "Today · …" / "2h 10m" | "42 min" | "1 min" | "Now" / "to your 8:40
+ * start time", lit (it's live). No date or time: nodate (the title says the organizer hasn't set it).
+ */
+export function lobbyHero(nowMs, { date, start, tz, course = '' }) {
+  const at = startAtFor(date, start, tz);
+  if (at == null) return { nodate: true, kicker: course, hero: '', sub: '', lit: false };
+  const days = dayNum(date) - dayNum(wallDate(nowMs, tz));
+  const clock = clock12(start);
+  const where = course ? ` · ${course}` : '';
+  const weekday = new Date(dayNum(date) * DAY).toLocaleDateString('en-US', { timeZone: 'UTC', weekday: 'long' });
+  if (days >= 2) {
+    const md = new Date(dayNum(date) * DAY).toLocaleDateString('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric' });
+    return { kicker: `${weekday} · ${md}${where}`, hero: clock, sub: `your start time · ${days} days away`, lit: false };
+  }
+  if (days === 1) return { kicker: `Tomorrow${where}`, hero: clock, sub: `your start time, ${weekday}`, lit: false };
+  const mins = Math.ceil((at - nowMs) / 60000);
+  const hero = days < 0 || mins <= 0 ? 'Now' : mins >= 60 ? `${Math.floor(mins / 60)}h ${mins % 60}m` : `${mins} min`;
+  return { kicker: `Today${where}`, hero, sub: `to your ${clock} start time`, lit: true };
+}
+
 /** Add minutes to "HH:MM" (wraps at midnight). */
 export function addMinutes(hhmm, mins) {
   const m = HHMM.exec(String(hhmm || ''));
@@ -109,10 +132,11 @@ const minutesOf = (hhmm) => { const m = HHMM.exec(String(hhmm || '')); return m 
 /** settings.lobby, cleaned up, or null (old rounds, other games). */
 export function lobbyOf(settings) {
   const l = settings?.lobby;
-  // Only Team Ryder Cup has a lobby (the server's gate checks the same).
-  if (!l || typeof l !== 'object' || Array.isArray(l) || String(settings.ryder) !== 'true') return null;
+  // 029 (Nov 19): every game can have a lobby (the server's _lobby_gate checks the same). Rounds without one: null.
+  if (!l || typeof l !== 'object' || Array.isArray(l)) return null;
   const n = l.notice && typeof l.notice === 'object' && l.notice.text ? { text: String(l.notice.text), at: l.notice.at || null, until: l.notice.until || null } : null;
   return {
+    ryder: String(settings.ryder) === 'true', // 025's draft stages are Team Ryder Cup only; every other game is ready from Setup
     stage: STAGES.includes(l.stage) ? l.stage : 'lobby',
     startTime: HHMM.test(String(l.startTime || '')) ? String(l.startTime) : '08:00',
     tz: validTz(l.tz) ? l.tz : 'UTC',
@@ -148,10 +172,12 @@ export function lobbyState(event, nowMs = Date.now()) {
   let stage = l.stage;
   const carts = hasCarts(roster);
   const opensMs = Date.parse(l.opensAt || '');
-  // A stage the roster doesn't support falls back to the highest one it does, never above the saved stage.
-  if ((stage === 'teams' || stage === 'ready') && !carts) stage = isPaired(roster) ? 'carts' : 'lobby';
-  if (stage === 'carts' && !isPaired(roster)) stage = 'lobby';
-  if (stage === 'ready' && !Number.isFinite(opensMs)) stage = 'teams';
+  if (l.ryder) {
+    // A stage the roster doesn't support falls back to the highest one it does, never above the saved stage.
+    if ((stage === 'teams' || stage === 'ready') && !carts) stage = isPaired(roster) ? 'carts' : 'lobby';
+    if (stage === 'carts' && !isPaired(roster)) stage = 'lobby';
+    if (stage === 'ready' && !Number.isFinite(opensMs)) stage = 'teams';
+  } else if (stage !== 'off') stage = Number.isFinite(opensMs) ? 'ready' : 'nodate'; // 029: teams come from Setup
   const open = stage === 'ready' && (l.openedEarly || nowMs >= opensMs);
   const date = event.played_on || null;
   const today = wallDate(nowMs, l.tz);
@@ -160,7 +186,7 @@ export function lobbyState(event, nowMs = Date.now()) {
   const notice = l.notice && (!l.notice.until || today <= l.notice.until) ? l.notice : null;
   const cohostP = l.cohost ? (roster.players || []).find((p) => p.id === l.cohost) : null;
   return {
-    stage, open, date, today,
+    stage, open, date, today, ryder: l.ryder,
     opensAt: stage === 'ready' ? new Date(opensMs).toISOString() : null,
     msToOpen: stage === 'ready' && !open ? opensMs - nowMs : stage === 'ready' ? 0 : null,
     opensLabel: stage === 'ready' ? clock12(wallClock(opensMs, l.tz)) : '',
@@ -273,12 +299,13 @@ export function lobbyView(state, ctx = {}) {
   if (state.stage === 'off') return 'off';
   if (!ctx.me) {
     if (ctx.picking) return 'who';
-    if (ctx.watching) return 'watch';
+    if (ctx.watching) return state.ryder ? 'watch' : 'follow';
     if (ctx.standalone) return 'who';
     if (ctx.guide) return 'guide';
     return ctx.invite && ctx.hcpFlow ? 'invite' : 'landing';
   }
   if (ctx.guide && ctx.safariPhone) return 'guide'; // Add Golf Board to your home screen (the lobby row)
+  if (!state.ryder && !(ctx.hasHcp && !ctx.seenHcp) && !ctx.revealing) return 'plan'; // 029 §1: every other game's lobby
   if (ctx.revealing) return 'reveal';
   if (ctx.hasHcp && !ctx.seenHcp) {
     // The handicap opens in the app (SPEC §6): on iPhone Safari a joined player (024 auto-join included) gets the

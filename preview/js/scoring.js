@@ -5,6 +5,7 @@
 // Raw strokes are the only stored truth; everything here is recomputed.
 
 export const HOLES = 18;
+import { draftedAt } from './mdraft.js';
 
 export const DEFAULT_ROTATION = [
   { holes: [1, 6], matches: [['A', 'B'], ['C', 'D']] },
@@ -134,6 +135,8 @@ function ryderPairsAt(roster, settings, pos) {
   const n = Math.min(a.length, b.length);
   const ranges = settings.rotation.map((r) => r.holes);
   const i = Math.max(0, ranges.findIndex((h) => pos >= h[0] && pos <= h[1]));
+  const drafted = ranges.length === 3 ? draftedAt(settings, i, a, b) : null; // the captains' matchup draft (Nov 7)
+  if (drafted) return drafted;
   return a.slice(0, n).map((x, k) => [x, b[(k + i) % n]]);
 }
 
@@ -208,6 +211,11 @@ export function threeCartRotation() {
   return [{ holes: [1, HOLES], matches: [['A', 'B'], ['A', 'C'], ['B', 'C']] }];
 }
 
+/** 031: 8 players, same opponents all 18: the two carts in each foursome play one 18-hole match. */
+export function sameOppsRotation() {
+  return [{ holes: [1, HOLES], matches: [['A', 'B'], ['C', 'D']] }];
+}
+
 /** 2v2 pairings for 4 players (indexes into the roster): never / every 6 / at the turn. */
 export function pairRotation(pairSwitch = 'never') {
   const P = [[[0, 1], [2, 3]], [[0, 2], [1, 3]], [[0, 3], [1, 2]]];
@@ -219,6 +227,9 @@ export function normalizeSettings(s) {
   const out = { ...DEFAULT_SETTINGS, ...(s || {}) };
   if (!Array.isArray(out.rotation) || !out.rotation.length) out.rotation = DEFAULT_ROTATION;
   out.startHole = Number(out.startHole) === 10 ? 10 : 1;
+  // 031 (new rounds only): each hole is one point to the lower best ball, a tie ½ each, no matchup bonus.
+  // Rounds made before Nov 19 don't carry holePoint and score exactly as they always did.
+  if (out.holePoint === true || out.holePoint === 'true') Object.assign(out, { holePoint: true, teamScore: 'bestBall', matchBonus: 0, halvedHolePoints: 0.5 });
   out.teeTimes = Array.isArray(out.teeTimes) ? out.teeTimes.map((t) => (/^\d{1,2}:\d{2}$/.test(String(t || '')) ? String(t) : '')) : [];
   out.lineups = Array.isArray(out.lineups)
     ? out.lineups.filter((l) => l && Number(l.fromHole) >= 1 && Number(l.fromHole) <= HOLES && Array.isArray(l.foursomes)).map((l) => ({ fromHole: Number(l.fromHole), foursomes: l.foursomes.map((f) => [...f]) }))
@@ -418,10 +429,11 @@ export function sameFoursome(roster, settings, aPid, bPid, hole) {
   const st = normalizeSettings(settings);
   if (st.ryder && a.teamId && b.teamId) {
     // Team Ryder Cup: tee times, until a Host lineup puts carts together from a hole on.
-    if (a.teamId === b.teamId) return true;
     const l = lineupAt(st, posOf(st, hole));
-    if (l && Array.isArray(l.foursomes) && l.foursomes.length) return l.foursomes.some((f) => f.includes(a.teamId) && f.includes(b.teamId));
-    return !!a.groupId && a.groupId === b.groupId;
+    if (l && Array.isArray(l.foursomes) && l.foursomes.length) return a.teamId === b.teamId || l.foursomes.some((f) => f.includes(a.teamId) && f.includes(b.teamId));
+    // The tee time is the foursome (owner, Nov 7: groups can split a cart's partners across tee times).
+    if (a.groupId && b.groupId) return a.groupId === b.groupId;
+    return a.teamId === b.teamId;
   }
   if ((st.rotationMode || 'swap') === 'swap' && a.teamId && b.teamId && Array.isArray(st.rotation)) {
     if (a.teamId === b.teamId) return true;
@@ -868,9 +880,22 @@ function finishGame(game, settings, teams, officialThrough, roster) {
       available: sum(pid, 'available'),
     }));
     people.forEach((r) => { r.provisionalPoints = Math.round((r.points - r.officialPoints) * 1e9) / 1e9; });
-    people.sort((a, b) => b.points - a.points || a.playerId.localeCompare(b.playerId));
+    // 031 (settings.dayBy 'stretches', partners switch): each stretch is its own match; the day goes to whoever
+    // wins the most stretches (½ for a halved one), points break ties. Otherwise: points, as always.
+    const byStretch = settings.dayBy === 'stretches';
+    for (const r of people) {
+      r.won = 0;
+      for (const m of game.matches) {
+        if (!m.final) continue;
+        const t = m.teams.find((x) => rows.find((y) => y.teamId === x)?.playerIds.includes(r.playerId));
+        if (t) r.won += m.result === 'halved' ? 0.5 : m.result === t ? 1 : 0;
+      }
+    }
+    const key = (r) => (byStretch ? [r.won, r.points] : [r.points]);
+    const same = (a, b) => key(a).every((v, i) => Math.abs(v - key(b)[i]) < 1e-9);
+    people.sort((a, b) => (byStretch ? b.won - a.won : 0) || b.points - a.points || a.playerId.localeCompare(b.playerId));
     people.forEach((r, i) => {
-      r.rank = i > 0 && Math.abs(people[i - 1].points - r.points) < 1e-9 ? people[i - 1].rank : i + 1;
+      r.rank = i > 0 && same(people[i - 1], r) ? people[i - 1].rank : i + 1;
     });
     game.people = people;
   }

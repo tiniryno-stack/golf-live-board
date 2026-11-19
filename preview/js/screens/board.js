@@ -14,6 +14,8 @@ import { teamColor, headlineColor, sideColor } from '../teams.js';
 import { latestMoment } from '../headlines.js';
 import { ryderBoard, ryderPlayers, ryderActions, rotationStrips } from './ryder.js';
 import { riderState, isRider } from '../riderview.js';
+import { playFor } from '../playfor.js';
+import { board031 } from './play031.js';
 
 const ordinal = (n) => `${n}${['th', 'st', 'nd', 'rd'][(n % 100 >= 11 && n % 100 <= 13) || n % 10 > 3 ? 0 : n % 10]}`;
 
@@ -236,6 +238,13 @@ function finalCard(app) {
     who = w ? w.name : `${a.name} & ${b.name}`;
     sub = `${w ? 'win the cup' : 'share the cup'} · ${fmtPts(a.points)}–${fmtPts(b.points)}`;
     if (w) jersey = sideColor(w.sideId);
+  } else if (g && snap.settings.pairs && g.people) {
+    // 2v2: people, not pairings (partners switch: most stretches won, 031 step 3).
+    const top = g.people.filter((r) => r.rank === 1);
+    if (top.some((r) => r.playerId === app.me)) jersey = 'var(--cart-you)';
+    who = top.map((r) => snap.playerById.get(r.playerId).name).join(' & ');
+    const by = snap.settings.dayBy === 'stretches' ? `${fmtPts(top[0].won)} stretch${top[0].won === 1 ? '' : 'es'} · ${fmtPts(top[0].points)} pts` : `${fmtPts(top[0].points)} pts`;
+    sub = `${top.length > 1 ? 'share the day' : 'win the day'} · ${by}`;
   } else if (g) {
     const isPM = g.type === 'rotationPlusMinus';
     const top = g.standings.filter((s) => s.rank === 1);
@@ -326,6 +335,14 @@ export default {
       return ryderBoard(app, { segs, players: view === 'players' ? `<div class="list">${ryderPlayers(app)}</div>` : '' });
     }
     if (!snap.anyPosted && !app.isFinal()) return waitingView(app);
+    // 031 §2.1: the Board follows who you play for (playFor, pure). Old shapes fall through to today's Board.
+    const view031 = playFor(snap);
+    if (view031 !== 'legacy') {
+      const final031 = snap.roundComplete ? finalCard(app)
+        : app.isFinal() ? `<div class="final-note locked">${icon('lock', 14)} The organizer finalized the round · scores locked</div>` : '';
+      const html = board031(app, view031, { final: final031 });
+      if (html) return html;
+    }
     const hasTeams = (snap.roster.teams || []).length > 0;
     const view = hasTeams ? app.ui.boardView : 'players';
     const mode = snap.hasStrokes ? app.ui.boardMode : 'gross';
@@ -387,6 +404,9 @@ export default {
   mount(root, app) {
     const chip = root.querySelector('[data-prov]');
     if (chip) app.coach('prov2', chip, 'These points already count. They’re provisional until the other foursome plays these holes.');
+    // 031 §2.5: the first visit, one tip on a name (the round card opens from it).
+    const name = root.querySelector('.p31 [data-act="board-player"], .ry-prow[data-act="board-player"]');
+    if (!chip && name && !document.querySelector('.coach')) app.coach('board1', name, 'Tap a name to see their round.');
   },
 
   actions: {

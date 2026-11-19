@@ -247,3 +247,62 @@ export function showStakes({ players, holes, me = null, total = 18, lastHole = 1
   if (pos >= 13 && st.lead <= 1 + EPS) return true;
   return ids.some((id) => raceState({ players, holes: [...complete, fakeHole(ids, [id])], me, total, lastHole }).locked);
 }
+
+// ───────────────────────────────────────────── 031 §2.2: the race, redrawn (table + one card when a hole decides something)
+
+/** Race numbers: one decimal, trimmed ("2", "2.8"). */
+export const dec = (n) => { const r = Math.round(n * 10) / 10; return Number.isInteger(r) ? String(r) : r.toFixed(1); };
+const WORDS = ['No', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
+
+/**
+ * The card on top of the race, only when a hole decides something (031 §2.2), else null:
+ *   clinched  "Clinched on 16 · Chris wins the day. · Two holes left. You're playing for 2nd: 0.5 ahead of Jake."
+ *   decides   (amber) the leader clinches by winning the next hole alone
+ *   need      (amber) the leader winning the next hole alone puts you out of reach
+ *   how       the first holes: how it works
+ * holes: every hole in play order ({ hole, scores }); a hole counts once every player has a score.
+ * Returns { kind, stake, kicker, title, sub }.
+ */
+export function raceCard({ players, holes, me = null, total = 18, lastHole = 18, early = 3 }) {
+  const ids = players.map((p) => p.id);
+  const name = (id) => players.find((p) => p.id === id)?.name || id;
+  const isIn = (h) => ids.every((id) => h.scores[id] != null);
+  const complete = holes.filter(isIn);
+  const st = raceState({ players, holes: complete, me, total, lastHole });
+  if (st.finished || ids.length < 2) return null;
+  const meRow = st.rows.find((r) => r.id === me) || null;
+  const youLead = !!meRow && meRow.rank === 1;
+  const alive = !!meRow && !meRow.out && !youLead;
+  if (st.locked) {
+    let at = null; // the hole it was clinched on
+    for (let k = 1; k <= complete.length; k++) {
+      if (raceState({ players, holes: complete.slice(0, k), me, total, lastHole }).locked) { at = complete[k - 1].hole; break; }
+    }
+    let sub = `${WORDS[st.left] || st.left} hole${st.left === 1 ? '' : 's'} left.`;
+    if (meRow && !youLead) {
+      const i = st.rows.indexOf(meRow);
+      const below = st.rows[i + 1], above = i > 1 ? st.rows[i - 1] : null;
+      const rel = below ? `: ${dec(meRow.points - below.points)} ahead of ${name(below.id)}` : above ? `: ${dec(above.points - meRow.points)} back of ${name(above.id)}` : '';
+      sub += ` You’re playing for ${ordinal(meRow.rank)}${rel}.`;
+    }
+    return { kind: 'clinched', stake: false, kicker: `Clinched on ${at}`, title: `${youLead ? 'You win' : `${name(st.leader)} wins`} the day.`, sub };
+  }
+  const next = holes.find((h) => !isIn(h))?.hole;
+  if (next != null && st.done) {
+    const fake = { hole: next, scores: Object.fromEntries(ids.map((id) => [id, id === st.leader ? 3 : 4])) };
+    const after = raceState({ players, holes: [...complete, fake], me, total, lastHole });
+    const ties = st.rows.filter((r) => r.rank === 1).length > 1;
+    if (!ties && after.locked) {
+      return {
+        kind: 'decides', stake: true, kicker: `Hole ${next} decides it`,
+        title: youLead ? 'You clinch it by winning it alone.' : `${name(st.leader)} clinches by winning it alone.`,
+        sub: alive ? 'Win or tie the hole and you’re still alive.' : 'Any other result and it goes on.',
+      };
+    }
+    if (!ties && alive && after.rows.find((r) => r.id === me)?.out) {
+      return { kind: 'need', stake: true, kicker: `Hole ${next} · you need this one`, title: `Lose it to ${name(st.leader)} and you’re out of reach.`, sub: 'Win or tie the hole and you’re still alive.' };
+    }
+  }
+  if (st.done < early) return { kind: 'how', stake: false, kicker: 'How it works', title: 'A point a hole to the low net score.', sub: `A tie for low splits the point. Most points after ${total} wins.` };
+  return null;
+}

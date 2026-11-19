@@ -9,7 +9,7 @@ import { esc, icon, seg, clock, copyText, roundLink } from '../ui.js';
 import * as db from '../db.js';
 import { teeTimeName, ryderMatchupsAt, normalizeSettings, playOrder, sideOf } from '../scoring.js';
 import { sideColor } from '../teams.js';
-import { hostLobbyView, lobbyActions, openedLine, orderStepView, orderRow } from './hostlobby.js';
+import { hostLobbyView, lobbyActions, openedLine, orderStepView, orderRow, matchupRow, mdraftView } from './hostlobby.js';
 import { startLobbyEdit } from './setup.js';
 import * as L from '../lobby.js';
 
@@ -257,6 +257,7 @@ export default {
     const lst = app.lobby();
     if (lst && !lst.open) return hostLobbyView(app);
     if (app.ui.orderStep?.code === app.code) return orderStepView(app); // opened, no score yet: Order and carts
+    if (app.ui.mdraft?.code === app.code) return mdraftView(app); // opened, no score yet: the matchup draft
     const d = draft(app);
     const tab = app.ui.hostTab;
     const body = tab === 'players' ? players(app, d) : tab === 'activity' ? activity(app) : rules(app, d);
@@ -267,6 +268,7 @@ export default {
       <h1 class="title">Host</h1>
       ${openedLine(app)}
       ${orderRow(app)}
+      ${matchupRow(app)}
       <div class="segs">${seg('host-tab', [['rules', 'Rules'], ['players', 'Players'], ['activity', 'Activity']], tab)}</div>
       ${body}${save}
     </div>`;

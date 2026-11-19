@@ -1,5 +1,5 @@
 {
- "v": "20261107052642",
+ "v": "20261119114354",
  "files": [
   "css/styles.css",
   "css/tokens.css",
@@ -18,7 +18,9 @@
   "js/identity.js",
   "js/loader.js",
   "js/lobby.js",
+  "js/mdraft.js",
   "js/names.js",
+  "js/playfor.js",
   "js/race.js",
   "js/reward.js",
   "js/riderview.js",
@@ -34,6 +36,7 @@
   "js/screens/hostlobby.js",
   "js/screens/lobby.js",
   "js/screens/matches.js",
+  "js/screens/play031.js",
   "js/screens/recap.js",
   "js/screens/ryder.js",
   "js/screens/season.js",
