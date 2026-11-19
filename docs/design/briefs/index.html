@@ -453,6 +453,7 @@ table.map tr.four th, table.map tr.four td { background: var(--tint-you); }
           <li>Each Board <b>before the first score</b>.</li>
           <li><b>Setup</b> with the new question for 2, 3, 5, 6, 7 and 16 players, and what the Teams step asks when partners switch.</li>
           <li><b>Matches for three carts</b> and for 8 players switching partners.</li>
+          <li><b>Season standings</b> as a season record (see the note at the bottom of this page).</li>
           <li><b>Light mode</b> for all of the above.</li>
         </ul>
       </div>
@@ -1342,14 +1343,32 @@ table.map tr.four th, table.map tr.four td { background: var(--tint-you); }
         <h3>2v2 onto the match card</h3>
         <p class="muted">2v2 is already one pair against another, so its Matches tab moves onto the match card and hole strip unchanged.</p>
       </div>
-      <div class="panel ask">
-        <span class="kicker">Still open · build calls, not design</span>
+      <div class="panel decided">
+        <span class="kicker">Build calls · decided by Andrew · Nov 19</span>
         <ul>
-          <li>Naming your cart: into the lobby (029), or cut? <span class="lean">Decided: <b>lobby</b>.</span></li>
-          <li>“Switch it up” card and the clinch alert: every game with matches, or cut?</li>
-          <li>Coach tips: rewrite for the calm Enter, or cut?</li>
-          <li>Season standings only count Rider Cup points: fix with this work, or after?</li>
+          <li><b>Naming your cart: cut for now.</b> Hidden behind a feature flag so it can come back. Carts are shown by their two players’ names everywhere. (This replaces the Nov 18 “lobby” answer, so 029’s cart-name row is off too.)</li>
+          <li><b>“Switch it up” stays</b> wherever partners or opponents switch: 2v2 with Partners or Opponents set to Switch, three carts aren’t affected. It shows once per switch, with who you’re with and who you’re playing now. Games where nothing switches never show it.</li>
+          <li><b>Coach tips: rewrite</b> for the new screens. Four tips, each shown once per phone:
+            <ol>
+              <li>Enter, first hole: “Tap the score you made. ⋯ has every other score.”</li>
+              <li>Enter, the quiet row: “Tap here to enter scores for the rest of your group.”</li>
+              <li>Matches, first visit: “Tap a hole to see everyone’s score on it.”</li>
+              <li>Board, first visit: “Tap a name to see their round.”</li>
+            </ol>
+          </li>
         </ul>
+      </div>
+      <div class="panel ask">
+        <span class="kicker">Needs its own design pass · season standings</span>
+        <p>The games score differently, so points can’t be added up across them. A plain win rate has a problem too: in an 8-player round only one cart can win, so big rounds would drag everyone down.</p>
+        <p><b>Suggestion: a season record.</b> In every round, whatever the game, you finish ahead of some people and behind others. Count those. Finish 2nd of 4 and you go 2–1 for the day; win an 8-player round with your partner and you both go 6–0. Standings rank by that record’s win rate, like any league table: <span class="mono">Andrew 31–17 · .646</span>.</p>
+        <ul>
+          <li>Works for every game and any number of players, with nothing new to explain.</li>
+          <li>Partners get the same result for the round; ties count as a half.</li>
+          <li>A minimum number of rounds to be ranked, so one lucky day doesn’t top the table.</li>
+          <li>Rounds won can sit next to it as a second column.</li>
+        </ul>
+        <p class="muted">Not drawn yet. It’s on the “Not drawn yet” list at the top.</p>
       </div>
     </div>
   </section>
