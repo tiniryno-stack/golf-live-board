@@ -2418,3 +2418,46 @@ html.light .p31, [data-theme="light"] .p31 { --p31-line: rgba(11,13,16,.08); }
 .p31-lowl .mono.you { color: var(--cart-you-text); }
 .p31-foot { display: flex; justify-content: space-between; align-items: center; padding: var(--space-2) var(--space-1) 0; font-size: 13px; line-height: 18px; color: var(--text-muted); }
 .p31-link { min-height: 48px; font-weight: 600; color: var(--text); font-size: 15px; background: none; }
+
+/* 031 §2.3 · Setup "Pick a game": only the games that fit; the picked row grows in place into its settings (027). */
+.gs-list { display: grid; gap: var(--space-2); }
+.gs-opt { border-radius: var(--radius-xl); background: var(--surface-1); box-shadow: var(--shadow-card); }
+.gs-opt.open { background: var(--surface-2); box-shadow: inset 0 0 0 2px var(--text); }
+.gs-card { display: grid; padding-bottom: 14px; }
+.gs-face { width: 100%; min-height: 72px; display: grid; grid-template-columns: minmax(0, 1fr) 24px; align-items: center; column-gap: var(--space-3); padding: 14px var(--space-4); text-align: left; background: none; }
+.gs-main { display: grid; gap: 2px; min-width: 0; }
+.gs-main b { font-size: 17px; line-height: 22px; font-weight: 600; }
+.gs-tag { font-weight: 500; color: var(--text-muted); }
+.gs-d { color: var(--text-muted); font-size: 15px; line-height: 20px; }
+.gs-face .radio { width: 24px; height: 24px; border-radius: 50%; box-shadow: inset 0 0 0 2px var(--line); }
+.gs-opt.open .gs-face .radio { box-shadow: inset 0 0 0 2px var(--text); background: radial-gradient(circle, var(--text) 0 6px, transparent 6.5px); }
+.gs-set { display: grid; gap: var(--space-2); padding: 0 var(--space-4); }
+.gs-set .ts-label { color: var(--text-muted); margin-top: var(--space-1); }
+.gs-seg { background: var(--surface-1); }
+html.light .gs-seg, [data-theme="light"] .gs-seg { background: var(--bg); }
+.gs-seg button[aria-disabled="true"] { opacity: var(--peek); }
+.gs-hint { margin: 0; color: var(--text-muted); font-size: 13px; line-height: 18px; }
+.tt-hint { margin-top: var(--space-3); }
+.rider-cart.wide .ry-cart-pair { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+/* 030 §3 · Tee times: a card per group, names four to a row, the time on the right, "Add a tee time" last. */
+.tt-list { display: grid; gap: var(--space-2); margin-top: var(--space-3); }
+.tt-group { background: var(--surface-1); border-radius: var(--radius-xl); padding: var(--space-3); box-shadow: var(--shadow-card); display: grid; gap: var(--space-3); }
+.tt-group.target { box-shadow: inset 0 0 0 1.5px var(--text); }
+.tt-h { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); min-height: 40px; }
+.tt-h .ts-label { color: var(--text-muted); }
+.tt-time { position: relative; height: 40px; display: inline-flex; align-items: center; gap: 6px; padding: 0 var(--space-3); border-radius: var(--radius-md); border: 1px dashed var(--line); color: var(--text-muted); font-size: 15px; }
+.tt-time.set { border: 0; background: var(--surface-2); color: var(--text); font-weight: 700; }
+.tt-time input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; border: 0; padding: 0; }
+.tt-chips { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-2); }
+.tt-chips.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.tt-chip { height: 48px; min-width: 0; padding: 0 var(--space-2); border-radius: var(--radius-md); background: var(--surface-2); font-size: 15px; font-weight: 600; color: var(--text); display: flex; align-items: center; justify-content: center; }
+.tt-chip.you { color: var(--cart-you-text); }
+.tt-chip.cart { background: var(--surface-2); box-shadow: inset 0 0 0 1.5px var(--text-muted); }
+.tt-chip.cart.you { background: var(--tint-you); box-shadow: inset 0 0 0 1.5px var(--cart-you); }
+.tt-chip.sel { background: var(--surface-3); box-shadow: inset 0 0 0 2px var(--text); }
+.tt-chip.empty { background: transparent; box-shadow: inset 0 0 0 1.5px var(--line); border-radius: var(--radius-md); color: var(--text-muted); font-size: 13px; font-weight: 500; border: 0; }
+.tt-alone { display: flex; align-items: center; gap: var(--space-2); margin: 0; color: var(--warn); font-size: 13px; line-height: 18px; }
+.tt-alone i { width: 8px; height: 8px; border-radius: 50%; background: var(--warn); flex: none; }
+.tt-add { width: 100%; display: flex; align-items: center; gap: var(--space-3); padding: 0 var(--space-4); color: var(--text-muted); font-size: 15px; font-weight: 600; background: none; }
+.tt-peek { margin-top: var(--space-3); background: var(--surface-1); border-radius: var(--radius-xl); padding: var(--space-3) var(--space-4); display: grid; gap: 2px; font-size: 15px; line-height: 20px; }
+.gs-face .radio { border: 0; margin: 0; }

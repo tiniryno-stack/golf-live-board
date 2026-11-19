@@ -61,3 +61,25 @@ test('031 the race card: how it works, you need this one, the hole that decides 
   const won = card({ an: 4, ja: 2, sa: 1, se: 1, ch: 8 }); // thru 16, Chris's run at the end clinched it on 16
   assert.deepEqual([won.kind, won.kicker, won.title, won.sub], ['clinched', 'Clinched on 16', 'Chris wins the day.', 'Two holes left. You’re playing for 2nd: 2 ahead of Jake.']);
 });
+
+test('031 Setup: games by player count (only what fits), the next step, default tee groups', async () => {
+  const { gameChoices, gameNext, teeGroups, aloneIn, groupsFit } = await import('../js/playfor.js');
+  const list = (n) => gameChoices(n).games.map((g) => `${g.name}${g.tag ? ` (${g.tag})` : ''}`).join(' · ');
+  assert.equal(list(1), 'Stroke play');
+  assert.equal(list(3), 'Everyone alone · Stroke play');
+  assert.equal(list(4), '2v2 · Everyone alone · Stroke play');
+  assert.equal(list(6), '2v2 (three carts) · Everyone alone · Stroke play');
+  assert.equal(list(8), '2v2 · Stroke play');
+  assert.equal(list(7), 'Stroke play');
+  assert.equal(list(16), 'Team Ryder Cup · Stroke play');
+  assert.deepEqual([4, 6, 8, 9, 2, 5].map((n) => gameChoices(n).shape), ['A foursome.', 'Three carts.', 'Two foursomes.', 'Three tee times.', 'A twosome.', 'Five in one group.']);
+  assert.deepEqual(gameChoices(8).games.map((g) => g.id), ['carts', 'scorecard'], 'stored ids unchanged');
+  assert.deepEqual(['2v2', 'carts', 'ryder', 'match', 'scorecard'].map((g) => gameNext(g).label), ['Next: partners', 'Next: carts', 'Next: carts', 'Next: tee times', 'Next: tee times']);
+  assert.deepEqual(teeGroups(3, 'scorecard'), [[0, 1, 2]]);
+  assert.deepEqual(teeGroups(6, 'match'), [[0, 1, 2, 3, 4, 5]], 'Everyone alone: 6 in one group is fine');
+  assert.deepEqual(teeGroups(6, 'scorecard'), [[0, 1, 2], [3, 4, 5]]);
+  assert.deepEqual(teeGroups(8, 'scorecard'), [[0, 1, 2, 3], [4, 5, 6, 7]]);
+  assert.equal(teeGroups(8, 'carts'), null);
+  assert.deepEqual(aloneIn([[0, 1, 2], [3], []]), [1]);
+  assert.ok(groupsFit([[0, 2], [1], []], 3) && !groupsFit([[0, 1]], 3) && !groupsFit([[0, 0, 1]], 3));
+});

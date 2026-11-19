@@ -873,6 +873,21 @@ Still open: nothing blocking. Design direction (section 9) is final.
     The smoke suite still expects the old Board / Matches in a few places (headline strip, 2v2 `.team-row`, the race's
     lanes): update them before the next smoke run.
 
+  - **Step 4 · Setup (031 §2.3 + 030's Teams / Tee times).** Pure in `js/playfor.js`: `gameChoices(n)` (shape line +
+    only the games that fit: 2v2 / Everyone alone / Stroke play / Team Ryder Cup, nothing dimmed), `gameNext`,
+    `teeGroups(n, game)`, `aloneIn`, `groupsFit` (tested). `setup.js`: `gameOf` maps the one on-screen "2v2" to the
+    stored ids (`2v2` with 4, `carts` with 6 / 8), so nothing stored changes. Game step = `.grow` rows (027): the picked
+    one grows into its settings: Partners (4: Keep all 18 / Switch every 6 / at the turn = `pairSwitch`; 8: Keep /
+    Switch every 6 *coming soon*) and Opponents (8: Switch every 6 / Same all 18 *coming soon*), one hint line.
+    Teams step: "Who's partners?" (2v2) / "Who rides together?" (carts; no cart names or colors while the flags are
+    off; your cart green). Tee times step for every game but Team Ryder Cup: `teeView` (group cards, time pill over
+    the native time input, tap two names to swap, a name then "Move here" to move it, "Add a tee time" last and only
+    when the last group is full, "Sam is alone at 9:00" in amber, empty groups dropped on leaving; saved as
+    `s.groups` → each player's `groupId` + `settings.teeTimes`); carts: `riderTeeView` redrawn as the same cards
+    (two carts a group, your matches peek, Game & matchups row). The last button stays **Start round** until the lobby
+    (step 6) makes it Next: invite. Everyone alone with 5–6 now starts as one group (030). Home / Rules / the quick
+    groups say 2v2 / Everyone alone / Stroke play.
+
 ## 13. V2 backlog (running list)
 
 - **Carryovers (skins-style):** a tied point rolls onto the next hole instead of halving, so the next hole can be worth 3–4 points. Open design question: does an unresolved carry die at the end of a 6-hole rotation, or roll into the next opponent?
