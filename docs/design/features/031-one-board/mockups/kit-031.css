@@ -322,3 +322,25 @@
 .ptab.stand .th, .ptab.stand .tr { grid-template-columns: 28px minmax(0, 1fr) 36px 88px 50px; }
 .ptab.stand .th span:nth-child(4) { text-align: center; }
 .rrow .rec.rec3 { width: 76px; }
+
+/* ── standings breakdown, second try (Nov 19): a calendar of rounds, grown in place; last-five form ── */
+.hg.rounds { margin-top: 8px; column-gap: 4px; }
+.hg.rounds span { height: 52px; font: 600 12px/16px var(--font-mono); background: var(--surface-1); }
+.hg.rounds span em { font-size: 15px; line-height: 20px; color: var(--text-muted); }
+.hg.rounds span em.w { color: var(--text); }
+.tr.me.open .hg.rounds span em.w, .hg.rounds.mine span em.w { color: var(--cart-you-text); }
+.hg.rounds span.sel { background: var(--surface-1); box-shadow: inset 0 0 0 2px var(--text); color: var(--text); }
+.ptab .tr.open .rrow { border-top: 0; margin-top: 6px; min-height: 44px; }
+.ptab .tr.open .rrow span, .ptab .tr.open .pc-h span { text-align: left; }
+.ptab .tr.open .pc-h .cl, .ptab .tr.open .rrow .rec { text-align: right; }
+.ptab.formt .th, .ptab.formt .tr { grid-template-columns: 28px minmax(0, 1fr) 84px 44px 70px; }
+.ptab.formt .tr { height: 48px; }
+.ptab.formt .th span:nth-child(3) { text-align: center; }
+.form { display: inline-flex; gap: 5px; justify-content: flex-end; font: 700 12px/16px var(--font-mono); }
+.form i { font-style: normal; width: 9px; text-align: center; color: var(--text-muted); font-weight: 500; }
+.form i.w { color: var(--text); font-weight: 700; }
+.tr.me .form i.w { color: var(--cart-you-text); }
+.ptab.stand .tr.open, .ptab.formt .tr.open { height: auto; }
+.ptab .tr.open .rrow b { color: var(--text); }
+.form { font-size: 13px; gap: 6px; }
+.ptab.formt .th, .ptab.formt .tr { grid-template-columns: 28px minmax(0, 1fr) 72px 42px 78px; column-gap: 6px; }
