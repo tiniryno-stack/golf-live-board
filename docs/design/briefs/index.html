@@ -1371,6 +1371,39 @@ table.map tr.four th, table.map tr.four td { background: var(--tint-you); }
         <p class="muted">Not drawn yet. It’s on the “Not drawn yet” list at the top.</p>
       </div>
     </div>
+
+    <h3>Season record: a worked example</h3>
+    <p class="refs-label">Four rounds, four different games, eight people. Each cell is what that player went for the day: people finished ahead of, then people finished behind. A tie is half each.</p>
+    <div class="tablewrap" role="region" aria-label="Season record example" tabindex="0">
+      <table>
+        <thead><tr><th>Player</th><th>Sat · 2v2, 8 players<br>opponents switch</th><th>Sun · Everyone alone<br>5 players</th><th>Wed · 2v2, a foursome<br>one match</th><th>Fri · Stroke play<br>4 players</th><th>Season</th><th>Win rate</th></tr></thead>
+        <tbody>
+          <tr><th>Andrew</th><td>3rd cart of 4 · <span class="mono">2–4</span></td><td>2nd · <span class="mono">3–1</span></td><td>Won with Sam · <span class="mono">2–0</span></td><td>T3 · <span class="mono">½–2½</span></td><td class="mono"><b>7½–7½</b></td><td class="mono"><b>.500</b> · 1st</td></tr>
+          <tr><th>Sam</th><td>4th cart · <span class="mono">0–6</span></td><td>4th · <span class="mono">1–3</span></td><td>Won with Andrew · <span class="mono">2–0</span></td><td>1st · <span class="mono">3–0</span></td><td class="mono"><b>6–9</b></td><td class="mono"><b>.400</b> · 2nd</td></tr>
+          <tr><th>Jake</th><td>4th cart · <span class="mono">0–6</span></td><td>3rd · <span class="mono">2–2</span></td><td>Lost · <span class="mono">0–2</span></td><td>2nd · <span class="mono">2–1</span></td><td class="mono"><b>4–11</b></td><td class="mono"><b>.267</b> · 3rd</td></tr>
+          <tr><th>Sean</th><td>3rd cart · <span class="mono">2–4</span></td><td>5th · <span class="mono">0–4</span></td><td>Lost · <span class="mono">0–2</span></td><td>T3 · <span class="mono">½–2½</span></td><td class="mono"><b>2½–12½</b></td><td class="mono"><b>.167</b> · 4th</td></tr>
+          <tr><th>Chris <span>2 rounds</span></th><td>2nd cart · <span class="mono">4–2</span></td><td>1st · <span class="mono">4–0</span></td><td class="na">–</td><td class="na">–</td><td class="mono">8–2</td><td class="mono">.800 · not ranked yet</td></tr>
+          <tr><th>Mike, Tyler <span>1 round</span></th><td>1st cart · <span class="mono">6–0</span></td><td class="na">–</td><td class="na">–</td><td class="na">–</td><td class="mono">6–0</td><td class="mono">1.000 · not ranked yet</td></tr>
+          <tr><th>Matt <span>1 round</span></th><td>2nd cart · <span class="mono">4–2</span></td><td class="na">–</td><td class="na">–</td><td class="na">–</td><td class="mono">4–2</td><td class="mono">.667 · not ranked yet</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="cols">
+      <div class="panel">
+        <span class="kicker">What the example shows</span>
+        <ul>
+          <li><b>Every game turns into the same thing:</b> who you finished ahead of. Points, holes up and strokes never get mixed.</li>
+          <li><b>Partners share the result.</b> You don’t count your own partner, so winning an 8-player round is 6–0, not 7–0.</li>
+          <li><b>The minimum matters.</b> Mike and Tyler are 6–0 after one round. With a 3-round minimum they’re listed but not ranked yet.</li>
+        </ul>
+      </div>
+      <div class="panel ask">
+        <span class="kicker">The one choice to make</span>
+        <p><b>Should a big round count for more?</b> In the table it does: Sam’s 0–6 on Saturday weighs more than his 3–0 on Friday, so he’s 2nd at .400.</p>
+        <p>The other way is to make every round worth the same: take the share of people you beat each day and average it. Then Andrew and Sam are level at .563, because Sam’s two wins count as much as his two bad days.</p>
+        <p class="muted">My pick: the record as shown. It’s the one you can explain in a sentence, and the 8-player days are the big days for the group.</p>
+      </div>
+    </div>
   </section>
 
   <footer>
