@@ -690,3 +690,4 @@ svg.i.s20 { width: 20px; height: 20px; } svg.i.s16 { width: 16px; height: 16px; 
 .gz.none { background: transparent; }
 .clinch.stake { background: var(--warn-bg); }
 .clinch.stake .k { color: var(--warn); }
+.ptab.four .th, .ptab.four .tr { grid-template-columns: 28px minmax(0, 1fr) 56px 56px; }
