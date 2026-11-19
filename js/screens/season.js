@@ -1,12 +1,11 @@
 // season.js — crew Standings split into seasons (feature 008-seasons), opened from the crew card.
 // #/season/<crew> = the current season · #/season/<crew>/past = seasons list · #/season/<crew>/<key> = one season.
-// Points are the cart game's (Partner "Rider" Cup) until the cross-game standings rework; the note says so.
+// Standings are a season record (Nov 19): every game becomes a finishing order, ranked by win rate (seasons.js).
 // Math lives in seasons.js (pure, tested); crew data comes from crew.js's loadCrew.
 
 import * as db from '../db.js';
 import { esc, icon } from '../ui.js';
-import { fmtPts } from '../scoring.js';
-import { shortDate, seasonTable, nextSeasonLabel, placeLabel } from '../seasons.js';
+import { shortDate, nextSeasonLabel, placeLabel, seasonRecordTable, seasonBests, recordLabel, pctLabel, ordinal, MIN_ROUNDS } from '../seasons.js';
 import { loadCrew, crewSeasons } from './crew.js';
 
 const today = () => new Date().toLocaleDateString('en-CA');
@@ -23,31 +22,67 @@ function datesLine(s) {
   return `${range} · ${s.rounds.length} ROUND${s.rounds.length === 1 ? '' : 'S'}`;
 }
 
+/** A record that lines up on its dash: wins right-aligned, losses left-aligned. */
+const rec = (w, l) => { const [a, b] = recordLabel(w, l).split('–'); return `<span class="st-rec mono"><i>${a}</i><u>–</u><i>${b}</i></span>`; };
+const dayDate = (d) => shortDate(d.date);
+const dayGame = (d) => `${d.game} · ${d.players}${d.cart ? ` · ${ordinal(d.place)} cart of ${d.of}` : ` · ${ordinal(d.place)}`}`;
+
+/** Your season, grown from the peek: the hero number, four bests, then every round (the B + D card). */
+function myCard(t) {
+  const me = t.me;
+  const b = seasonBests(me);
+  const days = me.days;
+  const prev = days.length > 1 ? days[days.length - 2].after : null;
+  const place = me.ranked ? `${me.tied ? 'T' : ''}${ordinal(me.rank)} of ${t.rows.filter((r) => r.ranked).length}` : `${me.rounds} of ${MIN_ROUNDS} rounds to be ranked`;
+  const tile = (k, v, sub, mono) => `<div class="sm-tile"><span class="ts-label">${k}</span><b class="${mono ? 'mono' : ''}">${esc(v)}</b><span>${esc(sub)}</span></div>`;
+  return `<section class="sm-card" aria-label="Your season">
+    <div class="sm-top"><span class="ts-label sm-k">Your season</span><button class="ghost sm-close" data-act="season-me">Close</button></div>
+    <div class="sm-hero"><span class="sm-pct mono">${pctLabel(me.pct)}</span><span class="sm-sub"><b>${esc(place)}</b><span>${prev != null ? `${me.pct < prev ? 'down' : me.pct > prev ? 'up' : 'level'} from ${pctLabel(prev)} last round` : recordLabel(me.w, me.l)}</span></span></div>
+    <div class="sm-tiles">
+      ${b.bestDay ? tile('Best day', recordLabel(b.bestDay.w, b.bestDay.l), dayDate(b.bestDay), true) : ''}
+      ${b.bestGame ? tile('Game', b.bestGame.key === 'Team Ryder Cup' ? 'Ryder' : b.bestGame.key === 'Everyone alone' ? 'Alone' : b.bestGame.key === 'Stroke play' ? 'Stroke' : b.bestGame.key, recordLabel(b.bestGame.w, b.bestGame.l)) : ''}
+      ${b.bestPartner ? tile('Partner', b.bestPartner.key.split(' + ')[0], recordLabel(b.bestPartner.w, b.bestPartner.l)) : ''}
+      ${b.lowRound ? tile('Low', String(b.lowRound.gross), dayDate(b.lowRound), true) : ''}
+    </div>
+    <div class="sm-days">
+      <div class="sm-day sm-dh ts-label"><span>Date</span><span>Game</span><span>Day</span><span>After</span></div>
+      ${days.map((d, k) => `<div class="sm-day"><span class="mono sm-d">${esc(dayDate(d))}</span><b class="ellipsis">${esc(dayGame(d))}</b>${rec(d.w, d.l)}<span class="mono sm-after${k && d.after > days[k - 1].after ? ' up' : ''}">${pctLabel(d.after)}</span></div>`).join('')}
+    </div>
+  </section>`;
+}
+
 function standingsView(app, id, data, season) {
   const me = app.crews?.[id]?.info?.me || db.crews.get(id)?.me || null;
-  const t = seasonTable(season, me);
-  const rows = t.rows.filter((r) => r.games > 0);
-  const table = rows.length
-    ? `<div class="st-head ts-label"><span>#</span><span>Player</span><span class="st-n">Rds</span><span class="st-n">Pts</span></div>
-      <div class="st-table">${rows.map((r) => `<div class="st-row${r.me ? ' me' : ''}"><span class="st-rank mono">${r.tied ? 'T' : ''}${r.rank}</span>
-        <span class="st-name ellipsis">${esc(shortName(r))}</span><span class="st-n mono">${r.rounds}</span><span class="st-n st-pts mono">${fmtPts(r.points)}</span></div>`).join('')}</div>`
-    : '<p class="meta st-empty">No finished Partner “Rider” Cup matchups this season yet.</p>';
+  const t = seasonRecordTable(season, me);
+  const open = !!(app.ui.seasonMe && t.me);
+  const ranked = t.rows.filter((r) => r.ranked), rest = t.rows.filter((r) => !r.ranked);
+  const row = (r) => `<div class="st-row${r.me ? ' me' : ''}${r.ranked ? '' : ' unranked'}"><span class="st-rank mono">${r.ranked ? `${r.tied ? 'T' : ''}${r.rank}` : ''}</span>
+        <span class="st-name ellipsis">${esc(shortName(r))}</span><span class="st-n mono">${r.rounds}</span>${rec(r.w, r.l)}<span class="st-n st-pts mono">${pctLabel(r.pct)}</span></div>`;
+  const table = t.rows.length
+    ? `<div class="st-head ts-label"><span>#</span><span>Player</span><span class="st-n">Rds</span><span class="st-c">Record</span><span class="st-n">Win</span></div>
+      <div class="st-table">${ranked.map(row).join('')}${rest.length ? `<div class="st-cut ts-label">${MIN_ROUNDS} rounds to be ranked</div>${rest.map(row).join('')}` : ''}</div>`
+    : '<p class="meta st-empty">No finished rounds this season yet.</p>';
   const owner = app.crews?.[id]?.info?.isOwner;
+  const peek = t.me && !open
+    ? `<button class="st-peek" data-act="season-me" aria-label="Open your season"><span class="ts-label">Your season</span><b>${t.me.ranked ? `${t.me.tied ? 'T' : ''}${ordinal(t.me.rank)}` : 'Not ranked yet'} · ${rec(t.me.w, t.me.l)}</b><span class="mono st-peek-n">${pctLabel(t.me.pct)}${icon('fwd', 18).replace('<svg', '<svg style="transform:rotate(-90deg)"')}</span></button>`
+    : '';
+  if (open) return `<button class="season-card st-folded" data-act="season-me"><span class="sc-main"><span class="sc-name">Standings</span><span class="ts-label sc-dates">${esc(season.name)}${ranked[0] ? ` · ${esc(shortName(ranked[0]))} leads · ${pctLabel(ranked[0].pct)}` : ''}</span></span></button>${myCard(t)}`;
   return `<button class="season-card" data-act="go" data-v="#/season/${esc(id)}/past">
       <span class="sc-main"><span class="sc-name">${esc(season.name)}</span><span class="ts-label sc-dates">${esc(datesLine(season))}</span></span>
       ${season.current ? '<span class="ts-label sc-tag">Current</span>' : ''}<span class="sc-chev">${icon('fwd', 18).replace('<svg', '<svg style="transform:rotate(90deg)"')}</span>
     </button>
     ${table}
-    <p class="meta st-note">Partner “Rider” Cup points from every crew round this season. Standings for every game are coming.</p>
-    ${season.current && owner ? `<div class="nr-foot"><button class="btn nr-cta" data-act="season-new" data-v="${esc(id)}">${icon('plus', 20)} Start a new season</button></div>` : ''}`;
+    <p class="meta st-note">Record = players you finished ahead of, then behind, in every game.</p>
+    ${season.current && owner ? `<div class="nr-foot"><button class="btn nr-cta" data-act="season-new" data-v="${esc(id)}">${icon('plus', 20)} Start a new season</button></div>` : ''}
+    ${peek}`;
 }
 
 function pastView(app, id, data) {
   const me = app.crews?.[id]?.info?.me || db.crews.get(id)?.me || null;
   const rows = [...data.seasons].reverse().map((s) => {
-    const t = seasonTable(s, me);
-    const top = t.rows.find((r) => r.games > 0);
-    const line = !top ? 'No matchups yet' : top.me ? 'Won by you' : `${s.current ? 'Led' : 'Won'} by ${shortName(top)}${t.me && t.me.games ? ` · you ${placeLabel(t.me)}` : ''}`;
+    const t = seasonRecordTable(s, me);
+    const top = t.rows.find((r) => r.ranked);
+    const line = !top ? 'No ranked players yet' : top.me ? 'Won by you' : `${s.current ? 'Led' : 'Won'} by ${shortName(top)}${t.me?.ranked ? ` · you ${placeLabel(t.me)}` : ''}`;
     return `<button class="season-card past" data-act="go" data-v="#/season/${esc(id)}/${esc(s.key)}">
         <span class="sc-main"><span class="sc-name">${esc(s.name)}</span><span class="ts-label sc-dates">${esc(datesLine(s))}</span><span class="sc-line">${esc(line)}</span></span>
         ${s.current ? '<span class="ts-label sc-tag">Current</span>' : s.upcoming ? '<span class="ts-label sc-tag soon">Next</span>' : ''}<span class="sc-chev">${icon('fwd', 18)}</span>
@@ -60,8 +95,8 @@ export const seasonSheets = {
   seasonNew(app, { id, name, starts = 'today', date = '' }, head) {
     const data = crewSeasons(app, id);
     const cur = data?.current;
-    const t = cur ? seasonTable(cur) : null;
-    const leader = t?.rows.find((r) => r.games > 0);
+    const t = cur ? seasonRecordTable(cur) : null;
+    const leader = t?.rows.find((r) => r.ranked);
     const nm = name ?? nextSeasonLabel(cur?.name, today());
     const when = starts === 'today' ? 'today' : starts === 'next' ? 'when the next round starts' : date ? `on ${shortDate(date).toLowerCase().replace(/^\w/, (c) => c.toUpperCase())}` : 'on the date you pick';
     return `${head('Start a new season')}
@@ -120,6 +155,7 @@ export default {
       loadCrew(app, app.season.crew, { force: true });
       app.render();
     },
+    'season-me': (el, ev, app) => { app.ui.seasonMe = !app.ui.seasonMe; app.render(); },
     'season-new': (el, ev, app) => app.openSheet('seasonNew', { id: el.dataset.v }),
     'season-name': (el, ev, app) => { app.sheet.props.name = el.value; },
     'season-starts': (el, ev, app) => app.openSheet('seasonNew', { ...app.sheet.props, name: document.getElementById('sn-name')?.value, starts: el.dataset.v }),

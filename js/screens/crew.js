@@ -6,7 +6,7 @@
 import * as db from '../db.js';
 import { esc, icon, initials, copyText } from '../ui.js';
 import { FLAGS } from '../flags.js';
-import { buildSeasons, seasonTable, placeLabel } from '../seasons.js';
+import { buildSeasons, seasonRecordTable, placeLabel } from '../seasons.js';
 import { countsAsPlayed } from '../lobby.js';
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -75,9 +75,9 @@ export function homeCrew(app) {
   let line = '';
   const ss = crewSeasons(app, cur.id);
   if (ss?.current?.rounds?.length) {
-    const t = seasonTable(ss.current, myPerson(app, cur.id));
-    if (t.gameRounds && t.me) line = `${ss.current.name} · you’re ${placeLabel(t.me)}`;
-    else if (t.gameRounds) line = ss.current.name;
+    const t = seasonRecordTable(ss.current, myPerson(app, cur.id));
+    if (t.me?.ranked) line = `${ss.current.name} · you’re ${placeLabel(t.me)}`;
+    else if (t.rows.length) line = ss.current.name;
   }
   const actions = name
     ? `<button class="btn cc-btn" data-act="go" data-v="#/season/${esc(cur.id)}">${icon('board', 20)} Standings</button>`
