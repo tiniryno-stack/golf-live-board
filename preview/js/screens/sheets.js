@@ -80,6 +80,7 @@ export function rulesRows(app) {
     rows.push(['Format', `2v2 · ${g.type === 'rotationPlusMinus' ? 'Plus/Minus' : 'Match play'}${snap.hasStrokes ? ' · net' : ''}`,
       st.pairs ? 'Two teams of two in one foursome.' : three ? 'Your cart plays both other carts on every hole.' : 'Your cart vs one other cart at a time.']);
     if (g.type === 'rotationPlusMinus') rows.push(['Points', 'Every stroke counts', `${two ? 'Low ball and low total' : st.teamScore === 'aggregate' ? 'Both partners added' : 'Best ball'}: beat theirs and the difference is yours.${g.cap != null ? ` A matchup swings ±${g.cap} at most.` : ''}`]);
+    else if (st.holePoint) rows.push(['Points', '1 a hole', `The lower best ball takes the hole, a tie is ½ each. More than half wins a match: ${fmtPts(g.matches[0] ? g.matches[0].total / 2 + 0.5 : 9.5)} over ${g.matches[0]?.total || 18} holes.`]);
     else rows.push(['Points', `${g.ncomp * (three ? 2 : 1)} a hole`, `${two ? '1 for low ball, 1 for low total' : st.teamScore === 'aggregate' ? '1 for the lower total of both partners' : '1 for the best ball'}${three ? ', against each cart' : ''}. ${half}${g.bonus ? ` +${fmtPts(g.bonus)} for winning a matchup.` : ''}`]);
     const myMatches = mine ? g.matches.filter((m) => m.teams.includes(mine)) : [];
     const lens = [...new Set(g.rotations.map((r) => r.to - r.from + 1))];
@@ -95,6 +96,9 @@ export function rulesRows(app) {
   rows.push(['Max score', ({ doublePar: 'Double par', netDoubleBogey: 'Net double bogey', none: 'None' })[st.maxHoleScore] || 'Double par',
     st.maxHoleScore === 'none' ? 'Play every hole out.' : `Pick up once you hit it; it counts as that score.${st.par3NoMax ? ' No max on par 3s.' : ''}`]);
   if (g && g.sides) rows.push(['Winner', `${fmtPts(g.sides[0].toWin)} match points`, `More than half of the ${g.sides[0].total} matches. Level at the end = the cup is shared.`]);
+  else if (g && st.dayBy === 'stretches') rows.push(['Winner', 'Most stretches won', 'Each stretch is its own match (½ when halved). Level on stretches: most points. Still level = shared.']);
+  else if (g && st.holePoint && !st.pairs) rows.push(['Winner', 'Each foursome’s match', 'Your cart against the other cart in your group, 18 holes. Carts are ranked by points.']);
+  else if (g && st.holePoint) rows.push(['Winner', 'More holes won', 'Level after 18 = the match is halved.']);
   else if (g && g.type !== 'splitPoint') rows.push(['Winner', g.type === 'rotationPlusMinus' ? 'Best +/− after 18' : 'Most points after 18', 'Tie at the top: better matchup record, then who won between the two, then the stroke margin. Still tied = shared.']);
   else if (g) rows.push(['Winner', 'Most points after 18', 'Tie at the end: most outright wins (holes won alone). Still tied = shared.']);
   else rows.push(['Winner', `Lowest ${snap.hasStrokes ? 'net ' : ''}total`, 'A tie is shared.']);

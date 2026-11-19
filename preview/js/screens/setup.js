@@ -13,7 +13,7 @@
 import { esc, icon, seg, todayISO, prettyDate, copyText, roundLink, empty } from '../ui.js';
 import { COURSES } from '../courses.js';
 import * as cd from '../coursedata.js';
-import { DEFAULT_SETTINGS, DEFAULT_ROTATION, GAMES, gameFix, autoGroups, cartRotation, threeCartRotation, cartIdsFor, ryderSetup, teeTimeName } from '../scoring.js';
+import { DEFAULT_SETTINGS, DEFAULT_ROTATION, GAMES, gameFix, autoGroups, cartRotation, threeCartRotation, sameOppsRotation, cartIdsFor, ryderSetup, teeTimeName } from '../scoring.js';
 import { sideColor } from '../teams.js';
 import * as db from '../db.js';
 import * as names from '../names.js';
@@ -22,7 +22,7 @@ import { loadGeo } from '../geoload.js';
 import { gameChoices, gameNext, teeGroups, aloneIn, groupsFit } from '../playfor.js';
 import { TEAM_NAME_PICKS, isDefaultTeamName } from '../teams.js';
 import { initials } from '../ui.js';
-import { countsAsPlayed, draftedRoster, newLobby, toTeamsStage, toCartsStage, withStartTimes, keepNames, rosterKey, allTimesSet, addMinutes, lobbyOf, lobbyState, maySaveStep, pairedRoster, cartOrder, mergeStep, opensAtFor, wallClock, clock12, dayName } from '../lobby.js';
+import { countsAsPlayed, draftedRoster, newLobby, wallDate, toTeamsStage, toCartsStage, withStartTimes, keepNames, rosterKey, allTimesSet, addMinutes, lobbyOf, lobbyState, maySaveStep, pairedRoster, cartOrder, mergeStep, opensAtFor, wallClock, clock12, dayName } from '../lobby.js';
 
 const TEAM_IDS = ['A', 'B', 'C', 'D'];
 const DRAFT_KEY = 'glb.setupDraft';
@@ -202,6 +202,7 @@ async function loadFrom(app, code) {
     s.game = ryder ? 'ryder' : settings.pairs ? '2v2' : settings.solo ? 'match' : nCarts === 4 || nCarts === 3 ? 'carts' : 'scorecard';
     s.pairSwitch = settings.pairSwitch || 'never';
     if (Array.isArray(rotation) && rotation.length === 2) s.schedule = 'turn';
+    if (Array.isArray(rotation) && rotation.length === 1 && nCarts === 4) s.schedule = 'same'; // 031: same opponents all 18
     if (Array.isArray(rotation) && rotation.length) s.opps = rotation.map((r) => r.matches?.[0]?.[1]).filter(Boolean);
     s.pairedFromLast = s.game === 'carts';
     s.crewId = ev.crew_id || null;
@@ -423,7 +424,9 @@ function buildRound(s) {
   const shown = names.displayNames(s.players);
   if (game === 'ryder') return buildRyder(s, c, shown);
   const three = game === 'carts' && s.players.length === 6; // 3 carts: everyone plays everyone, all 18
-  const rotation = three ? threeCartRotation() : game === 'carts' ? cartRotation(s.schedule, s.opps) : clone(DEFAULT_ROTATION);
+  const rotation = game === 'carts' ? cartRot(s) : clone(DEFAULT_ROTATION);
+  // 031 step 3, new rounds only: a hole is one point (best ball, ½ a tie, no bonus); partner stretches decide the day.
+  const hp = holeMatch(s) ? { holePoint: true, teamScore: 'bestBall', matchBonus: 0, halvedHolePoints: 0.5 } : {};
   const groupOfTeam = three ? { A: 'g1', B: 'g1', C: 'g2' } : {};
   if (!three) rotation[0].matches.forEach((m, i) => m.forEach((t) => (groupOfTeam[t] = `g${i + 1}`)));
   const auto = autoGroups(s.players.length);
@@ -443,15 +446,26 @@ function buildRound(s) {
   const teams = game === 'carts' ? cartIds(s).map((id) => ({ id, name: teamName(s, id).slice(0, 20) })) : [];
   const base = { ...s.settings };
   const settings = game === 'carts'
-    ? { ...base, solo: false, pairs: false, rotation, ...(three ? { rotationMode: 'fixed' } : {}) }
+    ? { ...base, solo: false, pairs: false, rotation, ...hp, ...(three || hp.holePoint ? { rotationMode: 'fixed' } : {}), ...(hp.holePoint ? { game: 'rotationMatch' } : {}) }
     : game === '2v2'
-      ? { ...base, game: 'rotationMatch', solo: false, pairs: true, pairSwitch: s.pairSwitch, rotationMode: 'fixed', rotation }
+      ? { ...base, game: 'rotationMatch', solo: false, pairs: true, pairSwitch: s.pairSwitch, rotationMode: 'fixed', rotation, ...hp, ...(s.pairSwitch !== 'never' ? { dayBy: 'stretches' } : {}) }
       : game === 'match'
         ? { ...base, game: 'rotationMatch', solo: true, pairs: false, rotationMode: 'fixed', rotation }
         : { ...base, game: 'none', solo: false, pairs: false, rotationMode: 'fixed', rotation };
   const { variants, variant, ...cleanCourse } = c;
+  // 029: every round is made with a lobby. Scoring opens 30 min before the first start time; no time today = now
+  // (made at the course: the first screen is Scoring is open); another day with no time = the organizer sets it later.
+  const date = dayOf(s), tz = tzNow();
+  const t0 = (settings.teeTimes || s.settings.teeTimes || [])[0] || '';
+  const o = db.owner.get();
+  const meIdx = o?.personId ? s.players.findIndex((p) => p.personId === o.personId) : -1;
+  settings.lobby = {
+    stage: 'ready', startTime: t0 || '08:00', tz, openedEarly: false, notice: null, cohost: null, prevStage: null,
+    opensAt: t0 ? opensAtFor(date, t0, tz) : date === wallDate(Date.now(), tz) ? new Date().toISOString() : null,
+    hostName: meIdx >= 0 ? s.players[meIdx].firstName : o?.name ? String(o.name).split(' ')[0] : '', hostId: meIdx >= 0 ? players[meIdx].id : null,
+  };
   return {
-    name: s.name.trim() || `${c.shortName || cd.shortCourseName(c.name)} · ${prettyDate(todayISO())}`,
+    name: s.name.trim() || `${c.shortName || cd.shortCourseName(c.name)} · ${prettyDate(date)}`,
     course: {
       id: cleanCourse.id, ...(c.ogaId ? { ogaId: c.ogaId } : {}), source: c.source === 'yours' ? c.lastSource || 'yours' : c.source || 'builtin',
       name: c.name.trim(), shortName: c.shortName || cd.shortCourseName(c.name), location: c.location || '',
@@ -461,7 +475,7 @@ function buildRound(s) {
     },
     roster: { groups: Array.from({ length: nGroups }, (_, i) => ({ id: `g${i + 1}`, name: `Group ${i + 1}` })), teams, players },
     settings,
-    playedOn: todayISO(),
+    playedOn: date,
     crewId: s.crewId,
   };
 }
@@ -757,8 +771,8 @@ function gameSettings(s, id) {
     return `<div class="gs-set"><span class="ts-label">Partners</span>
       ${optSeg('setup-pairswitch', [['never', 'Keep', 'all 18'], ['six', 'Switch', 'every 6', { soon: true }]], 'never')}
       <span class="ts-label">Opponents</span>
-      ${optSeg('setup-schedule', [['six', 'Switch', s.schedule === 'turn' ? 'at the turn' : 'every 6'], ['same', 'Same', 'all 18', { soon: true }]], 'six')}
-      <p class="gs-hint">${s.schedule === 'turn' ? 'Your cart plays two of the other three carts, nine holes each.' : 'Your cart plays each of the other three carts for six holes.'}</p></div>`;
+      ${optSeg('setup-schedule', [['six', 'Switch', s.schedule === 'turn' ? 'at the turn' : 'every 6'], ['same', 'Same', 'all 18']], s.schedule === 'same' ? 'same' : 'six')}
+      <p class="gs-hint">${s.schedule === 'same' ? 'Your cart plays the other cart in your group, all 18. One match, a point a hole.' : s.schedule === 'turn' ? 'Your cart plays two of the other three carts, nine holes each.' : 'Your cart plays each of the other three carts for six holes.'}</p></div>`;
   }
   if (id === 'carts') return '<div class="gs-set"><p class="gs-hint">Every cart plays both other carts on every hole, all 18.</p></div>';
   return '';
@@ -792,10 +806,10 @@ function rulesSummary(s) {
   const st = s.settings;
   const parts = [];
   if (s.game === 'carts') parts.push(st.game === 'rotationPlusMinus' ? 'Plus/Minus' : st.game === 'none' ? 'No game' : 'Match play');
-  parts.push({ bestBallAggregate: 'Low ball + total', bestBall: 'Best ball', aggregate: 'Aggregate' }[st.teamScore] || 'Low ball + total');
+  parts.push(holeMatch(s) ? 'Best ball · 1 a hole' : { bestBallAggregate: 'Low ball + total', bestBall: 'Best ball', aggregate: 'Aggregate' }[st.teamScore] || 'Low ball + total');
   parts.push({ doublePar: 'double par max', netDoubleBogey: 'net double bogey max', none: 'no max' }[st.maxHoleScore] || 'double par max');
   if (st.game !== 'rotationPlusMinus') parts.push(Number(st.halvedHolePoints) ? '½ ties' : 'no points for ties');
-  if (st.game !== 'rotationPlusMinus' && s.game !== 'ryder' && Number(st.matchBonus ?? 1)) parts.push(`+${st.matchBonus ?? 1} win`);
+  if (st.game !== 'rotationPlusMinus' && s.game !== 'ryder' && !holeMatch(s) && Number(st.matchBonus ?? 1)) parts.push(`+${st.matchBonus ?? 1} win`);
   return parts.join(' · ');
 }
 
@@ -805,11 +819,11 @@ function rulesBlock(s) {
   return `<div class="nr-rules${s.rulesOpen ? ' open' : ''}">
     <button class="nr-row" data-act="setup-rules" aria-expanded="${!!s.rulesOpen}"><span style="flex:1;min-width:0"><b class="rt">Rules</b><span class="rs ellipsis">${esc(rulesSummary(s))}</span></span>${icon('fwd', 18)}</button>
     ${s.rulesOpen ? `<div class="rules-body">
-      ${s.game === 'carts' ? `<div class="field"><span class="label">Game</span>${seg('setup-set', [['rotationMatch', 'Match play'], ['rotationPlusMinus', 'Plus/Minus'], ['none', 'None']], st.game, 'data-k="game"')}</div>` : ''}
-      ${st.game !== 'none' ? `<div class="field"><span class="label">Team score</span>${seg('setup-set', [['bestBallAggregate', 'Low ball + total'], ['bestBall', 'Best ball'], ['aggregate', 'Aggregate']], st.teamScore, 'data-k="teamScore"')}</div>` : ''}
+      ${s.game === 'carts' && !holeMatch(s) ? `<div class="field"><span class="label">Game</span>${seg('setup-set', [['rotationMatch', 'Match play'], ['rotationPlusMinus', 'Plus/Minus'], ['none', 'None']], st.game, 'data-k="game"')}</div>` : ''}
+      ${st.game !== 'none' && !holeMatch(s) ? `<div class="field"><span class="label">Team score</span>${seg('setup-set', [['bestBallAggregate', 'Low ball + total'], ['bestBall', 'Best ball'], ['aggregate', 'Aggregate']], st.teamScore, 'data-k="teamScore"')}</div>` : ''}
       <div class="field"><span class="label">Max hole score</span>${seg('setup-set', [['doublePar', 'Double par'], ['netDoubleBogey', 'Net dbl bogey'], ['none', 'None']], st.maxHoleScore, 'data-k="maxHoleScore"')}</div>
       ${!pm && st.game !== 'none' ? `<div class="field"><span class="label">Ties</span>${seg('setup-set', [['0.5', '½ each'], ['0', 'Nothing']], String(st.halvedHolePoints), 'data-k="halvedHolePoints"')}</div>
-      ${s.game === 'ryder' ? '' : `<div class="field"><span class="label">Matchup win bonus</span>${seg('setup-set', [['1', '+1 point'], ['0', 'None']], String(st.matchBonus ?? 1), 'data-k="matchBonus"')}</div>`}` : ''}
+      ${s.game === 'ryder' || holeMatch(s) ? '' : `<div class="field"><span class="label">Matchup win bonus</span>${seg('setup-set', [['1', '+1 point'], ['0', 'None']], String(st.matchBonus ?? 1), 'data-k="matchBonus"')}</div>`}` : ''}
       ${pm ? `<div class="field"><span class="label">Max swing per rotation</span>${seg('setup-set', [['', 'Uncapped'], ['3', '3'], ['5', '5']], st.plusMinusCap == null ? '' : String(st.plusMinusCap), 'data-k="plusMinusCap"')}</div>` : ''}
       <div class="chips"><button class="pill" data-act="setup-toggle" data-k="par3NoMax" aria-pressed="${!!st.par3NoMax}"><span class="dot"></span>No max on par 3s</button>
       <button class="pill" data-act="setup-lowman" aria-pressed="${st.handicapMode === 'offLow'}"><span class="dot"></span>Play off the low man</button></div>
@@ -1221,12 +1235,38 @@ function cartsView(s) {
     ${bottom('Next: tee times', 'setup-go', { v: 'tee', arrow: true })}`;
 }
 
+/** The cart game's rotation: three carts, same opponents all 18 (031), or opponents switching. */
+const cartRot = (s) => (cartIds(s).length === 3 ? threeCartRotation() : s.schedule === 'same' ? sameOppsRotation() : cartRotation(s.schedule, s.opps));
+/** 031 step 3: new 2v2 rounds where a hole is one point (best ball, no bonus): 4 players, or 8 with the same opponents. */
+const holeMatch = (s) => gameOf(s) === '2v2' || (gameOf(s) === 'carts' && s.players.length === 8 && s.schedule === 'same');
+
 /** Partner “Rider” Cup tee times: who tees off together = the first matchups. */
 function riderGroups(s) {
   const ids = cartIds(s);
   if (ids.length === 3) return [['A', 'B'], ['C']];
-  return cartRotation(s.schedule, s.opps)[0].matches.map((m) => [...m]);
+  return cartRot(s)[0].matches.map((m) => [...m]);
 }
+
+/** 029: the round's day (Today / Tomorrow / a date): 'YYYY-MM-DD'. */
+const tzNow = () => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'; } catch { return 'UTC'; } };
+function dayOf(s) {
+  const today = wallDate(Date.now(), tzNow());
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s.playDay || '') && s.playDay >= today) return s.playDay;
+  if (s.playDay === 'tomorrow') { const d = new Date(`${today}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + 1); return d.toISOString().slice(0, 10); }
+  return today;
+}
+/** The day row on the Tee times step (029: the lobby counts down to it). Not drawn in 030: Today / Tomorrow / a date. */
+function dayRow(s) {
+  const today = wallDate(Date.now(), tzNow());
+  const v = s.playDay === 'tomorrow' ? 'tomorrow' : /^\d{4}-/.test(s.playDay || '') && s.playDay > today ? 'date' : 'today';
+  const label = v === 'date' ? new Date(`${s.playDay}T12:00:00Z`).toLocaleDateString('en-US', { timeZone: 'UTC', weekday: 'short', month: 'short', day: 'numeric' }) : 'Pick date';
+  return `<div class="tt-day"><span class="ts-label">Day</span><div class="chips">
+      <button class="pill" data-act="setup-day" data-v="today" aria-pressed="${v === 'today'}">Today</button>
+      <button class="pill" data-act="setup-day" data-v="tomorrow" aria-pressed="${v === 'tomorrow'}">Tomorrow</button>
+      <label class="pill sn-date" aria-pressed="${v === 'date'}">${icon('clock', 18)} ${esc(label)}<input type="date" min="${today}" value="${v === 'date' ? esc(s.playDay) : ''}" data-change="setup-day-date" aria-label="Pick the day"></label></div></div>`;
+}
+/** The last button of Setup for every game but Team Ryder Cup (030 §4): the round is made with its lobby. */
+const inviteBtn = (s) => bottom(s.saving ? 'Creating…' : 'Next: invite', 'setup-save', { busy: s.saving, arrow: !s.saving });
 
 /** A group's tee time: a pill over the native time wheel ("Add time" dashed when it isn't set). */
 function timePill(s, k) {
@@ -1249,14 +1289,16 @@ function riderTeeView(s) {
   const groups = riderGroups(s);
   const rows = groups.map((g, k) => `<section class="tt-group${s.rySel && !g.includes(s.rySel) ? ' target' : ''}"><div class="tt-h"><span class="ts-label">${ORD[k]}</span>${timePill(s, k)}</div>
       <div class="tt-chips two">${g.map(chip).join('')}</div></section>`).join('');
-  const rot = ids.length === 3 ? threeCartRotation() : cartRotation(s.schedule, s.opps);
+  const rot = cartRot(s);
   const mine = rot.flatMap((r) => r.matches.filter((m) => m.includes(myCart)).map((m) => `${r.holes[0]}–${r.holes[1]} ${cartLabel(s, m[0] === myCart ? m[1] : m[0])}`));
   const sched = ids.length === 3 ? 'everyone plays everyone' : s.schedule === 'turn' ? 'switch at the turn' : 'switch every 6';
+  const fixedOpps = ids.length === 3 || s.schedule === 'same';
   return `${topBar(s)}${headline(`Step 5 · Tee times · 2v2 · ${s.players.length}`, 'Who tees off together?', s.rySel ? 'Now tap the cart to swap with.' : 'Tap two carts to swap. Your first match is the other cart in your group.')}
     <div class="tt-list">${rows}</div>
     <div class="tt-peek peek"><span class="ts-label">Your matches · ${esc(cartLabel(s, myCart))}</span><span>${esc(mine.join(' · '))}</span></div>
-    ${ids.length === 3 ? '' : `<button class="nr-row" data-act="setup-go" data-v="matchups"><span style="flex:1;min-width:0"><b class="rt">Game &amp; matchups</b><span class="rs ellipsis">${esc(`${rulesSummary(s).split(' · ').slice(0, 2).join(' · ')} · ${sched}`)}</span></span><span class="meta">Optional</span>${icon('fwd', 18)}</button>`}
-    ${bottom(s.saving ? 'Starting…' : `Start round · ${s.players.length} players`, 'setup-save', { busy: s.saving })}`;
+    ${dayRow(s)}
+    ${fixedOpps ? rulesBlock(s) : `<button class="nr-row" data-act="setup-go" data-v="matchups"><span style="flex:1;min-width:0"><b class="rt">Game &amp; matchups</b><span class="rs ellipsis">${esc(`${rulesSummary(s).split(' · ').slice(0, 2).join(' · ')} · ${sched}`)}</span></span><span class="meta">Optional</span>${icon('fwd', 18)}</button>`}
+    ${inviteBtn(s)}`;
 }
 
 /** ⑤ Tee times for every other game (030 §3): groups in tee order, names four to a row, tap two to swap,
@@ -1287,8 +1329,9 @@ function teeView(s) {
       : groups.length === 1 && n > 4 ? `${n} in one group is fine for Everyone alone. Add a tee time to split it.` : 'Tap two names to swap. Times are optional.';
   return `${topBar(s)}${headline(`Step ${hasTeams(s) ? 5 : 4} · Tee times · ${label}${n > 4 ? ` · ${n}` : ''}`, one ? 'What time do you tee off?' : 'Who tees off together?', sub)}
     <div class="tt-list">${groups.map(card).join('')}${add}</div>
+    ${dayRow(s)}
     ${game === '2v2' ? rulesBlock(s) : ''}
-    ${bottom(s.saving ? 'Starting…' : `Start round · ${n} player${n === 1 ? '' : 's'}`, 'setup-save', { busy: s.saving })}`;
+    ${inviteBtn(s)}`;
 }
 
 /** ④b with 3 carts: nothing to switch; every matchup runs all 18. Rules only. */
@@ -1977,6 +2020,18 @@ export default {
         app.toast({ title: 'Couldn’t save', sub: res.error, error: true });
         return;
       }
+      if (!lobby && round.settings?.lobby) {
+        // 029 / 030 §4: Round is live retires. Not open yet → the organizer's lobby with the invite share sheet; made at
+        // the course (open now) → the round itself (pick yourself, then Scoring is open · Go to hole 1).
+        db.admin.set(res.code, res.admin_pin);
+        db.local.del(DRAFT_KEY);
+        db.recent.remember({ code: res.code, name: round.name, played_on: round.playedOn, crew_id: res.crew_id, course: round.course, settings: round.settings });
+        app.setup = null;
+        const openNow = round.settings.lobby.opensAt && Date.parse(round.settings.lobby.opensAt) <= Date.now() + 1000;
+        if (!openNow) app.ui.lobbyShare = res.code;
+        app.go(openNow ? `#/e/${res.code}` : `#/e/${res.code}/host`);
+        return;
+      }
       if (lobby) {
         // Straight to Host's lobby view with the invite share sheet open (the organizer joins as himself there).
         db.admin.set(res.code, res.admin_pin);
@@ -2165,6 +2220,8 @@ export default {
       app.setup.rulesOpen = !app.setup.rulesOpen;
       app.render();
     },
+    'setup-day': (el, ev, app) => { app.setup.playDay = el.dataset.v; persist(app.setup); app.render(); },
+    'setup-day-date': (el, ev, app) => { if (/^\d{4}-\d{2}-\d{2}$/.test(el.value)) { app.setup.playDay = el.value; persist(app.setup); } app.render(); },
     'setup-soon': (el, ev, app) => app.toast({ title: 'Coming soon', sub: 'This one comes with the next scoring update.' }),
     'setup-tt-pick': (el, ev, app) => {
       // 030 §3: tap a name (picked), then another name to swap the two, or an empty slot to move it there.
@@ -2215,7 +2272,7 @@ export default {
       app.render();
     },
     'setup-schedule': (el, ev, app) => {
-      app.setup.schedule = el.dataset.v === 'turn' ? 'turn' : 'six';
+      app.setup.schedule = el.dataset.v === 'turn' ? 'turn' : el.dataset.v === 'same' ? 'same' : 'six';
       persist(app.setup);
       app.render();
     },

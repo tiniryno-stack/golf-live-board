@@ -238,6 +238,13 @@ function finalCard(app) {
     who = w ? w.name : `${a.name} & ${b.name}`;
     sub = `${w ? 'win the cup' : 'share the cup'} · ${fmtPts(a.points)}–${fmtPts(b.points)}`;
     if (w) jersey = sideColor(w.sideId);
+  } else if (g && snap.settings.pairs && g.people) {
+    // 2v2: people, not pairings (partners switch: most stretches won, 031 step 3).
+    const top = g.people.filter((r) => r.rank === 1);
+    if (top.some((r) => r.playerId === app.me)) jersey = 'var(--cart-you)';
+    who = top.map((r) => snap.playerById.get(r.playerId).name).join(' & ');
+    const by = snap.settings.dayBy === 'stretches' ? `${fmtPts(top[0].won)} stretch${top[0].won === 1 ? '' : 'es'} · ${fmtPts(top[0].points)} pts` : `${fmtPts(top[0].points)} pts`;
+    sub = `${top.length > 1 ? 'share the day' : 'win the day'} · ${by}`;
   } else if (g) {
     const isPM = g.type === 'rotationPlusMinus';
     const top = g.standings.filter((s) => s.rank === 1);

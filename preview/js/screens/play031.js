@@ -142,8 +142,9 @@ export function board031(app, view, { final = '' } = {}) {
 
   if (view === 'partners') {
     const won = stretchesWon(snap);
-    const rows = g.people.map((r) => ({ id: r.playerId, name: snap.playerById.get(r.playerId).name, rank: r.rank, value: r.points }));
-    let pl = placeLine(rows, app.me);
+    const byStretch = snap.settings.dayBy === 'stretches'; // 031 step 3: new partner rounds rank by stretches won
+    const rows = g.people.map((r) => ({ id: r.playerId, name: snap.playerById.get(r.playerId).name, rank: r.rank, value: byStretch ? r.won : r.points }));
+    let pl = placeLine(rows, app.me, byStretch ? { fmt: (n) => `${fmtPts(n)} stretch${n === 1 ? '' : 'es'}` } : {});
     const st = matchState(snap, app.me);
     const live = st?.matches.find((m) => st.mine.has(m.us.id) && m.status === 'live');
     if (live && app.me) {
@@ -151,7 +152,7 @@ export function board031(app, view, { final = '' } = {}) {
       pl = { ...pl, detail: `${live.leader === 'us' ? `${live.margin} up` : live.leader === 'them' ? `${live.margin} down` : 'all square'} with ${partner} right now` };
     }
     const { v, html } = segs(app, 'Your matches');
-    const rowsHtml = rows.map((r) => `<div class="p31-br${r.id === app.me ? ' me lit' : ''}"><span class="p31-pos mono">${rows.filter((x) => x.rank === r.rank).length > 1 ? 'T' : ''}${r.rank}</span><b class="ellipsis">${esc(r.name)}</b><span class="mono v">${esc(fmtPts(won[r.id] || 0))}</span><span class="mono">${esc(fmtPts(r.value))}</span></div>`).join('');
+    const rowsHtml = rows.map((r) => `<div class="p31-br${r.id === app.me ? ' me lit' : ''}"><span class="p31-pos mono">${rows.filter((x) => x.rank === r.rank).length > 1 ? 'T' : ''}${r.rank}</span><b class="ellipsis">${esc(r.name)}</b><span class="mono v">${esc(fmtPts(won[r.id] || 0))}</span><span class="mono">${esc(fmtPts(g.people.find((x) => x.playerId === r.id).points))}</span></div>`).join('');
     return `<div class="plain p31">${final}
       <section class="p31-bug">${placeHead('Leaderboard · stretches won', leftTxt, pl)}
         <div class="p31-br p31-bh ts-label"><span>Pos</span><span>Player</span><span>Won</span><span>Pts</span></div>${rowsHtml}</section>
