@@ -653,3 +653,31 @@ svg.i.s20 { width: 20px; height: 20px; } svg.i.s16 { width: 16px; height: 16px; 
 .pip.free { box-shadow: inset 0 0 0 1.5px var(--text-muted); }
 .pip.x { box-shadow: none; background: var(--surface-2); }
 .pips .pr span.c { justify-self: center; }
+
+/* ── race, more exploring (Nov 19): E cut line, F your number, G the chart ── */
+.ptab.cutt .th, .ptab.cutt .tr { grid-template-columns: 28px minmax(0, 1fr) 44px 48px 58px; }
+.mini { display: inline-flex; gap: 3px; justify-content: flex-end; }
+.mini i { width: 14px; height: 14px; border-radius: 4px; box-shadow: inset 0 0 0 1.5px var(--text-muted); }
+.mini i.n { background: var(--text); box-shadow: none; }
+.tr.me .mini i.n { background: var(--cart-you); }
+.tr.out .mini i { box-shadow: none; background: var(--surface-2); }
+.cutl { display: flex; align-items: center; gap: 10px; height: 32px; color: var(--warn); }
+.cutl::before, .cutl::after { content: ''; flex: 1; border-top: 1.5px dashed var(--warn); opacity: .6; }
+.ptab .cutl + .tr { border-top: 0; }
+.need3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.need3 div { height: 76px; border-radius: var(--radius-lg); display: grid; place-items: center; align-content: center; gap: 2px; box-shadow: inset 0 0 0 1.5px var(--cart-you); background: var(--tint-you); }
+.need3 div.lit { box-shadow: inset 0 0 0 1.5px var(--cart-you), var(--glow-you); }
+.need3 div b { font: 800 32px/36px var(--font-sans); letter-spacing: -1px; }
+.need3 div span { font-size: 13px; line-height: 18px; color: var(--text-muted); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.chips .t-label { width: 64px; color: var(--text-muted); }
+.chips .pill.you { color: var(--cart-you-text); box-shadow: inset 0 0 0 1.5px var(--cart-you); background: var(--tint-you); }
+.chips .pill.out { color: var(--text-muted); background: transparent; box-shadow: inset 0 0 0 1.5px var(--line); }
+.ch { display: block; width: 100%; height: auto; }
+.ch polyline, .ch line { fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; stroke: var(--text-muted); }
+.ch .lead { stroke: var(--text); } .ch .me { stroke: var(--cart-you); stroke-width: 3; } .ch .out { stroke: var(--line); }
+.ch .fan { stroke-dasharray: 2 5; } .ch .bar { stroke: var(--text); stroke-dasharray: 6 4; stroke-width: 1.5; }
+.ch .now { stroke: var(--line); stroke-width: 1.5; }
+.ch text { font: 600 12px var(--font-mono); fill: var(--text-muted); }
+.ch text.lead { fill: var(--text); } .ch text.me { fill: var(--cart-you-text); }
+.ch text, .ch text.lead, .ch text.me { stroke: none; stroke-width: 0; }
