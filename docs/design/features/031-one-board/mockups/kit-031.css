@@ -397,3 +397,13 @@
 .tiles4 div b { font: 800 32px/36px var(--font-sans); letter-spacing: -1px; }
 .tiles4 div b.m { font-family: var(--font-mono); font-weight: 700; }
 .tiles4 div span { color: var(--text-muted); font-size: 13px; line-height: 18px; }
+
+/* ── B + D together (Nov 19) ── */
+.tiles4.row { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.tiles4.row div { padding: 8px 8px 10px; gap: 0; }
+.tiles4.row div .t-label { font-size: 12px; letter-spacing: .5px; }
+.tiles4.row div b { font-size: 20px; line-height: 26px; letter-spacing: -.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tl .tli .tagb { display: inline-block; margin-left: 6px; font: 600 12px/16px var(--font-mono); letter-spacing: .5px; text-transform: uppercase; color: var(--cart-you-text); }
+.tl .tli.best { background: var(--tint-you); border-radius: var(--radius-md); border-top-color: transparent; margin: 0 -8px; padding: 0 8px; }
+.tl .tli.best + .tli { border-top-color: transparent; }
+.tl .tli .sub { display: block; font: 500 13px/18px var(--font-sans); color: var(--text-muted); }
