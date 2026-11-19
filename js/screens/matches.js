@@ -9,6 +9,8 @@ import { esc, seg, seg2, icon, foldIn, mark, syncMotion } from '../ui.js';
 import { local } from '../db.js';
 import { ryderMatches, ryderActions } from './ryder.js';
 import { isRider } from '../riderview.js';
+import { playFor } from '../playfor.js';
+import { matches031 } from './play031.js';
 import { raceState, holeShares, holeOutcomes, showStakes } from '../race.js';
 import { fmtPts, fmtSigned, rotationIndexFor, holeAt, HOLES, playOrder, sideOn, sideOf, matchSidePoints } from '../scoring.js';
 import { teamColor, shortTeam, sideColor } from '../teams.js';
@@ -447,6 +449,9 @@ export default {
   render(app) {
     const snap = app.snapshot;
     const g = snap.game;
+    const v031 = playFor(snap); // 031 §2.1: Matches follows who you play for; Team Ryder Cup and old shapes keep theirs
+    const html031 = v031 === 'ryder' || v031 === 'legacy' ? null : matches031(app, v031);
+    if (html031) return html031;
     if (!g) {
       const n = snap.players.length;
       const casual = !(snap.roster.teams || []).length && n >= 2 && n <= 6;

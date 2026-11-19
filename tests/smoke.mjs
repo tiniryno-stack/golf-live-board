@@ -593,7 +593,7 @@ await R6.page.waitForTimeout(300);
 await R6.page.tap('[data-act="menu-rules"]');
 await R6.page.waitForTimeout(300);
 const rules6 = (await R6.page.textContent('#sheet')).replace(/\s+/g, ' ');
-ok(/Partner “Rider” Cup · Match play/.test(rules6) && /4 a hole/.test(rules6) && /Same opponents all 18/.test(rules6) && /Full, off zero/.test(rules6) && /Double par/.test(rules6) && /better matchup record/.test(rules6),
+ok(/2v2 · Match play/.test(rules6) && /4 a hole/.test(rules6) && /Same opponents all 18/.test(rules6) && /Full, off zero/.test(rules6) && /Double par/.test(rules6) && /better matchup record/.test(rules6),
   `Rules sheet: the round's real settings (${rules6.slice(0, 120)}…)`);
 await R6.page.evaluate(() => window.__glb.closeSheet());
 await R6.page.evaluate(() => window.__glb.openSheet('menu', {}));
@@ -604,7 +604,7 @@ await R6.page.evaluate(() => window.__glb.closeSheet());
 await R6.page.goto(`${srv.origin}/#/`);
 await R6.page.waitForTimeout(600);
 const live6 = (await R6.page.textContent('.live-card').catch(() => '')).replace(/\s+/g, ' ');
-ok(/Live · hole 1/i.test(live6) && /Partner “Rider” Cup/.test(live6) && /Back to hole 1/.test(live6) && /Tara/.test(await R6.page.textContent('#topbar')),
+ok(/Live · hole 1/i.test(live6) && /2v2/.test(live6) && /Back to hole 1/.test(live6) && /Tara/.test(await R6.page.textContent('#topbar')),
   `Home: Playing now card, your name up top (${live6.trim().slice(0, 80)})`);
 await R6.page.tap('[data-act="home-joinsheet"]');
 await R6.page.waitForTimeout(400);

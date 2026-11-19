@@ -857,6 +857,22 @@ Still open: nothing blocking. Design direction (section 9) is final.
     with the old face cloned on top blurring out. Background redraws never animate. First use: Standings, where your
     season's peek grows into its card and the table folds into its "Standings" row in one motion.
 
+  - **Step 2 · Board and Matches by who you play for (§2.1, §2.2).** Display only, no engine change. Pure
+    `js/playfor.js`: `playFor(snap)` → `ryder` | `partners` (2v2, `pairSwitch` six / turn) | `cart` (Rider carts, 8 or
+    3-for-6) | `oneMatch` (2v2 never) | `alone` (split point) | `stroke` (no game) | `legacy` (anything else: today's
+    screens); `gameName` (2v2 / Everyone alone / Stroke play / Team Ryder Cup, used on Home and in Rules), `placeLine`
+    ("3rd · 6 back of Mike + Tyler"), `stretchesWon`. `riderview.matchState(snap, mePid)` = `riderState`'s shapes for
+    carts **and** 2v2 (us = whichever team in each match has you; `ryState` falls back to it, so the read-only match
+    sheet works for 2v2). `race.raceCard` (pure): clinched > the hole that decides it (amber) > you need this one
+    (amber) > How it works (first 3 holes) > nothing; `race.dec` = one decimal, trimmed. Screens: `js/screens/play031.js`
+    (`board031`, `matches031`), called from `board.js` / `matches.js` after the waiting view; Team Ryder Cup unchanged.
+    Your row on a Board, or your live hole tile on Matches, is the one `.lit`. Until step 3: one-match and partner
+    rounds show today's points (low ball + low total = "6 pts left · 6½ to win"; best ball tiles read W / L / ½), and
+    partners-switch Boards rank by points with the Won (stretches) column beside it. Board headlines (lead change…)
+    aren't on the 031 Boards (not drawn). Tests: `tests/playfor031.test.mjs`.
+    The smoke suite still expects the old Board / Matches in a few places (headline strip, 2v2 `.team-row`, the race's
+    lanes): update them before the next smoke run.
+
 ## 13. V2 backlog (running list)
 
 - **Carryovers (skins-style):** a tied point rolls onto the next hole instead of halving, so the next hole can be worth 3–4 points. Open design question: does an unresolved carry die at the end of a 6-hole rotation, or roll into the next opponent?
