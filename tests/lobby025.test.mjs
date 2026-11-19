@@ -61,7 +61,8 @@ test('opensAtFor: 30 min before the first start, right across DST and in other z
 
 test('lobbyState: every stage, sanity against the roster, opening to the millisecond, the day, notices', () => {
   assert.equal(L.lobbyState({ ...lobbyEvent(), settings: { ...ryderSettings(null) } }, Date.now()), null);
-  assert.equal(L.lobbyState({ settings: { lobby: { stage: 'lobby' } } }, Date.now()), null, 'not Team Ryder Cup: no lobby');
+  // 029 (Nov 19): every game can have a lobby; without opensAt it waits as 'nodate' (no draft stages outside Team Ryder Cup).
+  assert.equal(L.lobbyState({ settings: { lobby: { stage: 'lobby' } } }, Date.now()).stage, 'nodate', 'any game: a lobby with no date yet');
   const wed = at('2026-11-04T18:00:00Z');
   const s0 = L.lobbyState(lobbyEvent(), wed);
   assert.deepEqual([s0.stage, s0.open, s0.day, s0.past, s0.startLabel, s0.hostName], ['lobby', false, false, false, '8:00', 'Andrew']);
@@ -310,7 +311,7 @@ test('server gate (mock mirrors _lobby_gate): not_open until open, upsert + fill
     assert.equal(rpc.upsert_score({ p_code: old.code, p_device_id: 'dev-old', p_player_id: 'p1', p_hole: 1, p_strokes: 5 + (lobby === null ? 1 : 0) }).ok, true, String(lobby));
   }
   old.event.settings = { ...old.event.settings, lobby: { stage: 'lobby' } };
-  assert.equal(rpc.upsert_score({ p_code: old.code, p_device_id: 'dev-old', p_player_id: 'p1', p_hole: 2, p_strokes: 4 }).ok, true, 'not a Ryder round: no gate');
+  assert.equal(rpc.upsert_score({ p_code: old.code, p_device_id: 'dev-old', p_player_id: 'p1', p_hole: 2, p_strokes: 4 }).error, 'not_open', '029: any round with a lobby waits for it to open');
 });
 
 test('engine: a lobby roster gives a safe snapshot; old rounds are identical with lobby null; seasons skip unplayed lobbies', () => {

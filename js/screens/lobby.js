@@ -6,7 +6,11 @@
 import { esc, icon, syncMotion } from '../ui.js';
 import * as db from '../db.js';
 import { notSafari, byHandicap, guideEscape, GUIDE_ESCAPE_MS, joinList, myLobby, myCart, dayName, shortDate, hostLine, clock12, wallClock, hasHandicaps, hcpOf, holdStep, revealPhase, landsAt, finalFades, strokesLine, rankLabel, fieldTicks, inviteFaces, inviteDate, ownRoundName, HOLD_MS, TAP_MS, FREEZE_MS, LAND_MS } from '../lobby.js';
-import { playOrder } from '../scoring.js';
+import { playOrder, normalizeSettings, groupIndex, maxLabel } from '../scoring.js';
+import { lobbyHero } from '../lobby.js';
+import { gameBlurb, gameName, playFor } from '../playfor.js';
+import { matchState } from '../riderview.js';
+import { mark } from '../ui.js';
 
 const safariPhone = () => !db.STANDALONE && db.isIOS();
 const inAppBrowser = () => { try { return notSafari(navigator.userAgent); } catch { return false; } };
@@ -40,7 +44,7 @@ const row = (title, detail = '', { act = '', v = '', cls = '', chev = false, rig
 /** The amber-dot card for a change (8): the dot is the only amber; the text stays the normal colour. */
 const noticeCard = (st) => (st.notice ? `<div class="card lb-notice" role="status"><span class="lb-dot" aria-hidden="true"></span><span>${esc(st.notice.text)}</span></div>` : '');
 
-const howLink = () => `<button class="link-btn lb-how" data-act="lb-how">How Team Ryder Cup works ›</button>`;
+const howLink = () => `<button class="link-btn lb-how" data-act="lb-how">How Team Ryder Cup works ›</button>`; // Team Ryder Cup lobby only
 
 /** iPhone Safari: Add Golf Board to your home screen, on every lobby view until it's done (024 move link). */
 const addRow = () => (safariPhone()
@@ -92,8 +96,9 @@ function invitation(app, st, { lineText, primary, quiet }) {
   const host = st.hostName && st.hostName !== 'The organizer' ? st.hostName : '';
   const course = ev.course?.shortName || ev.course?.name || '';
   const own = ownRoundName(ev);
-  const big = own || course || 'Team Ryder Cup';
-  const what = ['Team Ryder Cup', own ? course : ''].filter(Boolean).join(' · ');
+  const gname = st.ryder ? 'Team Ryder Cup' : gameName(app.snapshot); // 029: every game has the invite
+  const big = own || course || gname;
+  const what = [gname, own ? course : ''].filter(Boolean).join(' · ');
   const when = st.date ? [inviteDate(st.date), st.startLabel ? `${st.startLabel} start` : ''].filter(Boolean).join(' · ') : '';
   const f = inviteFaces(ev.roster, app.claimed);
   return `<div class="lb-inv">
@@ -351,7 +356,119 @@ function gameday(app) {
       <button class="btn ghost block lb-quiet" data-act="lb-howday">How today’s game works</button>`)}`;
 }
 
-const VIEWS = { landing, invite, guide, reveal, who, early, watch: (a, s) => early(a, s, { watching: true }), drafted, ready, dayWait, off, removed, gameday };
+// ───────────────────────────────────────────── 029 · a lobby for every game (not Team Ryder Cup: that's above)
+
+/** Groups in start-time order: [{ k, time, players }], you first in yours. */
+function planGroups(app) {
+  const ev = app.event;
+  const times = normalizeSettings(ev.settings).teeTimes;
+  const by = new Map();
+  for (const p of ev.roster?.players || []) {
+    const k = groupIndex(p.groupId);
+    if (!by.has(k)) by.set(k, []);
+    by.get(k).push(p);
+  }
+  return [...by.keys()].sort((a, b) => a - b).map((k) => ({
+    k, time: times[k] || '', // only real start times: a round made with none has none (029 §3 `14`)
+    players: by.get(k).sort((a, b) => (b.id === app.me) - (a.id === app.me)),
+  }));
+}
+const firstNm = (p) => p?.firstName || String(p?.name || '').split(' ')[0];
+const timeTxt = (t) => clock12(t) || '';
+
+/** The game's own slot inside your start-time card (029 §2): who's with whom (2v2), your cart and its matches. */
+function planSlot(app) {
+  const snap = app.snapshot;
+  if (!snap?.game || !app.me) return '';
+  const v = playFor(snap);
+  const ms = matchState(snap, app.me);
+  const mine = ms ? ms.matches.filter((m) => ms.mine.has(m.us.id)) : [];
+  if (!mine.length) return '';
+  const pair = (c) => c.names.join(' + ');
+  if (snap.settings.pairs) {
+    const m0 = mine[0];
+    const sw = mine.length > 1 ? `Partners switch ${snap.settings.pairSwitch === 'turn' ? 'at the turn' : 'every 6'}: ${mine.slice(1).map((m) => `with ${m.us.names.filter((n, i) => m.us.playerIds[i] !== app.me).join(' + ')} on ${m.label.replace(/^Holes /, '')}`).join(', ')}.` : '';
+    return `<p class="lb-slot"><b>${esc(pair(m0.us))}</b> vs ${esc(pair(m0.them))}</p>${sw ? `<p class="lb-slot muted">${esc(sw)}</p>` : ''}`;
+  }
+  if (v === 'cart' || v === 'oneMatch') {
+    const rows = mine.map((m, i) => `<div class="lb-slot-r${i ? ' peek' : ''}"><span class="mono">${esc(m.label.replace(/^Holes /, ''))}</span><span>vs ${esc(pair(m.them))}</span></div>`).join('');
+    return `<div class="lb-slot"><span class="ts-label you">Your cart · ${esc(pair(mine[0].us))}</span>${rows}</div>`;
+  }
+  return '';
+}
+
+/** Who has Golf Board (029 §1.2): everyone who has picked their name, as faces (you ringed green). */
+function planFaces(app) {
+  const ps = app.event.roster?.players || [];
+  const n = ps.filter((p) => app.claimed.has(p.id)).length;
+  const label = n >= ps.length ? `all ${ps.length}` : n <= 1 ? 'just you so far' : `${n} of ${ps.length}`;
+  const faces = ps.map((p) => `<span class="lb-face${p.id === app.me ? ' you' : app.claimed.has(p.id) ? ' in' : ''}" title="${esc(p.name)}">${esc(firstNm(p).slice(0, 1).toUpperCase())}</span>`).join('');
+  return { n, html: `<div class="ts-label lb-k">Who has Golf Board · ${label}</div><div class="lb-faces">${faces}</div>` };
+}
+
+/** 029 §1 · the player lobby for every game: the hero, your start time (lit on the day), the others peeking, the game. */
+function plan(app, st) {
+  const ev = app.event;
+  const course = ev.course?.shortName || ev.course?.name || '';
+  const groups = planGroups(app);
+  const mineG = groups.find((g) => g.players.some((p) => p.id === app.me)) || groups[0];
+  const hero = lobbyHero(app.now(), { date: st.date, start: mineG?.time || (st.stage === 'ready' ? st.startTime : ''), tz: st.tz, course });
+  const host = st.hostName || 'The organizer';
+  const top = hero.nodate
+    ? head(esc(course), `${esc(host)} hasn’t set ${st.date ? 'the start time' : 'the day'} yet`, 'The day and your start time show up here as soon as they’re set.')
+    : `<div class="nr-head lb-herohead"><div class="nr-k"><span class="lbl">${esc(hero.kicker)}</span></div><div class="ts-number-xl lb-hero">${esc(hero.hero)}</div><div class="nr-sub">${esc(hero.sub)}</div></div>`;
+  const names = (g) => g.players.map((p) => `<span class="${p.id === app.me ? 'you' : ''}">${esc(firstNm(p))}</span>`).join(' · ');
+  const card = mineG ? `<section class="lb-start${hero.lit ? ' lit' : ''}"><span class="ts-label">${hero.nodate ? 'Your group' : `Your start time · ${esc(timeTxt(mineG.time))}`}</span>
+      <p class="lb-names">${names(mineG)}</p>${planSlot(app)}</section>` : '';
+  const rest = groups.filter((g) => g !== mineG);
+  const peek = rest.length ? `<div class="lb-others peek">${rest.slice(0, rest.length > 2 ? 1 : 2).map((g) => `<p><span class="mono">${esc(timeTxt(g.time) || '–')}</span> · ${g.players.map((p) => esc(firstNm(p))).join(' · ')}</p>`).join('')}${rest.length > 2 ? `<p>+${rest.length - 1} more start times</p>` : ''}</div>` : '';
+  const b = gameBlurb(app.snapshot);
+  const game = `<div class="ts-label lb-k">Today’s game</div><div class="lb-game"><b>${esc(b.name)}</b><p>${esc(b.text)}</p></div>`;
+  const f = planFaces(app);
+  const bottom = f.n <= 1
+    ? `${note(`${esc(host)} is sending the link to everyone.`)}<button class="btn block nr-cta" data-act="board-share">Share the link</button>`
+    : `${st.stage === 'ready' ? note(`Scoring opens by itself at ${esc(st.opensLabel)}${st.day ? '' : ` on ${esc(dayName(st.date, app.now(), st.tz))}`}.`) : ''}<button class="btn block nr-cta" data-act="lb-text">Text ${esc(host)}</button>`;
+  return `${top}${card}${peek}${game}${f.html}${addRow()}${foot(bottom)}`;
+}
+
+/** 029 §4 · someone who isn't playing: the start times as plain cards, Follow along. */
+function follow(app, st) {
+  const ev = app.event;
+  const course = ev.course?.shortName || ev.course?.name || '';
+  const groups = planGroups(app);
+  const day = st.date ? dayName(st.date, app.now(), st.tz) : '';
+  const times = groups.map((g) => timeTxt(g.time)).filter(Boolean);
+  const cards = groups.map((g) => `<section class="lb-start"><span class="ts-label">${g.time ? `Start time · ${esc(timeTxt(g.time))}` : 'Group'}</span><p class="lb-names">${g.players.map((p) => esc(firstNm(p))).join(' · ')}</p></section>`).join('');
+  return `${head(`${esc(st.hostName || 'The organizer')}’s ${esc(day || 'next')} round · ${esc(gameName(app.snapshot))}`, `${(ev.roster?.players || []).length} playing at ${esc(course)}`,
+      `${esc(day)}${times.length ? `, start time${times.length > 1 ? 's' : ''} ${esc(times.join(' and '))}` : ''}. The Board goes live with the first score.`)}
+    ${cards}
+    ${foot(`<button class="btn primary nr-cta" data-act="lb-followon">Follow along</button><button class="btn ghost block lb-quiet" data-act="lb-find">I’m playing · find my name</button>`)}`;
+}
+
+/** 029 §3 · Scoring is open (once per round per phone): your group on hole 1 as a preview, Go to hole 1. */
+function gamedayPlan(app, st) {
+  const groups = planGroups(app);
+  const mineG = groups.find((g) => g.players.some((p) => p.id === app.me)) || groups[0];
+  const h = playOrder(app.event.settings || {})[0] || 1;
+  const snap = app.snapshot;
+  const par = snap?.holes?.[h - 1]?.par || app.event.course?.par?.[h - 1] || 4;
+  const tee = app.event.course?.tee;
+  const yd = (app.event.course?.tees || []).find((t) => t.name === tee)?.yards?.[h - 1];
+  const others = mineG ? mineG.players.filter((p) => p.id !== app.me).map(firstNm) : [];
+  const list = (a) => (a.length <= 1 ? a.join('') : `${a.slice(0, -1).join(', ')} and ${a[a.length - 1]}`);
+  const now = !mineG?.time; // 029 §3 `14`: a round made at the course (no start time) starts now
+  const title = now ? `You${others.length ? `, ${list(others)}` : ''}` : `${timeTxt(mineG.time)}${others.length ? ` with ${list(others)}` : ''}`;
+  const rows = (mineG?.players || []).map((p) => `<div class="lb-h1"><span class="${p.id === app.me ? 'you' : ''}">${esc(firstNm(p))}</span>${mark(null, par, 28, { ghost: par })}</div>`).join('');
+  const rest = groups.filter((g) => g !== mineG);
+  return `<div class="nr-head"><div class="nr-k"><span class="lbl you">Scoring is open</span></div><h1 class="nr-title">${esc(title)}</h1><div class="nr-sub">${esc(gameName(snap))}</div></div>
+    <section class="lb-start lit"><span class="ts-label">Hole ${h} · par ${par}${yd ? ` · ${yd} yd` : ''}${now ? ' · starting now' : ''}</span>${rows}</section>
+    ${rest.length ? `<div class="lb-others peek">${rest.slice(0, 2).map((g) => `<p><span class="mono">${esc(timeTxt(g.time) || '–')}</span> · ${g.players.map((p) => esc(firstNm(p))).join(' · ')}</p>`).join('')}</div>` : ''}
+    ${foot(`<button class="btn primary nr-cta" data-act="lb-go1">Go to hole ${h}</button>
+      <button class="btn ghost block lb-quiet" data-act="lb-howday">How today’s game works</button>`)}`;
+}
+
+const VIEWS = { landing, invite, guide, reveal, who, early, watch: (a, s) => early(a, s, { watching: true }), drafted, ready, dayWait, off, removed,
+  gameday: (a, s) => (s.ryder ? gameday(a, s) : gamedayPlan(a, s)), plan, follow };
 
 /** "Hi Andrew — about Chuck's Bday: " in the share sheet (no phone numbers in the app; he picks the contact). */
 async function textHost(app, st) {
@@ -525,6 +642,12 @@ export default {
       app.render();
     },
     'lb-follow': (el, ev, app) => { app.ui.lobbyWatch = app.code; app.ui.lobbyPick = null; app.render(); },
+    'lb-followon': (el, ev, app) => {
+      // 029 §4: the Board once scores start; until then this screen says when.
+      const st = app.lobby();
+      if (!st || st.open) { app.go(app.tabHash('board')); return; }
+      app.toast({ title: 'The Board goes live with the first score', sub: st.stage === 'ready' ? `Scoring opens at ${st.opensLabel}.` : '' });
+    },
     'lb-back': (el, ev, app) => { app.ui.lobbyPick = null; app.ui.lobbyGuide = null; restoreHash(app); app.render(); },
     'lb-guide': (el, ev, app) => { app.ui.lobbyGuide = app.code; app.render(); document.getElementById('content').scrollTop = 0; },
     'lb-here': (el, ev, app) => {

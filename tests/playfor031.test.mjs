@@ -124,3 +124,17 @@ test('028 Enter line on top: Everyone alone and Stroke play, leading, trailing a
   assert.equal(enterLine(stroke, lead.id).you, true);
   assert.equal(enterLine(compute(four({}), []), 'an'), null, 'nothing posted: no line');
 });
+
+test('029 lobby hero: days away, tomorrow, today (hours, minutes, 1 min, Now), no date', async () => {
+  const { lobbyHero } = await import('../js/lobby.js');
+  const tz = 'America/Chicago', course = 'Twin Creeks';
+  const now = Date.parse('2026-11-18T14:00:00Z'); // Wed Nov 18, 8:00 in Chicago
+  const h = (date, start, ms = now) => lobbyHero(ms, { date, start, tz, course });
+  assert.deepEqual(h('2026-11-22', '08:40'), { kicker: 'Sunday · Nov 22 · Twin Creeks', hero: '8:40', sub: 'your start time · 4 days away', lit: false });
+  assert.deepEqual(h('2026-11-19', '08:40'), { kicker: 'Tomorrow · Twin Creeks', hero: '8:40', sub: 'your start time, Thursday', lit: false });
+  assert.deepEqual(h('2026-11-18', '10:10'), { kicker: 'Today · Twin Creeks', hero: '2h 10m', sub: 'to your 10:10 start time', lit: true });
+  assert.equal(h('2026-11-18', '08:42').hero, '42 min');
+  assert.equal(h('2026-11-18', '08:00', now - 30000).hero, '1 min');
+  assert.equal(h('2026-11-18', '08:00').hero, 'Now');
+  assert.equal(h(null, '08:40').nodate, true);
+});

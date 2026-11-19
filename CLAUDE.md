@@ -203,6 +203,9 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
   settings). Server gate `_lobby_gate` in `upsert_score` / `fill_score` (`not_open`), plus `mark_in_app`, `lobby_status`,
   `lobby_counts`, `set_round_date`, `claims.in_app`, `whoami.now` (migration `supabase/migrations/2026-11-06-ryder-lobby.sql`,
   rollback next to it). Screens: `js/screens/lobby.js` (players), `js/screens/hostlobby.js` (organizer). ARCHITECTURE.md 13a.
+- **Every round has a lobby (029, Nov 19, branch `claude/magical-turing-pueufg`):** Setup makes every round with
+  `settings.lobby`; `_lobby_gate` gates any round with one (migration `supabase/migrations/2026-11-19-lobby-every-round.sql`,
+  rollback beside it). Player screens `plan` / `follow` / `gamedayPlan` in `js/screens/lobby.js`, organizer `planHostView`.
 - **Small groups:** any roster that isn't 4 carts of 2 is a scorecard round (no teams).
   With 2–6 players, `settings.solo` = **split point** (`game.type 'splitPoint'`): 1 point a hole to the
   low net score, ties for low split it 1/k; level after 18 → **most outright wins** (`rankStandings`), still level = shared. Teams A–D are made in `soloView`, so Host can switch it on

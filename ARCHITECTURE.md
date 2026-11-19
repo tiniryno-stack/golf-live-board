@@ -922,6 +922,25 @@ Still open: nothing blocking. Design direction (section 9) is final.
     status reads `Jake hasn’t got a score on 10 yet.` The old Enter (`individualView`, steppers) is only a fallback now.
     **Touches score entry: smoke run before it ships.**
 
+  - **Step 6 · A lobby for every round (029).** SQL: `supabase/migrations/2026-11-19-lobby-every-round.sql` (create or
+    replace `_lobby_gate` without the Team Ryder Cup condition; rollback next to it), mirrored in `schema.sql` and the
+    mock. **Not applied to the live DB yet: Andrew runs it in the SQL Editor.** Checked live Nov 19: no non-Ryder round
+    has `settings.lobby`, so nothing played changes. `lobby.js`: `lobbyOf` for every game (`ryder` flag); outside Team
+    Ryder Cup `lobbyState` has no draft stages (`ready`, or `nodate` without opensAt); `lobbyView` → `plan` (player) /
+    `follow` (not playing) / `gameday`; pure `lobbyHero(nowMs, { date, start, tz, course })` (tested). Screens:
+    `js/screens/lobby.js` `plan` (hero by distance, your start time card lit on the day, the others peeking, the game
+    slot: 2v2 pairings / your cart's matches, Today's game from pure `playfor.gameBlurb`, Who has Golf Board faces =
+    who picked their name, Scoring opens… + Text the host), `follow`, `gamedayPlan` (Scoring is open: your group on hole
+    1 with ghost pars; no start time = "You, Sean, Sam and Jake · starting now"); `hostlobby.js` `planHostView` (N of M
+    have Golf Board, scoring row with Open now confirming in place as a grow, or the amber "Set the day and first tee
+    time" → the existing date sheet; everyone with a Share pill, not-in first, 4 then expand; Share the invite). Setup:
+    the Tee times step has a Day row (Today / Tomorrow / a date: not drawn in 030) and ends on **Next: invite**;
+    `buildRound` adds `settings.lobby` (opensAt = first start − 30 min; today with no time = now; another day with no
+    time = null) and `playedOn`; Round is live retires: open now → the round (Scoring is open), else the organizer's
+    lobby with the invite share sheet. Not built: the start-time card growing into hole 1 as scoring opens (it swaps),
+    naming your cart in the lobby (cart names are off), Tee times and teams › from the host lobby, See what players see.
+    **Touches joining and the scoring gate: full smoke run before it ships.**
+
 ## 13. V2 backlog (running list)
 
 - **Carryovers (skins-style):** a tied point rolls onto the next hole instead of halving, so the next hole can be worth 3–4 points. Open design question: does an unresolved carry die at the end of a 6-hole rotation, or roll into the next opponent?

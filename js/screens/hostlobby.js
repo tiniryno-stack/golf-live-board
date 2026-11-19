@@ -11,6 +11,7 @@ import * as L from '../lobby.js';
 import { startLobbyEdit, lobbyStepView } from './setup.js';
 import * as M from '../mdraft.js';
 import { holesLabel, normalizeSettings } from '../scoring.js';
+import { gameName } from '../playfor.js';
 
 const clone = (x) => JSON.parse(JSON.stringify(x));
 const hostKey = (app) => `glb.lobbyhost.${app.code}`;
@@ -245,7 +246,49 @@ export function matchupRow(app) {
   return `<div class="card lb-card lb-rows" style="margin:0 0 14px">${row('Matchups', Array.isArray(app.event.settings?.ryderMatchups) ? 'drafted · until the first score' : 'standard · until the first score', 'lh-mdraft')}</div>`;
 }
 
+/**
+ * 029 §5 · the organizer's lobby for every game but Team Ryder Cup: who has Golf Board, when scoring opens (Open now
+ * confirms in place), everyone with a Share pill (not in yet first), and one primary: Share the invite.
+ */
+function planHostView(app) {
+  const ev = app.event, st = app.lobby();
+  const rows = status(app);
+  const ps = ev.roster?.players || [];
+  const by = new Map((rows || []).map((r) => [r.player_id, r]));
+  const has = (p) => !!by.get(p.id)?.claimed;
+  const n = ps.filter(has).length;
+  const day = st.date ? L.dayName(st.date, app.now(), st.tz) : '';
+  const title = rows ? (n >= ps.length ? `All ${ps.length} have Golf Board` : `${n} of ${ps.length} have Golf Board`) : `${ps.length} players`;
+  const sub = [[day, st.stage === 'ready' ? st.startLabel : ''].filter(Boolean).join(' '), course(ev), gameName(app.snapshot)].filter(Boolean).join(' · ');
+  // The scoring row: when it opens + Open now, which grows into its confirm in place (no dialog); amber with no date.
+  let scoring;
+  if (st.stage === 'nodate') {
+    scoring = `<button class="row lb-row hl-warn" data-act="lh-when"><span class="body"><b class="lb-rt">Set the day and first tee time</b><span class="detail">scoring opens 30 min before it</span></span><span class="hr-chev">${icon('fwd', 20)}</span></button>`;
+  } else {
+    const asking = app.ui.planOpen === app.code;
+    scoring = `<div class="grow hl-open${asking ? ' open' : ''}" data-grow="hl-open">
+      <div class="g-row"><div class="row lb-row"><span class="body"><b class="lb-rt">Scoring opens at ${esc(st.opensLabel)}</b><span class="detail">by itself, 30 min before the first tee time</span></span>${st.day ? '<button class="btn small hl-now" data-act="hl-open-ask">Open now</button>' : ''}</div></div>
+      <div class="g-card hl-confirm"><b class="ts-row">Open scoring now?</b><p class="meta">Everyone can enter scores from now on, before ${esc(st.opensLabel)}. It can’t be closed again.</p>
+        <div class="hl-two"><button class="btn block" data-act="hl-open-no">Not yet</button><button class="btn primary block" data-act="hl-open-go">Open now</button></div></div></div>`;
+  }
+  const order = [...ps].sort((a, b) => has(a) - has(b));
+  const all = app.ui.planAll === app.code;
+  const shown = all ? order : order.slice(0, 4);
+  const line = (p) => `<div class="row lb-row"><span class="body"><b class="lb-rt${p.id === app.me ? ' you' : ''}">${esc(p.name)}</b></span>${p.id === st.hostId || p.id === app.me ? `<span class="detail lb-d">✓ organizer</span>`
+    : has(p) ? '<span class="detail lb-d">✓ has it</span>' : `<button class="btn small" data-act="hl-share-one" data-v="${esc(p.id)}">${icon('share', 16)} Share</button>`}</div>`;
+  const more = order.length - shown.length;
+  const missing = order.filter((p) => !has(p)).length;
+  const list = `<div class="lbl lb-k">Everyone${missing ? ' · not in the app first' : ''}</div><div class="card lb-card lb-rows">${shown.map(line).join('')}${more > 0
+    ? `<button class="row lb-row" data-act="hl-all"><span class="body"><b class="lb-rt muted">${more} more${missing ? ` · ${missing} not in the app yet` : ''}</b></span><span class="hr-chev">${icon('fwd', 20).replace('<svg', '<svg style="transform:rotate(90deg)"')}</span></button>` : ''}</div>`;
+  const primary = `<button class="btn primary nr-cta" data-act="lh-invite">${rows && n >= ps.length ? 'Share the invite again' : 'Share the invite'}</button>`;
+  return `<div class="plain nr-setup lb"><div class="nr-head"><div class="nr-k"><span class="lbl">${esc(day || 'Your round')} · host</span></div><h1 class="nr-title">${esc(title)}</h1><div class="nr-sub">${esc(sub)}</div></div>
+    <div class="card lb-card lb-rows">${scoring}</div>
+    ${list}
+    <div class="nr-foot">${primary}</div></div>`;
+}
+
 export function hostLobbyView(app) {
+  if (!app.lobby()?.ryder && app.lobby()?.stage !== 'off') return planHostView(app); // 029: every other game
   if (app.ui.mdraft?.code === app.code) return mdraftView(app);
   if (app.ui.orderStep?.code === app.code) return orderStepView(app);
   if (app.setup?.lobby?.code === app.code) return lobbyStepView(app); // Start the draft / Set start times
@@ -877,6 +920,21 @@ export const lobbyActions = {
         await saveLobby(app, ({ settings }) => ({ settings: L.withNotice(L.callOff(settings), L.notices.off(host), app.now(), app.event.played_on) }));
       },
     });
+  },
+  // 029 §5: Open now grows into its confirm in place; Not yet folds it back.
+  'hl-open-ask': (el, ev, app) => { app.ui.planOpen = app.code; app.render(); },
+  'hl-open-no': (el, ev, app) => { app.ui.planOpen = null; app.render(); },
+  'hl-open-go': async (el, ev, app) => {
+    const st = app.lobby();
+    if (!st?.day) { app.toast({ title: 'Only on the day of the round', error: true }); return; }
+    app.ui.planOpen = null;
+    const ok = await saveLobby(app, ({ settings }) => ({ settings: L.openNow(settings, app.now()) }));
+    if (ok) app.toast({ title: 'Scoring is open', sub: `Opened by you at ${L.clock12(L.wallClock(app.now(), st.tz))}` });
+  },
+  'hl-all': (el, ev, app) => { app.ui.planAll = app.ui.planAll === app.code ? null : app.code; app.render(); },
+  'hl-share-one': (el, ev, app) => {
+    const p = (app.event.roster?.players || []).find((x) => x.id === el.dataset.v);
+    if (p) share(app, 'person', { name: first(p), pid: p.id });
   },
   'lh-open-now': (el, ev, app) => {
     const st = app.lobby();
