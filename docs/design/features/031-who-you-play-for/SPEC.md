@@ -1,6 +1,6 @@
 # 031 · Who you play for: one Board, Matches and Setup for every game
 
-Status: handed off Nov 19, 2026. Built: §2.4 standings (8edba84), the cart flags in §2.5 (06caa7c), step 1 the feel (027) + the Standings grow, step 2 Board and Matches by who you play for + the race (display only), step 4 Setup (Game, Teams, Tee times; ends on Start round until the lobby). step 7 coach tips + Switch it up, step 3 scoring (new rounds only), step 5 the same Enter for every game, step 6 a lobby for every round (SQL in `supabase/migrations/2026-11-19-lobby-every-round.sql`, to run). See ARCHITECTURE.md 13a.
+Status: built in 53bc4c8 (merged to `main` Nov 19, 2026): steps 1–7, see ARCHITECTURE.md 13a. Lobby SQL applied. Not built: the open items in §6 (8 players switching partners stays coming soon).
 
 **What this is.** The one engineer brief for the Nov 19 redesign, approved by Andrew on the Claude Design canvas. It
 decides what the Board and Matches show for every game, redraws the race, moves partner and opponent switching into

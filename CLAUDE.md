@@ -8,7 +8,7 @@ after the first playtest; section 13 is the V2 backlog.
 
 New Boards and Matches by who you play for, the race, Setup's game step, season standings as a record, cart colors
 and names off. That one brief has the decisions, the 22 target screens, what's built, the build order and what's
-still open. The work is on branch `claude/friendly-lovelace-g5kzki`, not `main`.
+still open. **Built and merged to `main` Nov 19 (53bc4c8)**; ARCHITECTURE.md 13a has what each step did.
 
 ## What it is / where things stand
 
