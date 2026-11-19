@@ -4,8 +4,9 @@
 // a code field. Season standings sits at the top (Oct 22), Recent rounds at the bottom. Run it back
 // lives in a round's ⋯ menu. Everything here comes from this phone (glb.recent), no network.
 
+import { gameName } from '../playfor.js';
 import { esc, icon, prettyDate, initials, empty } from '../ui.js';
-import { recent, normCode, STANDALONE, moveLink, syncMyRounds, local, refreshLobbies, owner, clock } from '../db.js';
+import { recent, normCode, STANDALONE, moveLink, syncMyRounds, pruneGoneRounds, local, refreshLobbies, owner, clock } from '../db.js';
 import { lobbyState, homeCard } from '../lobby.js';
 import { homeCrew } from './crew.js';
 import { fmtPts, fmtToPar, playerLeaderboard } from '../scoring.js';
@@ -21,15 +22,8 @@ const ordinal = (n) => `${n}${['th', 'st', 'nd', 'rd'][(n % 100 >= 11 && n % 100
 
 let draftCode = '';
 
-/** The game's name, the way Home says it. */
-function gameLabel(snap) {
-  const st = snap.settings;
-  if (st.pairs) return '2v2';
-  if (snap.game?.type === 'splitPoint') return 'Match play';
-  if (snap.game?.sides) return 'Team Ryder Cup';
-  if (snap.game) return 'Partner “Rider” Cup';
-  return 'Stroke play';
-}
+/** The game's name, the way Home says it (031 §2.3 names; stored game ids don't change). */
+const gameLabel = (snap) => gameName(snap);
 
 /**
  * What Home shows for a round, from this phone's point of view (kept in glb.recent by app.js):
@@ -171,6 +165,7 @@ export default {
     if (!synced) {
       synced = true;
       syncMyRounds().then((n) => { if (n) app.render(); }).catch(() => { /* offline: next open */ });
+      pruneGoneRounds().then((n) => { if (n) app.render(); }).catch(() => { /* offline: next open */ }); // deleted rounds leave Recent
       refreshLobbies(clock.now()).then((n) => { if (n) app.render(); }).catch(() => { /* offline: next open */ }); // 025
     }
     const rounds = recent.all();

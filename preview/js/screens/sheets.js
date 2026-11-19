@@ -77,7 +77,7 @@ export function rulesRows(app) {
     rows.push(['Opponents', 'New cart every 6 holes', `Holes 1–6 the cart in your foursome, then carts from other tee times, compared hole by hole.${myMatches.length ? ` You: ${myMatches.map((m) => `${m.firstHole}–${m.lastHole} vs ${shortTeam(name(m.teams.find((t) => t !== mine)))}`).join(', ')}.` : ''}${st.lineups?.length ? ` Lineup changed from hole ${st.lineups.map((l) => l.fromHole).join(', ')}.` : ''}`]);
   } else {
     const three = !st.pairs && snap.teams.length === 3;
-    rows.push(['Format', `${st.pairs ? '2v2' : 'Partner “Rider” Cup'} · ${g.type === 'rotationPlusMinus' ? 'Plus/Minus' : 'Match play'}${snap.hasStrokes ? ' · net' : ''}`,
+    rows.push(['Format', `2v2 · ${g.type === 'rotationPlusMinus' ? 'Plus/Minus' : 'Match play'}${snap.hasStrokes ? ' · net' : ''}`,
       st.pairs ? 'Two teams of two in one foursome.' : three ? 'Your cart plays both other carts on every hole.' : 'Your cart vs one other cart at a time.']);
     if (g.type === 'rotationPlusMinus') rows.push(['Points', 'Every stroke counts', `${two ? 'Low ball and low total' : st.teamScore === 'aggregate' ? 'Both partners added' : 'Best ball'}: beat theirs and the difference is yours.${g.cap != null ? ` A matchup swings ±${g.cap} at most.` : ''}`]);
     else rows.push(['Points', `${g.ncomp * (three ? 2 : 1)} a hole`, `${two ? '1 for low ball, 1 for low total' : st.teamScore === 'aggregate' ? '1 for the lower total of both partners' : '1 for the best ball'}${three ? ', against each cart' : ''}. ${half}${g.bonus ? ` +${fmtPts(g.bonus)} for winning a matchup.` : ''}`]);

@@ -33,4 +33,31 @@ export const COURSES = [
       { gold: 548, blue: 514, white: 491, red: 369 }, { gold: 412, blue: 381, white: 348, red: 291 }, { gold: 421, blue: 385, white: 330, red: 289 },
     ],
   },
+  // Firewheel Golf Park · Lakes (Garland, TX): from the printed scorecard (owner's photo, Nov 7). Hole 10 is printed
+  // "4/5"; par 4 here (the men's card totals 72). Location: the Lakes/Old clubhouse, 600 W Campbell Rd (approximate).
+  {
+    id: 'firewheel-lakes-garland-tx',
+    source: 'builtin',
+    name: 'Firewheel Golf Park · Lakes',
+    shortName: 'Firewheel Lakes',
+    location: 'Garland, TX',
+    lat: 32.9765,
+    lng: -96.6291,
+    tees: [
+      { name: 'Gold', yards: 7134, rating: 75.5, slope: 139 },
+      { name: 'Blue', yards: 6680, rating: 73.6, slope: 134 },
+      { name: 'White', yards: 6141, rating: 70.7, slope: 125 },
+      { name: 'Red', yards: 5502, rating: 73.6, slope: 126 },
+    ],
+    par: [4, 4, 3, 5, 4, 4, 4, 3, 5, 4, 3, 4, 5, 4, 3, 4, 5, 4],
+    strokeIndex: [12, 10, 18, 4, 8, 6, 14, 16, 2, 5, 11, 7, 1, 9, 17, 15, 3, 13],
+    yards: [
+      { gold: 414, blue: 387, white: 372, red: 337 }, { gold: 431, blue: 413, white: 373, red: 335 }, { gold: 184, blue: 166, white: 141, red: 94 },
+      { gold: 512, blue: 497, white: 466, red: 438 }, { gold: 447, blue: 437, white: 424, red: 342 }, { gold: 468, blue: 437, white: 400, red: 354 },
+      { gold: 414, blue: 390, white: 350, red: 322 }, { gold: 189, blue: 168, white: 130, red: 85 }, { gold: 558, blue: 536, white: 502, red: 452 },
+      { gold: 440, blue: 400, white: 365, red: 335 }, { gold: 183, blue: 167, white: 134, red: 127 }, { gold: 426, blue: 403, white: 374, red: 318 },
+      { gold: 554, blue: 530, white: 488, red: 456 }, { gold: 418, blue: 384, white: 343, red: 315 }, { gold: 165, blue: 145, white: 135, red: 116 },
+      { gold: 393, blue: 359, white: 331, red: 319 }, { gold: 532, blue: 482, white: 457, red: 433 }, { gold: 406, blue: 379, white: 356, red: 324 },
+    ],
+  },
 ];

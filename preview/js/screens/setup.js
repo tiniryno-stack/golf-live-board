@@ -19,6 +19,7 @@ import * as db from '../db.js';
 import * as names from '../names.js';
 import { FLAGS } from '../flags.js';
 import { loadGeo } from '../geoload.js';
+import { gameChoices, gameNext, teeGroups, aloneIn, groupsFit } from '../playfor.js';
 import { TEAM_NAME_PICKS, isDefaultTeamName } from '../teams.js';
 import { initials } from '../ui.js';
 import { countsAsPlayed, draftedRoster, newLobby, toTeamsStage, toCartsStage, withStartTimes, keepNames, rosterKey, allTimesSet, addMinutes, lobbyOf, lobbyState, maySaveStep, pairedRoster, cartOrder, mergeStep, opensAtFor, wallClock, clock12, dayName } from '../lobby.js';
@@ -72,7 +73,19 @@ function blank(from = null) {
 
 /** The picked game, or Scorecard only if it no longer fits the player count. */
 function gameOf(s) {
-  return gameFix(s.game, s.players.length) ? 'scorecard' : s.game;
+  const n = s.players.length;
+  // 031 §2.3: "2v2" is one game on screen, stored as today: '2v2' with 4 players, 'carts' with 6 or 8.
+  const g = s.game === '2v2' && (n === 6 || n === 8) ? 'carts' : s.game === 'carts' && n === 4 ? '2v2' : s.game;
+  return gameFix(g, n) ? 'scorecard' : g;
+}
+
+/** 030 §3: who tees off together, as groups of player indexes (a saved grouping, or the default). */
+function teeGroupsOf(s) {
+  const n = s.players.length, g = gameOf(s);
+  if (s.groups && s.groupsKey === `${n}:${g}` && groupsFit(s.groups, n)) return s.groups;
+  s.groups = teeGroups(n, g);
+  s.groupsKey = `${n}:${g}`;
+  return s.groups;
 }
 
 /** Carts in play: 3 for 6 players, 4 for 8 (Partner “Rider” Cup). */
@@ -111,7 +124,7 @@ async function loadPast(app, crewId) {
     const groups = live.slice(-4).reverse().map(({ event }) => ({
       day: event.played_on ? new Date(`${event.played_on}T12:00:00`).toLocaleDateString([], { weekday: 'long' }) : '',
       course: event.course?.shortName || event.course?.name || '',
-      game: event.settings?.pairs ? '2v2' : (event.roster?.teams || []).length >= 3 ? 'Cart game' : event.settings?.solo ? 'Match' : '',
+      game: event.settings?.pairs || (event.roster?.teams || []).length >= 3 ? '2v2' : event.settings?.solo ? 'Everyone alone' : '',
       people: (event.roster?.players || []).filter((p) => p.personId).map((p) => ({ personId: p.personId, firstName: p.firstName || String(p.name || '').split(' ')[0], lastName: p.lastName || '', nickname: p.nickname || '' })),
     })).filter((g) => g.people.length);
     // Usual cart names (feature 009): per pair (either order), the name they used most recently in the crew.
@@ -414,11 +427,16 @@ function buildRound(s) {
   const groupOfTeam = three ? { A: 'g1', B: 'g1', C: 'g2' } : {};
   if (!three) rotation[0].matches.forEach((m, i) => m.forEach((t) => (groupOfTeam[t] = `g${i + 1}`)));
   const auto = autoGroups(s.players.length);
+  // 030: Stroke play / Everyone alone: the Tee times step's groups (empty ones dropped), times moved along with them.
+  const tg = game === 'carts' || game === '2v2' ? null : (teeGroupsOf(s) || []).map((g, k) => [g, k]).filter(([g]) => g.length);
+  const groupOfPlayer = {};
+  if (tg) tg.forEach(([g], k) => g.forEach((i) => { groupOfPlayer[i] = `g${k + 1}`; }));
+  if (tg) s.settings.teeTimes = tg.map(([, k]) => (s.settings.teeTimes || [])[k] || '');
   const players = s.players.map((p, i) => ({
     id: `p${i + 1}`, personId: p.personId || db.uuid(), name: shown[i],
     firstName: p.firstName, lastName: p.lastName || '', ...(p.nickname ? { nickname: p.nickname } : {}),
     teamId: game === 'carts' ? p.teamId : null,
-    groupId: game === 'carts' ? groupOfTeam[p.teamId] : game === '2v2' ? 'g1' : `g${auto[i] + 1}`,
+    groupId: game === 'carts' ? groupOfTeam[p.teamId] : game === '2v2' ? 'g1' : groupOfPlayer[i] || `g${auto[i] + 1}`,
     strokes: p.strokes === '' || p.strokes == null || Number.isNaN(Number(p.strokes)) ? null : Math.max(0, Math.round(Number(p.strokes))),
   }));
   const nGroups = Math.max(...players.map((p) => Number(p.groupId.slice(1))));
@@ -508,14 +526,15 @@ export function handicapSheet(app, { i }) {
 
 /** Back target for each screen. */
 const BACK = { which: 'course', players: 'course', check: 'players', game: 'players', teams: 'game', matchups: 'tee', draft: 'teams', tee: 'draft', invite: 'game', when: 'invite' };
+const hasTeams = (s) => ['2v2', 'carts'].includes(gameOf(s));
 // Partner “Rider” Cup (018): Carts → Tee times (no draft); matchups is an optional screen off Tee times.
 // Team Ryder Cup (025): Game → Invite now? → (When | Carts → Draft → Tee times).
-const backOf = (s) => (s.game === 'carts' && s.screen === 'tee' ? 'teams' : s.game === 'ryder' && s.screen === 'teams' ? 'invite' : BACK[s.screen]);
-const BACK_LABEL = { course: 'Course', players: 'Players', game: 'Game', invite: 'Invite', when: 'When', teams: s => (s.game === 'carts' ? 'Carts' : s.game === 'ryder' ? 'Carts' : 'Partners'), draft: 'Draft', tee: 'Tee times' };
+const backOf = (s) => (s.screen === 'tee' && gameOf(s) !== 'ryder' ? (hasTeams(s) ? 'teams' : 'game') : s.game === 'ryder' && s.screen === 'teams' ? 'invite' : BACK[s.screen]);
+const BACK_LABEL = { course: 'Course', players: 'Players', game: 'Game', invite: 'Invite', when: 'When', teams: s => (gameOf(s) === '2v2' ? 'Partners' : 'Carts'), draft: 'Draft', tee: 'Tee times' };
 
 /** Progress bars: how far along the flow this screen is (2–4 bars depending on the game). */
 function progress(s) {
-  const flow = ['course', 'players', 'game', ...(s.game === 'ryder' ? ['invite', ...(s.screen === 'when' ? ['when'] : ['teams', 'draft', 'tee'])] : s.game === '2v2' ? ['teams'] : s.game === 'carts' ? ['teams', 'tee'] : [])];
+  const flow = ['course', 'players', 'game', ...(gameOf(s) === 'ryder' ? ['invite', ...(s.screen === 'when' ? ['when'] : ['teams', 'draft', 'tee'])] : hasTeams(s) ? ['teams', 'tee'] : ['tee'])];
   const at = Math.max(0, flow.indexOf(s.screen === 'which' ? 'course' : s.screen === 'check' ? 'players' : s.screen));
   return `<div class="nr-bars">${flow.map((_, i) => `<i class="${i <= at ? 'on' : ''}"></i>`).join('')}</div>`;
 }
@@ -713,25 +732,54 @@ function playersView(s) {
 }
 
 /** ③ Pick a game (availability by player count). */
+/** One choice of a segmented setting: [value, label, sub, { soon }] ("coming soon" = shown, not pickable). */
+function optSeg(act, options, value) {
+  return `<div class="seg seg2 gs-seg" role="group">${options.map(([v, label, sub, o = {}]) => `<button data-act="${o.soon ? 'setup-soon' : act}" data-v="${esc(v)}" aria-pressed="${!o.soon && String(v) === String(value)}"${o.soon ? ' aria-disabled="true"' : ''}>
+      <span class="s-top"><span class="ellipsis">${esc(label)}</span></span><span class="s-sub mono">${esc(o.soon ? 'coming soon' : sub)}</span></button>`).join('')}</div>`;
+}
+
+const PARTNER_TIP = {
+  never: 'Same partner all 18. One match.',
+  six: 'You partner everyone once. Each six holes is its own match.',
+  turn: 'A new partner at the turn. Each nine is its own match.',
+};
+
+/** The picked 2v2's own settings, inside its row (031 §2.3): Partners, and Opponents with 8. */
+function gameSettings(s, id) {
+  const n = s.players.length;
+  if (id === '2v2') {
+    return `<div class="gs-set"><span class="ts-label">Partners</span>
+      ${optSeg('setup-pairswitch', [['never', 'Keep', 'all 18'], ['six', 'Switch', 'every 6'], ['turn', 'Switch', 'at the turn']], s.pairSwitch)}
+      <p class="gs-hint">${esc(PARTNER_TIP[s.pairSwitch] || PARTNER_TIP.never)}</p></div>`;
+  }
+  if (id === 'carts' && n === 8) {
+    // Partners switching across both foursomes and "Same all 18" need the scoring step (031 §5 step 3, §6): coming soon.
+    return `<div class="gs-set"><span class="ts-label">Partners</span>
+      ${optSeg('setup-pairswitch', [['never', 'Keep', 'all 18'], ['six', 'Switch', 'every 6', { soon: true }]], 'never')}
+      <span class="ts-label">Opponents</span>
+      ${optSeg('setup-schedule', [['six', 'Switch', s.schedule === 'turn' ? 'at the turn' : 'every 6'], ['same', 'Same', 'all 18', { soon: true }]], 'six')}
+      <p class="gs-hint">${s.schedule === 'turn' ? 'Your cart plays two of the other three carts, nine holes each.' : 'Your cart plays each of the other three carts for six holes.'}</p></div>`;
+  }
+  if (id === 'carts') return '<div class="gs-set"><p class="gs-hint">Every cart plays both other carts on every hole, all 18.</p></div>';
+  return '';
+}
+
 function gameView(s) {
   const n = s.players.length;
   const pick = gameOf(s);
-  const next = pick === '2v2' || pick === 'carts' || pick === 'ryder';
-  return `${topBar(s)}${headline(`Step 3 · Game · ${n} player${n === 1 ? '' : 's'}`, 'Pick a game', 'Games that don’t fit your player count are greyed out.')}
-    <div class="game-list">${GAMES.map((g) => {
-      const fix = gameFix(g.id, n);
-      const on = g.id === pick;
-      return `<button class="game-opt${on ? ' on' : ''}" data-act="setup-game" data-v="${g.id}" ${fix ? 'aria-disabled="true"' : ''} aria-pressed="${on}">
-        <span class="radio"></span>
-        <span style="flex:1;min-width:0"><span class="spread"><b class="ellipsis">${esc(g.name)}</b><span class="mono g-count">${g.count}</span></span>
-        <span class="g-desc ellipsis">${esc(n === 6 && g.desc6 ? g.desc6 : g.desc)}</span>${fix ? `<span class="g-fix">${esc(fix)}</span>` : ''}</span>
-      </button>`;
-    }).join('')}</div>
-    ${pick === 'match' ? '<p class="meta nr-hint">Match play: everyone plays their own ball. Each hole is worth 1 point; low net score takes it, a tie for low splits it.</p>' : ''}
-    <div class="nr-foot">
-      ${next ? '' : '<p class="meta" style="text-align:center;margin:0 0 8px">2v2, Partner “Rider” Cup and Team Ryder Cup go to one more screen to set teams.</p>'}
-      <button class="btn primary nr-cta" data-act="${next ? 'setup-go' : 'setup-save'}" ${next ? `data-v="${pick === 'ryder' ? 'invite' : 'teams'}"` : ''} ${s.saving ? 'aria-busy="true"' : ''}>${s.saving ? 'Starting…' : next ? `Next: ${pick === '2v2' ? 'pick partners' : pick === 'ryder' ? 'carts' : 'carts'}` : `Start round · ${n} player${n === 1 ? '' : 's'}`}${next ? icon('fwd', 18) : ''}</button>
-    </div>`;
+  const { shape, games } = gameChoices(n);
+  // 031 §2.3: only the games that fit; the picked row grows in place (027) to show its settings.
+  const rows = games.map((g) => {
+    const on = g.id === pick;
+    const face = `<span class="gs-main"><b>${esc(g.name)}${g.tag ? ` <span class="gs-tag">(${esc(g.tag)})</span>` : ''}</b><span class="gs-d">${esc(g.desc)}</span></span><span class="radio"></span>`;
+    return `<div class="grow gs-opt${on ? ' open' : ''}" data-grow="game-${g.id}">
+      <button class="g-row gs-face" data-act="setup-game" data-v="${g.id}" aria-pressed="false">${face}</button>
+      <div class="g-card gs-card" aria-current="true"><button class="gs-face" data-act="setup-game" data-v="${g.id}" aria-pressed="true">${face}</button>${gameSettings(s, g.id)}</div></div>`;
+  }).join('');
+  const next = gameNext(pick);
+  return `${topBar(s)}${headline(`Step 3 · Game · ${n} player${n === 1 ? '' : 's'}`, 'Pick a game', esc(shape))}
+    <div class="gs-list">${rows}</div>
+    ${bottom(next.label, 'setup-go', { v: next.to })}`;
 }
 
 const SWITCH_TIP = {
@@ -775,20 +823,16 @@ function swapBtn(s, i, extra = '') {
   return `<button class="swap-name${s.swapSel === i ? ' sel' : ''}" data-act="setup-swapsel" data-i="${i}" aria-pressed="${s.swapSel === i}"><span class="ellipsis">${esc(p.name)}</span>${extra}</button>`;
 }
 
-/** ④ 2v2: pick partners + when they switch. */
+/** ④ Teams, 2v2 with 4 (030 §2): who's partners. When partners switch is set on the Game step (031 §2.3). */
 function pairsView(s) {
-  const c = course(s);
-  return `${topBar(s)}${headline('Step 4 · 2v2 setup', 'Pick partners', `2v2 · 4 players${c ? ` · ${esc(c.shortName || c.name)}` : ''}`)}
+  return `${topBar(s)}${headline('Step 4 · Teams · 2v2', 'Who’s partners?')}
+    <div class="nr-line"><span class="meta">${s.swapSel != null ? 'Now tap a name on the other team.' : 'Tap two names to swap.'}</span><button class="btn small" data-act="setup-shuffle">${icon('shuffle', 18)} Shuffle</button></div>
     <div class="pair-grid">
       <div class="pair-card me"><div class="pc-k mono">${s.pairSwitch === 'never' ? 'TEAM 1' : 'START · TEAM 1'}</div>${swapBtn(s, 0)}${swapBtn(s, 1)}</div>
       <div class="pair-card them"><div class="pc-k mono">${s.pairSwitch === 'never' ? 'TEAM 2' : 'START · TEAM 2'}</div>${swapBtn(s, 2)}${swapBtn(s, 3)}</div>
     </div>
-    <div class="nr-line"><span class="meta">${s.swapSel != null ? 'Now tap who to swap with.' : 'Tap two names to swap partners.'}</span><button class="btn small" data-act="setup-shuffle">Shuffle</button></div>
-    <div class="lbl nr-lbl">Switch partners</div>
-    ${seg('setup-pairswitch', [['never', 'Never'], ['six', 'Every 6'], ['turn', 'At the turn']], s.pairSwitch)}
-    <div class="nr-tip">${icon('bulb', 16)}<span>${SWITCH_TIP[s.pairSwitch]}</span></div>
-    ${rulesBlock(s)}
-    ${bottom(s.saving ? 'Starting…' : 'Start round · 2v2', 'setup-save', { busy: s.saving })}`;
+    <p class="gs-hint tt-hint">${esc(PARTNER_TIP[s.pairSwitch] || PARTNER_TIP.never)}</p>
+    ${bottom('Next: tee times', 'setup-go', { v: 'tee', arrow: true })}`;
 }
 
 const CART_TINT = { A: 'var(--cart-you)', B: 'var(--t-B)', C: 'var(--t-C)', D: 'var(--t-D)' };
@@ -1052,7 +1096,7 @@ async function saveLobbyStep(app) {
   const rules = Object.fromEntries(RULE_KEYS.filter((k) => k in s.settings).map((k) => [k, s.settings[k]]));
   const base = { ...fresh.settings, ...rules };
   const settings = mode === 'tee' ? withStartTimes(base, fresh.played_on, times, app.now())
-    : mode === 'carts' ? toCartsStage(fresh.settings) : { ...toTeamsStage(base), teeTimes: [] };
+    : mode === 'carts' ? toCartsStage(fresh.settings) : { ...toTeamsStage(base), teeTimes: [], ryderMatchups: undefined }; // a new team draft = matchups drafted again
   s.saving = true;
   app.render();
   app.event = { ...app.event, ...fresh };
@@ -1160,16 +1204,20 @@ function cartsView(s) {
   applyUsual(s);
   const ids = cartIds(s);
   const idx = (id) => s.players.map((p, i) => [p, i]).filter(([p]) => p.teamId === id).map(([, i]) => i);
-  const rows = ids.map((id) => {
+  const three = ids.length === 3;
+  const rows = ids.map((id, k) => {
     const t = s.teams.find((x) => x.id === id);
-    return `<div class="ry-cart rider-cart" style="--jersey:${CART_TINT[id]}">
-      <div class="rider-cart-k"><span class="lbl">Cart ${id}</span>
-        <button class="tn-cart rider-tn" data-act="tn-open" data-v="${id}" aria-label="Name cart ${id}: ${esc(t.name || 'not named')}"><span class="ellipsis${t.name ? '' : ' empty'}">${esc(t.name || 'Pick a name')}</span>${cartTag(s, id) ? `<span class="ts-label tn-cart-tag">${esc(cartTag(s, id))}</span>` : ''}${icon('fwd', 14)}</button></div>
+    const mine = idx(id).includes(0); // the organizer's cart is "you" (green); every other cart neutral (031 §2.5)
+    const named = FLAGS.cartNames
+      ? `<button class="tn-cart rider-tn" data-act="tn-open" data-v="${id}" aria-label="Name cart ${id}: ${esc(t.name || 'not named')}"><span class="ellipsis${t.name ? '' : ' empty'}">${esc(t.name || 'Pick a name')}</span>${cartTag(s, id) ? `<span class="ts-label tn-cart-tag">${esc(cartTag(s, id))}</span>` : ''}${icon('fwd', 14)}</button>` : '';
+    return `<div class="ry-cart rider-cart${three ? ' wide' : ''}" style="--jersey:${mine ? 'var(--cart-you)' : FLAGS.cartColors ? CART_TINT[id] : 'var(--text-muted)'}">
+      <div class="rider-cart-k"><span class="lbl">${mine ? 'Your cart' : `Cart ${k + 1}`}</span>${named}</div>
       <div class="ry-cart-pair">${idx(id).map((i) => swapBtn(s, i)).join('')}</div></div>`;
   }).join('');
-  return `${topBar(s)}${headline('Step 4 · Carts', 'Who rides together?')}
-    <div class="nr-line"><span class="meta">${s.swapSel != null ? 'Now tap who to swap with.' : s.pairedFromLast ? 'Paired like your last round · tap two names to swap.' : 'Tap two names to swap.'}</span><button class="btn small" data-act="setup-shuffle">Shuffle</button></div>
+  return `${topBar(s)}${headline('Step 4 · Teams · 2v2', 'Who rides together?')}
+    <div class="nr-line"><span class="meta">${s.swapSel != null ? 'Now tap a name in another cart.' : s.pairedFromLast ? 'Paired like your last round · tap two names to swap.' : 'Tap two names to swap.'}</span><button class="btn small" data-act="setup-shuffle">${icon('shuffle', 18)} Shuffle</button></div>
     ${rows}
+    ${three ? '<p class="gs-hint tt-hint">3 carts: every cart plays both others on every hole, 18 holes.</p>' : ''}
     ${bottom('Next: tee times', 'setup-go', { v: 'tee', arrow: true })}`;
 }
 
@@ -1180,30 +1228,67 @@ function riderGroups(s) {
   return cartRotation(s.schedule, s.opps)[0].matches.map((m) => [...m]);
 }
 
-/** ⑤ Who tees off together? Tap two carts to swap them; your three matches; matchups optional. */
+/** A group's tee time: a pill over the native time wheel ("Add time" dashed when it isn't set). */
+function timePill(s, k) {
+  const t = (s.settings.teeTimes || [])[k] || '';
+  const shown = t ? teeClockOf(t) : 'Add time';
+  return `<label class="tt-time${t ? ' set' : ''}">${icon('clock', 18)}<span class="${t ? 'mono' : ''}">${esc(shown)}</span>
+    <input type="time" value="${esc(t)}" aria-label="${ORD[k] || `${k + 1}th`} tee time" data-input="setup-tt-time" data-i="${k}"></label>`;
+}
+const ORD = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th'];
+const teeClockOf = (t) => { const [h, m] = t.split(':').map(Number); return `${((h + 11) % 12) + 1}:${String(m).padStart(2, '0')}`; };
+const cartLabel = (s, id) => (FLAGS.cartNames && s.teams.find((x) => x.id === id)?.name) || s.players.filter((p) => p.teamId === id).map((p) => p.firstName || p.name).join(' + ') || `Cart ${id}`;
+
+/** ⑤ Tee times for the cart games (030 §3, `15`): groups hold carts; tap two carts to swap; your matches peek. */
 function riderTeeView(s) {
   ensureCarts(s);
   applyUsual(s);
   const ids = cartIds(s);
-  const name = (id) => s.teams.find((x) => x.id === id)?.name || `Cart ${id}`;
-  const times = s.settings.teeTimes || [];
-  const ord = ['1st', '2nd', '3rd', '4th'];
-  const chip = (id) => `<button class="ry-pick rider-pick${s.rySel === id ? ' sel' : ''}" style="--jersey:${CART_TINT[id]}" data-act="setup-rider-swap" data-v="${id}" aria-pressed="${s.rySel === id}"><span class="ellipsis">${esc(name(id))}</span></button>`;
-  const rows = riderGroups(s).map((g, k) => `<div class="ry-tee">
-      <div class="ry-tee-k"><span class="lbl">${ord[k]}</span>
-        <input class="ry-time mono${times[k] ? ' set' : ''}" type="time" value="${esc(times[k] || '')}" aria-label="${ord[k]} tee time" data-input="setup-ry-time" data-i="${k}">${times[k] ? '' : '<span class="ry-time-ph">Add time</span>'}</div>
-      <div class="ry-tee-pair">${chip(g[0])}<span class="meta">${g[1] ? 'v' : ''}</span>${g[1] ? chip(g[1]) : '<span></span>'}</div></div>`).join('');
+  const myCart = s.players[0]?.teamId || 'A';
+  const chip = (id) => `<button class="tt-chip cart${id === myCart ? ' you' : ''}${s.rySel === id ? ' sel' : ''}" data-act="setup-rider-swap" data-v="${id}" aria-pressed="${s.rySel === id}"><span class="ellipsis">${esc(cartLabel(s, id))}${id === myCart ? ' · You' : ''}</span></button>`;
+  const groups = riderGroups(s);
+  const rows = groups.map((g, k) => `<section class="tt-group${s.rySel && !g.includes(s.rySel) ? ' target' : ''}"><div class="tt-h"><span class="ts-label">${ORD[k]}</span>${timePill(s, k)}</div>
+      <div class="tt-chips two">${g.map(chip).join('')}</div></section>`).join('');
   const rot = ids.length === 3 ? threeCartRotation() : cartRotation(s.schedule, s.opps);
-  const mine = rot.flatMap((r) => r.matches.filter((m) => m.includes('A')).map((m) => [r.holes, m[0] === 'A' ? m[1] : m[0]]));
-  const groupOf = (id) => riderGroups(s).findIndex((g) => g.includes(id));
-  const my = mine.map(([holes, o]) => `<div class="ry-my"><span class="mono">${holes[0]}–${holes[1]}</span><span class="ellipsis" style="color:${CART_TINT[o]}">${esc(name(o))}</span><span class="meta">${groupOf(o) === groupOf('A') ? 'same tee time' : ord[groupOf(o)]}</span></div>`).join('');
+  const mine = rot.flatMap((r) => r.matches.filter((m) => m.includes(myCart)).map((m) => `${r.holes[0]}–${r.holes[1]} ${cartLabel(s, m[0] === myCart ? m[1] : m[0])}`));
   const sched = ids.length === 3 ? 'everyone plays everyone' : s.schedule === 'turn' ? 'switch at the turn' : 'switch every 6';
-  return `${topBar(s)}${headline('Step 5 · Tee times', 'Who tees off together?', s.rySel ? 'Now tap the cart to swap with.' : 'Tap two carts to swap them.')}
-    ${rows}
-    <div class="lbl ry-pool-k">Your matches · ${esc(name('A'))}</div>
-    ${my}
-    <button class="nr-row" data-act="setup-go" data-v="matchups"><span style="flex:1;min-width:0"><b class="rt">Game &amp; matchups</b><span class="rs ellipsis">${esc(`${rulesSummary(s).split(' · ').slice(0, 2).join(' · ')} · ${sched}`)}</span></span><span class="meta">Optional</span>${icon('fwd', 18)}</button>
+  return `${topBar(s)}${headline(`Step 5 · Tee times · 2v2 · ${s.players.length}`, 'Who tees off together?', s.rySel ? 'Now tap the cart to swap with.' : 'Tap two carts to swap. Your first match is the other cart in your group.')}
+    <div class="tt-list">${rows}</div>
+    <div class="tt-peek peek"><span class="ts-label">Your matches · ${esc(cartLabel(s, myCart))}</span><span>${esc(mine.join(' · '))}</span></div>
+    ${ids.length === 3 ? '' : `<button class="nr-row" data-act="setup-go" data-v="matchups"><span style="flex:1;min-width:0"><b class="rt">Game &amp; matchups</b><span class="rs ellipsis">${esc(`${rulesSummary(s).split(' · ').slice(0, 2).join(' · ')} · ${sched}`)}</span></span><span class="meta">Optional</span>${icon('fwd', 18)}</button>`}
     ${bottom(s.saving ? 'Starting…' : `Start round · ${s.players.length} players`, 'setup-save', { busy: s.saving })}`;
+}
+
+/** ⑤ Tee times for every other game (030 §3): groups in tee order, names four to a row, tap two to swap,
+ *  tap a name then an empty slot to move it; "Add a tee time" is the last row (027 rule 5). */
+function teeView(s) {
+  const n = s.players.length, game = gameOf(s);
+  const groups = teeGroupsOf(s);
+  const one = n <= 4 || game === '2v2';
+  const sel = one ? null : s.ttSel ?? null;
+  const nm = (i) => s.players[i]?.firstName || s.players[i]?.name || '';
+  const lonely = new Set(aloneIn(groups));
+  const card = (g, k) => {
+    const chips = g.map((i) => (one
+      ? `<span class="tt-chip still${i === 0 ? ' you' : ''}"><span class="ellipsis">${esc(nm(i))}</span></span>`
+      : `<button class="tt-chip${i === 0 ? ' you' : ''}${sel === i ? ' sel' : ''}" data-act="setup-tt-pick" data-i="${i}" aria-pressed="${sel === i}"><span class="ellipsis">${esc(nm(i))}</span></button>`)).join('');
+    const empties = !one && (sel != null || !g.length) && g.length < 4
+      ? Array.from({ length: 4 - g.length }, () => `<button class="tt-chip empty" data-act="setup-tt-move" data-g="${k}">Move here</button>`).join('') : '';
+    const t = (s.settings.teeTimes || [])[k];
+    const warn = lonely.has(k) ? `<p class="tt-alone"><i></i>${esc(nm(g[0]))} is alone${t ? ` at ${teeClockOf(t)}` : ''}</p>` : '';
+    return `<section class="tt-group${sel != null && !g.includes(sel) ? ' target' : ''}"><div class="tt-h"><span class="ts-label">${one ? 'Your group' : ORD[k] || `${k + 1}th`}</span>${timePill(s, k)}</div>
+      <div class="tt-chips">${chips}${empties}</div>${warn}</section>`;
+  };
+  const last = groups[groups.length - 1] || [];
+  const add = !one && last.length >= 4 ? `<button class="add-row tt-add" data-act="setup-tt-add">${icon('plus', 20)}<span>Add a tee time</span></button>` : '';
+  const label = { '2v2': '2v2', match: 'Everyone alone', scorecard: 'Stroke play' }[game] || 'Stroke play';
+  const sub = one ? 'One group. Times are optional.'
+    : sel != null ? `Now tap who ${esc(nm(sel))} swaps with.`
+      : groups.length === 1 && n > 4 ? `${n} in one group is fine for Everyone alone. Add a tee time to split it.` : 'Tap two names to swap. Times are optional.';
+  return `${topBar(s)}${headline(`Step ${hasTeams(s) ? 5 : 4} · Tee times · ${label}${n > 4 ? ` · ${n}` : ''}`, one ? 'What time do you tee off?' : 'Who tees off together?', sub)}
+    <div class="tt-list">${groups.map(card).join('')}${add}</div>
+    ${game === '2v2' ? rulesBlock(s) : ''}
+    ${bottom(s.saving ? 'Starting…' : `Start round · ${n} player${n === 1 ? '' : 's'}`, 'setup-save', { busy: s.saving })}`;
 }
 
 /** ④b with 3 carts: nothing to switch; every matchup runs all 18. Rules only. */
@@ -1252,7 +1337,7 @@ function matchupsView(s) {
     <div class="nr-line"><span class="lbl" style="flex:1">Matchups</span><button class="btn small" data-act="setup-shuffle-mu">Shuffle</button><button class="btn small${s.custom ? ' primary' : ''}" data-act="setup-custom">${s.custom ? 'Done' : 'Custom'}</button></div>
     <div class="mu-card">${rows}<div class="mu-groups meta">${esc(groupLine)}</div></div>
     ${rulesBlock(s)}
-    ${bottom(s.saving ? 'Starting…' : 'Start round · 8 players', 'setup-save', { busy: s.saving })}`;
+    ${bottom('Back to tee times', 'setup-go', { v: 'tee' })}`;
 }
 
 /** Scorecard check: good / fix / entered by hand. Also tees, first tee and the round name. */
@@ -1330,7 +1415,7 @@ function savedView(s) {
     ${ry ? `<div class="nr-foot"><button class="btn primary nr-cta" data-act="setup-copy" data-v="share">${icon('share', 18)} Text the group</button><button class="link-btn" style="margin-top:8px" data-act="setup-open">Open the round</button></div>` : bottom('Open the round', 'setup-open')}`;
 }
 
-const VIEWS = { course: courseView, which: whichView, players: playersView, check: checkView, game: gameView, invite: inviteView, when: whenView, teams: (s) => (s.game === 'carts' ? cartsView(s) : s.game === 'ryder' ? ryCartsView(s) : pairsView(s)), matchups: matchupsView, draft: ryDraftView, tee: (s, app) => (s.game === 'carts' ? riderTeeView(s) : ryTeeView(s, app)) };
+const VIEWS = { course: courseView, which: whichView, players: playersView, check: checkView, game: gameView, invite: inviteView, when: whenView, teams: (s) => (gameOf(s) === 'carts' ? cartsView(s) : gameOf(s) === 'ryder' ? ryCartsView(s) : pairsView(s)), matchups: matchupsView, draft: ryDraftView, tee: (s, app) => (gameOf(s) === 'carts' ? riderTeeView(s) : gameOf(s) === 'ryder' ? ryTeeView(s, app) : teeView(s)) };
 
 
 // ───────────────────────────────────────────── course search actions
@@ -1940,9 +2025,18 @@ export default {
       if (to === 'game' && !s.players.length) return;
       if (to === 'teams') {
         const g = gameOf(s);
-        if (g !== s.game || (g !== '2v2' && g !== 'carts' && g !== 'ryder')) return;
+        if (g !== '2v2' && g !== 'carts' && g !== 'ryder') return;
+        s.game = g;
         if (g === 'carts') ensureCarts(s);
       }
+      if (to === 'tee' && gameOf(s) !== 'ryder') s.game = gameOf(s);
+      if (s.screen === 'tee' && to !== 'tee' && s.groups?.some((g) => !g.length)) {
+        // 030: an empty group is dropped when you leave the step (its time goes with it).
+        const keep = s.groups.map((g, k) => [g, k]).filter(([g]) => g.length);
+        s.settings.teeTimes = keep.map(([, k]) => (s.settings.teeTimes || [])[k] || '');
+        s.groups = keep.map(([g]) => g);
+      }
+      s.ttSel = null;
       if (to === 'matchups' || to === 'tee') { if (gameOf(s) === 'carts') ensureCarts(s); }
       s.screen = to;
       s.swapSel = null;
@@ -2069,6 +2163,50 @@ export default {
     },
     'setup-rules': (el, ev, app) => {
       app.setup.rulesOpen = !app.setup.rulesOpen;
+      app.render();
+    },
+    'setup-soon': (el, ev, app) => app.toast({ title: 'Coming soon', sub: 'This one comes with the next scoring update.' }),
+    'setup-tt-pick': (el, ev, app) => {
+      // 030 §3: tap a name (picked), then another name to swap the two, or an empty slot to move it there.
+      const s = app.setup;
+      const i = Number(el.dataset.i);
+      const groups = teeGroupsOf(s);
+      if (s.ttSel == null || s.ttSel === i) s.ttSel = s.ttSel === i ? null : i;
+      else {
+        const a = s.ttSel;
+        const ga = groups.find((g) => g.includes(a)), gb = groups.find((g) => g.includes(i));
+        ga[ga.indexOf(a)] = i; gb[gb.indexOf(i)] = a;
+        s.ttSel = null;
+        persist(s);
+      }
+      app.render();
+    },
+    'setup-tt-move': (el, ev, app) => {
+      const s = app.setup;
+      const groups = teeGroupsOf(s);
+      const to = groups[Number(el.dataset.g)];
+      if (s.ttSel == null || !to || to.length >= 4) { app.render(); return; }
+      const from = groups.find((g) => g.includes(s.ttSel));
+      from.splice(from.indexOf(s.ttSel), 1);
+      to.push(s.ttSel);
+      s.ttSel = null;
+      persist(s);
+      app.render();
+    },
+    'setup-tt-add': (el, ev, app) => {
+      const s = app.setup;
+      teeGroupsOf(s).push([]);
+      persist(s);
+      app.render();
+    },
+    'setup-tt-time': (el, ev, app) => {
+      const s = app.setup;
+      const k = Number(el.dataset.i);
+      const t = [...(s.settings.teeTimes || [])];
+      while (t.length <= k) t.push('');
+      t[k] = /^\d{1,2}:\d{2}$/.test(el.value) ? el.value : '';
+      s.settings.teeTimes = t;
+      persist(s);
       app.render();
     },
     'setup-pairswitch': (el, ev, app) => {

@@ -55,17 +55,25 @@ function hostRow(app, st) {
   return `<div class="card lb-card lb-rows">${row('Host', app.adminPin ? 'draft, start times, players' : 'enter the organizer PIN', { act: 'lb-host', chev: true })}</div>`;
 }
 
-function whoPlaying(app, st) {
+/** The captains' matchup draft, while it's running: one row to watch the board fill in (owner, Nov 7). */
+function mdCard(app) {
+  const md = app.event.settings?.matchupDraft;
+  if (!md || md.done) return '';
+  return `<div class="card lb-card lb-rows">${row('Matchup draft · live', `${(md.picks || []).length} of 12 matches picked`, { act: 'lb-md', chev: true, cls: 'you' })}</div>`;
+}
+
+function whoPlaying(app, st, { all = false } = {}) {
   // Lowest handicap first (owner, Nov 6); joinList is A–Z, so ties stay A–Z.
   const meFirst = byHandicap(app.event.roster, joinList(app.event.roster, app.claimed, '', app.me));
   const ps = meFirst;
   const c = counts(app);
   const missing = c ? Math.max(0, c.total - c.in_app) : null;
-  const more = ps.length - 4;
+  const shown = all ? ps.length : 4; // the day-of "drafting" screen lists everyone (owner, Nov 7)
+  const more = ps.length - shown;
   const hcp = hasHandicaps(app.event.roster) || (app.event.roster?.players || []).some((p) => hcpOf(app.event.roster, p.id));
   const right = (id) => { const h = hcpOf(app.event.roster, id); return h ? { text: h.strokes, mono: true } : ''; };
   const tag = (id) => (id === app.me ? 'you' : id === st.hostId ? 'organizer' : '');
-  const rows = meFirst.slice(0, 4).map((p) => row(esc(p.name), tag(p.id), { cls: p.id === app.me ? 'you' : '', right: right(p.id) })).join('');
+  const rows = meFirst.slice(0, shown).map((p) => row(esc(p.name), tag(p.id), { cls: p.id === app.me ? 'you' : '', right: right(p.id) })).join('');
   return `<div class="lbl lb-k">Who’s playing${hcp ? ' · handicap' : ''}</div>
     <div class="card lb-card lb-rows">${rows}${more > 0 ? row(`${more} more${missing ? ` · ${missing} haven’t added Golf Board` : ''}`, '', { act: 'lb-all', chev: true, cls: 'muted' }) : ''}</div>`;
 }
@@ -247,6 +255,7 @@ function early(app, st, { watching = false } = {}) {
     ${howLink()}
     ${noticeCard(st)}
     ${hostRow(app, st)}
+    ${mdCard(app)}
     ${watching ? '' : hcpCard(app, st)}
     ${watching ? '' : st.paired && myCart(app.event, app.me) ? cartCard(app) : comingUp(st)}
     ${whoPlaying(app, st)}
@@ -269,6 +278,7 @@ function drafted(app, st) {
   return `${head(`${esc(ev.name)} · teams are set`, `You’re on ${esc(m.side?.name || 'a team')}`, `${esc(dayName(st.date, app.now(), st.tz))} ${esc(st.startLabel)} · ${esc(ev.course?.shortName || ev.course?.name || '')}`)}
     ${noticeCard(st)}
     ${hostRow(app, st)}
+    ${mdCard(app)}
     ${teamCard(m.side, true)}
     ${teamCard(m.other, open, 'lb-other')}
     ${howLink()}
@@ -287,6 +297,7 @@ function ready(app, st) {
   return `${head(`${esc(ev.name)} · ${esc(m.side?.name || '')}`, `${esc(day)} · ${esc(m.tee || st.startLabel)}${m.mate ? ` with ${esc(m.mate)}` : ''}`, `${esc(ev.course?.shortName || ev.course?.name || '')} · Team Ryder Cup`)}
     ${noticeCard(st)}
     ${hostRow(app, st)}
+    ${mdCard(app)}
     <div class="card lb-card lb-rows">${m.matches.map((x) => row(`Holes ${esc(x.holes)}`, x.vs ? `vs ${esc(x.vs)}` : '')).join('')}</div>
     ${note(`Scoring opens by itself at ${esc(st.opensLabel)}${st.day ? '' : ` on ${esc(day)}`}. Just tap Golf Board.${soon}`)}
     ${howLink()}
@@ -304,6 +315,10 @@ function dayWait(app, st) {
       drafting ? 'Keep this open: your team, start time and matches show up here.' : 'Teams are set. Keep this open: scoring opens the moment start times are in.')}
     ${noticeCard(st)}
     ${hostRow(app, st)}
+    ${mdCard(app)}
+    ${hcpCard(app, st)}
+    ${st.paired && myCart(app.event, app.me) ? cartCard(app) : ''}
+    ${drafting ? whoPlaying(app, st, { all: true }) : ''}
     ${addRow()}
     ${foot(`${note('Running late? Give them a nudge.')}<button class="btn block nr-cta" data-act="lb-text">Text ${esc(st.hostName)}</button>`)}`;
 }
@@ -542,6 +557,7 @@ export default {
     'lb-notlisted': (el, ev, app) => textHost(app, app.lobby()),
     'lb-text': (el, ev, app) => textHost(app, app.lobby()),
     'lb-all': (el, ev, app) => app.openSheet('lobby-all', {}),
+    'lb-md': (el, ev, app) => app.openSheet('lobby-md', {}),
     'lb-other': (el, ev, app) => { app.ui.lbOther = app.ui.lbOther === app.code ? null : app.code; app.render(); },
     'lb-host': (el, ev, app) => app.go(app.tabHash('host')),
     'lb-how': (el, ev, app) => {

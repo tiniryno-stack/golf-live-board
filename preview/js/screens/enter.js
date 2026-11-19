@@ -20,6 +20,7 @@ import { riderState, isRider } from '../riderview.js';
 import { cardOn, cardState, gpsBadge, greenCard } from './greencard.js';
 import { shortCourseName } from '../coursedata.js';
 import { gps } from '../gps.js';
+import { FLAGS } from '../flags.js';
 
 /** "+2 thru 4" / "All square" from this team's side of its current matchup. */
 export function matchStatus(snap, m, teamId) {
@@ -73,13 +74,17 @@ function cartsFor(app, hole) {
   if (snap.settings.solo) return [{ teamId: null, players: ids.map((id) => snap.playerById.get(id)) }];
   // 2v2: you + your partner on this hole, then the other pair.
   const side = (pid) => (snap.settings.pairs ? sideOn(snap, pid, hole) : snap.playerById.get(pid).teamId);
-  const mine = side(app.me);
-  const order = [...ids.filter((id) => side(id) === mine), ...ids.filter((id) => side(id) !== mine)];
+  // Team Ryder Cup: the two players of a side in your tee time ride together, even when the drafted partners play
+  // in different tee times (owner, Nov 7). The cart keeps the teamId of its first player (yours first).
+  const ryd = snap.settings.ryder;
+  const ride = (pid) => (ryd ? String(side(pid) || '')[0] : side(pid));
+  const mine = ride(app.me);
+  const order = [...ids.filter((id) => ride(id) === mine), ...ids.filter((id) => ride(id) !== mine)];
   const carts = [];
   for (const id of order) {
     const p = { ...snap.playerById.get(id), teamId: side(id) };
-    let c = carts.find((x) => x.teamId === p.teamId);
-    if (!c) carts.push((c = { teamId: p.teamId, players: [] }));
+    let c = carts.find((x) => x.ride === ride(id));
+    if (!c) carts.push((c = { teamId: p.teamId, ride: ride(id), players: [] }));
     c.players.push(p);
   }
   return carts;
@@ -156,7 +161,7 @@ function cartCard(app, cart, hole, mine, locked) {
   const team = cart.teamId ? snap.teamById.get(cart.teamId) : null;
   const label = cartLabel(app, cart);
   const jersey = team ? sideColor(app, team.id) : 'var(--cart-you)';
-  const name = mine && team && !locked && !snap.settings.pairs
+  const name = FLAGS.cartNames && mine && team && !locked && !snap.settings.pairs
     ? `<button class="name name-btn" data-act="team-picker" aria-label="Name your cart"><i class="jd"></i><span class="ellipsis">${esc(label)}</span>${isDefaultTeamName(team) ? '<span class="pick">Name it</span>' : ''}</button>`
     : `<span class="name"><i class="jd"></i><span class="ellipsis">${esc(label)}</span></span>`;
   // A locked (finished) hole: the whole card is the tap target that unlocks it for editing.
@@ -496,7 +501,8 @@ function ryderEnterView(app, h, { gcard, carts, locked, ahead, pos, limitPos, la
       const won = pt ? `<span class="ce-won anim${pt.line.tone === 'text' ? '' : ' muted'}" data-t0="${pt.at}">${esc(pt.line.text)}${pt.named ? ` on ${pt.hole}` : ''}</span>` : '';
       right = `<span class="ce-end">${up}<span class="ce-swap"><span class="ce-vs${pt ? ' anim' : ''}"${pt ? ` data-t0="${pt.at}"` : ''}>vs ${esc(them)}</span>${won}</span></span>`;
     }
-    matchLine = `<div class="ce-match"><span class="ce-us ellipsis">${esc(names(mine.players))}</span>${right}</div>`;
+    const us = m ? m.us.playerIds.map((id) => snap.playerById.get(id)).filter(Boolean) : mine.players; // your real partner
+    matchLine = `<div class="ce-match"><span class="ce-us ellipsis">${esc(names(us))}</span>${right}</div>`;
   }
 
   // Rows: yours with pads in one card (023 §3, the green rail is gone — the card says "your team"),
@@ -778,9 +784,9 @@ export default {
       if (document.querySelector('.coach')) return; // one tip at a time
       const mineRows = ce.querySelector('.ce-mine.rail'), theirs = ce.querySelector('.ce-line');
       if (mineRows && !mineRows.querySelector('.ce-pad.sel') && mineRows.querySelector('.ce-pads')) {
-        app.coach('pad2', mineRows.querySelector('.ce-pads'), 'Tap the score you made. ⋯ has every other score.');
+        app.coach('pad3', mineRows.querySelector('.ce-pads'), 'Tap the score you made. ⋯ has every other score.'); // 031 §2.5
       } else if (mineRows && theirs && !theirs.querySelector('.ce-sm') && mineRows.querySelectorAll('.ce-pad.sel').length >= 2) {
-        app.coach('oppcart4', theirs, 'You can enter scores for the other cart in your group too. Tap their row.');
+        app.coach('quiet1', theirs, 'Tap here to enter scores for the rest of your group.'); // 031 §2.5
       }
       return;
     }
@@ -1012,13 +1018,26 @@ function nextHole(app) {
       });
       return;
     }
+    // 031 §2.5: once per switch, who you're with and who you're playing now. 2v2 switching partners: your pairing
+    // changes with the stretch, so "you" before and after are different teams.
     const swap = (st.rotationMode || 'swap') === 'swap';
+    const meBefore = st.pairs ? sideOn(snap, app.me, h) : myTeam, meAfter = st.pairs ? sideOn(snap, app.me, nh) : myTeam;
+    const was = st.pairs ? matchFor(snap, meBefore, h) : done, now = st.pairs ? matchFor(snap, meAfter, nh) : next;
+    const firsts = (t, skipMe = false) => (snap.teamById.get(t)?.playerIds || []).filter((id) => !skipMe || id !== app.me)
+      .map((id) => { const p = snap.playerById.get(id); return p?.firstName || String(p?.name || '').split(' ')[0]; }).join(' + ');
+    const other = (m, t) => (m ? m.teams.find((x) => x !== t) : null);
+    let last = '';
+    if (was) {
+      const u = was.points[meBefore], t = was.points[other(was, meBefore)];
+      last = snap.game.type === 'rotationPlusMinus' ? `Last stretch: ${fmtSigned(was.margin[meBefore], 'E')}`
+        : `Last stretch: ${!was.final ? `${fmtPts(u)}–${fmtPts(t)} so far` : u > t ? `you won ${fmtPts(u)}–${fmtPts(t)}` : u < t ? `lost ${fmtPts(u)}–${fmtPts(t)}` : `halved ${fmtPts(u)}–${fmtPts(t)}`}`;
+    }
     app.showCard({
       kicker: 'Switch it up',
-      big: done?.final ? `Rotation ${done.rotation} is in` : `On to rotation ${(done?.rotation || 0) + 1}`,
-      result,
-      sub,
-      sub2: swap ? 'One cart waits, one moves up.' : 'Same foursome — this matchup compares scores with the other group.',
+      big: now ? (st.pairs ? `With ${firsts(meAfter, true)}` : `vs ${firsts(other(now, meAfter))}`) : `On to rotation ${(done?.rotation || 0) + 1}`,
+      result: last,
+      sub: now ? (st.pairs ? `vs ${firsts(other(now, meAfter))} · ${now.label.toLowerCase()}` : `${now.label} · with ${firsts(meAfter, true)}`) : sub,
+      sub2: st.pairs ? 'Same foursome, new partner. Each stretch is its own match.' : swap ? 'One cart waits, one moves up.' : 'Nobody moves. The app compares your scores with the other group.',
       button: `Continue to hole ${nh}`,
       onContinue: () => goHole(app, nh, h),
     });

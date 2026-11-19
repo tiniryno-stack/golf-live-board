@@ -57,6 +57,25 @@ export function shortTeam(name) {
   return w[0].length <= 3 && w[1] ? `${w[0]} ${w[1]}` : w[0];
 }
 
+/** What a cart is called on screen. With cart names off (FLAGS.cartNames), a cart of two or more is
+ *  its players' first names joined with " + "; a one-player team or a side keeps its own name. Pure. */
+export function cartDisplayName(team, players, namesOn) {
+  if (namesOn || !team) return team?.name;
+  const ps = (team.members || []).length
+    ? team.members.map((id) => players.find((p) => p.id === id)).filter(Boolean)
+    : players.filter((p) => p.teamId === team.id);
+  return ps.length >= 2 ? ps.map((p) => p.name).join(' + ') : team.name;
+}
+
+/** The round as screens should see it: same event, with cart names swapped per cartDisplayName.
+ *  Display only. Never save this copy back (update_event writes app.event). */
+export function displayEvent(event, namesOn) {
+  const r = event?.roster;
+  if (namesOn || !r?.teams?.length) return event;
+  const players = r.players || [];
+  return { ...event, roster: { ...r, teams: r.teams.map((t) => ({ ...t, name: cartDisplayName(t, players, false) })) } };
+}
+
 /** A team still has its placeholder name ("Cart A"…) and can pick one. */
 export function isDefaultTeamName(team) {
   return !team?.name || /^Cart [12]?[A-D]$/i.test(String(team.name).trim());

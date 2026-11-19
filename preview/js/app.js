@@ -5,9 +5,9 @@
 import * as db from './db.js';
 import { compute, nextHoleFor, currentHoleOf, sameFoursome, matchFor, playOrder, posOf, holeAt, HOLES, sideOn, teeTimeName, groupIndex } from './scoring.js';
 import { roundSummary } from './screens/home.js';
-import { isDefaultTeamName } from './teams.js';
+import { isDefaultTeamName, displayEvent } from './teams.js';
 import { replayHeadlines, latestMoment } from './headlines.js';
-import { esc, icon, initials, roundLink, copyText } from './ui.js';
+import { esc, icon, initials, roundLink, copyText, growMeasure, growPlay } from './ui.js';
 import * as fx from './screens/toasts.js';
 import * as sheets from './screens/sheets.js';
 import home from './screens/home.js';
@@ -218,17 +218,17 @@ function recompute({ headlines = 'soon' } = {}) {
   }
   const rows = mergedRows();
   const hadScores = !!app.snapshot?.anyPosted;
-  app.snapshot = compute(app.event, rows);
+  app.snapshot = compute(displayEvent(app.event, FLAGS.cartNames), rows);
   if (!app.snapshot.anyPosted) freshStart(hadScores);
   try { db.recent.note(app.code, roundSummary(app)); } catch { /* Home's summary is a nice-to-have */ }
   if (headlines === 'now') {
     clearTimeout(headlineTimer);
-    app.headlines = replayHeadlines(app.event, rows);
+    app.headlines = replayHeadlines(displayEvent(app.event, FLAGS.cartNames), rows);
   } else if (headlines === 'soon') {
     clearTimeout(headlineTimer);
     headlineTimer = setTimeout(() => {
       if (!app.event) return;
-      app.headlines = replayHeadlines(app.event, mergedRows());
+      app.headlines = replayHeadlines(displayEvent(app.event, FLAGS.cartNames), mergedRows());
       processHeadlines('live');
       if (app.route.tab === 'board') render();
     }, 300);
@@ -571,7 +571,7 @@ function afterJoin() {
   // 025: a lobby never asks for a cart name or shows Today's game here: "See you Saturday" / "Scoring is open" do.
   if (app.lobby()) { app.joining = 0; render(); return; }
   const t = app.myTeam() && app.snapshot?.teamById.get(app.myTeam());
-  if (t && isDefaultTeamName(t) && !app.roundOver()) fx.showTeamPicker(app, maybeBrief);
+  if (FLAGS.cartNames && t && isDefaultTeamName(t) && !app.roundOver()) fx.showTeamPicker(app, maybeBrief);
   else maybeBrief();
 }
 function maybeBrief() {
@@ -650,7 +650,7 @@ app.relevantRequests = () => {
 
 // ───────────────────────────────────────────── organizer
 
-app.saveEvent = async ({ course, roster, settings, name }) => {
+app.saveEvent = async ({ course, roster, settings, name, quiet = false }) => {
   app.savingEvent = Date.now();
   let res;
   try {
@@ -669,7 +669,7 @@ app.saveEvent = async ({ course, roster, settings, name }) => {
   app.event = { ...app.event, course: course ?? app.event.course, roster: roster ?? app.event.roster, settings: settings ?? app.event.settings, name: name || app.event.name };
   recompute();
   render();
-  app.toast({ title: 'Saved', sub: res.changes ? `${res.changes} change${res.changes === 1 ? '' : 's'} logged` : 'No changes' });
+  if (!quiet) app.toast({ title: 'Saved', sub: res.changes ? `${res.changes} change${res.changes === 1 ? '' : 's'} logged` : 'No changes' });
   return true;
 };
 
@@ -1318,9 +1318,11 @@ function draw(opts) {
   } else {
     pendingContent = false;
     const top = content.scrollTop;
+    const grown = userAction ? growMeasure(content) : null; // 027: only a tap grows / folds; redraws jump to the end
     content.innerHTML = ready ? screen.render(app) : renderRoundState();
     content.scrollTop = top;
     if (ready) screen.mount?.(content, app);
+    if (grown) growPlay(content, grown);
   }
   renderSyncChip();
   renderSheet();
@@ -1607,6 +1609,7 @@ app._gps = gps; // tests + console: the location watcher
 // Realtime handlers, reachable from the console / headless checks to simulate a push.
 app._remote = { score: onRemoteScore, event: onRemoteEvent, joinRequest: onRemoteJoinRequest, note: onRemoteNote };
 document.documentElement.classList.toggle('standalone', db.STANDALONE); // home screen app: no Safari bars
+document.documentElement.classList.toggle('no-cart-colors', !FLAGS.cartColors); // Nov 19: you're green, every other cart neutral
 if (db.STANDALONE) {
   // The real screen height (iPhone's screen size doesn't turn with the phone; this app is portrait).
   const fit = () => {

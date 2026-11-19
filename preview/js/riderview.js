@@ -19,7 +19,8 @@ export function isRider(snap) {
 }
 
 function cartInfo(snap, tid, myTeam) {
-  const ps = snap.players.filter((p) => p.teamId === tid);
+  // A cart's players, or a 2v2 pairing's (031: 2v2 uses these screens too; its teams carry members).
+  const ps = (snap.teamById.get(tid)?.playerIds || []).map((id) => snap.playerById.get(id)).filter(Boolean);
   const first = (p) => p.firstName || String(p.name || '').split(' ')[0];
   let pos = null;
   for (let q = 1; q <= HOLES; q++) {
@@ -145,20 +146,37 @@ export function holeLines(hole, usNames, themNames, strokes = null, { mine = tru
 /** The Team Ryder Cup screens' state for a Partner “Rider” Cup round, from the viewer's cart. */
 export function riderState(snap, myTeam = null) {
   if (!isRider(snap)) return null;
+  return buildState(snap, new Set(myTeam ? [myTeam] : []), myTeam);
+}
+
+/**
+ * 031: the same state for any round of matches between pairs: Partner “Rider” Cup (carts) and 2v2 (pairings
+ * that change when partners switch). `mePid` = the viewer's player id: "us" in each match is whichever of its
+ * two teams has you in it, so a 2v2 match always reads from your side. Not for Team Ryder Cup or split point.
+ */
+export function matchState(snap, mePid = null) {
+  const g = snap?.game;
+  if (!g || g.sides || g.type === 'splitPoint' || !g.matches?.length) return null;
+  if (!isRider(snap) && !snap.settings.pairs) return null;
+  const mine = new Set(mePid ? snap.teams.filter((t) => t.playerIds.includes(mePid)).map((t) => t.id) : []);
+  return buildState(snap, mine, [...mine][0] || null);
+}
+
+function buildState(snap, mine, myTeam) {
   const g = snap.game;
-  const carts = new Map((snap.roster.teams || []).map((t) => [t.id, cartInfo(snap, t.id, myTeam)]));
-  const matches = g.matches.map((m) => riderMatch(snap, m, myTeam, carts, g));
+  const carts = new Map((snap.roster.teams || []).map((t) => [t.id, { ...cartInfo(snap, t.id, myTeam), you: mine.has(t.id) }]));
+  const matches = g.matches.map((m) => riderMatch(snap, m, m.teams.find((t) => mine.has(t)) || null, carts, g));
   const ri = [...new Set(matches.map((m) => m.rotation))].sort((a, b) => a - b);
   const rotations = ri.map((r) => {
     const ms = matches.filter((m) => m.rotation === r);
     const anyScore = ms.some((m) => m.holes.some((h) => h.whoIsIn !== 'none'));
     const status = ms.every((m) => m.status === 'done') ? 'done' : ms.some((m) => m.status === 'live') || anyScore ? 'live' : 'future';
-    const mine = myTeam ? ms.find((m) => m.us.id === myTeam) : null;
+    const mineM = ms.find((m) => mine.has(m.us.id));
     // The strip's middle: thru n while live, "done", or who you play next.
-    const center = status === 'live' ? `thru ${Math.max(0, ...ms.map((m) => m.thru))}` : status === 'done' ? 'done' : mine ? `vs ${mine.them.name}` : '';
+    const center = status === 'live' ? `thru ${Math.max(0, ...ms.map((m) => m.thru))}` : status === 'done' ? 'done' : mineM ? `vs ${mineM.them.name}` : '';
     return { index: r, label: ms[0].label, holes: ms[0].label.replace(/^Holes /, ''), status, center, matches: ms };
   });
   const rank = { live: 0, done: 1, future: 2 };
   const order = [...rotations].sort((a, b) => rank[a.status] - rank[b.status] || (a.status === 'live' ? b.index - a.index : a.index - b.index));
-  return { rider: true, matches, rotations, order, carts };
+  return { rider: true, matches, rotations, order, carts, mine };
 }

@@ -209,3 +209,74 @@ export function syncMotion(root) {
     }
   }
 }
+
+// ───────────────────────────────────────────── 027: grow in place
+
+/** 027 §6, pure: the grow / fold at `t` ms. `dir` 'swap' (300 ms; one folds while another grows, or a
+ *  row grows) or 'fold' (a fold on its own: 225 ms). Height eases out over the whole motion; the old
+ *  face fades + blurs out over 0–40 % (ease-in), the new one sharpens in over 20–100 % (ease-out). */
+export function growFrame(t, dir = 'swap', { dur = 300, blur = 8 } = {}) {
+  const d = dir === 'fold' ? dur * 0.75 : dur;
+  const clamp = (x) => Math.max(0, Math.min(1, x));
+  const bez = (x1, y1, x2, y2) => (x) => { // cubic-bezier y for an x (bisection, plenty for frames)
+    let lo = 0, hi = 1, s = x;
+    for (let i = 0; i < 30; i++) {
+      s = (lo + hi) / 2;
+      const xs = 3 * x1 * s * (1 - s) ** 2 + 3 * x2 * s * s * (1 - s) + s ** 3;
+      if (xs < x) lo = s; else hi = s;
+    }
+    return 3 * y1 * s * (1 - s) ** 2 + 3 * y2 * s * s * (1 - s) + s ** 3;
+  };
+  const out = bez(0.4, 0, 1, 1), grow = bez(0.2, 0.8, 0.2, 1);
+  const p = clamp(t / d);
+  const o = clamp(p / 0.4), i = clamp((p - 0.2) / 0.8);
+  const ro = (x) => Math.round(x * 1000) / 1000;
+  return { dur: d, heightP: ro(grow(p)), outOpacity: ro(1 - out(o)), blurOut: ro(blur * out(o)), inOpacity: ro(grow(i)), blurIn: ro(blur * (1 - grow(i))) };
+}
+
+/** Before a tap's redraw: every grow slot (`.grow[data-grow]`) with its height, state and showing face. */
+export function growMeasure(root) {
+  const m = new Map();
+  for (const el of root?.querySelectorAll?.('.grow[data-grow]') || []) {
+    const open = el.classList.contains('open');
+    const face = el.querySelector(open ? ':scope > .g-card' : ':scope > .g-row');
+    m.set(el.dataset.grow, { open, h: el.offsetHeight, face: face ? face.outerHTML : '' });
+  }
+  return m;
+}
+
+/** After the redraw: slots that changed state grow / fold from their old height, the old face blurring out
+ *  on top while the new one sharpens in. A swap is one 300 ms motion; a fold with nothing opening 225 ms.
+ *  Reduced motion: no height, no blur; the new face fades in over 150 ms (CSS). */
+export function growPlay(root, before) {
+  if (!before?.size || !root?.querySelectorAll) return;
+  const els = [...root.querySelectorAll('.grow[data-grow]')].filter((el) => {
+    const b = before.get(el.dataset.grow);
+    return b && b.open !== el.classList.contains('open');
+  });
+  if (!els.length) return;
+  const reduced = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const dir = els.some((el) => el.classList.contains('open')) ? 'swap' : 'fold';
+  const dur = growFrame(0, dir).dur;
+  for (const el of els) {
+    const b = before.get(el.dataset.grow);
+    el.style.setProperty('--motion-grow', `${dur}ms`);
+    el.classList.add('anim');
+    setTimeout(() => { el.classList.remove('anim'); el.style.removeProperty('--motion-grow'); }, dur + 20);
+    if (reduced || !el.animate) continue;
+    const to = el.offsetHeight;
+    if (Math.abs(to - b.h) > 1) el.animate([{ height: `${b.h}px` }, { height: `${to}px` }], { duration: dur, easing: 'cubic-bezier(.2,.8,.2,1)' });
+    if (b.face) {
+      const tpl = document.createElement('template');
+      tpl.innerHTML = b.face;
+      const old = tpl.content.firstElementChild;
+      if (old) {
+        old.classList.add('g-leaving');
+        old.setAttribute('aria-hidden', 'true');
+        old.removeAttribute('data-act');
+        el.appendChild(old);
+        setTimeout(() => old.remove(), dur * 0.4 + 20);
+      }
+    }
+  }
+}
