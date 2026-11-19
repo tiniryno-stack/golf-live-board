@@ -289,3 +289,12 @@
 .ch text { font: 600 12px var(--font-mono); fill: var(--text-muted); }
 .ch text.lead { fill: var(--text); } .ch text.me { fill: var(--cart-you-text); }
 .ch text, .ch text.lead, .ch text.me { stroke: none; stroke-width: 0; }
+
+/* ── the race, one screen from hole 1 to the clinch (E + A, Nov 19) ── */
+.gz { display: block; position: relative; height: 8px; border-radius: 4px; background: var(--surface-2); overflow: hidden; }
+.gz i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; background: var(--text-muted); }
+.tr.me .gz i { background: var(--cart-you); }
+.tr.out .gz i { background: var(--surface-3); }
+.gz.none { background: transparent; }
+.clinch.stake { background: var(--warn-bg); }
+.clinch.stake .k { color: var(--warn); }
