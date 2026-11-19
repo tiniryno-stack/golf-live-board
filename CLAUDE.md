@@ -4,11 +4,11 @@ Read this first. It replaces re-reading the whole repo. `ARCHITECTURE.md` (≈73
 spec: **grep the section you need, don't read it end to end.** Section 13a lists every change made
 after the first playtest; section 13 is the V2 backlog.
 
-## Building the Nov 19 redesign? Read `docs/design/BUILD-NOV19.md` first
+## Building the Nov 19 redesign? Read `docs/design/features/031-who-you-play-for/SPEC.md` first
 
 New Boards and Matches by who you play for, the race, Setup's game step, season standings as a record, cart colors
-and names off. That file has the decisions, the drawings, what's built, the build order and what's still open. The
-work is on branch `claude/friendly-lovelace-g5kzki`, not `main`. Briefs 031 and 032 are unapproved drafts.
+and names off. That one brief has the decisions, the 22 target screens, what's built, the build order and what's
+still open. The work is on branch `claude/friendly-lovelace-g5kzki`, not `main`.
 
 ## What it is / where things stand
 
