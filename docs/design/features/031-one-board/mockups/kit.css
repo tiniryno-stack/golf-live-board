@@ -620,3 +620,36 @@ svg.i.s20 { width: 20px; height: 20px; } svg.i.s16 { width: 16px; height: 16px; 
 .tr.out b, .tr.out .v { color: var(--text-muted); }
 .clinch { background: var(--surface-1); border-radius: var(--radius-xl); padding: 12px 16px; box-shadow: var(--shadow-card); flex: none; display: grid; gap: 2px; }
 .clinch .k { color: var(--text-muted); }
+
+/* ── race, another pass (Nov 19): reach bars + holes-needed pips ── */
+.reach { background: var(--surface-1); border-radius: var(--radius-xl); padding: 8px 14px 10px; box-shadow: var(--shadow-card); flex: none; }
+.reach .rr { display: grid; grid-template-columns: 64px 36px minmax(0, 1fr); align-items: center; column-gap: 8px; height: 44px; }
+.reach .rr b { font: 600 15px/20px var(--font-sans); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.reach .rr .p { font: 700 15px var(--font-mono); text-align: right; }
+.reach .rr.me b, .reach .rr.me .p { color: var(--cart-you-text); }
+.reach .rr.out b, .reach .rr.out .p { color: var(--text-muted); }
+.trk { position: relative; height: 14px; }
+.trk .now { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; background: var(--text-muted); }
+.trk .can { position: absolute; top: 0; bottom: 0; border-radius: 4px; box-shadow: inset 0 0 0 1.5px var(--text-muted); border: 0; }
+.rr.me .trk .now { background: var(--cart-you); }
+.rr.me .trk .can { box-shadow: inset 0 0 0 1.5px var(--cart-you); }
+.rr.lead .trk .now { background: var(--text); }
+.rr.out .trk .now { background: var(--surface-3); }
+.rr.out .trk .can { box-shadow: inset 0 0 0 1.5px var(--line); }
+.trk .bar2 { position: absolute; top: -15px; bottom: -15px; width: 2px; margin-left: -1px; background: var(--text); }
+.reach .scale { display: grid; grid-template-columns: 64px 36px minmax(0, 1fr); column-gap: 8px; height: 22px; align-items: end; }
+.reach .scale span:last-child { position: relative; height: 16px; color: var(--text-muted); }
+.reach .scale i { position: absolute; transform: translateX(-50%); font: 600 12px/16px var(--font-mono); font-style: normal; white-space: nowrap; color: var(--text); }
+.pips { background: var(--surface-1); border-radius: var(--radius-xl); padding: 6px 14px 8px; box-shadow: var(--shadow-card); flex: none; }
+.pips .pr { display: grid; grid-template-columns: minmax(0, 1fr) 40px 32px 32px 32px; align-items: center; column-gap: 6px; height: 48px; border-top: 1px solid var(--line-faint); }
+.pips .pr:first-child { border-top: 0; height: 28px; color: var(--text-muted); }
+.pips .pr b { font: 600 17px/22px var(--font-sans); }
+.pips .pr .p { font: 700 15px var(--font-mono); text-align: right; }
+.pips .pr.me b, .pips .pr.me .p { color: var(--cart-you-text); }
+.pips .pr.out b, .pips .pr.out .p { color: var(--text-muted); }
+.pip { width: 28px; height: 28px; border-radius: var(--radius-sm); justify-self: center; box-shadow: inset 0 0 0 1.5px var(--line); }
+.pip.need { background: var(--text); box-shadow: none; }
+.pr.me .pip.need { background: var(--cart-you); }
+.pip.free { box-shadow: inset 0 0 0 1.5px var(--text-muted); }
+.pip.x { box-shadow: none; background: var(--surface-2); }
+.pips .pr span.c { justify-self: center; }
