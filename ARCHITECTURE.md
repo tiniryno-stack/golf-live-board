@@ -846,6 +846,17 @@ Still open: nothing blocking. Design direction (section 9) is final.
   whole group (`swapGroups`); people move between carts, cart ids / sides / start times stay; cart names follow
   (`renameRyderCarts`); saves refuse when the roster changed meanwhile or a score is in. Tested in `tests/lobby025.test.mjs`.
 
+- **Nov 19 redesign (brief 031, branch from `claude/friendly-lovelace-g5kzki`).** Already on the branch: cart colors / cart
+  names off behind `FLAGS.cartColors` / `FLAGS.cartNames` (06caa7c); season standings as a season record (8edba84).
+  - **Step 1 · the feel (027).** Tokens `glow-you` (light = `0 0 0 0 transparent`, not `none`, so it joins a
+    `box-shadow` list), `motion-grow` + `--ease-grow`, `blur-swap`, `peek` in the design system (tokens.json v4,
+    tokens.css, README, `components/GrowCard`) → `npm run tokens`. CSS: `.grow` (`.g-row` / `.g-card` faces in one grid
+    cell, `.open`), `.g-leaving`, `.lit`, `.peek`, `.wake`, `.add-row`, reduced motion. JS: pure `ui.growFrame(t, dir)`
+    (tested) and `ui.growMeasure` / `ui.growPlay`: `draw()` measures every `.grow[data-grow]` before a redraw that comes
+    from a tap and, after it, animates the height of each slot whose state changed (swap 300 ms, a fold alone 225 ms),
+    with the old face cloned on top blurring out. Background redraws never animate. First use: Standings, where your
+    season's peek grows into its card and the table folds into its "Standings" row in one motion.
+
 ## 13. V2 backlog (running list)
 
 - **Carryovers (skins-style):** a tied point rolls onto the next hole instead of halving, so the next hole can be worth 3–4 points. Open design question: does an unresolved carry die at the end of a 6-hole rotation, or roll into the next opponent?

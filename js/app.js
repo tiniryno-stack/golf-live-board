@@ -7,7 +7,7 @@ import { compute, nextHoleFor, currentHoleOf, sameFoursome, matchFor, playOrder,
 import { roundSummary } from './screens/home.js';
 import { isDefaultTeamName, displayEvent } from './teams.js';
 import { replayHeadlines, latestMoment } from './headlines.js';
-import { esc, icon, initials, roundLink, copyText } from './ui.js';
+import { esc, icon, initials, roundLink, copyText, growMeasure, growPlay } from './ui.js';
 import * as fx from './screens/toasts.js';
 import * as sheets from './screens/sheets.js';
 import home from './screens/home.js';
@@ -1318,9 +1318,11 @@ function draw(opts) {
   } else {
     pendingContent = false;
     const top = content.scrollTop;
+    const grown = userAction ? growMeasure(content) : null; // 027: only a tap grows / folds; redraws jump to the end
     content.innerHTML = ready ? screen.render(app) : renderRoundState();
     content.scrollTop = top;
     if (ready) screen.mount?.(content, app);
+    if (grown) growPlay(content, grown);
   }
   renderSyncChip();
   renderSheet();

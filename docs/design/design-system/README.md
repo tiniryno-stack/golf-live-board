@@ -22,6 +22,7 @@ This system is the north star for how the app looks. Three things, one direction
 - **Scores look like a scorecard.** Golfers read marks, not numbers: every score anywhere uses the Score mark component.
 - **Red means something is wrong.** `double` for double bogey or worse; `error` (the same red) for input errors. No team is ever red. Problems that need fixing use `warn` (amber).
 - **Every action gets a response.** Pressed, loading, saved, copied: the user always sees that the app heard them.
+- **One hero, one lit thing, the next thing peeks.** Each screen has one `number-xl` fact, at most one lit (live, yours) element, and what comes next waiting dimmed at the bottom edge. Finished things are solid and quiet, upcoming things are dashed.
 - **Defaults over questions.** Setup asks only what has no sensible default; everything else shows its default value and can be changed.
 
 ## Color
@@ -40,7 +41,8 @@ This system is the north star for how the app looks. Three things, one direction
 ## Depth
 
 - Dark mode: depth comes from lighter surfaces (`bg` → `surface-1` → `surface-2`), not shadows. Keep borders low-contrast (`line`).
-- **The one glow:** in dark mode the floating tab bar uses `shadow-dock`, a lit top edge plus a soft white glow. It is the only glowing surface. Cards, segmented controls, selected segments and anything nested never glow.
+- **Two glows, never more.** In dark mode the floating tab bar uses `shadow-dock` (a lit top edge plus a soft white glow). The one live thing on the screen that's yours may use `glow-you` (027): your live hole tile, your tee time on the day, your live rotation, your row on a live leaderboard. Never two lit things; never on anything that isn't yours; nothing is lit before it's live. Cards, segmented controls, selected segments and anything nested never glow. In light mode `glow-you` is a transparent no-op: the lit thing is `tint-you` + a 1.5px `cart-you` outline.
+- **Peek:** what comes next (the next rotation, the other tee times, your season) sits at the bottom edge at `peek` opacity (0.6). Inside a peek every text uses `text`, never `text-muted`, so 12px labels still pass 4.5:1. A peek wakes to full opacity, over `motion-grow`, when it goes live.
 - Light mode: cards get `shadow-card`, the tab bar `shadow-dock`; toasts `shadow-float`; bottom sheets `shadow-sheet`. If a shadow is the first thing you notice, it's too strong.
 - Avoid cards inside cards. Group with spacing first; nest only when the inner thing is a control (a score tile, a pill).
 
@@ -103,7 +105,10 @@ Every control has these states, all designed:
 - Swipe right to go back in setup. Swipe down to close a sheet.
 - Never swipe to change holes on Enter (too easy to do by accident); use the arrows or the hole grid.
 - Long-press a score on the scorecard to see who entered it and edit it.
-- Motion is short and functional: 200–450ms ease-out; folds, sheets and score bumps only. Respect reduced motion.
+- Motion is short and functional: **grow / fold** (`motion-grow`, 300ms, `cubic-bezier(.2,.8,.2,1)`; a fold on its own 225ms), **blur swap** when content changes inside a growing card (`blur-swap`, 8px), sheets (300ms), score bumps and the reward motion (021/022). Nothing else moves.
+- **Grow where you tapped.** Looking at someone else's cart, match or tee time grows their row into a card in place; whatever was open folds back to its row in the same motion. No new screen, no sheet for this. Sheets stay for side tasks.
+- Animate only right after a tap, never on a redraw. A tap mid-motion jumps to the end. Nothing pinned to the bottom (Next hole, primary button, tab bar) ever moves.
+- **Reduced motion:** no blur, no size animation, no glow fade: things jump to their end size and the new content fades in over 150ms.
 
 ## Empty states
 
@@ -152,7 +157,8 @@ Team Ryder Cup on `main` (handoffs 015 + 016) is how every game should look. Oth
 
 - **Segmented control** for switching views or picking one of a few options. Keep segments short: a name and one short line at most.
 - **Bottom sheet** for side tasks that should keep you in place: handicap stepper, rules, max score, fixing a hole, changing tees.
-- **Expand in place** for looking at someone else's match or group: your item folds into a pinned green bar at the top, theirs opens below in its own outlined box labeled WATCHING, in its own colors only. Never navigate to a separate screen for this.
+- **Grow card** for looking at someone else's cart, match or group: their quiet row grows into their card in place, yours folds into a row (with the green rail on Enter). See components/GrowCard. Replaces Expand in place and the "Their scores" / read-only match sheets.
+- **New things go at the end.** Adding something is always the last row of its list, typed in place: add a player, add a tee time. The add row is a 56px dashed `line` box; tapped, it becomes the input in the same box (solid `text` border + focus ring) and the keyboard opens. Confirming swaps the new item in with the blur swap and puts a fresh add row under it. No separate screen, no sheet.
 - **Hints** under a choice change with the choice and say only what that option means.
 - **Progress** under the Enter card: Hole progress, 18 short segments with a gap where each rotation ends.
 - **Score source** on rows you can enter for others: "✓ From Sam's phone", "Waiting on Jake · tap to enter", "Entered by you".
@@ -178,6 +184,10 @@ Simple 2px-stroke line icons with round caps (flag, two rings, list bars, grid, 
 ## Logo
 
 There is no logo yet. Set the name "Golf Live Board" in Geist 800. The home screen icon is labelled "Golf Board"; everywhere else the product is Golf Live Board.
+
+## Version 4 (Nov 19, 2026)
+
+Handoff 027 (the feel): tokens `glow-you`, `motion-grow`, `blur-swap`, `peek`; the Grow card component (replaces Expand in place once 028's Enter lands); rules for one lit thing, the peek and new things at the end.
 
 ## Version 3 (Nov 3, 2026)
 

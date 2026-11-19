@@ -1566,8 +1566,8 @@ details.fold summary::-webkit-details-marker { display: none; }
 .st-row.unranked .st-name, .st-row.unranked .st-rec, .st-row.unranked .st-pts { color: var(--text-muted); }
 .st-cut { display: flex; align-items: center; gap: var(--space-3); min-height: 36px; padding: 0 var(--space-4); color: var(--text-muted); border-bottom: 1px solid var(--line); }
 .st-cut::before, .st-cut::after { content: ''; flex: 1; border-top: 1.5px dashed var(--line); }
-.st-peek { position: sticky; bottom: calc(var(--space-4) + env(safe-area-inset-bottom, 0px)); margin-top: var(--space-6); width: 100%; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: var(--space-3); padding: var(--space-3) var(--space-4); border-radius: var(--radius-xl); background: var(--surface-1); box-shadow: var(--shadow-card); text-align: left; opacity: .6; }
-.st-peek * { color: var(--text) !important; }
+.st-me:not(.open) { position: sticky; bottom: calc(var(--space-4) + env(safe-area-inset-bottom, 0px)); margin-top: var(--space-6); }
+.st-peek { width: 100%; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: var(--space-3); padding: var(--space-3) var(--space-4); border-radius: var(--radius-xl); background: var(--surface-1); box-shadow: var(--shadow-card); text-align: left; }
 .st-peek .ts-label { grid-column: 1 / -1; }
 .st-peek b { font-size: 17px; line-height: 22px; display: inline-flex; gap: var(--space-2); align-items: baseline; }
 .st-peek .st-rec { display: inline-grid; }
@@ -2298,3 +2298,34 @@ html.light .ce-mine.ce-card, [data-theme="light"] .ce-mine.ce-card { box-shadow:
 .md-slot.set .lb-rt { font-size: 15px; line-height: 19px; }
 .md-slot.now { border: 2px solid var(--cart-you); color: var(--cart-you-text); font-weight: 600; }
 .md-pick { margin: 4px 0 8px; }
+
+/* ───────────────────────────────────────────── 027 · the feel (docs/design/features/027-feel/motion.css)
+   Tokens (--motion-grow, --ease-grow, --blur-swap, --glow-you, --peek) come from tokens.css.
+   .grow[data-grow] = a slot that is a quiet row (.g-row) or an open card (.g-card); ui.growPlay animates
+   its height and adds .anim only right after a tap. .lit = the one live thing that's yours. .peek = next. */
+.grow { display: grid; position: relative; }
+.grow.anim { overflow: hidden; } /* clip only while it moves, so light-mode card shadows aren't cut */
+.grow > .g-row, .grow > .g-card { grid-area: 1 / 1; min-width: 0; }
+.grow:not(.open) > .g-card, .grow.open > .g-row { visibility: hidden; height: 0; overflow: hidden; }
+@keyframes swap-out { from { opacity: 1; filter: blur(0) } to { opacity: 0; filter: blur(var(--blur-swap)) } }
+@keyframes swap-in { from { opacity: 0; filter: blur(var(--blur-swap)) } to { opacity: 1; filter: blur(0) } }
+.grow.anim.open > .g-card:not(.g-leaving), .grow.anim:not(.open) > .g-row:not(.g-leaving) {
+  animation: swap-in calc(var(--motion-grow) * .8) calc(var(--motion-grow) * .2) var(--ease-grow) both;
+}
+.grow > .g-leaving { position: absolute; top: 0; left: 0; right: 0; visibility: visible !important; height: auto !important; pointer-events: none;
+  animation: swap-out calc(var(--motion-grow) * .4) cubic-bezier(.4, 0, 1, 1) both; }
+.lit { background: var(--tint-you); box-shadow: inset 0 0 0 1.5px var(--cart-you), var(--glow-you); }
+@keyframes lit-on { from { box-shadow: inset 0 0 0 1.5px transparent } }
+.lit.anim { animation: lit-on var(--motion-grow) var(--ease-grow) both; }
+.peek { opacity: var(--peek); }
+.peek * { color: var(--text) !important; }
+@keyframes wake { from { opacity: var(--peek) } to { opacity: 1 } }
+.wake { animation: wake var(--motion-grow) var(--ease-grow) both; }
+.add-row { min-height: 56px; border-radius: var(--radius-lg); border: 1.5px dashed var(--line); }
+.add-row.typing { border-style: solid; border-color: var(--text); box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--focus); }
+@keyframes fade-in-027 { from { opacity: 0 } to { opacity: 1 } }
+@media (prefers-reduced-motion: reduce) {
+  .grow.anim.open > .g-card, .grow.anim:not(.open) > .g-row { animation: fade-in-027 150ms linear both; }
+  .grow > .g-leaving { display: none; }
+  .lit.anim, .wake { animation: none; }
+}

@@ -63,18 +63,18 @@ function standingsView(app, id, data, season) {
       <div class="st-table">${ranked.map(row).join('')}${rest.length ? `<div class="st-cut ts-label">${MIN_ROUNDS} rounds to be ranked</div>${rest.map(row).join('')}` : ''}</div>`
     : '<p class="meta st-empty">No finished rounds this season yet.</p>';
   const owner = app.crews?.[id]?.info?.isOwner;
-  const peek = t.me && !open
-    ? `<button class="st-peek" data-act="season-me" aria-label="Open your season"><span class="ts-label">Your season</span><b>${t.me.ranked ? `${t.me.tied ? 'T' : ''}${ordinal(t.me.rank)}` : 'Not ranked yet'} · ${rec(t.me.w, t.me.l)}</b><span class="mono st-peek-n">${pctLabel(t.me.pct)}${icon('fwd', 18).replace('<svg', '<svg style="transform:rotate(-90deg)"')}</span></button>`
-    : '';
-  if (open) return `<button class="season-card st-folded" data-act="season-me"><span class="sc-main"><span class="sc-name">Standings</span><span class="ts-label sc-dates">${esc(season.name)}${ranked[0] ? ` · ${esc(shortName(ranked[0]))} leads · ${pctLabel(ranked[0].pct)}` : ''}</span></span></button>${myCard(t)}`;
-  return `<button class="season-card" data-act="go" data-v="#/season/${esc(id)}/past">
+  // 027: the peek grows into your season card where it sits, and the table folds into its "Standings" row, in one motion.
+  const peek = `<div class="g-row"><button class="st-peek peek" data-act="season-me" aria-label="Open your season"><span class="ts-label">Your season</span><b>${t.me?.ranked ? `${t.me.tied ? 'T' : ''}${ordinal(t.me.rank)}` : 'Not ranked yet'} · ${t.me ? rec(t.me.w, t.me.l) : ''}</b><span class="mono st-peek-n">${t.me ? pctLabel(t.me.pct) : ''}${icon('fwd', 18).replace('<svg', '<svg style="transform:rotate(-90deg)"')}</span></button></div>`;
+  const folded = `<button class="g-row season-card st-folded" data-act="season-me"><span class="sc-main"><span class="sc-name">Standings</span><span class="ts-label sc-dates">${esc(season.name)}${ranked[0] ? ` · ${esc(shortName(ranked[0]))} leads · ${pctLabel(ranked[0].pct)}` : ''}</span></span></button>`;
+  return `<div class="grow st-main${open ? '' : ' open'}" data-grow="season-table">${folded}
+    <div class="g-card"><button class="season-card" data-act="go" data-v="#/season/${esc(id)}/past">
       <span class="sc-main"><span class="sc-name">${esc(season.name)}</span><span class="ts-label sc-dates">${esc(datesLine(season))}</span></span>
       ${season.current ? '<span class="ts-label sc-tag">Current</span>' : ''}<span class="sc-chev">${icon('fwd', 18).replace('<svg', '<svg style="transform:rotate(90deg)"')}</span>
     </button>
     ${table}
     <p class="meta st-note">Record = players you finished ahead of, then behind, in every game.</p>
-    ${season.current && owner ? `<div class="nr-foot"><button class="btn nr-cta" data-act="season-new" data-v="${esc(id)}">${icon('plus', 20)} Start a new season</button></div>` : ''}
-    ${peek}`;
+    ${season.current && owner ? `<div class="nr-foot"><button class="btn nr-cta" data-act="season-new" data-v="${esc(id)}">${icon('plus', 20)} Start a new season</button></div>` : ''}</div></div>
+    ${t.me ? `<div class="grow st-me${open ? ' open' : ''}" data-grow="season-me">${peek}<div class="g-card">${myCard(t)}</div></div>` : ''}`;
 }
 
 function pastView(app, id, data) {
