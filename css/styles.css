@@ -32,6 +32,8 @@
   --tap: var(--tap-min); --gutter: var(--space-4);
   --radius-card: var(--radius-xl); --radius-chip: var(--radius-md);
 }
+/* Cart colors off (FLAGS.cartColors, Nov 19): every cart that isn't yours is neutral. */
+html.no-cart-colors { --t-A: var(--text-muted); --t-B: var(--text-muted); --t-C: var(--text-muted); --t-D: var(--text-muted); --t-E: var(--text-muted); --t-F: var(--text-muted); }
 
 /* ───────────────────────────────────────────── base */
 *, *::before, *::after { box-sizing: border-box; }

@@ -20,6 +20,7 @@ import { riderState, isRider } from '../riderview.js';
 import { cardOn, cardState, gpsBadge, greenCard } from './greencard.js';
 import { shortCourseName } from '../coursedata.js';
 import { gps } from '../gps.js';
+import { FLAGS } from '../flags.js';
 
 /** "+2 thru 4" / "All square" from this team's side of its current matchup. */
 export function matchStatus(snap, m, teamId) {
@@ -160,7 +161,7 @@ function cartCard(app, cart, hole, mine, locked) {
   const team = cart.teamId ? snap.teamById.get(cart.teamId) : null;
   const label = cartLabel(app, cart);
   const jersey = team ? sideColor(app, team.id) : 'var(--cart-you)';
-  const name = mine && team && !locked && !snap.settings.pairs
+  const name = FLAGS.cartNames && mine && team && !locked && !snap.settings.pairs
     ? `<button class="name name-btn" data-act="team-picker" aria-label="Name your cart"><i class="jd"></i><span class="ellipsis">${esc(label)}</span>${isDefaultTeamName(team) ? '<span class="pick">Name it</span>' : ''}</button>`
     : `<span class="name"><i class="jd"></i><span class="ellipsis">${esc(label)}</span></span>`;
   // A locked (finished) hole: the whole card is the tap target that unlocks it for editing.
