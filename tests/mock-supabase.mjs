@@ -39,7 +39,7 @@ export function createBackend() {
   // Mirrors _lobby_gate: null = scores may be written; else the not_open refusal.
   const lobbyGate = (e) => {
     const l = e.settings?.lobby;
-    if (!l || typeof l !== 'object' || Array.isArray(l) || String(e.settings.ryder) !== 'true') return null;
+    if (!l || typeof l !== 'object' || Array.isArray(l)) return null; // 029: every round with a lobby (was Team Ryder Cup only)
     const at = l.opensAt ? Date.parse(l.opensAt) : NaN;
     const early = l.openedEarly === true || l.openedEarly === 'true';
     if (l.stage === 'ready' && Number.isFinite(at) && (early || nowMs() >= at)) return null;

@@ -37,7 +37,7 @@ const srv = await serve();
 const be = createBackend();
 const r = seedRound(be);
 const link = `${srv.origin}/#/e/${r.code}`;
-const browser = await chromium.launch();
+const browser = await chromium.launch(process.env.PW_CHROMIUM ? { executablePath: process.env.PW_CHROMIUM } : {}); // PW_CHROMIUM: a browser path when Playwright's own isn't installed
 const results = [];
 let failed = 0;
 
@@ -50,7 +50,7 @@ async function phone(name) {
   const ctx = await browser.newContext({ viewport: { width: 393, height: 659 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true }); // iPhone 15/16 (Andrew: 15/16/17 only)
   await attach(ctx, be, srv.origin);
   await ctx.addInitScript(() => {
-    for (const k of ['tile5', 'prov2', 'oppcart3', 'pad1']) localStorage.setItem('glb.coach.' + k, 'true');
+    for (const k of ['tile5', 'prov2', 'oppcart3', 'pad1', 'pad3', 'quiet1', 'matches1', 'board1']) localStorage.setItem('glb.coach.' + k, 'true');
   });
   const page = await ctx.newPage();
   page.errors = [];
@@ -593,7 +593,7 @@ await R6.page.waitForTimeout(300);
 await R6.page.tap('[data-act="menu-rules"]');
 await R6.page.waitForTimeout(300);
 const rules6 = (await R6.page.textContent('#sheet')).replace(/\s+/g, ' ');
-ok(/Partner “Rider” Cup · Match play/.test(rules6) && /4 a hole/.test(rules6) && /Same opponents all 18/.test(rules6) && /Full, off zero/.test(rules6) && /Double par/.test(rules6) && /better matchup record/.test(rules6),
+ok(/2v2 · Match play/.test(rules6) && /4 a hole/.test(rules6) && /Same opponents all 18/.test(rules6) && /Full, off zero/.test(rules6) && /Double par/.test(rules6) && /better matchup record/.test(rules6),
   `Rules sheet: the round's real settings (${rules6.slice(0, 120)}…)`);
 await R6.page.evaluate(() => window.__glb.closeSheet());
 await R6.page.evaluate(() => window.__glb.openSheet('menu', {}));
@@ -604,7 +604,7 @@ await R6.page.evaluate(() => window.__glb.closeSheet());
 await R6.page.goto(`${srv.origin}/#/`);
 await R6.page.waitForTimeout(600);
 const live6 = (await R6.page.textContent('.live-card').catch(() => '')).replace(/\s+/g, ' ');
-ok(/Live · hole 1/i.test(live6) && /Partner “Rider” Cup/.test(live6) && /Back to hole 1/.test(live6) && /Tara/.test(await R6.page.textContent('#topbar')),
+ok(/Live · hole 1/i.test(live6) && /2v2/.test(live6) && /Back to hole 1/.test(live6) && /Tara/.test(await R6.page.textContent('#topbar')),
   `Home: Playing now card, your name up top (${live6.trim().slice(0, 80)})`);
 await R6.page.tap('[data-act="home-joinsheet"]');
 await R6.page.waitForTimeout(400);
@@ -712,7 +712,7 @@ const YF = await (async () => {
     localStorage.setItem('glb.me.' + code, '"p1"');
     localStorage.setItem('glb.who.' + code, 'true');
     localStorage.setItem('glb.brief.' + code, 'true');
-    for (const k of ['tile5', 'prov2', 'oppcart3', 'pad1']) localStorage.setItem('glb.coach.' + k, 'true');
+    for (const k of ['tile5', 'prov2', 'oppcart3', 'pad1', 'pad3', 'quiet1', 'matches1', 'board1']) localStorage.setItem('glb.coach.' + k, 'true');
   }, [yr.code, YDEV]);
   const page = await ctx.newPage();
   page.errors = [];
@@ -784,7 +784,7 @@ const MX = await (async () => {
     localStorage.setItem('glb.who.' + code, 'true');
     localStorage.setItem('glb.brief.' + code, 'true');
     localStorage.setItem('glb.seen.' + code, JSON.stringify({ last: Date.now(), ids: [] }));
-    for (const k of ['tile5', 'prov2', 'oppcart3', 'pad1']) localStorage.setItem('glb.coach.' + k, 'true');
+    for (const k of ['tile5', 'prov2', 'oppcart3', 'pad1', 'pad3', 'quiet1', 'matches1', 'board1']) localStorage.setItem('glb.coach.' + k, 'true');
   }, [mr.code, MDEV]);
   const page = await ctx.newPage();
   page.errors = [];
@@ -812,7 +812,7 @@ await MX.ctx.close();
 const V = await (async () => {
   const ctx = await browser.newContext({ viewport: { width: 393, height: 852 }, isMobile: true, hasTouch: true });
   await attach(ctx, be, srv.origin);
-  await ctx.addInitScript(() => { for (const k of ['tile5', 'prov2', 'oppcart3', 'pad1']) localStorage.setItem('glb.coach.' + k, 'true'); });
+  await ctx.addInitScript(() => { for (const k of ['tile5', 'prov2', 'oppcart3', 'pad1', 'pad3', 'quiet1', 'matches1', 'board1']) localStorage.setItem('glb.coach.' + k, 'true'); });
   const page = await ctx.newPage();
   page.errors = [];
   page.on('pageerror', (e) => page.errors.push(`2v2 phone: ${e.message}`));
@@ -858,7 +858,7 @@ const F = await (async () => {
     localStorage.setItem('glb.me.' + code, '"p1"');
     localStorage.setItem('glb.who.' + code, 'true');
     localStorage.setItem('glb.brief.' + code, 'true');
-    for (const k of ['tile5', 'prov2', 'oppcart3', 'pad1']) localStorage.setItem('glb.coach.' + k, 'true');
+    for (const k of ['tile5', 'prov2', 'oppcart3', 'pad1', 'pad3', 'quiet1', 'matches1', 'board1']) localStorage.setItem('glb.coach.' + k, 'true');
   }, [r3.code, DEV3]);
   const page = await ctx.newPage();
   page.errors = [];
@@ -947,7 +947,7 @@ const R = await (async () => {
     localStorage.setItem('glb.who.' + code, 'true');
     localStorage.setItem('glb.brief.' + code, 'true');
     localStorage.setItem('glb.seen.' + code, JSON.stringify({ last: Date.now(), ids: [] }));
-    for (const k of ['tile5', 'prov2', 'oppcart3', 'pad1']) localStorage.setItem('glb.coach.' + k, 'true');
+    for (const k of ['tile5', 'prov2', 'oppcart3', 'pad1', 'pad3', 'quiet1', 'matches1', 'board1']) localStorage.setItem('glb.coach.' + k, 'true');
   }, [r4.code, DEV4]);
   const page = await ctx.newPage();
   page.errors = [];
@@ -1018,7 +1018,7 @@ async function presetPhone(label, code, { dev, me, pin } = {}) {
     localStorage.setItem('glb.who.' + c, 'true');
     localStorage.setItem('glb.brief.' + c, 'true');
     localStorage.setItem('glb.seen.' + c, JSON.stringify({ last: Date.now(), ids: [] }));
-    for (const k of ['tile5', 'prov2', 'oppcart3', 'pad1']) localStorage.setItem('glb.coach.' + k, 'true');
+    for (const k of ['tile5', 'prov2', 'oppcart3', 'pad1', 'pad3', 'quiet1', 'matches1', 'board1']) localStorage.setItem('glb.coach.' + k, 'true');
   }, [code, dev || null, me || null, pin || null]);
   const page = await ctx.newPage();
   page.errors = [];
@@ -1104,7 +1104,7 @@ const G = await (async () => {
     geolocation: { latitude: 33.1084, longitude: -96.7181 }, permissions: ['geolocation'],
   });
   await attach(ctx, be, srv.origin);
-  await ctx.addInitScript(() => { for (const k of ['tile5', 'prov2', 'oppcart3', 'pad1']) localStorage.setItem('glb.coach.' + k, 'true'); });
+  await ctx.addInitScript(() => { for (const k of ['tile5', 'prov2', 'oppcart3', 'pad1', 'pad3', 'quiet1', 'matches1', 'board1']) localStorage.setItem('glb.coach.' + k, 'true'); });
   const page = await ctx.newPage();
   page.errors = [];
   page.on('pageerror', (e) => page.errors.push(`Course phone: ${e.message}`));
@@ -1554,7 +1554,7 @@ async function geoPhone(label, code, tee) {
     localStorage.setItem('glb.who.' + c, 'true');
     localStorage.setItem('glb.brief.' + c, 'true');
     localStorage.setItem('glb.seen.' + c, JSON.stringify({ last: Date.now(), ids: [] }));
-    for (const k of ['tile5', 'prov2', 'oppcart3', 'pad1']) localStorage.setItem('glb.coach.' + k, 'true');
+    for (const k of ['tile5', 'prov2', 'oppcart3', 'pad1', 'pad3', 'quiet1', 'matches1', 'board1']) localStorage.setItem('glb.coach.' + k, 'true');
   }, [code, dev]);
   const page = await ctx.newPage();
   page.errors = [];

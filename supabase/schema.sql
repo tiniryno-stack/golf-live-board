@@ -768,7 +768,8 @@ create or replace function public._lobby_gate(e public.events)
 returns jsonb language plpgsql stable security definer set search_path = public as $$
 declare l jsonb := e.settings->'lobby'; v_at timestamptz;
 begin
-  if l is null or jsonb_typeof(l) <> 'object' or coalesce(e.settings->>'ryder', 'false') <> 'true' then return null; end if;
+  -- 029 (Nov 19): every round made with a lobby is gated, not only Team Ryder Cup. Rounds without settings.lobby: null.
+  if l is null or jsonb_typeof(l) <> 'object' then return null; end if;
   begin
     v_at := nullif(l->>'opensAt', '')::timestamptz;
   exception when others then

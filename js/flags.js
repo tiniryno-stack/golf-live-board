@@ -8,6 +8,12 @@ export const FLAGS = {
   // App-only (handoff 024 §6): a phone in Safari with no claim in a round is sent to Add to Home Screen
   // (app.mustUseApp). Logic only until 025 brings the real screens; anyone already playing in Safari keeps playing.
   appOnly: false,
+  // Cart colors (orange, blue, pink, violet) for carts that aren't yours. Off since Nov 19: you're green,
+  // everyone else is neutral. Turning it back on restores the jerseys everywhere (css --t-A…F).
+  cartColors: false,
+  // Cart names ("Hogan's Heroes", the Pokémon picks). Off since Nov 19: carts are shown by their players'
+  // first names ("Andrew + Sean") and nobody is asked to name a cart. Names already saved stay in the round.
+  cartNames: false,
 };
 // Tests flip flags per page with `window.__GLB_FLAGS = { gps: true }` before the app loads.
 if (typeof globalThis.__GLB_FLAGS === 'object') Object.assign(FLAGS, globalThis.__GLB_FLAGS);

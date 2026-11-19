@@ -97,6 +97,11 @@ tr.tpl th, tr.tpl td { background: var(--tint-you); }
 .ref img { width: 92px; aspect-ratio: 393 / 852; object-fit: cover; border-radius: 10px; border: 1px solid var(--line); display: block; background: var(--surface-2); }
 .ref span { font-size: 12px; line-height: 1.3; color: var(--text-muted); }
 .ref:focus-visible img { outline: 2px solid var(--note); outline-offset: 2px; }
+.shots { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px 16px; }
+.shots .ref { width: auto; }
+.shots .ref img { width: 100%; aspect-ratio: 393 / 659; border-radius: 16px; }
+.shots .ref span { font-size: 13px; }
+.shots .ref span b { color: var(--text); font-weight: 600; display: block; }
 
 .mocks { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 32px 20px; }
 figure.mock { margin: 0; display: grid; gap: 12px; justify-items: center; align-content: start; min-width: 0; }
@@ -290,74 +295,341 @@ table.map tbody th { width: 92px; font-family: var(--font-mono); }
 table.map tr.four th, table.map tr.four td { background: var(--tint-you); }
 @media (max-width: 420px) { .ph { zoom: .7; } }
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+/* Hand-off layout (Nov 19) */
+.grp { display: grid; gap: 14px; }
+.grp + .grp { margin-top: 12px; }
+.grp h3 .tag { vertical-align: 3px; margin-left: 8px; }
+details.archive { border: 1px solid var(--line); border-radius: 18px; background: var(--surface-1); }
+details.archive > summary { cursor: pointer; padding: 16px 20px; font-weight: 600; }
+details.archive[open] > summary { border-bottom: 1px solid var(--line); }
+details.archive > .inner { padding: 0 20px 24px; }
+table.steps { min-width: 720px; }
+table.steps tbody th { width: 40px; font-family: var(--font-mono); }
 </style>
 
 <div class="wrap">
   <header class="top">
-    <span class="kicker">Golf Live Board · design briefs 027–030 · Nov 17, 2026 · 032 added Nov 18</span>
-    <h1>One app for every game</h1>
-    <p class="lede">Team Ryder Cup is the most finished game in the app: the invite, the lobby, the calm Enter, the cup Board and the final card. These four briefs ask for the pieces needed to give every other game that same journey. Each brief says what stays fixed, the few places a game may differ, the states to draw, and which questions are still open. The phones are first passes drawn with the app’s own tokens so you have something concrete to react to. Rebuild them in the components; don’t trace them.</p>
+    <span class="kicker">Golf Live Board · hand-off to the engineer · Nov 19, 2026</span>
+    <h1>The Nov 19 redesign</h1>
+    <p class="lede">Everything approved on the Claude Design canvas, in one place, in the order it gets built. The engineer builds from one brief in the repo, <code>docs/design/features/031-who-you-play-for/SPEC.md</code>. This page is the same brief with the pictures.</p>
   </header>
 
-  <nav class="toc" aria-label="Briefs">
+  <nav class="toc" aria-label="Hand-off">
     <ol>
-      <li><a href="#start">Read first</a></li>
-      <li><a href="#b027"><span class="n">027</span>The feel</a></li>
-      <li><a href="#b028"><span class="n">028</span>Game slots</a></li>
-      <li><a href="#b029"><span class="n">029</span>A lobby for every round</a></li>
-      <li><a href="#b030"><span class="n">030</span>One setup</a></li>
-      <li><a href="#b032"><span class="n">032</span>Games by player count</a></li>
-      <li><a href="#skip">No design needed</a></li>
+      <li><a href="#start">Start here</a></li>
+      <li><a href="#rule"><span class="n">1</span>The rule</a></li>
+      <li><a href="#setup"><span class="n">2</span>Setup</a></li>
+      <li><a href="#boards"><span class="n">3</span>Board + Matches</a></li>
+      <li><a href="#race"><span class="n">4</span>The race</a></li>
+      <li><a href="#standings"><span class="n">5</span>Standings</a></li>
+      <li><a href="#calls"><span class="n">6</span>Rules</a></li>
+      <li><a href="#order">Build order</a></li>
+      <li><a href="#open">Still open</a></li>
+      <li><a href="#earlier">Earlier briefs</a></li>
     </ol>
   </nav>
 
-  <!-- ================= READ FIRST ================= -->
+  <!-- ================= START HERE ================= -->
   <section class="part" id="start">
-    <div class="part-head"><span class="kicker">Read first</span><h2>How these briefs work</h2></div>
+    <div class="part-head"><span class="kicker">Start here</span><h2>Where everything is</h2></div>
     <div class="cols">
       <div class="panel">
-        <h3>The journey every game will share</h3>
-        <ol>
-          <li><b>Organizer:</b> course → players → game → teams (only if the game has them) → tee times → invite.</li>
-          <li><b>Player:</b> invite link → “Which one are you?” → add to home screen → lobby → scoring is open.</li>
-          <li><b>The round:</b> Enter, Matches, Board, Card.</li>
-          <li><b>The end:</b> final card, recap, share.</li>
-        </ol>
-        <p class="muted">A game may differ in only three places: <b>how people are grouped</b>, <b>what a hole is worth</b>, and <b>what the standings look like</b>. Anything else that differs is a bug to fix.</p>
+        <h3>The three places</h3>
+        <ul>
+          <li><b>The brief:</b> <code>docs/design/features/031-who-you-play-for/</code> in the repo. <code>SPEC.md</code> is the source of truth, with 22 screenshots and their mockups.</li>
+          <li><b>The canvas:</b> <a href="https://claude.ai/artifact/6d76RhvkedJGkb7R3gM6MR">Golf Board · briefs 028–032</a>, page “Hand-off · approved screens”. The other pages are the options we dropped.</li>
+          <li><b>The code:</b> branch <code>claude/friendly-lovelace-g5kzki</code>. Not on <code>main</code> yet.</li>
+        </ul>
       </div>
       <div class="panel">
-        <h3>The five games</h3>
+        <h3>Where it stands</h3>
         <ul>
-          <li><b>Team Ryder Cup:</b> 16 players, two sides of four carts. The template.</li>
-          <li><b>Partner “Rider” Cup:</b> 6 or 8 players in carts of 2, opponents rotate. Already on the Team Ryder Cup screens, with cart colors.</li>
-          <li><b>2v2:</b> exactly 4 players, two pairs.</li>
-          <li><b>Match play</b> (split point in the code): 2–6 players, 1 point a hole to the low net score, ties split it.</li>
-          <li><b>Scorecard only:</b> any number, no game.</li>
+          <li><b>Live:</b> everything through handoff 026. None of this redesign.</li>
+          <li><b>Built on the branch:</b> season standings as a record; cart colors and cart names off.</li>
+          <li><b>To build:</b> everything else on this page, in the <a href="#order">build order</a>.</li>
         </ul>
-        <p class="muted"><b>Nov 18:</b> brief 032 folds these five into three games picked by player count. Where 027–030 name a game, read it through 032’s table.</p>
+        <p class="muted">Two older drafts (031 One Board, 032 Games by player count) are folded into this one brief and removed from the repo.</p>
       </div>
       <div class="panel">
         <h3>Limits that don’t move</h3>
         <ul>
-          <li>Phones held in one hand on a course, in sun, often with a glove. Tap targets 48px or more; tap is the main gesture.</li>
-          <li>Design at 393 × 852 (iPhone 16), dark and light. Every screen fits an iPhone 16; <b>Enter never scrolls</b>.</li>
-          <li><b>Green means you</b>, never success. Red means double bogey or an error. No team is ever red.</li>
-          <li>No swiping between holes. 12px is the smallest text. Six type styles, no new ones.</li>
-          <li>The system lives in <code>docs/design/design-system/</code>. A new color, size, type style or motion gets flagged and added there first.</li>
-        </ul>
-      </div>
-      <div class="panel">
-        <h3>What to send back</h3>
-        <ul>
-          <li>One folder per brief: <code>docs/design/features/027-…</code> to <code>030-…</code>, each with <code>SPEC.md</code> (the source of truth), screenshots of every state (dark + light), and mockups as reference.</li>
-          <li>Start new screens from the <b>North star</b> page of the App Screens canvas.</li>
-          <li><b>Order:</b> 027 first, because the others use its rules. Then 028, 029, 030.</li>
-          <li>“Decided” boxes are Andrew’s calls (Nov 18): draw what they say. The one amber box left is for the build, not for you.</li>
+          <li>Phones held in one hand on a course, in sun, often with a glove. Tap targets 48px or more.</li>
+          <li>Every screen fits 393 × 659. <b>Enter never scrolls.</b></li>
+          <li><b>Green means you</b>, never success. Red means double bogey or an error.</li>
+          <li>Six type styles and the design system’s tokens. Nothing new without flagging it.</li>
+          <li>Old rounds keep working: stored game ids and settings don’t change, only what screens call them.</li>
         </ul>
       </div>
     </div>
   </section>
 
+  <!-- ================= 1 · THE RULE ================= -->
+  <section class="part" id="rule">
+    <div class="part-head">
+      <span class="kicker">1 · The rule everything follows</span>
+      <h2>Who are you playing for?</h2>
+      <p class="goal">Partner swap and opponent swap are different games. What the Board and Matches show follows who you’re playing for.</p>
+    </div>
+    <div class="tablewrap" role="region" aria-label="Who you play for" tabindex="0">
+      <table>
+        <thead><tr><th>You’re playing for</th><th>How it’s set up</th><th>The Board</th><th>Matches</th><th>Screens</th></tr></thead>
+        <tbody>
+          <tr><th>Yourself</th><td>2v2, partners switch</td><td>Players ranked by stretches won, your place on top, then your matches</td><td>The stretch you’re in, one tab per partner</td><td class="mono">03 04</td></tr>
+          <tr><th>Your cart</th><td>2v2, partner fixed, opponents switch (8 players), or three carts (6)</td><td>Carts ranked by points, then the live matches</td><td>Your match, one tab per six holes</td><td class="mono">05 06 07</td></tr>
+          <tr><th>Your cart, one match</th><td>2v2, partner and opponents the same all day (a foursome, or each foursome of 8)</td><td>Two totals and one bar that fills up</td><td>The hole calendar</td><td class="mono">08 09 10</td></tr>
+          <tr><th>Yourself, no partner</th><td>Everyone alone (2–6)</td><td>The leaderboard, with only your place above it</td><td>The race</td><td class="mono">11 · 12–16</td></tr>
+          <tr><th>Nobody, just your score</th><td>Stroke play (any number)</td><td>The leaderboard, to par</td><td>Your group’s last three holes</td><td class="mono">17 18</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="refs-label">Team Ryder Cup (16 players) doesn’t change.</p>
+  </section>
+
+  <!-- ================= 2 · SETUP ================= -->
+  <section class="part" id="setup">
+    <div class="part-head">
+      <span class="kicker">2 · Setup · build step 4</span>
+      <h2>Pick a game. Switching is a setting inside 2v2.</h2>
+      <p class="goal">The step still says “Pick a game” and lists only the games that fit the number of players. Pick 2v2 and the row grows to ask about partners and, with 8, opponents.</p>
+    </div>
+    <div class="shots">
+      <button class="ref" data-src="agreed/01-setup-4-players.png"><img src="agreed/01-setup-4-players.png" alt="01 · A foursome"><span><b>01 · A foursome</b>2v2 picked. Partners: keep, switch every 6, or switch at the turn.</span></button>
+      <button class="ref" data-src="agreed/02-setup-8-players.png"><img src="agreed/02-setup-8-players.png" alt="02 · Eight players"><span><b>02 · Eight players</b>2v2 with two settings: Partners and Opponents.</span></button>
+    </div>
+    <div class="cols">
+      <div class="panel decided">
+        <span class="kicker">Decided</span>
+        <ul>
+          <li><b>Game names:</b> 2v2, Everyone alone, Stroke play, Team Ryder Cup. “Split point” and “Partner Rider Cup” leave the app.</li>
+          <li><b>Partners:</b> Keep all 18 · Switch every 6 · Switch at the turn.</li>
+          <li><b>Opponents</b> (8 players): Switch every 6 · Same all 18.</li>
+          <li>The button names the next step: partners, carts or tee times.</li>
+          <li>Then one Teams step and one Tee times step for every game (brief 030).</li>
+          <li>Scramble and Carries over say “coming soon”.</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <span class="kicker">Which games show, by players</span>
+        <ul>
+          <li><b>1:</b> Stroke play</li>
+          <li><b>2, 3, 5:</b> Everyone alone · Stroke play</li>
+          <li><b>4:</b> 2v2 · Everyone alone · Stroke play</li>
+          <li><b>6:</b> 2v2 (three carts) · Everyone alone · Stroke play</li>
+          <li><b>8:</b> 2v2 · Stroke play</li>
+          <li><b>7, 9–15:</b> Stroke play</li>
+          <li><b>16:</b> Team Ryder Cup · Stroke play</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 3 · BOARD + MATCHES ================= -->
+  <section class="part" id="boards">
+    <div class="part-head">
+      <span class="kicker">3 · Board and Matches · build steps 2 and 3</span>
+      <h2>One Board and one Matches for each way of playing</h2>
+      <p class="goal">Step 2 draws these from the scores the app already keeps. Step 3 changes the scoring where a line below says so.</p>
+    </div>
+    <div class="grp">
+      <h3>Playing for yourself · partners switch</h3>
+      <p class="refs-label">Each stretch is its own match. The day goes to whoever wins the most stretches; points break ties.</p>
+    <div class="shots">
+      <button class="ref" data-src="agreed/03-partners-switch-board.png"><img src="agreed/03-partners-switch-board.png" alt="03 · Board"><span><b>03 · Board</b>Your place by stretches won, then your matches.</span></button>
+      <button class="ref" data-src="agreed/04-partners-switch-matches.png"><img src="agreed/04-partners-switch-matches.png" alt="04 · Matches"><span><b>04 · Matches</b>The stretch you’re in. One tab per partner. “3½ to win.”</span></button>
+    </div>
+    </div>
+    <div class="grp">
+      <h3>Playing for your cart · opponents switch</h3>
+      <p class="refs-label">Today’s cart-game scoring: low ball 1 point, low total 1 point, points add up over the day.</p>
+    <div class="shots">
+      <button class="ref" data-src="agreed/05-opponents-switch-board.png"><img src="agreed/05-opponents-switch-board.png" alt="05 · Board"><span><b>05 · Board</b>Carts ranked, then the live matches.</span></button>
+      <button class="ref" data-src="agreed/06-opponents-switch-matches.png"><img src="agreed/06-opponents-switch-matches.png" alt="06 · Matches"><span><b>06 · Matches</b>One tab per six holes. The line says what wins.</span></button>
+      <button class="ref" data-src="agreed/07-three-carts-board.png"><img src="agreed/07-three-carts-board.png" alt="07 · Board · three carts"><span><b>07 · Board · three carts</b>The same Board with six players.</span></button>
+    </div>
+    </div>
+    <div class="grp">
+      <h3>Your cart, one match · same partner and opponents all day</h3>
+      <p class="refs-label">Each hole is a point; a halved hole is ½ each. The bar’s middle line is always half the points, labeled with what wins.</p>
+    <div class="shots">
+      <button class="ref" data-src="agreed/08-one-match-board.png"><img src="agreed/08-one-match-board.png" alt="08 · Board"><span><b>08 · Board</b>Two totals and one bar. “9½ to win.”</span></button>
+      <button class="ref" data-src="agreed/09-one-match-matches.png"><img src="agreed/09-one-match-matches.png" alt="09 · Matches"><span><b>09 · Matches</b>The hole calendar: W, L or ½. Empty holes outlined, the live hole lit.</span></button>
+      <button class="ref" data-src="agreed/10-one-match-8-players-board.png"><img src="agreed/10-one-match-8-players-board.png" alt="10 · Board · eight players"><span><b>10 · Board · eight players</b>A match in each foursome. Yours is lit.</span></button>
+    </div>
+    </div>
+    <div class="grp">
+      <h3>Everyone alone</h3>
+      <p class="refs-label">The Board is the leaderboard. Matches is <a href="#race">the race</a>.</p>
+    <div class="shots">
+      <button class="ref" data-src="agreed/11-everyone-alone-board.png"><img src="agreed/11-everyone-alone-board.png" alt="11 · Board"><span><b>11 · Board</b>Your place, then the table. Nothing else on top.</span></button>
+    </div>
+    </div>
+    <div class="grp">
+      <h3>Stroke play</h3>
+    <div class="shots">
+      <button class="ref" data-src="agreed/17-stroke-play-board.png"><img src="agreed/17-stroke-play-board.png" alt="17 · Board"><span><b>17 · Board</b>Place, then everyone to par.</span></button>
+      <button class="ref" data-src="agreed/18-stroke-play-matches.png"><img src="agreed/18-stroke-play-matches.png" alt="18 · Matches"><span><b>18 · Matches</b>Your group’s last three holes.</span></button>
+    </div>
+    </div>
+    <div class="grp">
+      <h3>Tap a player, on any Board</h3>
+    <div class="shots">
+      <button class="ref" data-src="agreed/19-tap-a-player.png"><img src="agreed/19-tap-a-player.png" alt="19 · Their round"><span><b>19 · Their round</b>The round card the app already has. Nothing new to build.</span></button>
+    </div>
+    </div>
+  </section>
+
+  <!-- ================= 4 · THE RACE ================= -->
+  <section class="part" id="race">
+    <div class="part-head">
+      <span class="kicker">4 · The race · build step 2 · approved</span>
+      <h2>The race: can I still win?</h2>
+      <p class="goal">Always the leaderboard with Pts and Back. A dashed “Out of reach” line appears when someone can’t catch up. A card shows on top only when a hole decides something.</p>
+    </div>
+    <div class="shots">
+      <button class="ref" data-src="agreed/12-race-after-hole-1.png"><img src="agreed/12-race-after-hole-1.png" alt="12 · After hole 1"><span><b>12 · After hole 1</b>“How it works”, for the first few holes only.</span></button>
+      <button class="ref" data-src="agreed/13-race-at-the-turn.png"><img src="agreed/13-race-at-the-turn.png" alt="13 · At the turn"><span><b>13 · At the turn</b>Place, Pts and Back. Nothing else until it matters.</span></button>
+      <button class="ref" data-src="agreed/14-race-one-hole-from-out.png"><img src="agreed/14-race-one-hole-from-out.png" alt="14 · One hole from out"><span><b>14 · One hole from out</b>The warning: “Lose it to Chris and you’re out of reach.”</span></button>
+      <button class="ref" data-src="agreed/15-race-hole-decides-it.png"><img src="agreed/15-race-hole-decides-it.png" alt="15 · The hole that decides it"><span><b>15 · The hole that decides it</b>“Chris clinches if he wins it alone.” Out of reach sits under the line.</span></button>
+      <button class="ref" data-src="agreed/16-race-clinched.png"><img src="agreed/16-race-clinched.png" alt="16 · Clinched"><span><b>16 · Clinched</b>The winner is alone above the line. You’re told what you’re still playing for.</span></button>
+    </div>
+    <div class="cols">
+      <div class="panel decided"><span class="kicker">Decided</span><ul><li>No bars and no lock number.</li><li>The warning comes one hole before you’d be out.</li><li>Point totals show one decimal (4.3).</li></ul></div>
+    </div>
+  </section>
+
+  <!-- ================= 5 · STANDINGS ================= -->
+  <section class="part" id="standings">
+    <div class="part-head">
+      <span class="kicker">5 · Season standings · built on the branch</span>
+      <h2>One record across every game</h2>
+      <p class="goal">In every round you finish ahead of some people and behind others. Count those, add them up over the season, rank by win rate.</p>
+    </div>
+    <div class="shots">
+      <button class="ref" data-src="agreed/20-standings.png"><img src="agreed/20-standings.png" alt="20 · Standings"><span><b>20 · Standings</b>Rounds, Record, Win rate. Under 3 rounds you’re below the line.</span></button>
+      <button class="ref" data-src="agreed/21-standings-your-season-peeks.png"><img src="agreed/21-standings-your-season-peeks.png" alt="21 · Your season peeks"><span><b>21 · Your season peeks</b>It sits dimmed at the bottom edge.</span></button>
+      <button class="ref" data-src="agreed/22-standings-your-season-card.png"><img src="agreed/22-standings-your-season-card.png" alt="22 · Tap it"><span><b>22 · Tap it</b>Your win rate, four tiles, then every round.</span></button>
+    </div>
+    <div class="cols">
+      <div class="panel decided">
+        <span class="kicker">Decided</span>
+        <ul>
+          <li>Your record is players you finished ahead of, then behind. Partners don’t count against each other. A tie is ½.</li>
+          <li><b>A big round counts for more:</b> records are added, not averaged.</li>
+          <li>3 rounds to be ranked.</li>
+          <li>Records line up on their dash.</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <span class="kicker">Left to do</span>
+        <ul>
+          <li>Nobody has looked at it in the real app yet.</li>
+          <li>The card opens with a plain swap. It should grow in place (build step 1).</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 6 · RULES ================= -->
+  <section class="part" id="calls">
+    <div class="part-head"><span class="kicker">6 · Rules for every screen</span><h2>The calls that apply everywhere</h2></div>
+    <div class="cols">
+      <div class="panel decided">
+        <span class="kicker">On every screen</span>
+        <ul>
+          <li><b>Headlines are short:</b> your place (“2nd”), with the detail small beside it.</li>
+          <li><b>Never two scoreboards.</b> A mini leaderboard only where the matches under it make up the standings.</li>
+          <li><b>No hole-by-hole bar on the Board.</b> The hole calendar lives on Matches.</li>
+          <li><b>The glow</b> goes on the one live thing on each screen.</li>
+          <li><b>Tap a player</b> opens the round card the app already has.</li>
+        </ul>
+      </div>
+      <div class="panel decided">
+        <span class="kicker">Carts</span>
+        <ul>
+          <li><b>Cart colors are off everywhere:</b> green for you, grey for everyone else. <span class="tag t">Built</span></li>
+          <li><b>Cart names are cut.</b> A cart reads “Andrew + Sean”. Nobody is asked to name one. <span class="tag t">Built</span></li>
+          <li>Both sit behind a switch in the code, so they can come back.</li>
+          <li><b>“Switch it up”</b> stays, wherever partners or opponents switch. Once per switch.</li>
+        </ul>
+      </div>
+      <div class="panel decided">
+        <span class="kicker">Coach tips · four, each shown once</span>
+        <ol>
+          <li>Enter, first hole: “Tap the score you made. ⋯ has every other score.”</li>
+          <li>Enter, the quiet row: “Tap here to enter scores for the rest of your group.”</li>
+          <li>Matches, first visit: “Tap a hole to see everyone’s score on it.”</li>
+          <li>Board, first visit: “Tap a name to see their round.”</li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= BUILD ORDER ================= -->
+  <section class="part" id="order">
+    <div class="part-head"><span class="kicker">For the engineer</span><h2>Build order</h2><p class="goal">Seven steps. Three of them stop and ask Andrew first.</p></div>
+    <div class="tablewrap" role="region" aria-label="Build order" tabindex="0">
+      <table class="steps">
+        <thead><tr><th>#</th><th>Step</th><th>Comes from</th><th>Ask first?</th></tr></thead>
+        <tbody>
+          <tr><th>1</th><td><b>The feel:</b> grow in place, one lit thing, the next thing peeks. Use the grow on the Standings card.</td><td>Brief 027</td><td>No</td></tr>
+          <tr><th>2</th><td><b>Board and Matches for each way of playing, the race, Stroke play.</b> Display only, from scores the app already keeps.</td><td>Sections 1, 3, 4</td><td>No</td></tr>
+          <tr><th>3</th><td><b>Scoring:</b> one match counts holes as points (“9½ to win”); Same all 18 for 8 players; partners switch is won by most stretches; one decimal.</td><td>Section 3</td><td><span class="tag q">Yes</span> changes the engine</td></tr>
+          <tr><th>4</th><td><b>Setup:</b> Pick a game by player count, Partners and Opponents inside 2v2, one Teams step, one Tee times step.</td><td>Section 2, brief 030</td><td>No</td></tr>
+          <tr><th>5</th><td><b>The same Enter for every game.</b></td><td>Brief 028 (Enter only)</td><td><span class="tag q">Yes</span> changes score entry</td></tr>
+          <tr><th>6</th><td><b>A lobby for every round,</b> with the new game names and no cart-name row.</td><td>Brief 029</td><td><span class="tag q">Yes</span> needs a database change</td></tr>
+          <tr><th>7</th><td><b>Coach tips and “Switch it up”.</b></td><td>Section 6</td><td>No</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ================= STILL OPEN ================= -->
+  <section class="part" id="open">
+    <div class="part-head"><span class="kicker">Not decided</span><h2>Still open</h2><p class="goal">The engineer asks about these. Nothing here gets guessed.</p></div>
+    <div class="cols">
+      <div class="panel ask">
+        <span class="kicker">Needs a call from Andrew</span>
+        <ul>
+          <li><b>The Board, Matches and Setup screens (01–11, 17, 18)</b> weren’t signed off one at a time. The rule, the race and Standings were. They get built as drawn and shown to you.</li>
+          <li><b>8 players switching partners across both foursomes</b> needs a rule first. Suggested: switching inside your foursome ships first.</li>
+          <li><b>Standings, tapping someone else:</b> the same card as yours (suggested), or a row that opens in place?</li>
+          <li><b>Standings, changing season:</b> keep today’s dropdown, or a pager at the top?</li>
+          <li><b>How a hole is won in 2v2</b> (best ball, or low ball + low total) isn’t on the new Game step. As drawn: one match is best ball, opponents switch keeps today’s scoring.</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <span class="kicker">Not drawn yet</span>
+        <ul>
+          <li>The <b>final card</b> for each way of playing. Until drawn: Team Ryder Cup’s final card with that game’s winner line.</li>
+          <li><b>Enter’s top line</b> for each way of playing.</li>
+          <li>Each Board <b>before the first score</b>.</li>
+          <li><b>Setup</b> for 2, 3, 5, 6, 7 and 16 players.</li>
+          <li><b>Matches</b> for three carts, and for 8 players switching partners.</li>
+          <li><b>Light mode.</b> It follows the tokens.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= EARLIER BRIEFS ================= -->
+  <section class="part" id="earlier">
+    <div class="part-head"><span class="kicker">Reference</span><h2>Earlier briefs, and what still stands</h2></div>
+    <div class="tablewrap" role="region" aria-label="Earlier briefs" tabindex="0">
+      <table class="steps">
+        <thead><tr><th>Brief</th><th>What it is</th><th>Now</th></tr></thead>
+        <tbody>
+          <tr><th>027</th><td>The feel: grow in place, one lit thing, the next thing peeks</td><td><b>Stands.</b> Build step 1.</td></tr>
+          <tr><th>028</th><td>Game slots: one round screen for every game</td><td><b>Enter stands</b> (step 5). Its Board, Matches and final card are replaced by sections 1 and 3.</td></tr>
+          <tr><th>029</th><td>A lobby for every round</td><td><b>Stands</b> (step 6), with the new game names and no cart-name row.</td></tr>
+          <tr><th>030</th><td>One setup</td><td><b>Teams and Tee times stand</b> (step 4). The Game step is section 2.</td></tr>
+          <tr><th>031</th><td>One Board (draft)</td><td>Replaced by sections 1, 3 and 4.</td></tr>
+          <tr><th>032</th><td>Games by player count (draft)</td><td>Replaced by section 2.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <details class="archive">
+      <summary>Open the original briefs 027–030 and 032, as written Nov 17–18</summary>
+      <div class="inner">
   <!-- ================= 027 ================= -->
   <section class="part" id="b027">
     <div class="part-head">
@@ -509,6 +781,7 @@ table.map tr.four th, table.map tr.four td { background: var(--tint-you); }
 
   <!-- ================= 028 ================= -->
   <section class="part" id="b028">
+    <div class="panel ask"><span class="kicker">Changed Nov 19</span><p>Enter in this brief stands. The Board, Matches and final card were redrawn on the canvas. See <a href="#rule">the rule</a> at the top of this page.</p></div>
     <div class="part-head">
       <span class="badge"><span class="num">028</span><span class="covers">To-do 1 One Enter · 2 One Matches · 3 One Board · 4 the final card’s words</span></span>
       <h2>Game slots: one round screen for every game</h2>
@@ -1022,6 +1295,7 @@ table.map tr.four th, table.map tr.four td { background: var(--tint-you); }
 
   <!-- ================= 032 ================= -->
   <section class="part" id="b032">
+    <div class="panel ask"><span class="kicker">Changed Nov 19</span><p>Replaced by <a href="#setup">Setup: pick a game</a> at the top of this page. The games-by-player-count idea stands; the settings inside 2v2 are now Partners and Opponents. See <a href="#rule">the rule</a> at the top of this page.</p></div>
     <div class="part-head">
       <span class="badge"><span class="num">032</span><span class="covers">Changes 030’s Game step and the five games in Read first · send back as <code>features/032-games-by-player-count</code></span></span>
       <h2>Games by player count</h2>
@@ -1213,38 +1487,13 @@ table.map tr.four th, table.map tr.four td { background: var(--tint-you); }
     </div>
   </section>
 
-  <!-- ================= NO DESIGN ================= -->
-  <section class="part" id="skip">
-    <div class="part-head"><span class="kicker">Not in these briefs</span><h2>No design needed</h2><p class="lede">These copy a Team Ryder Cup screen as it is, so they go straight to the build.</p></div>
-    <div class="cols">
-      <div class="panel">
-        <h3>To-do 4 · One final card</h3>
-        <p class="muted">Every game ends on Team Ryder Cup’s final card. The only new part is each game’s winner line, which is in brief 028’s table.</p>
       </div>
-      <div class="panel">
-        <h3>To-do 5 · One front door</h3>
-        <p class="muted">Every round link opens on the invite (026), then the full-screen “Which one are you?”, then “You’re Sean?”. The name sheet retires.</p>
-      </div>
-      <div class="panel">
-        <h3>2v2 onto the match card</h3>
-        <p class="muted">2v2 is already one pair against another, so its Matches tab moves onto the match card and hole strip unchanged.</p>
-      </div>
-      <div class="panel ask">
-        <span class="kicker">Still open · build calls, not design</span>
-        <ul>
-          <li>Naming your cart: into the lobby (029), or cut? <span class="lean">Decided: <b>lobby</b>.</span></li>
-          <li>“Switch it up” card and the clinch alert: every game with matches, or cut?</li>
-          <li>Coach tips: rewrite for the calm Enter, or cut?</li>
-          <li>Season standings only count Rider Cup points: fix with this work, or after?</li>
-        </ul>
-      </div>
-    </div>
+    </details>
   </section>
 
   <footer>
-    <p>The phones are first passes drawn in this page with the app’s dark tokens, at 72% of real size. The small screenshots are today’s live app (main @ b865c66), from the Golf Board map.</p>
-    <p>Feel reference: the Anchor concept by Alexpuda, sent as two screen recordings alongside this page. It is described here in words; none of its frames are reproduced.</p>
-    <p>Comment on anything with the comment button. Andrew’s decisions (Nov 18) are marked “Decided”.</p>
+    <p>Screens are the mockups from the canvas page “Hand-off · approved screens”, rendered at 393 × 659. Tap one to see it full size. They are reference: the app rebuilds them in its own components.</p>
+    <p>Feel reference for brief 027: the Anchor concept by Alexpuda, described in words only.</p>
   </footer>
 </div>
 

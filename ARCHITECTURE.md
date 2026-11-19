@@ -846,6 +846,108 @@ Still open: nothing blocking. Design direction (section 9) is final.
   whole group (`swapGroups`); people move between carts, cart ids / sides / start times stay; cart names follow
   (`renameRyderCarts`); saves refuse when the roster changed meanwhile or a score is in. Tested in `tests/lobby025.test.mjs`.
 
+- **Nov 19 redesign (brief 031, branch from `claude/friendly-lovelace-g5kzki`).** Already on the branch: cart colors / cart
+  names off behind `FLAGS.cartColors` / `FLAGS.cartNames` (06caa7c); season standings as a season record (8edba84).
+  - **Step 1 · the feel (027).** Tokens `glow-you` (light = `0 0 0 0 transparent`, not `none`, so it joins a
+    `box-shadow` list), `motion-grow` + `--ease-grow`, `blur-swap`, `peek` in the design system (tokens.json v4,
+    tokens.css, README, `components/GrowCard`) → `npm run tokens`. CSS: `.grow` (`.g-row` / `.g-card` faces in one grid
+    cell, `.open`), `.g-leaving`, `.lit`, `.peek`, `.wake`, `.add-row`, reduced motion. JS: pure `ui.growFrame(t, dir)`
+    (tested) and `ui.growMeasure` / `ui.growPlay`: `draw()` measures every `.grow[data-grow]` before a redraw that comes
+    from a tap and, after it, animates the height of each slot whose state changed (swap 300 ms, a fold alone 225 ms),
+    with the old face cloned on top blurring out. Background redraws never animate. First use: Standings, where your
+    season's peek grows into its card and the table folds into its "Standings" row in one motion.
+
+  - **Step 2 · Board and Matches by who you play for (§2.1, §2.2).** Display only, no engine change. Pure
+    `js/playfor.js`: `playFor(snap)` → `ryder` | `partners` (2v2, `pairSwitch` six / turn) | `cart` (Rider carts, 8 or
+    3-for-6) | `oneMatch` (2v2 never) | `alone` (split point) | `stroke` (no game) | `legacy` (anything else: today's
+    screens); `gameName` (2v2 / Everyone alone / Stroke play / Team Ryder Cup, used on Home and in Rules), `placeLine`
+    ("3rd · 6 back of Mike + Tyler"), `stretchesWon`. `riderview.matchState(snap, mePid)` = `riderState`'s shapes for
+    carts **and** 2v2 (us = whichever team in each match has you; `ryState` falls back to it, so the read-only match
+    sheet works for 2v2). `race.raceCard` (pure): clinched > the hole that decides it (amber) > you need this one
+    (amber) > How it works (first 3 holes) > nothing; `race.dec` = one decimal, trimmed. Screens: `js/screens/play031.js`
+    (`board031`, `matches031`), called from `board.js` / `matches.js` after the waiting view; Team Ryder Cup unchanged.
+    Your row on a Board, or your live hole tile on Matches, is the one `.lit`. Until step 3: one-match and partner
+    rounds show today's points (low ball + low total = "6 pts left · 6½ to win"; best ball tiles read W / L / ½), and
+    partners-switch Boards rank by points with the Won (stretches) column beside it. Board headlines (lead change…)
+    aren't on the 031 Boards (not drawn). Tests: `tests/playfor031.test.mjs`.
+    The smoke suite still expects the old Board / Matches in a few places (headline strip, 2v2 `.team-row`, the race's
+    lanes): update them before the next smoke run.
+
+  - **Step 4 · Setup (031 §2.3 + 030's Teams / Tee times).** Pure in `js/playfor.js`: `gameChoices(n)` (shape line +
+    only the games that fit: 2v2 / Everyone alone / Stroke play / Team Ryder Cup, nothing dimmed), `gameNext`,
+    `teeGroups(n, game)`, `aloneIn`, `groupsFit` (tested). `setup.js`: `gameOf` maps the one on-screen "2v2" to the
+    stored ids (`2v2` with 4, `carts` with 6 / 8), so nothing stored changes. Game step = `.grow` rows (027): the picked
+    one grows into its settings: Partners (4: Keep all 18 / Switch every 6 / at the turn = `pairSwitch`; 8: Keep /
+    Switch every 6 *coming soon*) and Opponents (8: Switch every 6 / Same all 18 *coming soon*), one hint line.
+    Teams step: "Who's partners?" (2v2) / "Who rides together?" (carts; no cart names or colors while the flags are
+    off; your cart green). Tee times step for every game but Team Ryder Cup: `teeView` (group cards, time pill over
+    the native time input, tap two names to swap, a name then "Move here" to move it, "Add a tee time" last and only
+    when the last group is full, "Sam is alone at 9:00" in amber, empty groups dropped on leaving; saved as
+    `s.groups` → each player's `groupId` + `settings.teeTimes`); carts: `riderTeeView` redrawn as the same cards
+    (two carts a group, your matches peek, Game & matchups row). The last button stays **Start round** until the lobby
+    (step 6) makes it Next: invite. Everyone alone with 5–6 now starts as one group (030). Home / Rules / the quick
+    groups say 2v2 / Everyone alone / Stroke play.
+
+  - **Step 7 · Coach tips and Switch it up (§2.5).** Four tips, once per phone: Enter first hole `pad3` ("Tap the score
+    you made. ⋯ has every other score."), the quiet row `quiet1` ("Tap here to enter scores for the rest of your
+    group."), Matches first visit `matches1` on the hole tiles, Board first visit `board1` on a name. The old Enter
+    (2v2 / Everyone alone / Stroke play until step 5) keeps `tile5` / `oppcart3`. "Switch it up" (Enter, once per switch,
+    `glb.switch.CODE.H`) now says who you're with and who you play: 2v2 partner swaps read your pairing before and after
+    (`sideOn`), so the card is "With Sam · Last stretch: you won 6½–5½ · vs Sean + Jake · holes 7–12"; carts:
+    "vs Sam + Jake · Holes 7–12 · with Sean". The headless test lists skip the new tips.
+
+  - **Step 3 · Scoring (Andrew, Nov 19: best ball, 1 point a hole; new rounds only; 8-player partner switching stays
+    coming soon).** New settings, written by Setup on new rounds only: `holePoint: true` (normalizeSettings then forces
+    `teamScore 'bestBall'`, `matchBonus 0`, `halvedHolePoints 0.5`: a hole is one point, a tie ½ each, "9½ to win" over
+    18, "3½" over six) on every new 4-player 2v2 and on 8 players with **Same all 18**; `dayBy: 'stretches'` on new
+    partner-switch rounds (`game.people` ranked by stretches won, ½ a halved one, then points; `people[].won`; Season's
+    finishing order follows). Same all 18 = `scoring.sameOppsRotation()` (one 18-hole stretch, A v B and C v D, nobody
+    moves) → `playFor` = `oneMatch`. Setup hides Team score / Game / win bonus for these; Rules sheet says "1 a hole" and
+    "Most stretches won"; the Board's final card names the top person in 2v2. Checked live Nov 19: none of the 5 stored
+    rounds carries `holePoint` / `dayBy`, so every played round scores exactly as before. Tests in
+    `tests/playfor031.test.mjs`. One decimal: the race and the Everyone alone Board (step 2); `fmtPts` keeps ½.
+
+  - **Step 5 · The same Enter for every game (028 §2).** 2v2, Everyone alone and Stroke play now use the calm Enter
+    (`ryderEnterView`) like the cart games and Team Ryder Cup. `ceCarts(app, h)`: you first, then your partner, then the
+    rest of your tee time; games without carts = you alone in your card + everyone else as one quiet row (`ceQuiet`:
+    names + marks, 4 or more = missing first, two names, `+N`). The line on top: 2v2 from `matchState` (first hole with
+    a new partner: `Holes 10–18 · with Sean`); Everyone alone / Stroke play from pure `playfor.enterLine` (`3.3 PTS ·
+    T2ND · Jake +0.8`, `+3 · T3RD · Sam +1`; tested). **Grow in place replaces the "Their scores" sheet (027):** your card
+    and each quiet row are `.grow` slots (`data-grow="ce-mine"` / `ce-t-<id>`), `app.ui.ceOpen = { hole, t }`; open,
+    the line reads `Entering for Sean, Sam + Jake · Done` (`Entering for N players` with 4+), your card folds into a
+    row with the green rail; `ceTheirCard`: up to two players get pads, three or more get one pad row (first missing,
+    or the one tapped: `ui.cePad`) + 52 px rows (`from their phone` / `tap to enter` / `entered by you`); a 5–6 tee
+    time folds the yardage card while open. It folds by itself 1.2 s after their last score (`app.render({ grow: true })`
+    animates it), on Done, or on a tap on your row. Next hole while only others are missing grows their card and the
+    status reads `Jake hasn’t got a score on 10 yet.` The old Enter (`individualView`, steppers) is only a fallback now.
+    **Touches score entry: smoke run before it ships.**
+
+  - **Step 6 · A lobby for every round (029).** SQL: `supabase/migrations/2026-11-19-lobby-every-round.sql` (create or
+    replace `_lobby_gate` without the Team Ryder Cup condition; rollback next to it), mirrored in `schema.sql` and the
+    mock. **Not applied to the live DB yet: Andrew runs it in the SQL Editor.** Checked live Nov 19: no non-Ryder round
+    has `settings.lobby`, so nothing played changes. `lobby.js`: `lobbyOf` for every game (`ryder` flag); outside Team
+    Ryder Cup `lobbyState` has no draft stages (`ready`, or `nodate` without opensAt); `lobbyView` → `plan` (player) /
+    `follow` (not playing) / `gameday`; pure `lobbyHero(nowMs, { date, start, tz, course })` (tested). Screens:
+    `js/screens/lobby.js` `plan` (hero by distance, your start time card lit on the day, the others peeking, the game
+    slot: 2v2 pairings / your cart's matches, Today's game from pure `playfor.gameBlurb`, Who has Golf Board faces =
+    who picked their name, Scoring opens… + Text the host), `follow`, `gamedayPlan` (Scoring is open: your group on hole
+    1 with ghost pars; no start time = "You, Sean, Sam and Jake · starting now"); `hostlobby.js` `planHostView` (N of M
+    have Golf Board, scoring row with Open now confirming in place as a grow, or the amber "Set the day and first tee
+    time" → the existing date sheet; everyone with a Share pill, not-in first, 4 then expand; Share the invite). Setup:
+    the Tee times step has a Day row (Today / Tomorrow / a date: not drawn in 030) and ends on **Next: invite**;
+    `buildRound` adds `settings.lobby` (opensAt = first start − 30 min; today with no time = now; another day with no
+    time = null) and `playedOn`; Round is live retires: open now → the round (Scoring is open), else the organizer's
+    lobby with the invite share sheet. Not built: the start-time card growing into hole 1 as scoring opens (it swaps),
+    naming your cart in the lobby (cart names are off), Tee times and teams › from the host lobby, See what players see.
+    **Touches joining and the scoring gate: full smoke run before it ships.**
+
+  - **Smoke (Nov 19):** `tests/smoke031.mjs` (`npm run test:smoke031`, iPhone 15/16 size): 43 checks, all passing, for
+    the lobby for every round (server `not_open`, the invite → Find my name → the lobby with the countdown, Open now in
+    place, Scoring is open → Enter), 2v2 partners on two phones (Next waits, Switch it up, stretches, 031 Board /
+    Matches, own entry wins), Everyone alone with one phone entering five (grown card folds by itself, the race, the
+    offline queue), the 8-cart round from one phone, Same all 18, Stroke play. `tests/smoke.mjs` has been stale since
+    the calm Enter (021, Nov 5): it still taps 016's `.ry-ecard` pads and stops at hole 1 (on `main` too).
+
 ## 13. V2 backlog (running list)
 
 - **Carryovers (skins-style):** a tied point rolls onto the next hole instead of halving, so the next hole can be worth 3–4 points. Open design question: does an unresolved carry die at the end of a 6-hole rotation, or roll into the next opponent?

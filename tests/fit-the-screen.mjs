@@ -175,7 +175,7 @@ for (const size of SIZES) {
     localStorage.setItem('glb.device', JSON.stringify(dev));
     localStorage.setItem('glb.who.' + code, 'true');
     localStorage.setItem('glb.seen.' + code, JSON.stringify({ last: Date.now(), ids: [] }));
-    for (const k of ['tile5', 'prov2', 'oppcart3', 'pad1']) localStorage.setItem('glb.coach.' + k, 'true');
+    for (const k of ['tile5', 'prov2', 'oppcart3', 'pad1', 'pad3', 'quiet1', 'matches1', 'board1']) localStorage.setItem('glb.coach.' + k, 'true');
     localStorage.setItem('glb.me.' + code, '"p1"');
     localStorage.setItem('glb.admin.' + code, JSON.stringify(pin));
   }, [r.code, DEV, r.admin_pin]);
@@ -415,7 +415,7 @@ for (const size of SIZES) {
     await ctxG.addInitScript(([codes, dev, pin]) => {
       window.__GLB_FLAGS = { gps: true };
       localStorage.setItem('glb.device', JSON.stringify(dev));
-      for (const k of ['tile5', 'prov2', 'oppcart3', 'pad1']) localStorage.setItem('glb.coach.' + k, 'true');
+      for (const k of ['tile5', 'prov2', 'oppcart3', 'pad1', 'pad3', 'quiet1', 'matches1', 'board1']) localStorage.setItem('glb.coach.' + k, 'true');
       for (const code of codes) {
         localStorage.setItem('glb.who.' + code, 'true');
         localStorage.setItem('glb.brief.' + code, 'true');

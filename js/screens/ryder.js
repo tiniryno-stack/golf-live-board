@@ -6,10 +6,11 @@
 
 import { esc, icon, seg, seg2, mark, copyText } from '../ui.js';
 import { fmtPts, fmtToPar, playerLeaderboard, projectedGross, ryderState, ryderNeedLine, ryderHoleLine, teeTimeName, holeAt } from '../scoring.js';
-import { riderState, holeLines } from '../riderview.js';
+import { riderState, holeLines, matchState } from '../riderview.js';
 import { local } from '../db.js';
 
-export const ryState = (app) => ryderState(app.snapshot, app.myTeam()) || riderState(app.snapshot, app.myTeam());
+// 031: 2v2 too (its pairings change when partners switch; matchState reads every match from your side).
+export const ryState = (app) => ryderState(app.snapshot, app.myTeam()) || riderState(app.snapshot, app.myTeam()) || (app.snapshot.settings.pairs ? matchState(app.snapshot, app.me) : null);
 const tint = (cart) => (cart.color ? ` style="color:${cart.color}"` : '');
 const cartTitle = (cart) => (cart.color ? cart.name : cart.names.join(' + ')); // Rider: the cart's name; Ryder: the two first names
 const clinchLbl = (m) => `${fmtPts(m.clinchAt || 6.5)} CLINCHES`;
@@ -20,7 +21,7 @@ const clinchLbl = (m) => `${fmtPts(m.clinchAt || 6.5)} CLINCHES`;
 const names = (cart, cls = '') => `<span class="ry-nm ${cart.color ? '' : cls}"${tint(cart)}>${cart.names.map((n) => `<span class="ellipsis">${esc(n)}</span>`).join('')}</span>`;
 
 /** The flag: one 72 × 26 shape per match, hanging toward whoever holds the point. */
-function flag(m) {
+export function flag(m) {
   const f = m.flag;
   const check = f.look === 'won' || f.look === 'halved' ? icon('check', 12) : '';
   return `<span class="ry-flag ${f.look} at-${f.side}">${check}${esc(f.text)}</span>`;

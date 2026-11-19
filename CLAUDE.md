@@ -4,6 +4,12 @@ Read this first. It replaces re-reading the whole repo. `ARCHITECTURE.md` (≈73
 spec: **grep the section you need, don't read it end to end.** Section 13a lists every change made
 after the first playtest; section 13 is the V2 backlog.
 
+## Building the Nov 19 redesign? Read `docs/design/features/031-who-you-play-for/SPEC.md` first
+
+New Boards and Matches by who you play for, the race, Setup's game step, season standings as a record, cart colors
+and names off. That one brief has the decisions, the 22 target screens, what's built, the build order and what's
+still open. The work is on branch `claude/friendly-lovelace-g5kzki`, not `main`.
+
 ## What it is / where things stand
 
 - Mobile web app for Andrew's friend group: each foursome enters hole-by-hole scores on their
@@ -197,6 +203,9 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
   settings). Server gate `_lobby_gate` in `upsert_score` / `fill_score` (`not_open`), plus `mark_in_app`, `lobby_status`,
   `lobby_counts`, `set_round_date`, `claims.in_app`, `whoami.now` (migration `supabase/migrations/2026-11-06-ryder-lobby.sql`,
   rollback next to it). Screens: `js/screens/lobby.js` (players), `js/screens/hostlobby.js` (organizer). ARCHITECTURE.md 13a.
+- **Every round has a lobby (029, Nov 19, branch `claude/magical-turing-pueufg`):** Setup makes every round with
+  `settings.lobby`; `_lobby_gate` gates any round with one (migration `supabase/migrations/2026-11-19-lobby-every-round.sql`,
+  rollback beside it). Player screens `plan` / `follow` / `gamedayPlan` in `js/screens/lobby.js`, organizer `planHostView`.
 - **Small groups:** any roster that isn't 4 carts of 2 is a scorecard round (no teams).
   With 2–6 players, `settings.solo` = **split point** (`game.type 'splitPoint'`): 1 point a hole to the
   low net score, ties for low split it 1/k; level after 18 → **most outright wins** (`rankStandings`), still level = shared. Teams A–D are made in `soloView`, so Host can switch it on
@@ -218,6 +227,10 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
   Host → Rules; say them with `teeTimeName()` ("8:40 tee time" / "1st tee time"), never "Group 1".
 
 ## UI conventions (don't regress these)
+
+- **031 / 028 (Nov 19, branch `claude/magical-turing-pueufg`):** every game uses the calm Enter; the rest of your tee time
+  grows in place (no `ce-theirs` sheet). Board / Matches per `playfor.playFor` (`js/screens/play031.js`). The Enter notes
+  below describe the old Enter, now a fallback only.
 
 - **Enter (team game):** your cart's players as stacked rows (− · score mark · +, 88px / 112px on tall
   screens, shrinking by height tiers; ≥48px on an SE); the other cart = one slim row + Edit (then
@@ -270,7 +283,7 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
 - All storage goes through `db.local` (never `localStorage` directly) so `?sim=N` test phones stay
   separate. localStorage keys: `glb.device`, `glb.me.CODE`, `glb.admin.CODE`, `glb.recent`,
   `glb.queue.CODE`, `glb.seen.CODE`, `glb.alert.CODE.H`, `glb.switch.CODE.H`, `glb.brief.CODE`,
-  `glb.who.CODE`, `glb.cardOpen.CODE`, `glb.coach.{tile5,oppcart3,prov2,pad1}`, `glb.setupDraft`,
+  `glb.who.CODE`, `glb.cardOpen.CODE`, `glb.coach.{tile5,oppcart3,prov2,pad1}` (031: `pad3`, `quiet1`, `matches1`, `board1`), `glb.setupDraft`,
   `glb.theme`, `glb.people`, `glb.crews`, `glb.crew`, (024) `glb.owner` (`{ personId, name }` = the one person this
   device belongs to; `{ personId: null }` = cleared by "I'm not X"), `glb.hasApp` (Add to Home Screen was tapped).
   (025) `glb.seen.CODE.open` (Scoring is open shown once), `glb.seen.CODE.hcp` (= the player id the handicap reveal was shown to; `.welcome` is no longer read), `glb.seen.CODE.here` (chose to stay in Safari: Can't add it / Join in Safari for now), `glb.inapp.CODE` (= the player id
@@ -295,7 +308,9 @@ file). Token cost matters more than coverage here.
 npm install
 npm test               # 116 unit tests (incl. race.test.mjs, seasons.test.mjs, ryder.test.mjs): scoring + headlines + course data + names/crews + games (2v2, at the turn, 6-player match play, Partner “Rider” Cup for 6, Team Ryder Cup, tee times) + score marks + design tokens (drift, retired colors, type scale)
 npm run test:fit       # 160 checks: every screen at SE / 13 mini / 15-16 / Pro Max, no scroll on Enter
-npm run test:smoke     # 283 checks (incl. crews): multi-phone flows against the mock (join, swap, offline, rejoin,
+npm run test:smoke031  # 43 checks, the Nov 19 redesign on two phones: lobby gate + join + Open now, calm Enter per game
+                       # (grown card, own entry, offline queue, Switch it up), 031 Board / Matches. PW_CHROMIUM=/opt/pw-browsers/chromium here.
+npm run test:smoke     # STALE since Nov 5: still drives the 016 Enter and stops at its first hole. 283 checks (incl. crews): multi-phone flows against the mock (join, swap, offline, rejoin,
                        # reset/delete, back nine, Next waits for every score, grid/locks, recap,
                        # finalize + PIN unlock, add a course, which course?, names/nicknames/crew-mates, you-first pad,
                        # matches expand in place, 2v2, 3 carts for 6, own entry wins, Add to Home Screen move, test phones, blank-screen guards)

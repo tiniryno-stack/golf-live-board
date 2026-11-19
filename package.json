@@ -13,7 +13,8 @@
     "tokens": "python3 -I tests/make-tokens.py docs/design/design-system/tokens.css css/tokens.css",
     "preview": "bash tests/publish-preview.sh",
     "stamp": "node tools/stamp.mjs",
-    "test:lobby": "node tests/lobby-smoke.mjs"
+    "test:lobby": "node tests/lobby-smoke.mjs",
+    "test:smoke031": "node tests/smoke031.mjs"
   },
   "devDependencies": {
     "@supabase/supabase-js": "2.118.0",

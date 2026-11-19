@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Switch partners, Matches, the stretch you are in</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="kit.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400..800&family=Geist+Mono:wght@400..700&display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div class="scr pad-tab" data-theme="{{theme}}" style="width: 393px; height: 659px">
+<div class="tbar"><span class="av">A</span><b>Andrew</b><span class="tr">2v2 · Twin Creeks</span><span class="ib"><svg class="i s20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.6" fill="currentColor" stroke="none"/></svg></span></div>
+<div class="mt t-title">With Sam</div>
+<span class="t-body">vs Sean + Jake · holes 7–12</span>
+<div class="seg mpick"><span>1–6<small>with Sean</small></span><span class="on">7–12<small>with Sam</small></span><span>13–18<small>with Jake</small></span></div>
+<div class="gap8"></div>
+<div class="mcard">
+<span class="k t-label">Thru 3 of 6</span>
+<div class="two">
+<div><b class="you">Andrew + Sam</b><span class="t-xl you">2</span></div>
+<div class="them"><b>Sean + Jake</b><span class="t-xl">1</span></div>
+</div>
+<div class="cbar"><span class="l" style="width: 33.3%"></span><span class="r" style="width: 16.7%"></span><span class="mid"></span></div>
+<div class="ft t-body"><span>3 holes left</span><span>3½ to win</span><span style="text-align: right"></span></div>
+</div>
+<div class="hg">
+<span>7<em class="w">W</em></span><span>8<em>½</em></span><span class="sel">9<em>½</em></span><span class="lit">10<em></em></span><span class="fut">11<em></em></span><span class="fut">12<em></em></span>
+</div>
+<div class="hs">
+<div><b class="you">Andrew</b><span class="mk">4</span></div>
+<div><b class="you">Sam</b><span class="mk s">5</span></div>
+<div><b>Sean</b><span class="mk">4</span></div>
+<div><b>Jake</b><span class="mk s">5</span></div>
+</div>
+<div class="lowl"><span>Hole 9</span><b>Halved, 4 each</b><span class="pt muted">½ each</span></div>
+<div class="tabbar"><span><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 21V4"/><path d="M6 4h11l-3 4 3 4H6"/></svg></span><span class="on"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="8.5" cy="12" r="4.5"/><circle cx="15.5" cy="12" r="4.5"/></svg></span><span><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M5 12h10M5 17h7"/></svg></span><span><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 10h16M4 15h16M10 4v16M15 4v16"/></svg></span></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":393,"height":659}}'>
+class Component extends DCLogic {
+renderVals() {
+return { theme: this.props.theme ?? 'dark' };
+}
+}
+</script>
+</body>
+</html>

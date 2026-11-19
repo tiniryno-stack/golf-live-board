@@ -9,6 +9,8 @@ import { esc, seg, seg2, icon, foldIn, mark, syncMotion } from '../ui.js';
 import { local } from '../db.js';
 import { ryderMatches, ryderActions } from './ryder.js';
 import { isRider } from '../riderview.js';
+import { playFor } from '../playfor.js';
+import { matches031 } from './play031.js';
 import { raceState, holeShares, holeOutcomes, showStakes } from '../race.js';
 import { fmtPts, fmtSigned, rotationIndexFor, holeAt, HOLES, playOrder, sideOn, sideOf, matchSidePoints } from '../scoring.js';
 import { teamColor, shortTeam, sideColor } from '../teams.js';
@@ -430,6 +432,9 @@ export default {
   // have now been shown (2s after they appear, or at once on the first visit) so they stop ringing.
   mount(root, app) {
     syncMotion(root);
+    // 031 §2.5: the first visit, one tip on the hole tiles.
+    const tiles = root.querySelector('.p31-hg, .rm-strip');
+    if (tiles && !document.querySelector('.coach')) app.coach('matches1', tiles, 'Tap a hole to see everyone’s score on it.');
     const rm = app.ui.rm;
     if (!rm || !root.querySelector('.rm-strip')) return;
     const key = `glb.seen.${app.code}.mx`;
@@ -447,6 +452,9 @@ export default {
   render(app) {
     const snap = app.snapshot;
     const g = snap.game;
+    const v031 = playFor(snap); // 031 §2.1: Matches follows who you play for; Team Ryder Cup and old shapes keep theirs
+    const html031 = v031 === 'ryder' || v031 === 'legacy' ? null : matches031(app, v031);
+    if (html031) return html031;
     if (!g) {
       const n = snap.players.length;
       const casual = !(snap.roster.teams || []).length && n >= 2 && n <= 6;
