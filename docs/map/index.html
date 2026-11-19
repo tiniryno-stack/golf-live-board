@@ -1,0 +1,554 @@
+<title>Golf Board Map</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: the journey first (four tracks of numbered steps, no screens), then each step as a card holding today's screens grouped by which games share them. Tap any phone for a full-size view. */
+:root {
+  --font-sans: Geist, system-ui, -apple-system, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, monospace;
+  --bg: #0a0b0d; --surface-1: #15171b; --surface-2: #1f2227; --surface-3: #2a2e35;
+  --text: #f4f5f7; --text-muted: #a7acb4; --line: #2b2f36;
+  --you: #3ddc84; --tint-you: rgba(61,220,132,0.12);
+  --warn: #f5c64a; --tint-warn: rgba(245,198,74,0.12); --scrim: rgba(5,6,8,0.88);
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) {
+  --bg: #f2f3f5; --surface-1: #ffffff; --surface-2: #e8eaee; --surface-3: #dcdfe5;
+  --text: #0e1013; --text-muted: #5b616b; --line: #d5d9df;
+  --you: #0f8a4b; --tint-you: rgba(19,163,90,0.12); --warn: #8a6208; --tint-warn: rgba(168,120,10,0.14); --scrim: rgba(14,16,19,0.82);
+  color-scheme: light; } }
+:root[data-theme="light"] {
+  --bg: #f2f3f5; --surface-1: #ffffff; --surface-2: #e8eaee; --surface-3: #dcdfe5;
+  --text: #0e1013; --text-muted: #5b616b; --line: #d5d9df;
+  --you: #0f8a4b; --tint-you: rgba(19,163,90,0.12); --warn: #8a6208; --tint-warn: rgba(168,120,10,0.14); --scrim: rgba(14,16,19,0.82);
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--font-sans); }
+.wrap { max-width: 1240px; margin: 0 auto; padding-block: 28px 80px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1 { font-size: 34px; line-height: 1.1; letter-spacing: -0.02em; margin: 0 0 6px; text-wrap: balance; }
+h2 { font-size: 24px; letter-spacing: -0.01em; margin: 0; text-wrap: balance; }
+h3 { font-size: 18px; letter-spacing: -0.01em; margin: 0; text-wrap: balance; }
+.kicker { font: 500 11px/1 var(--font-mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted); }
+.lede { color: var(--text-muted); max-width: 66ch; margin: 0; }
+header { display: grid; gap: 10px; margin-bottom: 22px; }
+.stats, .legend { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.chip { font: 500 12px/1 var(--font-mono); padding: 7px 10px; border-radius: 999px; background: var(--surface-2); color: var(--text-muted); white-space: nowrap; }
+.chip b { color: var(--text); font-weight: 600; }
+
+/* Marks: the state of one step */
+.mark { display: inline-flex; align-items: center; gap: 6px; font: 600 12px/1 var(--font-sans); padding: 6px 10px; border-radius: 999px; white-space: nowrap; }
+.mark::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.mark.same { color: var(--you); background: var(--tint-you); }
+.mark.split, .mark.some { color: var(--warn); background: var(--tint-warn); }
+.mark.some::before { background: transparent; box-shadow: inset 0 0 0 2px currentColor; }
+.mark.branch { color: var(--text-muted); background: transparent; box-shadow: inset 0 0 0 1px var(--line); white-space: normal; line-height: 1.3; border-radius: 12px; min-width: 0; }
+.mark.branch::before { display: none; }
+.legend { gap: 6px 14px; align-items: center; color: var(--text-muted); font-size: 13px; }
+.legend span.item { display: inline-flex; align-items: center; gap: 8px; }
+
+/* The map with no screens in it */
+.overview { display: grid; grid-template-columns: repeat(auto-fit, minmax(215px, 1fr)); gap: 12px; margin: 22px 0 6px; }
+.lane { background: var(--surface-1); border: 1px solid var(--line); border-radius: 16px; padding: 14px; min-width: 0; }
+.lane h3 { font-size: 15px; margin-bottom: 10px; }
+.lane ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.lane a { display: grid; grid-template-columns: 26px minmax(0, 1fr) 10px; align-items: center; gap: 6px; padding: 7px 8px; border-radius: 10px; color: var(--text); text-decoration: none; font-size: 13.5px; line-height: 1.3; }
+.lane a:hover, .lane a:focus-visible { background: var(--surface-3); outline: none; }
+.lane .num { font: 600 11px var(--font-sans); color: var(--text-muted); }
+.lane .dot { width: 9px; height: 9px; border-radius: 50%; }
+.dot.same { background: var(--you); }
+.dot.split { background: var(--warn); }
+.dot.some { box-shadow: inset 0 0 0 2px var(--warn); }
+.lane .br { font: 500 10px var(--font-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); display: block; margin-top: 2px; }
+
+.journey { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); padding-block: 10px; margin: 18px 0 8px; border-bottom: 1px solid var(--line); }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+.journey ol { list-style: none; margin: 0; padding: 0; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+.journey li { flex: none; }
+.journey a { display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 999px; background: var(--surface-1); color: var(--text); text-decoration: none; font-weight: 500; font-size: 13px; border: 1px solid var(--line); }
+.journey a:hover, .journey a:focus-visible { background: var(--surface-3); outline: none; }
+.journey a.on { border-color: var(--you); color: var(--you); }
+.tools { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0 0; }
+.tools input { flex: 1 1 220px; min-width: 0; background: var(--surface-1); color: var(--text); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; font: inherit; }
+.tools input:focus-visible { outline: 2px solid var(--you); outline-offset: 1px; }
+
+section.track { padding-top: 40px; scroll-margin-top: 120px; }
+.track-head { display: grid; gap: 6px; margin-bottom: 16px; }
+.track-head p { margin: 0; color: var(--text-muted); max-width: 70ch; }
+
+.step { background: var(--surface-1); border: 1px solid var(--line); border-radius: 20px; padding: 18px; margin-bottom: 14px; scroll-margin-top: 130px; min-width: 0; }
+.step-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+.step-head .num { font: 600 13px var(--font-sans); color: var(--text-muted); }
+.step-head h3 { margin-right: 4px; }
+.step .what { margin: 8px 0 0; color: var(--text-muted); max-width: 72ch; }
+.step .verdict { margin: 8px 0 0; max-width: 72ch; }
+.step .verdict b { font-weight: 600; }
+.group { display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 14px; padding-top: 16px; margin-top: 16px; border-top: 1px solid var(--line); }
+.g-label { min-width: 0; display: grid; gap: 4px; align-content: start; }
+.g-label .name { font-weight: 600; font-size: 14px; line-height: 1.3; }
+.g-label .games { font-size: 13px; color: var(--text-muted); line-height: 1.4; }
+.ref { justify-self: start; font: 500 10px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; padding: 4px 6px; border-radius: 6px; color: var(--you); background: var(--tint-you); margin-top: 2px; }
+.shots { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 14px 12px; min-width: 0; }
+.gap { border: 1px dashed var(--line); border-radius: 14px; padding: 14px; color: var(--text-muted); font-size: 13.5px; max-width: 60ch; align-self: start; }
+.gap b { color: var(--text); font-weight: 600; }
+
+/* To-do: the amber steps, ranked. Ticks are saved in the artifact's database. */
+.phase { margin: 28px 0 12px; display: grid; gap: 2px; }
+.phase h3 { font-size: 16px; }
+.phase p { margin: 0; color: var(--text-muted); font-size: 13.5px; }
+.todo-item { display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 12px; background: var(--surface-1); border: 1px solid var(--line); border-radius: 20px; padding: 16px 18px; margin-bottom: 10px; }
+.todo-item input { width: 22px; height: 22px; margin: 2px 0 0; accent-color: var(--you); cursor: pointer; }
+.todo-item input:disabled { cursor: default; }
+.todo-item.done .todo-body { opacity: .55; }
+.todo-item.done h3 { text-decoration: line-through; }
+.todo-body { min-width: 0; }
+.todo-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+.todo-head .rank { font: 600 13px var(--font-sans); color: var(--text-muted); }
+.todo-item dl { margin: 10px 0 0; display: grid; gap: 8px; max-width: 76ch; }
+.todo-item dt { font: 500 10px var(--font-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 2px; }
+.todo-item dd { margin: 0; }
+.todo-item a { color: inherit; }
+.todo-item.small { padding: 12px 18px; border-radius: 16px; }
+.todo-item.small p { margin: 0; }
+.size { font: 600 12px/1 var(--font-sans); padding: 6px 10px; border-radius: 999px; background: var(--surface-2); color: var(--text); white-space: nowrap; }
+.todo-note { color: var(--text-muted); font-size: 13px; margin: 8px 0 0; }
+@media (max-width: 760px) { .todo-item { padding: 14px; border-radius: 16px; gap: 10px; } }
+
+.phone { all: unset; cursor: pointer; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.phone .shot { aspect-ratio: 393 / 852; width: 100%; max-width: 100%; border-radius: 12px; overflow: hidden; background: var(--surface-2); border: 1px solid var(--line); transition: transform .15s ease, border-color .15s; }
+.phone img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.phone:hover .shot, .phone:focus-visible .shot { border-color: var(--text-muted); transform: translateY(-2px); }
+.phone:focus-visible .shot { outline: 2px solid var(--you); outline-offset: 2px; }
+.phone .t { font-weight: 500; font-size: 12px; line-height: 1.3; overflow-wrap: anywhere; }
+.phone .h { font-size: 11.5px; color: var(--text-muted); line-height: 1.35; }
+
+/* Lightbox */
+dialog { border: 0; padding: 0; background: transparent; color: var(--text); max-width: 100vw; max-height: 100vh; width: 100vw; height: 100%; }
+dialog::backdrop { background: var(--scrim); backdrop-filter: blur(4px); }
+.lb { height: 100%; display: grid; grid-template-columns: auto minmax(0, 340px); justify-content: center; align-items: center; gap: 32px; padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
+.lb img { height: min(88vh, 852px); aspect-ratio: 393 / 852; max-width: 100%; border-radius: 28px; border: 1px solid var(--line); display: block; background: var(--surface-2); }
+.lb aside { display: grid; gap: 14px; align-content: center; min-width: 0; }
+.lb h3 { font-size: 26px; line-height: 1.15; }
+.lb dl { margin: 0; display: grid; gap: 12px; }
+.lb dt { font: 500 10px var(--font-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 3px; }
+.lb dd { margin: 0; overflow-wrap: anywhere; }
+.lb code { font: 13px var(--font-mono); background: var(--surface-2); padding: 2px 6px; border-radius: 6px; }
+.lb .nav { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn { font: 600 14px var(--font-sans); background: var(--surface-2); color: var(--text); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; cursor: pointer; }
+.btn:hover { background: var(--surface-3); }
+.btn:focus-visible { outline: 2px solid var(--you); outline-offset: 1px; }
+.count { font: 12px var(--font-mono); color: var(--text-muted); }
+@media (max-width: 760px) {
+  h1 { font-size: 28px; }
+  .group { grid-template-columns: 1fr; gap: 10px; }
+  .shots { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 8px; }
+  .step { padding: 14px; border-radius: 16px; }
+  .lb { grid-template-columns: 1fr; align-content: start; overflow-y: auto; gap: 16px; }
+  .lb img { height: auto; width: 100%; max-width: 360px; justify-self: center; }
+}
+@media (prefers-reduced-motion: reduce) { .phone .shot { transition: none; } }
+.empty { color: var(--text-muted); padding: 20px 0; }
+footer { margin-top: 56px; color: var(--text-muted); font-size: 13px; border-top: 1px solid var(--line); padding-top: 16px; max-width: 75ch; display: grid; gap: 8px; }
+footer p { margin: 0; }
+</style>
+
+<div class="wrap">
+  <header>
+    <span class="kicker">Golf Board · live code as of Nov 17 (main @ b865c66)</span>
+    <h1>One journey, every game</h1>
+    <p class="lede">The journey comes first, with no screens in it. Then each step shows the screens the live app has today, grouped by which games share them. A game is only allowed to differ in three places: how people are grouped, what a hole is worth, and what the standings look like. The ranked to-do list sits right under the journey. Comment on anything that looks wrong or that you’d rank differently.</p>
+    <div class="stats" id="stats"></div>
+    <div class="legend" aria-label="What the marks mean">
+      <span class="item"><span class="mark same">Same</span> one screen for every game</span>
+      <span class="item"><span class="mark split">Built more than once</span> every game has it, in different versions</span>
+      <span class="item"><span class="mark some">Some games only</span> the rest skip it or bury it</span>
+      <span class="item"><span class="mark branch">Allowed to differ</span> one of the three places</span>
+    </div>
+  </header>
+
+  <div class="overview" id="overview" aria-label="The journey"></div>
+
+  <nav class="journey" aria-label="Tracks">
+    <ol id="journey"></ol>
+    <div class="tools"><input id="q" type="search" placeholder="Find a screen: “recap”, “draft”, “tee”, “host”…" aria-label="Find a screen"></div>
+  </nav>
+
+  <section class="track" id="todo">
+    <div class="track-head">
+      <span class="kicker" id="todo-count">To-do</span>
+      <h2>What to do, in order</h2>
+      <p>The 13 amber steps, bundled into 7 pieces of work. Ranked by how often people touch the screen, then by how much of the template already exists. Sizes are rough: <b>S</b> is one session, <b>M</b> two or three, <b>L</b> needs a design handoff first and then several.</p>
+      <p class="todo-note" id="todo-note" role="status"></p>
+    </div>
+    <div id="todo-list"></div>
+  </section>
+
+  <main id="main"><p class="empty">Loading screens…</p></main>
+
+  <footer>
+    <p><b>Not in the screenshots yet:</b> the matchup draft board (it only shows during a live captains’ draft), Team Ryder Cup’s tee times step inside Setup, and “Fixing a finalized round”.</p>
+    <p>Made by <code>tests/screen-map.mjs</code> (run <code>node tests/screen-map.mjs</code> to refresh). 393×852 at 2×, dark mode, test data. Enter shows “Turn on location” because the test phone has no location, except the one GPS shot.</p>
+  </footer>
+</div>
+
+<dialog id="lb" aria-label="Screen detail">
+  <div class="lb">
+    <img id="lb-img" alt="">
+    <aside>
+      <span class="kicker" id="lb-area"></span>
+      <h3 id="lb-title"></h3>
+      <dl>
+        <div><dt>How you get here</dt><dd id="lb-how"></dd></div>
+        <div><dt>Drawn by</dt><dd><code id="lb-file"></code></dd></div>
+      </dl>
+      <div class="nav">
+        <button class="btn" id="lb-prev" aria-label="Previous screen">← Prev</button>
+        <button class="btn" id="lb-next" aria-label="Next screen">Next →</button>
+        <button class="btn" id="lb-close">Close</button>
+      </div>
+      <span class="count" id="lb-count"></span>
+    </aside>
+  </div>
+</dialog>
+
+<script>
+const RYDER = 'Team Ryder Cup';
+const OTHERS4 = '2v2, Match play, Split point, Scorecard';
+const TRACKS = [
+  { id: 'organizer', name: 'Organizer', blurb: 'Whoever starts the round on their phone. Same six questions for every game, then invite.', steps: [
+    { n: 'O1', name: 'Start a round', mark: 'same', what: 'Home → Start a round. No login.',
+      groups: [{ name: 'Every game', ids: ['home-fresh'] }] },
+    { n: 'O2', name: 'Course', mark: 'same', what: 'Search, your courses, near you, then a scorecard check if the card has gaps.',
+      groups: [{ name: 'Every game', ids: ['setup-course', 'setup-noresults', 'setup-check'] }] },
+    { n: 'O3', name: 'Players', mark: 'same', what: 'Add names, crew regulars as one-tap chips, optional handicaps.',
+      groups: [{ name: 'Every game', ids: ['setup-players-empty', 'setup-players', 'setup-hcp'] }] },
+    { n: 'O4', name: 'Game', mark: 'same', what: 'Pick the game. Games that don’t fit the player count are greyed out.',
+      groups: [{ name: 'Every game', ids: ['setup-game'] }] },
+    { n: 'O5', name: 'Teams', mark: 'split', branch: 'nobody · pairs · carts · two sides',
+      what: 'How people are grouped. This is one of the three places a game may differ.',
+      verdict: '<b>The branch is fine; the screens aren’t.</b> “Who rides together?” is built three times, and only Rider Cup names its carts or shows matchups here.',
+      groups: [
+        { name: 'Carts, then a draft', games: RYDER + ' · in the lobby', ref: true, ids: ['lh-carts', 'lh-draft', 'lh-order'] },
+        { name: 'Carts, then a draft', games: RYDER + ' · in Setup (“Draft and start times first”)', ids: ['setup-ryder-teams', 'setup-ryder-draft'] },
+        { name: 'Carts + matchups', games: 'Rider Cup', ids: ['setup-carts', 'setup-teamname', 'setup-matchups', 'setup-matchups-custom'] },
+        { name: 'Pairs', games: '2v2', ids: ['setup-2v2'] },
+        { name: 'Nobody', games: 'Match play, Split point, Scorecard', gap: '<b>No step.</b> “Start round” sits on the Game screen.' },
+      ] },
+    { n: 'O6', name: 'Tee times', mark: 'some', what: 'Who tees off together, and when.',
+      verdict: '<b>Three versions.</b> Two games ask up front; the other four only have blank time boxes inside Host → Rules, after the round has started.',
+      groups: [
+        { name: 'Start times', games: RYDER + ' · in the lobby', ref: true, ids: ['lh-times'] },
+        { name: 'Who tees off together?', games: 'Rider Cup · in Setup', ids: ['setup-tee'] },
+        { name: 'Host → Rules', games: OTHERS4, ids: ['host-rules'] },
+      ] },
+    { n: 'O7', name: 'Invite', mark: 'some', what: 'Share the link and watch people arrive.',
+      verdict: '<b>Only Team Ryder Cup has a lobby</b> that shows who has the app. Every other game gets one “Round is live” screen with a code.',
+      groups: [
+        { name: 'Invite now, draft later', games: RYDER, ref: true, ids: ['setup-ryder-invite', 'setup-ryder-when', 'lh-lobby', 'lh-paired'] },
+        { name: 'Round is live', games: 'Every other game', ids: ['setup-live'] },
+      ] },
+    { n: 'O8', name: 'Open scoring', mark: 'some', what: 'The moment Enter unlocks for everyone.',
+      groups: [
+        { name: 'Opens by itself', games: RYDER + ' · 30 min before the first start time', ref: true, ids: ['lh-ready'] },
+        { name: 'No step', games: 'Every other game', gap: '<b>No step.</b> The round is open the moment it’s created.' },
+      ] },
+  ] },
+  { id: 'player', name: 'Player', blurb: 'Someone who got the link. No login: the app knows you, or you tap your name.', steps: [
+    { n: 'P1', name: 'Open the invite link', mark: 'split', what: 'The first thing a friend sees.',
+      verdict: '<b>Two front doors.</b> Team Ryder Cup opens on an invite with the round’s name, date and who’s in. Everything else opens on “Watching”.',
+      groups: [
+        { name: 'Invite', games: RYDER, ref: true, ids: ['lb-invite'] },
+        { name: 'Watching, or type a code', games: 'Every other game', ids: ['join-watching', 'join-sheet'] },
+      ] },
+    { n: 'P2', name: 'Who are you', mark: 'split', what: 'The app knows you and asks “You’re Sean?”, or you tap your name.',
+      verdict: '<b>The confirm is shared. The name list is built twice:</b> a full screen in the lobby, a sheet grouped by cart everywhere else.',
+      groups: [
+        { name: 'Which one are you?', games: RYDER, ref: true, ids: ['lb-names', 'lb-confirm'] },
+        { name: 'Who are you?', games: 'Every other game', ids: ['join-who', 'join-confirm', 'join-taken', 'join-waiting'] },
+      ] },
+    { n: 'P3', name: 'Put the app on your home screen', mark: 'some', what: 'iPhone only. So the app remembers you and opens straight into the round.',
+      verdict: '<b>Only Team Ryder Cup walks you through it.</b> Other games leave it as a button on Home that nothing points to.',
+      groups: [
+        { name: 'Guide', games: RYDER, ref: true, ids: ['lb-guide', 'lb-guide-late'] },
+        { name: 'Button on Home', games: 'Every other game', ids: ['homescreen-sheet'] },
+      ] },
+    { n: 'P4', name: 'Lobby', mark: 'some', what: 'Who’s in, your team, your tee time, how today’s game works.',
+      verdict: '<b>Only Team Ryder Cup has a lobby.</b> Other games drop you on Enter; the closest thing is Today’s game, shown once.',
+      groups: [
+        { name: 'Handicap reveal, then waiting', games: RYDER, ref: true, ids: ['lb-reveal', 'lb-revealed', 'lb-day'] },
+        { name: 'No lobby', games: 'Every other game', gap: '<b>No screen today.</b> You go from your name straight to hole 1.' },
+        { name: 'How today’s game works', games: 'Every game · the words are allowed to differ', ids: ['brief-ryder', 'brief-1', 'brief-2v2', 'brief-split'] },
+      ] },
+    { n: 'P5', name: 'Scoring opens', mark: 'some', what: 'Your side, your start time, who you play first, then go.',
+      groups: [
+        { name: 'Scoring is open', games: RYDER, ref: true, ids: ['lb-open'] },
+        { name: 'Straight to hole 1', games: 'Every other game', ids: ['empty-enter'] },
+      ] },
+  ] },
+  { id: 'round', name: 'The round', blurb: 'Four tabs, for everyone. The frame should be identical; only the marked slot changes with the game.', steps: [
+    { n: 'R1', name: 'Enter', mark: 'split', branch: 'the one line that says what the hole is worth',
+      what: 'Your score first, then your cart partner, then the rest of your tee time.',
+      verdict: '<b>Three different Enter screens.</b> Even the hole header differs: title on the left with small arrows, or centered with big ones.',
+      groups: [
+        { name: 'Calm Enter', games: RYDER + ', Rider Cup (8 and 6)', ref: true, ids: ['ryder-enter', 'carts8-enter', 'carts6-enter', 'enter-their-cart', 'enter-more', 'enter-next-waiting', 'enter-locked', 'enter-preview', 'gps-enter'] },
+        { name: 'Cart with − / +', games: '2v2', ids: ['2v2-enter'] },
+        { name: '“You first” with − / +', games: 'Match play, Split point, Scorecard', ids: ['match-enter', 'split-enter', 'scorecard-enter'] },
+        { name: 'Hole grid', games: 'Every game', ids: ['sheet-holes'] },
+      ] },
+    { n: 'R2', name: 'Matches', mark: 'split', branch: 'what the rows show',
+      what: 'Your match right now, hole by hole.',
+      verdict: '<b>Four versions.</b> The race is a different idea, not just different rows: decide whether it lives on as Split point’s content inside the shared frame.',
+      groups: [
+        { name: 'Match card + hole table', games: RYDER + ', Rider Cup (8 and 6)', ref: true, ids: ['ryder-matches', 'carts8-matches', 'carts6-matches', 'ryder-match-sheet', 'sheet-hole', 'empty-matches'] },
+        { name: 'Its own match card', games: '2v2', ids: ['2v2-matches'] },
+        { name: 'The race', games: 'Match play, Split point', ids: ['match-matches', 'split-matches'] },
+        { name: 'Nothing to show', games: 'Scorecard', ids: ['scorecard-matches'] },
+      ] },
+    { n: 'R3', name: 'Board', mark: 'split', branch: 'the card at the top',
+      what: 'Where everyone stands, across every tee time.',
+      verdict: '<b>Three layouts.</b> The switch under the top card changes its words by game: Cup / Players, Teams / Players, Points / Strokes.',
+      groups: [
+        { name: 'Cup card + match strips', games: RYDER, ref: true, ids: ['ryder-board'] },
+        { name: 'Ranked carts + match strips', games: 'Rider Cup (8 and 6)', ids: ['carts8-board', 'carts6-board', 'board-players', 'sheet-team', 'empty-board'] },
+        { name: 'Leader + ranked list', games: OTHERS4, ids: ['2v2-board', 'match-board', 'split-board', 'scorecard-board'] },
+        { name: 'Headlines and player card', games: 'Every game', ids: ['headline-toast', 'sheet-headlines', 'sheet-player'] },
+      ] },
+    { n: 'R4', name: 'Scorecard', mark: 'same', what: 'Front 9 / Back 9 for your group, other groups folded underneath.',
+      groups: [{ name: 'Every game', ids: ['ryder-card', 'carts8-card', 'carts6-card', '2v2-card', 'match-card', 'split-card', 'scorecard-card'] }] },
+    { n: 'R5', name: 'Menus and sheets', mark: 'same', what: 'The ⋯ menu, You, Rules, switch to watching.',
+      groups: [{ name: 'Every game', ids: ['sheet-menu', 'sheet-you', 'sheet-leave', 'sheet-rules', 'sheet-confirm'] }] },
+  ] },
+  { id: 'end', name: 'The end', blurb: 'Every score is in.', steps: [
+    { n: 'E1', name: 'Final card, recap, share', mark: 'split', what: 'Who won, lock the round, keepsake images.',
+      verdict: '<b>Two final cards.</b> Team Ryder Cup: trophy, score, Round recap, Share the result. Every other game: a ranked list with a winner card under it.',
+      groups: [
+        { name: 'Final card', games: RYDER, ref: true, ids: ['ryder-final'] },
+        { name: 'Board turns final', games: 'Every other game', ids: ['final-board', 'final-host', 'final-board-locked', 'final-enter', 'recap'] },
+      ] },
+    { n: 'E2', name: 'Back on Home', mark: 'same', what: 'The round in your list, your crew, season standings.',
+      verdict: 'Screens are shared. One catch from the notes: season standings only count Rider Cup points until the standings rework.',
+      groups: [
+        { name: 'Home', games: 'Every game', ids: ['home-rounds', 'home-rounds-2'] },
+        { name: 'Crew', games: 'Every game', ids: ['crew-start', 'crew-rename', 'crew-which', 'crew-new-player', 'crew-settings'] },
+        { name: 'Season', games: 'Every game', ids: ['season', 'season-2', 'season-past', 'season-new'] },
+      ] },
+  ] },
+  { id: 'side', name: 'Off to the side', blurb: 'Not steps in the journey, but they have to exist.', steps: [
+    { n: 'S1', name: 'Organizer fixes during a round', mark: 'same', what: '⋯ → Host settings: rules, players, activity log, fix a score or a hole.',
+      verdict: 'One Host screen. Team Ryder Cup adds three rows on top (scoring, order and carts, matchups).',
+      groups: [{ name: 'Every game', ids: ['host-pin', 'host-main', 'host-rules', 'host-players', 'host-activity', 'host-ryder-rules', 'sheet-pin', 'sheet-edit', 'sheet-fixhole'] }] },
+    { n: 'S2', name: 'Loading, no signal, bad link', mark: 'same', what: 'Never a blank screen.',
+      groups: [{ name: 'Every game', ids: ['loader', 'no-signal', 'bad-code'] }] },
+  ] },
+];
+// Screens that fit no step in the outline: keep (and give them a step) or cut.
+const NOBOX = {
+  'team-picker': 'Rider Cup only. Naming your cart isn’t a step in the outline. Move it into the lobby, or cut it?',
+  'card-switch': 'Rider Cup only: a full-screen card when your opponents rotate.',
+  'card-lockin': 'Full-screen alert when a match can be clinched.',
+  'coach-tip': 'One-time tips that pop over Enter.',
+};
+const DROP = new Set(['recap-2', 'final-fixing', 'setup-ryder-tee']);
+const GAME = { carts8: 'Rider Cup · 8', carts6: 'Rider Cup · 6', ryder: 'Team Ryder Cup', '2v2': '2v2', match: 'Match play', split: 'Split point', scorecard: 'Scorecard' };
+const TABS = new Set(['Enter', 'Matches', 'Board', 'Card']);
+const MARK = { same: 'Same', split: 'Built more than once', some: 'Some games only' };
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+let byId = {}, flat = [], cur = -1;
+
+function caption(s) { return TABS.has(s.title) && GAME[s.game] ? GAME[s.game] : s.title; }
+function phone(s, where, note) {
+  if (!s.where) { s.where = where; flat.push(s); }
+  return `<button class="phone" data-id="${esc(s.id)}" data-q="${esc((s.title + ' ' + s.how + ' ' + (GAME[s.game] || '') + ' ' + s.file + ' ' + s.id + ' ' + where).toLowerCase())}">
+    <div class="shot"><img loading="lazy" src="shots/${esc(s.id)}.jpg" alt="${esc(s.title)}"></div>
+    <div class="t">${esc(caption(s))}</div>
+    ${note ? `<div class="h">${esc(note)}</div>` : ''}
+  </button>`;
+}
+
+function render(shots) {
+  shots = shots.filter((s) => !DROP.has(s.id));
+  byId = Object.fromEntries(shots.map((s) => [s.id, s]));
+  flat = [];
+  let html = '';
+  const tally = { same: 0, split: 0, some: 0 };
+  for (const t of TRACKS) {
+    html += `<section class="track" id="${t.id}"><div class="track-head"><span class="kicker">${t.steps.length} steps</span><h2>${esc(t.name)}</h2><p>${esc(t.blurb)}</p></div>`;
+    for (const st of t.steps) {
+      tally[st.mark]++;
+      html += `<article class="step" id="${st.n.toLowerCase()}"><div class="step-head"><span class="num">${st.n}</span><h3>${esc(st.name)}</h3><span class="mark ${st.mark}">${MARK[st.mark]}</span>${st.branch ? `<span class="mark branch">Allowed to differ: ${esc(st.branch)}</span>` : ''}</div>
+        <p class="what">${esc(st.what)}</p>${st.verdict ? `<p class="verdict">${st.verdict}</p>` : ''}`;
+      for (const g of st.groups) {
+        const list = (g.ids || []).map((id) => byId[id]).filter(Boolean);
+        html += `<div class="group"><div class="g-label"><span class="name">${esc(g.name)}</span>${g.games ? `<span class="games">${esc(g.games)}</span>` : ''}${g.ref ? '<span class="ref">The template</span>' : ''}</div>
+          ${g.gap ? `<div class="gap">${g.gap}</div>` : `<div class="shots">${list.map((s) => phone(s, `${st.n} ${st.name} · ${g.name}`)).join('')}</div>`}</div>`;
+      }
+      html += '</article>';
+    }
+    html += '</section>';
+  }
+  const rest = shots.filter((s) => !s.where);
+  if (rest.length) {
+    html += `<section class="track" id="nobox"><div class="track-head"><span class="kicker">${rest.length} screens</span><h2>No step for these</h2><p>Screens the live app has that don’t fit any step above. Each one either earns a step or gets cut.</p></div>
+      <article class="step"><div class="shots">${rest.map((s) => phone(s, 'No step', NOBOX[s.id] || '')).join('')}</div></article></section>`;
+  }
+  document.getElementById('main').innerHTML = html;
+
+  document.getElementById('overview').innerHTML = TRACKS.map((t) => `<div class="lane"><h3>${esc(t.name)}</h3><ol>${t.steps.map((st) =>
+    `<li><a href="#${st.n.toLowerCase()}"><span class="num">${st.n}</span><span>${esc(st.name)}${st.branch ? '<span class="br">may differ by game</span>' : ''}</span><span class="dot ${st.mark}" title="${MARK[st.mark]}"></span></a></li>`).join('')}</ol></div>`).join('');
+  const nav = [['todo', 'To-do'], ...TRACKS.map((t) => [t.id, t.name])];
+  if (rest.length) nav.push(['nobox', 'No step']);
+  document.getElementById('journey').innerHTML = nav.map(([id, name]) => `<li><a href="#${id}" data-a="${id}">${esc(name)}</a></li>`).join('');
+  const steps = tally.same + tally.split + tally.some;
+  document.getElementById('stats').innerHTML = [
+    `<b>${steps}</b> steps`, `<b>${tally.same}</b> the same for every game`, `<b>${tally.split}</b> built more than once`, `<b>${tally.some}</b> some games only`, `<b>${flat.length}</b> screens`,
+  ].map((x) => `<span class="chip">${x}</span>`).join('');
+}
+
+function open(i) {
+  cur = (i + flat.length) % flat.length;
+  const s = flat[cur];
+  document.getElementById('lb-img').src = `shots/${s.id}.jpg`;
+  document.getElementById('lb-img').alt = s.title;
+  document.getElementById('lb-area').textContent = s.where || '';
+  document.getElementById('lb-title').textContent = GAME[s.game] && TABS.has(s.title) ? `${s.title} · ${GAME[s.game]}` : s.title;
+  document.getElementById('lb-how').textContent = s.how;
+  document.getElementById('lb-file').textContent = s.file;
+  document.getElementById('lb-count').textContent = `${cur + 1} of ${flat.length} · ← → to step through`;
+  const d = document.getElementById('lb');
+  if (!d.open) d.showModal();
+}
+
+document.addEventListener('click', (e) => {
+  const p = e.target.closest('.phone');
+  if (p) open(flat.findIndex((s) => s.id === p.dataset.id));
+});
+document.getElementById('lb-prev').onclick = () => open(cur - 1);
+document.getElementById('lb-next').onclick = () => open(cur + 1);
+document.getElementById('lb-close').onclick = () => document.getElementById('lb').close();
+document.getElementById('lb').addEventListener('click', (e) => { if (e.target.classList.contains('lb')) e.currentTarget.close(); });
+document.addEventListener('keydown', (e) => {
+  if (!document.getElementById('lb').open) return;
+  if (e.key === 'ArrowRight') open(cur + 1);
+  if (e.key === 'ArrowLeft') open(cur - 1);
+});
+document.getElementById('q').addEventListener('input', (e) => {
+  const q = e.target.value.trim().toLowerCase();
+  document.querySelectorAll('.phone').forEach((p) => { p.hidden = !!q && !p.dataset.q.includes(q); });
+  const any = (el) => [...el.querySelectorAll('.phone')].some((p) => !p.hidden);
+  document.querySelectorAll('.group').forEach((g) => { g.hidden = !!q && !any(g); });
+  document.querySelectorAll('.step').forEach((s) => { s.hidden = !!q && !any(s); });
+  document.querySelectorAll('section.track').forEach((s) => { s.hidden = !!q && !any(s); });
+});
+const io = new IntersectionObserver((es) => es.forEach((en) => {
+  if (en.isIntersecting) document.querySelectorAll('.journey a').forEach((a) => a.classList.toggle('on', a.dataset.a === en.target.id));
+}), { rootMargin: '-30% 0px -60% 0px' });
+
+// ---- To-do: what the page says is fixed here; what's ticked lives in the artifact's database (collection "todo").
+const PHASES = [
+  { name: 'First: the round', why: 'Everyone touches these on every hole, and Rider Cup already proved a game can plug into the Team Ryder Cup screens.', items: [
+    { id: 'enter', title: 'One Enter screen', steps: ['R1'], size: 'L', prep: 'Short design note first',
+      does: '2v2, Match play, Split point and Scorecard move to the calm Enter. You first, then your partner if you have one, then the rest of your tee time. Only the line at the top changes with the game.',
+      retires: 'The cart − / + Enter, the “you first” Enter, and the coach tips written for them.',
+      before: 'What the top line says for each game. And for a foursome without carts: is everyone a row, or do the others sit behind “Their scores”? This touches score entry, so it’s worth a smoke run before it ships.' },
+    { id: 'matches', title: 'One Matches screen', steps: ['R2'], size: 'M', prep: 'Two decisions first',
+      does: '2v2 moves onto the match card and hole table (it is already one pair against another). Match play and Split point keep the race, inside the same frame as everyone else.',
+      retires: '2v2’s own match card.',
+      before: 'Does the race stay? And what does this tab show on a Scorecard round, where today it says there’s no game?' },
+    { id: 'board', title: 'One Board', steps: ['R3'], size: 'M', prep: 'Short design note first',
+      does: 'One layout: a top card that changes with the game, the same list under it, and one switch with the same two words in every game.',
+      retires: 'The “leader + ranked list” layout. Rider Cup’s ranked carts become its top card.',
+      before: 'What the top card shows for each game.' },
+    { id: 'final', title: 'One final card', steps: ['E1'], size: 'S', prep: 'Build from the template',
+      does: 'Every game ends on the Team Ryder Cup final card: who won, the score, Round recap, Share the result, Finalize.',
+      retires: 'The winner card under the ranked list.' },
+  ] },
+  { name: 'Then: getting in', why: 'Seen once a round, but it’s the first impression, and the lobby is where the biggest gap is.', items: [
+    { id: 'door', title: 'One front door', steps: ['P1', 'P2'], size: 'M', prep: 'Build from the template',
+      does: 'Every round link opens on the invite (round name, date, who’s in), then one “Which one are you?” list, then “You’re Sean?”.',
+      retires: 'The sheet version of the name list. “Watching” stays, but only for people who aren’t playing.' },
+    { id: 'lobby', title: 'A lobby for every game', steps: ['P3', 'P4', 'P5', 'O7', 'O8'], size: 'L', prep: 'Design handoff first',
+      does: 'Every game gets the home screen guide, a waiting room (who’s in, your team, your tee time, how today’s game works) and “Scoring is open”. The organizer sees who has arrived. A same-day foursome passes straight through.',
+      retires: 'The “Round is live” screen, and Today’s game as a pop-up.',
+      before: 'What the lobby shows when there’s no draft and no handicap to reveal. This one needs a database change (today the lobby is switched on for Team Ryder Cup rounds only), so it’s worth a smoke run.' },
+  ] },
+  { name: 'Last: setting up', why: 'The biggest redo, and only the organizer ever sees it.', items: [
+    { id: 'setup', title: 'One Teams step, one Tee times step', steps: ['O5', 'O6'], size: 'L', prep: 'Design handoff first',
+      does: 'One “Who rides together?” screen for every game that has groups, with the draft on top for two sides. Then one tee times screen for every game.',
+      retires: 'Two of the three carts screens, and tee times living only inside Host → Rules.',
+      before: 'Team Ryder Cup can do teams in Setup or in the lobby today. Pick one place for every game.' },
+  ] },
+];
+const DECIDE = [
+  { id: 'd-cartnames', text: 'Naming your cart (Rider Cup only): move it into the lobby, or cut it?' },
+  { id: 'd-popups', text: 'The “Switch it up” card and the clinch alert: keep them for every game with matches, or cut them?' },
+  { id: 'd-tips', text: 'Coach tips: rewrite them for the calm Enter, or cut them?' },
+  { id: 'd-standings', text: 'Season standings only count Rider Cup points (per the project notes). Fix it as part of this, or after?' },
+];
+const done = {};
+let todoDb = null, canTick = true;
+const todoNote = (t) => { document.getElementById('todo-note').textContent = t; };
+
+function renderTodo() {
+  let n = 0, html = '';
+  for (const ph of PHASES) {
+    html += `<div class="phase"><h3>${esc(ph.name)}</h3><p>${esc(ph.why)}</p></div>`;
+    for (const it of ph.items) {
+      n++;
+      html += `<div class="todo-item" data-id="${it.id}"><input type="checkbox" aria-label="Done: ${esc(it.title)}" disabled>
+        <div class="todo-body"><div class="todo-head"><span class="rank">${n}</span><h3>${esc(it.title)}</h3><span class="size">${it.size}</span><span class="mark branch">${esc(it.prep)}</span><span class="mark branch">Covers ${it.steps.map((s) => `<a href="#${s.toLowerCase()}">${s}</a>`).join(', ')}</span></div>
+        <dl><div><dt>What changes</dt><dd>${esc(it.does)}</dd></div><div><dt>What it retires</dt><dd>${esc(it.retires)}</dd></div>${it.before ? `<div><dt>Before starting</dt><dd>${esc(it.before)}</dd></div>` : ''}</dl></div></div>`;
+    }
+  }
+  html += '<div class="phase"><h3>Decisions, no building</h3><p>Four screens fit no step, and one rule only covers one game. Each needs a yes or no from you.</p></div>';
+  for (const d of DECIDE) html += `<div class="todo-item small" data-id="${d.id}"><input type="checkbox" aria-label="Decided: ${esc(d.text)}" disabled><div class="todo-body"><p>${esc(d.text)}</p></div></div>`;
+  document.getElementById('todo-list').innerHTML = html;
+}
+function paintTodo() {
+  let total = 0, ticked = 0;
+  document.querySelectorAll('.todo-item').forEach((el) => {
+    const cb = el.querySelector('input'), on = !!done[el.dataset.id];
+    if (!el.classList.contains('small')) { total++; if (on) ticked++; }
+    cb.checked = on;
+    cb.disabled = !todoDb || !canTick || el.dataset.busy === '1';
+    el.classList.toggle('done', on);
+  });
+  document.getElementById('todo-count').textContent = `${ticked} of ${total} done`;
+}
+renderTodo(); paintTodo();
+
+document.getElementById('todo-list').addEventListener('change', async (e) => {
+  const cb = e.target.closest('input[type="checkbox"]');
+  if (!cb || !todoDb) return;
+  const el = cb.closest('.todo-item'), id = el.dataset.id, val = cb.checked;
+  el.dataset.busy = '1'; cb.disabled = true;
+  try {
+    await todoDb.doc('todo/' + id).set({ done: val, at: new Date().toISOString() });
+    done[id] = val; todoNote('');
+  } catch (err) {
+    if (err && err.code === 'invalid_argument') { canTick = false; todoNote('You can read this list, but only people who can edit the page can tick items.'); }
+    else todoNote('That tick didn’t save. Try again in a moment.');
+  }
+  el.dataset.busy = '';
+  paintTodo();
+});
+(async () => {
+  let d = null;
+  try { d = window.claude && window.claude.use ? await window.claude.use('db') : null; } catch { d = null; }
+  if (!d) { todoNote('Ticks can’t be saved in this view. Open the page signed in to tick items off.'); return; }
+  todoDb = d; paintTodo();
+  const slow = setTimeout(() => todoNote('Can’t reach the saved ticks yet. What you see may be out of date.'), 10000);
+  d.collection('todo').onSnapshot((snap) => {
+    if (!snap.metadata.fromCache) { clearTimeout(slow); todoNote(''); }
+    for (const k of Object.keys(done)) delete done[k];
+    snap.docs.forEach((doc) => { const v = doc.data(); if (v && v.done === true) done[doc.id] = true; });
+    paintTodo();
+  }, () => { clearTimeout(slow); todoDb = null; todoNote('Saved ticks aren’t available right now.'); paintTodo(); });
+})();
+
+fetch('manifest.json').then((r) => r.json()).then((m) => {
+  render(m.shots);
+  document.querySelectorAll('section.track').forEach((s) => io.observe(s));
+}).catch(() => { document.getElementById('main').innerHTML = '<p class="empty">Couldn’t load the screen list. Reload the page.</p>'; });
+</script>

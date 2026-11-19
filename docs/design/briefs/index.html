@@ -1,0 +1,1281 @@
+<title>Golf Board Design Briefs</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: a brief per section (027 → 030), each: the ask in words, today's screens as small references, then first-pass phones at 72% drawn with the app's own dark tokens. Page = Night Round tokens, dark first. */
+:root {
+  --font-sans: Geist, system-ui, -apple-system, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, monospace;
+  --bg: #0a0b0d; --surface-1: #15171b; --surface-2: #1f2227; --surface-3: #2a2e35;
+  --text: #f4f5f7; --text-muted: #a7acb4; --line: #2b2f36;
+  --you: #3ddc84; --tint-you: rgba(61,220,132,0.12);
+  --note: #7aa7ff; --tint-note: rgba(122,167,255,0.12);
+  --warn: #f5c64a; --tint-warn: rgba(245,198,74,0.12);
+  --scrim: rgba(5,6,8,0.88);
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) {
+  --bg: #f2f3f5; --surface-1: #ffffff; --surface-2: #e8eaee; --surface-3: #dcdfe5;
+  --text: #0b0d10; --text-muted: #4f555e; --line: #d5d9df;
+  --you: #0a7a43; --tint-you: rgba(18,163,92,0.10);
+  --note: #2457c5; --tint-note: rgba(36,87,197,0.10);
+  --warn: #8a6000; --tint-warn: rgba(138,96,0,0.10); --scrim: rgba(11,13,16,0.82);
+  color-scheme: light; } }
+:root[data-theme="light"] {
+  --bg: #f2f3f5; --surface-1: #ffffff; --surface-2: #e8eaee; --surface-3: #dcdfe5;
+  --text: #0b0d10; --text-muted: #4f555e; --line: #d5d9df;
+  --you: #0a7a43; --tint-you: rgba(18,163,92,0.10);
+  --note: #2457c5; --tint-note: rgba(36,87,197,0.10);
+  --warn: #8a6000; --tint-warn: rgba(138,96,0,0.10); --scrim: rgba(11,13,16,0.82);
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--text); font: 16px/1.55 var(--font-sans); }
+.wrap { max-width: 1180px; margin: 0 auto; padding-block: 32px 96px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1 { font-size: 40px; line-height: 1.08; letter-spacing: -0.03em; font-weight: 800; margin: 0; text-wrap: balance; }
+h2 { font-size: 30px; line-height: 1.12; letter-spacing: -0.02em; font-weight: 800; margin: 0; text-wrap: balance; }
+h3 { font-size: 18px; line-height: 1.3; letter-spacing: -0.01em; font-weight: 700; margin: 0; text-wrap: balance; }
+p { margin: 0; }
+.kicker { font: 600 12px/16px var(--font-mono); letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); }
+.lede { color: var(--text-muted); max-width: 66ch; font-size: 17px; }
+.muted { color: var(--text-muted); }
+code, .mono { font-family: var(--font-mono); font-size: .92em; }
+a { color: inherit; text-underline-offset: 3px; }
+header.top { display: grid; gap: 12px; margin-bottom: 8px; }
+
+nav.toc { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); padding-block: 12px; margin: 20px 0 8px; border-bottom: 1px solid var(--line); }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+nav.toc ol { list-style: none; margin: 0; padding: 0; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+nav.toc li { flex: none; }
+nav.toc a { display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 999px; background: var(--surface-1); border: 1px solid var(--line); text-decoration: none; font-weight: 600; font-size: 14px; }
+nav.toc a .n { font: 600 12px var(--font-mono); color: var(--text-muted); }
+nav.toc a:hover, nav.toc a:focus-visible { background: var(--surface-3); outline: none; }
+
+section.part { padding-top: 48px; scroll-margin-top: 72px; display: grid; gap: 20px; }
+.part-head { display: grid; gap: 8px; }
+.badge { justify-self: start; display: inline-flex; gap: 10px; align-items: center; }
+.badge .num { font: 700 13px/1 var(--font-mono); padding: 7px 9px; border-radius: 8px; background: var(--text); color: var(--bg); }
+.badge .covers { font-size: 13px; color: var(--text-muted); font-weight: 500; }
+.goal { font-size: 19px; line-height: 1.45; max-width: 62ch; font-weight: 500; }
+
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
+.panel { background: var(--surface-1); border: 1px solid var(--line); border-radius: 18px; padding: 18px 20px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+.panel ul, .panel ol { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+.panel li { padding-left: 2px; }
+.panel li b { font-weight: 600; }
+.panel.ask { background: var(--tint-warn); border-color: transparent; }
+.panel.ask .kicker { color: var(--warn); }
+.panel.decided .kicker { color: var(--text); }
+.lean { font-size: 14px; color: var(--text-muted); display: block; margin-top: 2px; }
+.lean b { color: var(--text); font-weight: 600; }
+
+.rules { display: grid; gap: 12px; counter-reset: rule; }
+.rule { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 4px 14px; background: var(--surface-1); border: 1px solid var(--line); border-radius: 18px; padding: 16px 18px; }
+.rule::before { counter-increment: rule; content: counter(rule); grid-row: span 3; font: 800 32px/1 var(--font-mono); color: var(--text-muted); }
+.rule h3 { font-size: 19px; }
+.rule .where { font-size: 14px; color: var(--text-muted); }
+.rule .sys { font-size: 14px; }
+.rule .sys b { color: var(--warn); font-weight: 600; }
+
+.tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 18px; background: var(--surface-1); }
+table { border-collapse: collapse; width: 100%; min-width: 860px; font-size: 14px; }
+th, td { text-align: left; vertical-align: top; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+thead th { font: 600 11px/1.3 var(--font-mono); letter-spacing: .8px; text-transform: uppercase; color: var(--text-muted); background: var(--surface-2); }
+tbody th { font-weight: 700; width: 150px; }
+tbody th span { display: block; font-weight: 500; font-size: 12.5px; color: var(--text-muted); margin-top: 2px; }
+td .mono { font-size: 13px; }
+tr.tpl th, tr.tpl td { background: var(--tint-you); }
+.tag { font: 600 10.5px/1 var(--font-mono); letter-spacing: .6px; text-transform: uppercase; padding: 4px 6px; border-radius: 5px; background: var(--surface-3); color: var(--text-muted); white-space: nowrap; }
+.tag.q { background: var(--tint-warn); color: var(--warn); }
+.tag.t { background: var(--tint-you); color: var(--you); }
+
+.refs { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-start; }
+.refs-label { font-size: 14px; color: var(--text-muted); max-width: 64ch; }
+.ref { all: unset; cursor: zoom-in; display: grid; gap: 6px; width: 92px; }
+.ref img { width: 92px; aspect-ratio: 393 / 852; object-fit: cover; border-radius: 10px; border: 1px solid var(--line); display: block; background: var(--surface-2); }
+.ref span { font-size: 12px; line-height: 1.3; color: var(--text-muted); }
+.ref:focus-visible img { outline: 2px solid var(--note); outline-offset: 2px; }
+
+.mocks { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 32px 20px; }
+figure.mock { margin: 0; display: grid; gap: 12px; justify-items: center; align-content: start; min-width: 0; }
+figure.mock figcaption { width: 100%; max-width: 330px; display: grid; gap: 6px; font-size: 14px; color: var(--text-muted); }
+figure.mock figcaption b { color: var(--text); font-weight: 700; font-size: 15px; }
+ol.notes { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; counter-reset: note; }
+ol.notes li { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 8px; counter-increment: note; }
+ol.notes li::before { content: counter(note); width: 20px; height: 20px; border-radius: 50%; background: var(--note); color: var(--bg); font: 700 11px/20px var(--font-mono); text-align: center; margin-top: 1px; }
+
+dialog { border: 0; padding: 0; background: transparent; max-width: 100vw; max-height: 100vh; width: 100vw; height: 100%; }
+dialog::backdrop { background: var(--scrim); }
+.lbx { height: 100%; display: grid; place-items: center; gap: 12px; padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); align-content: center; }
+.lbx img { max-height: 84vh; max-width: 100%; aspect-ratio: 393 / 852; border-radius: 24px; border: 1px solid var(--line); }
+.btn { font: 600 15px var(--font-sans); background: var(--surface-2); color: var(--text); border: 1px solid var(--line); border-radius: 12px; padding: 10px 16px; cursor: pointer; }
+.btn:focus-visible { outline: 2px solid var(--note); outline-offset: 2px; }
+footer { margin-top: 64px; padding-top: 18px; border-top: 1px solid var(--line); display: grid; gap: 8px; color: var(--text-muted); font-size: 14px; max-width: 80ch; }
+
+/* ---------- Phones: the app's own dark tokens, always dark ---------- */
+.ph {
+  --bg: #0a0b0d; --s1: #15171b; --s2: #1f2227; --s3: #2a2e35; --tx: #f4f5f7; --mu: #a7acb4; --ln: #2b2f36;
+  --you: #3ddc84; --tyou: rgba(61,220,132,.10); --ca: #ff9f43; --cb: #5b9bff; --cc: #ff6fb5; --cd: #b18cff;
+  --ta: rgba(255,159,67,.12); --tb: rgba(91,155,255,.12); --tc: rgba(255,111,181,.12); --td: rgba(177,140,255,.12);
+  --dbl: #ff6b6b; --hair: rgba(255,255,255,.06); --pin: #7aa7ff;
+  zoom: .72; width: 393px; height: 852px; flex: none; position: relative; overflow: hidden;
+  border-radius: 56px; background: var(--bg); color: var(--tx); color-scheme: dark;
+  font: 500 15px/20px var(--font-sans); padding: 54px 16px 0; display: flex; flex-direction: column;
+  box-shadow: 0 0 0 9px #17191d, 0 0 0 10px #3a3e45; margin: 10px;
+}
+.ph * { box-sizing: border-box; }
+.ph .sb { position: absolute; inset: 0 0 auto; height: 50px; display: flex; align-items: center; justify-content: space-between; padding: 6px 34px 0 40px; font: 600 15px var(--font-sans); }
+.ph .island { position: absolute; left: 50%; top: 11px; width: 122px; height: 35px; margin-left: -61px; border-radius: 20px; background: #000; }
+.ph .bat { width: 25px; height: 12px; border: 1.5px solid var(--tx); border-radius: 4px; opacity: .9; position: relative; }
+.ph .bat::after { content: ""; position: absolute; inset: 1.5px 6px 1.5px 1.5px; background: var(--tx); border-radius: 1.5px; }
+.ph svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.ph .ic { width: 44px; height: 44px; display: grid; place-items: center; color: var(--mu); }
+.ph .fl { flex: 1; min-height: 8px; }
+.ph .anc { position: relative; }
+.ph .pin { position: absolute; top: -12px; right: -16px; z-index: 4; width: 30px; height: 30px; border-radius: 50%; background: var(--pin); color: #0a0b0d; font: 700 15px/30px var(--font-mono); text-align: center; box-shadow: 0 0 0 4px var(--bg); }
+
+/* Enter */
+.ph .eh { display: flex; align-items: center; gap: 4px; min-height: 54px; }
+.ph .hn { font-size: 32px; font-weight: 700; letter-spacing: -.5px; line-height: 1; }
+.ph .hp { font-size: 17px; color: var(--mu); margin-left: 8px; align-self: flex-end; padding-bottom: 14px; }
+.ph .eh .sp { flex: 1; }
+.ph .ml { height: 36px; display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--mu); white-space: nowrap; }
+.ph .ml b { color: var(--tx); font-weight: 600; }
+.ph .st { font: 700 15px var(--font-mono); color: var(--mu); margin-right: 10px; }
+.ph .st.you { color: var(--you); }
+.ph .cardy { background: var(--s1); border-radius: 18px; padding: 2px 16px 6px; position: relative; }
+.ph .cardy.them { background: var(--tb); box-shadow: inset 0 0 0 1.5px var(--cb); }
+.ph .cardy-h { display: flex; align-items: center; justify-content: space-between; height: 44px; font-weight: 600; }
+.ph .cardy-h span { color: var(--mu); font-size: 13px; font-weight: 500; }
+.ph .pr { padding: 8px 0 4px; border-top: 1px solid var(--hair); }
+.ph .cardy > .pr:first-child, .ph .cardy-h + .pr { border-top: 0; }
+.ph .pn { display: flex; gap: 8px; align-items: baseline; height: 24px; font-size: 17px; font-weight: 600; margin-bottom: 2px; }
+.ph .pn span { font-size: 13px; font-weight: 500; color: var(--mu); }
+.ph .pads { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) 56px; gap: 6px; }
+.ph .pad { height: 64px; border-radius: 16px; display: grid; place-items: center; color: var(--tx); }
+.ph .pad.sel { background: var(--tx); color: var(--bg); }
+.ph .pad.more { color: var(--mu); }
+.ph .mk { --m: 40px; width: var(--m); height: var(--m); display: grid; place-items: center; font: 700 22px/1 var(--font-mono); position: relative; flex: none; }
+.ph .mk.c, .ph .mk.cc { border: 1.5px solid currentColor; border-radius: 50%; }
+.ph .mk.s, .ph .mk.ss { border: 1.5px solid currentColor; border-radius: 7px; }
+.ph .mk.cc::after, .ph .mk.ss::after { content: ""; position: absolute; inset: 3px; border: 1.5px solid currentColor; border-radius: inherit; }
+.ph .mk.sm { --m: 28px; font-size: 15px; }
+.ph .mk.sm.ss::after { inset: 2.5px; border-radius: 4px; }
+.ph .mk.d { color: var(--dbl); }
+.ph .ql { min-height: 60px; display: flex; align-items: center; gap: 14px; }
+.ph .ql + .ql, .ph .cardy + .ql { border-top: 0; }
+.ph .qg { font-size: 13px; color: var(--mu); flex: none; }
+.ph .qw { flex: 1; min-width: 0; display: flex; gap: 16px; align-items: center; font-size: 17px; font-weight: 600; white-space: nowrap; }
+.ph .qp { display: inline-flex; gap: 8px; align-items: center; }
+.ph .dash { font: 600 17px var(--font-mono); color: var(--mu); width: 18px; text-align: center; }
+.ph .go { font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 2px; flex: none; }
+.ph .go svg { width: 20px; height: 20px; }
+.ph .ql.mine { position: relative; }
+.ph .ql.mine::before { content: ""; position: absolute; left: -10px; top: 14px; bottom: 14px; width: 3px; border-radius: 2px; background: var(--you); }
+.ph .nx { height: 60px; border-radius: 16px; background: var(--s1); color: var(--mu); font: 600 17px var(--font-sans); display: grid; place-items: center; flex: none; margin-top: 12px; }
+.ph .nx.go { background: var(--tx); color: var(--bg); }
+.ph .sublabel { font: 600 12px/16px var(--font-mono); letter-spacing: 1px; color: var(--mu); margin: 14px 0 0; }
+
+/* Tab bar */
+.ph .tb { position: absolute; left: 16px; right: 16px; bottom: 26px; height: 68px; border-radius: 34px; background: rgba(21,23,27,.92); border: 1px solid rgba(255,255,255,.09); box-shadow: inset 0 1px 0 rgba(255,255,255,.10), 0 0 28px rgba(255,255,255,.06); display: grid; grid-template-columns: repeat(4, 1fr); padding: 6px; gap: 4px; z-index: 2; }
+.ph .tb span { display: grid; place-items: center; border-radius: 28px; color: var(--mu); }
+.ph .tb .on { background: var(--s3); color: var(--tx); }
+
+/* Round top bar, type, cards */
+.ph .tp { display: flex; align-items: center; gap: 12px; height: 56px; flex: none; }
+.ph .av { width: 40px; height: 40px; border-radius: 50%; background: var(--s2); display: grid; place-items: center; font: 600 15px var(--font-sans); flex: none; }
+.ph .tp > b { font-size: 17px; font-weight: 600; }
+.ph .tr { flex: 1; min-width: 0; text-align: right; color: var(--mu); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ph .ib { width: 44px; height: 44px; border-radius: 50%; background: var(--s1); display: grid; place-items: center; flex: none; }
+.ph .lb { font: 600 12px/16px var(--font-mono); letter-spacing: 1px; text-transform: uppercase; color: var(--mu); }
+.ph .ti { font-size: 32px; line-height: 36px; font-weight: 800; letter-spacing: -1px; }
+.ph .xl { font: 700 64px/64px var(--font-mono); letter-spacing: -2px; }
+.ph .bd { font-size: 15px; line-height: 20px; color: var(--mu); }
+.ph .rw { font-size: 17px; line-height: 22px; font-weight: 600; }
+.ph .box { background: var(--s1); border-radius: 18px; padding: 16px; display: grid; gap: 8px; }
+.ph .hero { background: var(--s1); border-radius: 24px; padding: 18px 20px; display: grid; gap: 6px; }
+.ph .lit { background: var(--tyou); box-shadow: inset 0 0 0 1.5px var(--you), 0 0 22px rgba(61,220,132,.28); }
+.ph .peek > :not(.pin) { opacity: .4; }
+.ph .anc > .pin { display: block; color: #0a0b0d; background: var(--pin); border-radius: 50%; opacity: 1; }
+.ph .seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; background: var(--s1); border-radius: 14px; padding: 4px; height: 52px; flex: none; }
+.ph .seg span { display: grid; place-items: center; border-radius: 11px; color: var(--mu); font-weight: 600; text-align: center; }
+.ph .seg .on { background: var(--s3); color: var(--tx); }
+.ph .gap8 { height: 8px; flex: none; } .ph .gap12 { height: 12px; flex: none; } .ph .gap16 { height: 16px; flex: none; } .ph .gap24 { height: 24px; flex: none; }
+.ph .you { color: var(--you); } .ph .ca { color: var(--ca); } .ph .cb { color: var(--cb); } .ph .cc { color: var(--cc); } .ph .cd { color: var(--cd); }
+
+/* Leader rows */
+.ph .lr { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; column-gap: 12px; row-gap: 3px; align-items: center; padding: 11px 14px; border-radius: 16px; }
+.ph .lr .rk { grid-row: span 3; font: 600 13px var(--font-mono); color: var(--mu); }
+.ph .lr .nm { font-size: 17px; font-weight: 600; display: flex; gap: 8px; align-items: baseline; }
+.ph .lr .nm em { font: 600 11px var(--font-mono); letter-spacing: .8px; font-style: normal; color: var(--you); }
+.ph .lr .sub { font-size: 13px; color: var(--mu); }
+.ph .lr .pt { grid-row: 1 / span 3; grid-column: 3; font: 700 28px var(--font-mono); }
+.ph .lr .bar { height: 4px; border-radius: 2px; background: var(--s3); overflow: hidden; }
+.ph .lr .bar i { display: block; height: 100%; background: currentColor; }
+.ph .lr.me { background: var(--tyou); box-shadow: inset 0 0 0 1px rgba(61,220,132,.35); }
+
+/* Buttons and bottom */
+.ph .bp, .ph .bs { height: 60px; border-radius: 16px; font: 600 17px var(--font-sans); display: grid; place-items: center; flex: none; }
+.ph .bp { background: var(--tx); color: var(--bg); }
+.ph .bs { background: var(--s1); color: var(--tx); }
+.ph .bg { font-weight: 600; color: var(--tx); font-size: 15px; display: inline-flex; align-items: center; gap: 6px; }
+.ph .bot { margin-top: auto; padding-bottom: 34px; display: grid; gap: 10px; flex: none; }
+.ph .bot .bd { text-align: center; }
+
+/* Setup */
+.ph .su { display: flex; align-items: center; justify-content: space-between; height: 44px; color: var(--mu); flex: none; }
+.ph .su .back { display: flex; align-items: center; gap: 2px; }
+.ph .su .back svg { width: 20px; height: 20px; }
+.ph .prog { display: flex; gap: 4px; }
+.ph .prog i { width: 18px; height: 3px; border-radius: 2px; background: var(--s3); }
+.ph .prog i.on { background: var(--tx); }
+.ph .chip { display: flex; align-items: center; height: 44px; padding: 0 14px; border-radius: 12px; background: var(--s2); font-size: 15px; font-weight: 600; white-space: nowrap; min-width: 0; }
+.ph .tc { border-radius: 16px; padding: 10px; display: grid; gap: 8px; border: 1.5px solid var(--ln); }
+.ph .tc .lb { padding-left: 4px; }
+.ph .tc.you { border-color: var(--you); background: var(--tyou); }
+.ph .tc.a { border-color: var(--ca); background: var(--ta); }
+.ph .tc.b { border-color: var(--cb); background: var(--tb); }
+.ph .tc.c { border-color: var(--cc); background: var(--tc); }
+.ph .tc.d { border-color: var(--cd); background: var(--td); }
+.ph .tm { font: 600 15px var(--font-mono); height: 34px; padding: 0 10px; border-radius: 10px; background: var(--s2); display: inline-flex; align-items: center; gap: 6px; }
+.ph .tm svg { width: 16px; height: 16px; color: var(--mu); }
+.ph .tm.empty { color: var(--mu); }
+.ph .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.ph .addrow { height: 56px; border-radius: 16px; border: 1.5px dashed var(--ln); display: flex; align-items: center; gap: 8px; padding: 0 16px; color: var(--mu); font-weight: 600; flex: none; }
+.ph .setrow { display: flex; align-items: center; justify-content: space-between; min-height: 56px; padding: 0 16px; background: var(--s1); border-radius: 16px; gap: 12px; }
+.ph .setrow small { display: block; color: var(--mu); font-size: 13px; font-weight: 500; }
+.ph .vs { font-size: 13px; color: var(--mu); text-align: center; }
+
+/* Lit hole strip and faces */
+.ph .hs { display: flex; gap: 10px; }
+.ph .hs div { flex: 1; display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
+.ph .hs i { height: 12px; border-radius: 3px; background: var(--s3); }
+.ph .hs i.fut { background: transparent; border: 1.5px dashed var(--ln); }
+.ph .hs i.live { background: var(--you); box-shadow: 0 0 18px rgba(61,220,132,.6); }
+.ph .faces { display: flex; flex-wrap: wrap; gap: 8px; }
+.ph .faces i { width: 34px; height: 34px; border-radius: 50%; background: var(--s2); font: 600 12px/34px var(--font-sans); text-align: center; font-style: normal; }
+.ph .faces i.no { background: transparent; border: 1.5px dashed var(--ln); line-height: 31px; color: var(--mu); }
+.ph .faces i.me { background: var(--you); color: #0a0b0d; }
+.ph .typing { display: flex; align-items: center; gap: 2px; height: 48px; font-size: 17px; font-weight: 600; color: var(--you); border-top: 1px solid var(--hair); }
+.ph .typing::after { content: ""; width: 2px; height: 22px; background: var(--you); margin-left: 2px; }
+.ph .mrow { display: flex; align-items: center; justify-content: space-between; height: 44px; border-top: 1px solid var(--hair); }
+.ph .mrow:first-of-type { border-top: 0; }
+.ph .mrow .mono { font: 600 15px var(--font-mono); color: var(--mu); width: 64px; }
+.ph .mrow b { flex: 1; font-weight: 600; font-size: 17px; }
+.ph .ok { color: var(--mu); font-size: 13px; display: inline-flex; align-items: center; gap: 4px; }
+.ph .ok svg { width: 16px; height: 16px; }
+.ph .lock { display: inline-flex; align-items: center; gap: 6px; }
+.ph .lock svg { width: 18px; height: 18px; }
+/* 032: game list that grows in place, count map */
+.ph .gl { display: grid; gap: 8px; }
+.ph .gm { border-radius: 18px; background: var(--s1); padding: 12px 16px; display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 2px 14px; align-items: start; border: 2px solid transparent; }
+.ph .gm .rd { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--ln); grid-row: span 2; margin-top: 1px; }
+.ph .gm.on { background: var(--s2); border-color: var(--tx); }
+.ph .gm.on .rd { border: 7px solid var(--tx); }
+.ph .gm b { font-size: 17px; font-weight: 700; }
+.ph .gm > span { font-size: 13px; color: var(--mu); line-height: 1.35; }
+.ph .gm .fld { grid-column: 1 / -1; display: grid; gap: 8px; margin-top: 12px; }
+.ph .gm .seg { background: var(--s1); }
+.ph .seg span small { display: block; font: 600 11px/14px var(--font-mono); color: var(--mu); }
+.ph .seg small.nw { color: var(--pin); }
+.ph .seg.two { height: 58px; }
+.ph .hint { font-size: 13px; color: var(--mu); line-height: 1.35; }
+td.same { color: var(--text-muted); }
+td.same::before { content: "✓ "; color: var(--you); font-weight: 700; }
+td.na { color: var(--text-muted); }
+table.map { min-width: 720px; }
+table.map tbody th { width: 92px; font-family: var(--font-mono); }
+table.map tr.four th, table.map tr.four td { background: var(--tint-you); }
+@media (max-width: 420px) { .ph { zoom: .7; } }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <span class="kicker">Golf Live Board · design briefs 027–030 · Nov 17, 2026 · 032 added Nov 18</span>
+    <h1>One app for every game</h1>
+    <p class="lede">Team Ryder Cup is the most finished game in the app: the invite, the lobby, the calm Enter, the cup Board and the final card. These four briefs ask for the pieces needed to give every other game that same journey. Each brief says what stays fixed, the few places a game may differ, the states to draw, and which questions are still open. The phones are first passes drawn with the app’s own tokens so you have something concrete to react to. Rebuild them in the components; don’t trace them.</p>
+  </header>
+
+  <nav class="toc" aria-label="Briefs">
+    <ol>
+      <li><a href="#start">Read first</a></li>
+      <li><a href="#b027"><span class="n">027</span>The feel</a></li>
+      <li><a href="#b028"><span class="n">028</span>Game slots</a></li>
+      <li><a href="#b029"><span class="n">029</span>A lobby for every round</a></li>
+      <li><a href="#b030"><span class="n">030</span>One setup</a></li>
+      <li><a href="#b032"><span class="n">032</span>Games by player count</a></li>
+      <li><a href="#skip">No design needed</a></li>
+    </ol>
+  </nav>
+
+  <!-- ================= READ FIRST ================= -->
+  <section class="part" id="start">
+    <div class="part-head"><span class="kicker">Read first</span><h2>How these briefs work</h2></div>
+    <div class="cols">
+      <div class="panel">
+        <h3>The journey every game will share</h3>
+        <ol>
+          <li><b>Organizer:</b> course → players → game → teams (only if the game has them) → tee times → invite.</li>
+          <li><b>Player:</b> invite link → “Which one are you?” → add to home screen → lobby → scoring is open.</li>
+          <li><b>The round:</b> Enter, Matches, Board, Card.</li>
+          <li><b>The end:</b> final card, recap, share.</li>
+        </ol>
+        <p class="muted">A game may differ in only three places: <b>how people are grouped</b>, <b>what a hole is worth</b>, and <b>what the standings look like</b>. Anything else that differs is a bug to fix.</p>
+      </div>
+      <div class="panel">
+        <h3>The five games</h3>
+        <ul>
+          <li><b>Team Ryder Cup:</b> 16 players, two sides of four carts. The template.</li>
+          <li><b>Partner “Rider” Cup:</b> 6 or 8 players in carts of 2, opponents rotate. Already on the Team Ryder Cup screens, with cart colors.</li>
+          <li><b>2v2:</b> exactly 4 players, two pairs.</li>
+          <li><b>Match play</b> (split point in the code): 2–6 players, 1 point a hole to the low net score, ties split it.</li>
+          <li><b>Scorecard only:</b> any number, no game.</li>
+        </ul>
+        <p class="muted"><b>Nov 18:</b> brief 032 folds these five into three games picked by player count. Where 027–030 name a game, read it through 032’s table.</p>
+      </div>
+      <div class="panel">
+        <h3>Limits that don’t move</h3>
+        <ul>
+          <li>Phones held in one hand on a course, in sun, often with a glove. Tap targets 48px or more; tap is the main gesture.</li>
+          <li>Design at 393 × 852 (iPhone 16), dark and light. Every screen fits an iPhone 16; <b>Enter never scrolls</b>.</li>
+          <li><b>Green means you</b>, never success. Red means double bogey or an error. No team is ever red.</li>
+          <li>No swiping between holes. 12px is the smallest text. Six type styles, no new ones.</li>
+          <li>The system lives in <code>docs/design/design-system/</code>. A new color, size, type style or motion gets flagged and added there first.</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h3>What to send back</h3>
+        <ul>
+          <li>One folder per brief: <code>docs/design/features/027-…</code> to <code>030-…</code>, each with <code>SPEC.md</code> (the source of truth), screenshots of every state (dark + light), and mockups as reference.</li>
+          <li>Start new screens from the <b>North star</b> page of the App Screens canvas.</li>
+          <li><b>Order:</b> 027 first, because the others use its rules. Then 028, 029, 030.</li>
+          <li>“Decided” boxes are Andrew’s calls (Nov 18): draw what they say. The one amber box left is for the build, not for you.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 027 ================= -->
+  <section class="part" id="b027">
+    <div class="part-head">
+      <span class="badge"><span class="num">027</span><span class="covers">Sets the rules for 028, 029 and 030</span></span>
+      <h2>The feel: grow in place, one lit thing, the next thing peeks</h2>
+      <p class="goal">Add five rules to the design system so every new screen feels like one calm app: you stay where you tapped, one thing on screen is alive, and what comes next is quietly in view.</p>
+    </div>
+    <p class="refs-label">The reference is the <b>Anchor</b> concept by Alexpuda, two short screen recordings sent with this brief. Take its feel, not its look: no purple, no white calendar panel over a dark screen, no Dynamic Island (a website can’t draw there). Today the other cart’s scores open in a sheet:</p>
+    <div class="refs">
+      <button class="ref" data-src="today/carts8-enter.jpg"><img src="today/carts8-enter.jpg" alt="Today: Enter, Rider Cup"><span>Enter today</span></button>
+      <button class="ref" data-src="today/enter-their-cart.jpg"><img src="today/enter-their-cart.jpg" alt="Today: their scores sheet"><span>“Their scores” sheet today</span></button>
+    </div>
+
+    <div class="rules">
+      <div class="rule">
+        <h3>Grow where you tapped</h3>
+        <p>A quiet row grows in place into its full card, and its content swaps with a short blur (soft → sharp) instead of a new screen or a sheet on top. Whatever was open folds back into a quiet row.</p>
+        <p class="where">First uses: the other cart on Enter (replaces the “Their scores” sheet), a match on the Board (replaces the read-only match sheet), cards in the lobby. Sheets stay for side tasks: rules, handicaps, fixing a hole.</p>
+        <p class="sys"><b>System change:</b> motion today is limited to folds, sheets and score bumps. This adds a “grow” motion and a blur swap. It succeeds the Expand in place component.</p>
+      </div>
+      <div class="rule">
+        <h3>One hero fact per screen</h3>
+        <p>One thing at <code>number-xl</code>, everything else quiet. Already the rule on Board and Matches.</p>
+        <p class="where">New uses: the lobby countdown (“42 min”), the final card’s score.</p>
+        <p class="sys">No system change.</p>
+      </div>
+      <div class="rule">
+        <h3>One lit thing</h3>
+        <p>The thing that is live right now, such as your current hole or your live match, is the one element that glows. Finished things are solid and quiet; upcoming things are dashed.</p>
+        <p class="where">First uses: the hole strip on Matches, your tee time in the lobby, the live rotation on the Board.</p>
+        <p class="sys"><b>System change:</b> today the tab bar is the only glowing surface. This adds one more glow, in green because it’s always yours, dark mode only, and never on more than one element per screen.</p>
+      </div>
+      <div class="rule">
+        <h3>The next thing peeks</h3>
+        <p>What comes next sits dimmed at the bottom edge, so you know it’s there without it competing: your next rotation, the next tee time.</p>
+        <p class="where">First uses: Matches (next rotation), the lobby (other tee times).</p>
+        <p class="sys"><b>System change:</b> a dimmed “peek” treatment. It must still pass contrast for the 12px label inside it.</p>
+      </div>
+      <div class="rule">
+        <h3>New things go at the end</h3>
+        <p>Adding something is always the last row of its list, typed in place: add a player, add a tee time, name your cart. No separate screen, no sheet.</p>
+        <p class="where">First uses: Setup players, Setup tee times, the lobby’s cart name.</p>
+        <p class="sys">No system change; a pattern note in the README.</p>
+      </div>
+    </div>
+
+    <div class="tablewrap" role="region" aria-label="Proposed tokens" tabindex="0">
+      <table>
+        <thead><tr><th>Proposed token</th><th>Starting value</th><th>Used for</th><th>Light mode</th></tr></thead>
+        <tbody>
+          <tr><th><code>motion-grow</code></th><td class="mono">320ms, ease-out (cubic-bezier .2, .8, .2, 1)</td><td>A row growing into a card, a card folding to a row</td><td>Same</td></tr>
+          <tr><th><code>blur-swap</code></th><td class="mono">8px → 0, over the first 60% of motion-grow</td><td>Content changing inside a growing card</td><td>Same</td></tr>
+          <tr><th><code>glow-you</code></th><td class="mono">0 0 18px rgba(61,220,132,.45)</td><td>The one live element</td><td>None; use the <code>cart-you</code> outline only</td></tr>
+          <tr><th><code>peek</code></th><td class="mono">opacity .4</td><td>The next thing at the bottom edge</td><td>opacity .5</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="cols">
+      <div class="panel">
+        <span class="kicker">States to draw</span>
+        <ul>
+          <li>Grow: at rest, halfway, open. Fold back: the same three.</li>
+          <li><b>Reduced motion:</b> a plain cross-fade, no blur, no size change.</li>
+          <li>The lit thing and the peek in light mode.</li>
+          <li>A screen with nothing live (before the first score): nothing glows.</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <span class="kicker">Deliverables</span>
+        <ul>
+          <li>Design system README: Motion, Depth and Interaction patterns sections updated.</li>
+          <li><code>tokens.json</code> with the four tokens.</li>
+          <li>A Grow card component README (replaces Expand in place).</li>
+          <li>A motion spec for grow and fold, like 022’s <code>motion.css</code>.</li>
+        </ul>
+      </div>
+      <div class="panel decided">
+        <span class="kicker">Decided by Andrew · Nov 18</span>
+        <ul>
+          <li>Does grow-in-place replace the “Their scores” sheet on Enter? <span class="lean">Decided: <b>yes</b>, it keeps you on the hole.</span></li>
+          <li>Is a second glow OK if it’s only ever on your live thing? <span class="lean">Decided: <b>yes</b>, dark mode only.</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="mocks">
+      <figure class="mock">
+        <div class="ph">
+          <div class="sb"><span>8:41</span><i class="island"></i><span class="bat"></span></div>
+          <div class="eh"><b class="hn">Hole 8</b><span class="hp">Par 4</span><span class="sp"></span><span class="ic"><i data-i="left"></i></span><span class="ic"><i data-i="right"></i></span><span class="ic"><i data-i="dots"></i></span></div>
+          <div class="ml"><b>Andrew + Sean</b><span><span class="st you">1 UP</span>vs Sam + Jake</span></div>
+          <div class="cardy">
+            <div class="pr"><div class="pn">Andrew</div><div class="pads"><span class="pad"><b class="mk c">3</b></span><span class="pad sel"><b class="mk">4</b></span><span class="pad"><b class="mk s">5</b></span><span class="pad"><b class="mk ss">6</b></span><span class="pad more"><i data-i="dots"></i></span></div></div>
+            <div class="pr"><div class="pn">Sean</div><div class="pads"><span class="pad"><b class="mk c">3</b></span><span class="pad"><b class="mk">4</b></span><span class="pad sel"><b class="mk s">5</b></span><span class="pad"><b class="mk ss">6</b></span><span class="pad more"><i data-i="dots"></i></span></div></div>
+          </div>
+          <div class="ql anc"><span class="pin">1</span><span class="qg">Your group</span><span class="qw"><span class="qp">Sam <b class="mk sm">4</b></span><span class="qp">Jake <span class="dash">–</span></span></span><span class="go">Enter<i data-i="right"></i></span></div>
+          <div class="nx">Next hole · 1 to go</div>
+          <div class="fl"></div>
+          <nav class="tb"><span class="on"><i data-i="flag"></i></span><span><i data-i="rings"></i></span><span><i data-i="bars"></i></span><span><i data-i="grid"></i></span></nav>
+        </div>
+        <figcaption><b>Grow · at rest</b><ol class="notes"><li>The other cart is a quiet row. Tapping it grows the row into their card right here.</li></ol></figcaption>
+      </figure>
+
+      <figure class="mock">
+        <div class="ph">
+          <div class="sb"><span>8:41</span><i class="island"></i><span class="bat"></span></div>
+          <div class="eh"><b class="hn">Hole 8</b><span class="hp">Par 4</span><span class="sp"></span><span class="ic"><i data-i="left"></i></span><span class="ic"><i data-i="right"></i></span><span class="ic"><i data-i="dots"></i></span></div>
+          <div class="ml"><b>Andrew + Sean</b><span><span class="st you">1 UP</span>vs Sam + Jake</span></div>
+          <div class="ql mine anc"><span class="pin">2</span><span class="qg">You</span><span class="qw"><span class="qp">Andrew <b class="mk sm">4</b></span><span class="qp">Sean <b class="mk sm s">5</b></span></span></div>
+          <div class="cardy them anc"><span class="pin">1</span>
+            <div class="cardy-h">Sam + Jake <span>their cart</span></div>
+            <div class="pr"><div class="pn">Sam <span>from Sam’s phone</span></div><div class="pads"><span class="pad"><b class="mk c">3</b></span><span class="pad sel"><b class="mk">4</b></span><span class="pad"><b class="mk s">5</b></span><span class="pad"><b class="mk ss">6</b></span><span class="pad more"><i data-i="dots"></i></span></div></div>
+            <div class="pr"><div class="pn">Jake <span>waiting · tap to enter</span></div><div class="pads"><span class="pad"><b class="mk c">3</b></span><span class="pad"><b class="mk">4</b></span><span class="pad"><b class="mk s">5</b></span><span class="pad"><b class="mk ss">6</b></span><span class="pad more"><i data-i="dots"></i></span></div></div>
+          </div>
+          <div class="nx">Next hole · 1 to go</div>
+          <div class="fl"></div>
+          <nav class="tb"><span class="on"><i data-i="flag"></i></span><span><i data-i="rings"></i></span><span><i data-i="bars"></i></span><span><i data-i="grid"></i></span></nav>
+        </div>
+        <figcaption><b>Grow · open</b><ol class="notes"><li>Their row grew into their card, in their cart color, with the blur swap. Nothing slid up from the bottom.</li><li>Your cart folded into one quiet row with your scores, green rail on the left. Tap it to swap back.</li></ol></figcaption>
+      </figure>
+
+      <figure class="mock">
+        <div class="ph">
+          <div class="sb"><span>8:41</span><i class="island"></i><span class="bat"></span></div>
+          <div class="tp"><span class="av">A</span><b>Andrew</b><span class="tr">Rider Cup · Sat</span><span class="ib"><i data-i="dots"></i></span></div>
+          <div class="gap8"></div>
+          <span class="lb">Matches · holes 7–12</span>
+          <div class="ti">vs <span class="cc">Fore Play</span></div>
+          <div class="gap16"></div>
+          <div class="hero">
+            <span class="lb">Thru 3 · you’re 1 up</span>
+            <div style="display:flex;justify-content:space-between;align-items:flex-end"><div><div class="rw you">Hogan’s Heroes</div><div class="xl you">3½</div></div><div style="text-align:right"><div class="rw">Fore Play</div><div class="xl">2½</div></div></div>
+          </div>
+          <div class="gap24"></div>
+          <span class="lb">Hole 10 · live</span>
+          <div class="gap8"></div>
+          <div class="hs anc"><span class="pin">1</span><div><i></i><i></i><i></i><i></i><i></i><i></i></div><div><i></i><i></i><i></i><i class="live"></i><i class="fut"></i><i class="fut"></i></div><div><i class="fut"></i><i class="fut"></i><i class="fut"></i><i class="fut"></i><i class="fut"></i><i class="fut"></i></div></div>
+          <div class="gap24"></div>
+          <div class="box"><div class="mrow"><span class="mono">9 · p4</span><b>Andrew + Sean</b><span class="ok">low ball + low total</span></div><div class="mrow"><span class="mono">8 · p3</span><b>Halved</b><span class="ok">½ each</span></div></div>
+          <div class="fl"></div>
+          <div class="box peek anc" style="margin-bottom:112px"><span class="pin">2</span><span class="lb">Next · holes 13–18 · 2nd tee time</span><div class="rw">vs <span class="cb">Shank Redemption</span></div></div>
+          <nav class="tb"><span><i data-i="flag"></i></span><span class="on"><i data-i="rings"></i></span><span><i data-i="bars"></i></span><span><i data-i="grid"></i></span></nav>
+        </div>
+        <figcaption><b>One lit thing, the next thing peeks</b><ol class="notes"><li>Holes played are solid, the live hole is the one lit segment, holes ahead are dashed. Nothing else on the screen glows.</li><li>Your next rotation sits dimmed at the bottom edge. It wakes up when that rotation goes live.</li></ol></figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ================= 028 ================= -->
+  <section class="part" id="b028">
+    <div class="part-head">
+      <span class="badge"><span class="num">028</span><span class="covers">To-do 1 One Enter · 2 One Matches · 3 One Board · 4 the final card’s words</span></span>
+      <h2>Game slots: one round screen for every game</h2>
+      <p class="goal">Every game uses Team Ryder Cup’s four tabs as they are. Design only the slots each game fills: the line on top of Enter, who gets pads, what Matches shows, the Board’s top card and the final card’s winner line.</p>
+    </div>
+    <p class="refs-label">Today 2v2, Match play and Scorecard each have their own Enter, Matches and Board:</p>
+    <div class="refs">
+      <button class="ref" data-src="today/2v2-enter.jpg"><img src="today/2v2-enter.jpg" alt="Today: Enter, 2v2"><span>2v2 Enter</span></button>
+      <button class="ref" data-src="today/scorecard-enter.jpg"><img src="today/scorecard-enter.jpg" alt="Today: Enter, Scorecard"><span>Scorecard Enter</span></button>
+      <button class="ref" data-src="today/carts8-board.jpg"><img src="today/carts8-board.jpg" alt="Today: Board, Rider Cup"><span>Rider Cup Board</span></button>
+      <button class="ref" data-src="today/match-board.jpg"><img src="today/match-board.jpg" alt="Today: Board, Match play"><span>Match play Board</span></button>
+      <button class="ref" data-src="today/scorecard-matches.jpg"><img src="today/scorecard-matches.jpg" alt="Today: Matches, Scorecard"><span>Scorecard Matches</span></button>
+      <button class="ref" data-src="today/final-board.jpg"><img src="today/final-board.jpg" alt="Today: final Board"><span>Final, every other game</span></button>
+    </div>
+
+    <div class="cols">
+      <div class="panel">
+        <span class="kicker">Stays fixed (the template)</span>
+        <ul>
+          <li><b>Enter:</b> hole header, one line on top, your rows of four bare pads + ⋯, everyone else in your tee time as quiet rows, Next hole. Never scrolls.</li>
+          <li><b>Matches:</b> your match card, the hole strip, the chosen hole’s scores. Match play keeps its race (the design system already says so).</li>
+          <li><b>Board:</b> one top card, one switch, one list. Tap a row → it grows (027).</li>
+          <li><b>Final:</b> Team Ryder Cup’s final card: trophy, winner, score, Round recap, Share the result, Finalize.</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <span class="kicker">Enter for a group with no carts</span>
+        <p>Enter is: <b>your score first, then your cart partner if you have one, then the rest of your tee time.</b> With no carts you get one row of pads; the rest of your tee time is one quiet row. Tap it and it grows into their pads (027 rule 1). That is Rider Cup’s Enter with the partner row left out, so it’s one screen, not a new one.</p>
+      </div>
+    </div>
+
+    <div class="tablewrap" role="region" aria-label="The slots for each game" tabindex="0">
+      <table>
+        <thead><tr><th>Game</th><th>Enter · the line on top</th><th>Enter · who has pads</th><th>Matches</th><th>Board · top card</th><th>Final · winner line</th></tr></thead>
+        <tbody>
+          <tr class="tpl"><th>Team Ryder Cup <span>template, built</span></th><td class="mono">Andrew + Alex · 2 DN · vs Josh + Brandon</td><td>Your cart; the other cart quiet</td><td>Match card + hole strip</td><td>Cup card</td><td class="mono">Team Sean wins the cup · 4½–7½</td></tr>
+          <tr><th>Partner “Rider” Cup <span>built, cart colors kept</span></th><td class="mono">Andrew + Sean · 1 UP · vs Sam + Jake</td><td>Your cart; the other cart quiet</td><td>Match card + hole strip</td><td>Leader card: the top cart <span class="tag q">question</span></td><td class="mono">Shank Redemption win the day · 24 pts</td></tr>
+          <tr><th>2v2</th><td class="mono">Andrew + Sam · 1 UP · vs Sean + Jake<br><span class="muted">after a partner switch: “Holes 10–18 · with Sean”</span></td><td>You + your partner; the other pair quiet</td><td>Match card + hole strip <span class="tag">no design</span></td><td>Leader card: the top player</td><td class="mono">Jake wins · 15½ pts</td></tr>
+          <tr><th>Match play <span>split point, 2–6</span></th><td class="mono">3½ pts · 2nd · Chris +1</td><td>You; the rest of your tee time quiet</td><td>The race <span class="tag">keep</span></td><td>Leader card</td><td class="mono">Chris wins · 5⅓ pts</td></tr>
+          <tr><th>Scorecard only</th><td class="mono">+3 · 3rd · Sam +1</td><td>You; the rest of your tee time quiet</td><td>Your tee time <span class="tag q">question</span></td><td>Leader card: low score to par</td><td class="mono">Sam wins · 73 (+1)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="cols">
+      <div class="panel">
+        <span class="kicker">States to draw</span>
+        <ul>
+          <li>Enter for each game mid-hole; the quiet row when everyone’s in, when some are missing, and grown open.</li>
+          <li>Tee times of 2, 3, 4 and 5–6 players (Match play allows 6). A quiet row with too many names shortens to “Chris, Jake +2”.</li>
+          <li>Next hole waiting, and the tap that names who’s missing.</li>
+          <li>Before the first score: the top card shows the matchups, not zeros.</li>
+          <li>The Board’s leader card for each game, and with a tie for the lead.</li>
+          <li>The final card for each game, and a shared win.</li>
+        </ul>
+      </div>
+      <div class="panel decided">
+        <span class="kicker">Decided by Andrew · Nov 18</span>
+        <ul>
+          <li>What does Matches show on a Scorecard round? <span class="lean">Decided: <b>your tee time</b>: the players you’re with, to par, last three holes. Not hiding the tab, so the tab bar stays the same.</span></li>
+          <li>The switch under the top card says Cup / Players, Teams / Players or Points / Strokes depending on the game. <span class="lean">Decided: <b>Standings / Players</b> everywhere; Scorecard has no switch.</span></li>
+          <li>Rider Cup’s ranked-carts card becomes the leader card, with all four carts in the list under it? <span class="lean">Decided: <b>yes</b>. Two layouts total: the cup card for two sides, the leader card for everything else.</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="mocks">
+      <figure class="mock">
+        <div class="ph">
+          <div class="sb"><span>9:12</span><i class="island"></i><span class="bat"></span></div>
+          <div class="eh"><b class="hn">Hole 6</b><span class="hp">Par 5</span><span class="sp"></span><span class="ic"><i data-i="left"></i></span><span class="ic"><i data-i="right"></i></span><span class="ic"><i data-i="dots"></i></span></div>
+          <div class="ml anc"><span class="pin">1</span><b>Andrew</b><span><span class="st you">+3 · 3RD</span>Sam +1</span></div>
+          <div class="cardy">
+            <div class="pr"><div class="pn">Andrew</div><div class="pads"><span class="pad"><b class="mk c">4</b></span><span class="pad sel"><b class="mk">5</b></span><span class="pad"><b class="mk s">6</b></span><span class="pad"><b class="mk ss">7</b></span><span class="pad more"><i data-i="dots"></i></span></div></div>
+          </div>
+          <div class="sublabel">YOUR TEE TIME</div>
+          <div class="ql anc"><span class="pin">2</span><span class="qw"><span class="qp">Sean <b class="mk sm c">4</b></span><span class="qp">Sam <b class="mk sm">5</b></span><span class="qp">Jake <span class="dash">–</span></span></span><span class="go">Enter<i data-i="right"></i></span></div>
+          <div class="nx">Next hole · 1 to go</div>
+          <div class="fl"></div>
+          <nav class="tb"><span class="on"><i data-i="flag"></i></span><span><i data-i="rings"></i></span><span><i data-i="bars"></i></span><span><i data-i="grid"></i></span></nav>
+        </div>
+        <figcaption><b>Enter · Scorecard foursome</b><ol class="notes"><li>The slot: your place and the leader. Match play would say “3½ pts · 2nd · Chris +1”.</li><li>Everyone else in your tee time is one quiet row. Tap it and it grows into three pad rows.</li></ol></figcaption>
+      </figure>
+
+      <figure class="mock">
+        <div class="ph">
+          <div class="sb"><span>9:12</span><i class="island"></i><span class="bat"></span></div>
+          <div class="eh"><b class="hn">Hole 12</b><span class="hp">Par 4</span><span class="sp"></span><span class="ic"><i data-i="left"></i></span><span class="ic"><i data-i="right"></i></span><span class="ic"><i data-i="dots"></i></span></div>
+          <div class="ml anc"><span class="pin">1</span><b>Andrew + Sam</b><span><span class="st">4 DN</span>vs Sean + Jake</span></div>
+          <div class="cardy">
+            <div class="pr"><div class="pn">Andrew</div><div class="pads"><span class="pad"><b class="mk c">3</b></span><span class="pad"><b class="mk">4</b></span><span class="pad"><b class="mk s">5</b></span><span class="pad"><b class="mk ss">6</b></span><span class="pad more"><i data-i="dots"></i></span></div></div>
+            <div class="pr"><div class="pn">Sam</div><div class="pads"><span class="pad"><b class="mk c">3</b></span><span class="pad"><b class="mk">4</b></span><span class="pad"><b class="mk s">5</b></span><span class="pad"><b class="mk ss">6</b></span><span class="pad more"><i data-i="dots"></i></span></div></div>
+          </div>
+          <div class="ql"><span class="qg">Your group</span><span class="qw"><span class="qp">Sean <span class="dash">–</span></span><span class="qp">Jake <span class="dash">–</span></span></span><span class="go">Enter<i data-i="right"></i></span></div>
+          <div class="nx">Next hole · 4 to go</div>
+          <div class="fl"></div>
+          <nav class="tb"><span class="on"><i data-i="flag"></i></span><span><i data-i="rings"></i></span><span><i data-i="bars"></i></span><span><i data-i="grid"></i></span></nav>
+        </div>
+        <figcaption><b>Enter · 2v2</b><ol class="notes"><li>Same screen as Rider Cup. Only the line differs. After a partner switch it adds who you’re with now.</li></ol></figcaption>
+      </figure>
+
+      <figure class="mock">
+        <div class="ph">
+          <div class="sb"><span>11:02</span><i class="island"></i><span class="bat"></span></div>
+          <div class="tp"><span class="av">A</span><b>Andrew</b><span class="tr">Match play · Sun</span><span class="ib"><i data-i="dots"></i></span></div>
+          <div class="gap8"></div>
+          <div class="hero anc"><span class="pin">1</span>
+            <span class="lb">Leader · official thru 14</span>
+            <div style="display:flex;justify-content:space-between;align-items:center"><div class="ti ca">Chris</div><div class="xl">4⅓</div></div>
+            <div class="bd">up 1 on you</div>
+          </div>
+          <div class="gap12"></div>
+          <div class="seg anc"><span class="pin">2</span><span class="on">Standings</span><span>Players</span></div>
+          <div class="gap8"></div>
+          <div class="lr ca"><span class="rk">1</span><span class="nm">Chris</span><span class="sub">3 won · 2 split · thru 14</span><span class="bar"><i style="width:100%"></i></span><span class="pt">4⅓</span></div>
+          <div class="lr me you"><span class="rk">2</span><span class="nm">Andrew <em>YOU</em></span><span class="sub">2 won · 3 split · thru 14</span><span class="bar"><i style="width:77%"></i></span><span class="pt">3⅓</span></div>
+          <div class="lr cb"><span class="rk">3</span><span class="nm" style="color:var(--tx)">Jake</span><span class="sub">1 won · 3 split · thru 14</span><span class="bar"><i style="width:58%"></i></span><span class="pt">2½</span></div>
+          <div class="lr cc"><span class="rk">4</span><span class="nm" style="color:var(--tx)">Sam</span><span class="sub">1 won · 2 split · thru 14</span><span class="bar"><i style="width:46%"></i></span><span class="pt">2</span></div>
+          <div class="lr cd"><span class="rk">5</span><span class="nm" style="color:var(--tx)">Sean</span><span class="sub">1 won · 2 split · thru 14</span><span class="bar"><i style="width:42%"></i></span><span class="pt">1.83</span></div>
+          <div class="fl"></div>
+          <nav class="tb"><span><i data-i="flag"></i></span><span><i data-i="rings"></i></span><span class="on"><i data-i="bars"></i></span><span><i data-i="grid"></i></span></nav>
+        </div>
+        <figcaption><b>Board · the leader card</b><ol class="notes"><li>The one card every game without two sides uses: who leads, by how much, against you. Rider Cup, 2v2 and Scorecard fill the same card.</li><li>The same two words in every game.</li></ol></figcaption>
+      </figure>
+
+      <figure class="mock">
+        <div class="ph">
+          <div class="sb"><span>9:30</span><i class="island"></i><span class="bat"></span></div>
+          <div class="tp"><span class="av">A</span><b>Andrew</b><span class="tr">Scorecard · Sun</span><span class="ib"><i data-i="dots"></i></span></div>
+          <div class="gap8"></div>
+          <span class="lb">Matches · your tee time · thru 5</span>
+          <div class="ti anc"><span class="pin">1</span>2 back of Sam</div>
+          <div class="gap16"></div>
+          <div class="box">
+            <div class="mrow"><span class="mono">+1</span><b>Sam</b><span class="qp"><b class="mk sm">4</b><b class="mk sm c">2</b><b class="mk sm">5</b></span></div>
+            <div class="mrow"><span class="mono">+2</span><b>Jake</b><span class="qp"><b class="mk sm s">5</b><b class="mk sm">3</b><b class="mk sm">5</b></span></div>
+            <div class="mrow"><span class="mono you">+3</span><b class="you">Andrew</b><span class="qp"><b class="mk sm">4</b><b class="mk sm s">4</b><b class="mk sm">5</b></span></div>
+            <div class="mrow"><span class="mono">+3</span><b>Sean</b><span class="qp"><b class="mk sm ss d">6</b><b class="mk sm">3</b><b class="mk sm c">4</b></span></div>
+          </div>
+          <div class="gap12"></div>
+          <div class="bd" style="display:flex;justify-content:space-between"><span>Last three holes</span><span class="bg">Everyone on the Board<i data-i="right"></i></span></div>
+          <div class="fl"></div>
+          <nav class="tb"><span><i data-i="flag"></i></span><span class="on"><i data-i="rings"></i></span><span><i data-i="bars"></i></span><span><i data-i="grid"></i></span></nav>
+        </div>
+        <figcaption><b>Matches · Scorecard round</b> <span class="tag q">question</span><ol class="notes"><li>With no game there’s no match, so Matches becomes the four people you’re playing with: one hero line, to par, last three holes.</li></ol></figcaption>
+      </figure>
+
+      <figure class="mock">
+        <div class="ph">
+          <div class="sb"><span>1:48</span><i class="island"></i><span class="bat"></span></div>
+          <div class="tp"><span class="av">A</span><b>Andrew</b><span class="tr">Match play · final</span><span class="ib"><i data-i="dots"></i></span></div>
+          <div class="gap8"></div>
+          <div class="hero anc" style="justify-items:center;text-align:center;padding:22px 20px"><span class="pin">1</span>
+            <span class="lb">Final · 18 holes</span>
+            <span style="color:var(--mu)"><i data-i="trophy"></i></span>
+            <div class="ti ca">Chris wins</div>
+            <div class="xl">5⅓</div>
+            <div class="bd">points · 6 holes won outright</div>
+            <div class="gap8"></div>
+            <div class="bp" style="width:100%">Round recap</div>
+            <div class="bs" style="width:100%;background:var(--s2)">Share the result</div>
+          </div>
+          <div class="gap12"></div>
+          <div class="bs lock" style="display:flex;justify-content:center"><i data-i="lock"></i>Finalize round</div>
+          <div class="gap12"></div>
+          <div class="seg"><span class="on">Standings</span><span>Players</span></div>
+          <div class="gap8"></div>
+          <div class="lr ca"><span class="rk">1</span><span class="nm">Chris</span><span class="sub">6 won · 4 split</span><span class="bar"><i style="width:100%"></i></span><span class="pt">5⅓</span></div>
+          <div class="fl"></div>
+          <nav class="tb"><span><i data-i="flag"></i></span><span><i data-i="rings"></i></span><span class="on"><i data-i="bars"></i></span><span><i data-i="grid"></i></span></nav>
+        </div>
+        <figcaption><b>Final card · Match play</b><ol class="notes"><li>Team Ryder Cup’s final card with Match play’s words in the slot. No new layout: this one only needs the winner line per game.</li></ol></figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ================= 029 ================= -->
+  <section class="part" id="b029">
+    <div class="part-head">
+      <span class="badge"><span class="num">029</span><span class="covers">To-do 6 · home screen guide, lobby, scoring opens, invite, open scoring</span></span>
+      <h2>A lobby for every round</h2>
+      <p class="goal">Every round link leads to the same place: a lobby with your tee time, who you’re playing with and how today’s game works, which turns into “Scoring is open”. Team Ryder Cup’s lobby is the template; this brief is the version with no draft and no handicap to reveal.</p>
+    </div>
+    <p class="refs-label">Today only Team Ryder Cup has a lobby. Every other game ends setup on a code screen and drops players on a name list:</p>
+    <div class="refs">
+      <button class="ref" data-src="today/lb-day.jpg"><img src="today/lb-day.jpg" alt="Today: Ryder lobby, player"><span>Ryder lobby, player</span></button>
+      <button class="ref" data-src="today/lh-lobby.jpg"><img src="today/lh-lobby.jpg" alt="Today: Ryder lobby, organizer"><span>Ryder lobby, organizer</span></button>
+      <button class="ref" data-src="today/setup-live.jpg"><img src="today/setup-live.jpg" alt="Today: Round is live"><span>Every other game: “Round is live”</span></button>
+      <button class="ref" data-src="today/join-who.jpg"><img src="today/join-who.jpg" alt="Today: Who are you sheet"><span>Every other game: name sheet</span></button>
+    </div>
+
+    <div class="cols">
+      <div class="panel">
+        <span class="kicker">Stays fixed (already built for Team Ryder Cup)</span>
+        <ul>
+          <li>The invite (026), the add-to-home-screen guide, “Which one are you?”, “You’re Sean?”.</li>
+          <li>The handicap reveal, only when the organizer set handicaps (already the rule).</li>
+          <li>Scoring opens by itself 30 minutes before the first tee time; the organizer can open it sooner.</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <span class="kicker">What to design</span>
+        <ul>
+          <li><b>Player lobby, any game:</b> a countdown as the hero, your tee time lit, the other tee times peeking, today’s game in three lines, who has the app.</li>
+          <li><b>The game slot</b> in the lobby: Team Ryder Cup your team and the draft (built); Rider Cup your cart, its name and your matches; 2v2 your partner; Match play and Scorecard nothing extra.</li>
+          <li><b>Scoring is open:</b> your tee time card grows into hole 1.</li>
+          <li><b>Organizer lobby, any game:</b> who has the app (Share to the rest), when scoring opens, Open now.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="cols">
+      <div class="panel">
+        <span class="kicker">States to draw</span>
+        <ul>
+          <li>Days away, tomorrow, today, within the hour.</li>
+          <li>Nobody in yet; some in; all in.</li>
+          <li>One tee time only (a single foursome).</li>
+          <li>No date or time set yet.</li>
+          <li>Scoring is open while you’re still on the lobby.</li>
+          <li>Organizer taps Open now: confirm in place, no dialog.</li>
+          <li>Someone opens the link who isn’t playing: Follow along.</li>
+        </ul>
+      </div>
+      <div class="panel decided">
+        <span class="kicker">Decided by Andrew · Nov 18</span>
+        <ul>
+          <li>A countdown as the lobby’s hero number? <span class="lean">Decided: <b>yes</b> on the day; the date and time when it’s further out.</span></li>
+          <li>A round made at the course to play right now: skip the lobby? <span class="lean">Decided: <b>no lobby to wait in</b>. If scoring is open, the lobby is just “Scoring is open · Go to hole 1”.</span></li>
+          <li>Today’s game is a full-screen pager now. Keep it? <span class="lean">Decided: <b>no</b>. Three lines in the lobby, the full rules behind ⋯ → Rules.</span></li>
+        </ul>
+      </div>
+      <div class="panel">
+        <span class="kicker">For the build (not a design concern)</span>
+        <p class="muted">Today the lobby only switches on for Team Ryder Cup rounds, and the database checks that. Turning it on for every game needs a database change and a full test run before it ships.</p>
+      </div>
+    </div>
+
+    <div class="mocks">
+      <figure class="mock">
+        <div class="ph">
+          <div class="sb"><span>7:58</span><i class="island"></i><span class="bat"></span></div>
+          <div class="tp"><span class="av">S</span><b>Sean</b><span class="tr">Saturday · Twin Creeks</span><span class="ib"><i data-i="dots"></i></span></div>
+          <div class="gap8"></div>
+          <span class="lb">Today · Twin Creeks · Match play</span>
+          <div class="gap8"></div>
+          <div class="xl anc"><span class="pin">1</span>42 min</div>
+          <div class="bd" style="margin-top:6px">to your 8:40 tee time</div>
+          <div class="gap16"></div>
+          <div class="box lit anc"><span class="pin">2</span>
+            <span class="lb you">Your tee time · 8:40</span>
+            <div class="row2"><span class="chip you">Sean</span><span class="chip">Andrew</span><span class="chip">Sam</span><span class="chip">Jake</span></div>
+          </div>
+          <div class="gap8"></div>
+          <div class="box peek anc"><span class="pin">3</span><span class="lb">8:50 · Mike · Tyler · Chris · Matt</span></div>
+          <div class="gap16"></div>
+          <span class="lb">Today’s game</span>
+          <div class="gap8"></div>
+          <div class="box"><div class="rw">Match play</div><div class="bd">1 point a hole to the low net score. A tie for low splits it. Most points after 18 wins.</div></div>
+          <div class="gap16"></div>
+          <span class="lb">Who’s in · 7 of 8</span>
+          <div class="gap8"></div>
+          <div class="faces"><i class="me">S</i><i>A</i><i>S</i><i class="no">J</i><i>M</i><i>T</i><i>C</i><i>M</i></div>
+          <div class="bot"><div class="bd">Scoring opens by itself at 8:10.</div><div class="bs">Text Andrew</div></div>
+        </div>
+        <figcaption><b>Player lobby · Match play, today</b><ol class="notes"><li>One hero fact: how long until you tee off.</li><li>Your tee time is the one lit thing.</li><li>The next tee time peeks, dimmed.</li></ol></figcaption>
+      </figure>
+
+      <figure class="mock">
+        <div class="ph">
+          <div class="sb"><span>6:15</span><i class="island"></i><span class="bat"></span></div>
+          <div class="tp"><span class="av">A</span><b>Andrew</b><span class="tr">Friday Rider Cup</span><span class="ib"><i data-i="dots"></i></span></div>
+          <div class="gap8"></div>
+          <span class="lb">Tomorrow · Rider Cup</span>
+          <div class="gap8"></div>
+          <div class="xl">8:40</div>
+          <div class="bd" style="margin-top:6px">Saturday, 1st tee time</div>
+          <div class="gap16"></div>
+          <div class="box lit anc" style="gap:0"><span class="pin">1</span>
+            <span class="lb you" style="margin-bottom:8px">Your cart</span>
+            <div class="rw">Andrew + Sean</div>
+            <div class="gap8"></div>
+            <div class="typing">Hogan’s Her</div>
+            <div class="bd">Name it, or pick one: Bulbasaur, Eevee, Snorlax</div>
+          </div>
+          <div class="gap16"></div>
+          <span class="lb">Your matches</span>
+          <div class="gap8"></div>
+          <div class="box" style="gap:0">
+            <div class="mrow"><span class="mono">1–6</span><b>vs <span class="cb">Cart B</span></b><span class="ok">same tee time</span></div>
+            <div class="mrow peek"><span class="mono">7–12</span><b>vs <span class="cc">Cart C</span></b><span class="ok">2nd tee time</span></div>
+            <div class="mrow peek"><span class="mono">13–18</span><b>vs <span class="cd">Cart D</span></b><span class="ok">2nd tee time</span></div>
+          </div>
+          <div class="gap16"></div>
+          <span class="lb">Who’s in · 5 of 8</span>
+          <div class="gap8"></div>
+          <div class="faces"><i class="me">A</i><i>S</i><i>S</i><i>J</i><i>M</i><i class="no">T</i><i class="no">C</i><i class="no">M</i></div>
+          <div class="bot"><div class="bs">How today’s game works</div></div>
+        </div>
+        <figcaption><b>Player lobby · Rider Cup, tomorrow</b><ol class="notes"><li>The game slot: your cart and its name, typed in place as the last row (027 rule 5). This replaces the full-screen cart-name picker.</li></ol></figcaption>
+      </figure>
+
+      <figure class="mock">
+        <div class="ph">
+          <div class="sb"><span>8:12</span><i class="island"></i><span class="bat"></span></div>
+          <div class="tp"><span class="av">S</span><b>Sean</b><span class="tr">Saturday · Twin Creeks</span><span class="ib"><i data-i="dots"></i></span></div>
+          <div class="gap8"></div>
+          <span class="lb you">Scoring is open</span>
+          <div class="ti">8:40 with Andrew, Sam and Jake</div>
+          <div class="gap8"></div>
+          <div class="bd">Hole 1 · par 4. 1 point a hole to the low net score.</div>
+          <div class="gap24"></div>
+          <div class="box lit anc"><span class="pin">1</span>
+            <span class="lb you">Hole 1 · par 4 · 382 yd</span>
+            <div class="pads" style="grid-template-columns:repeat(4,1fr)"><span class="pad"><b class="mk c">3</b></span><span class="pad"><b class="mk">4</b></span><span class="pad"><b class="mk s">5</b></span><span class="pad"><b class="mk ss">6</b></span></div>
+          </div>
+          <div class="gap8"></div>
+          <div class="box peek"><span class="lb">8:50 · Mike · Tyler · Chris · Matt</span></div>
+          <div class="bot"><div class="bp">Go to hole 1</div><div class="bs">How today’s game works</div></div>
+        </div>
+        <figcaption><b>Scoring is open</b><ol class="notes"><li>Your tee time card has grown to show hole 1’s pads. Go to hole 1 grows it the rest of the way into Enter. A round made on the spot opens straight on this.</li></ol></figcaption>
+      </figure>
+
+      <figure class="mock">
+        <div class="ph">
+          <div class="sb"><span>7:40</span><i class="island"></i><span class="bat"></span></div>
+          <div class="tp"><span class="av">A</span><b>Andrew</b><span class="tr">Saturday · Twin Creeks</span><span class="ib"><i data-i="dots"></i></span></div>
+          <div class="gap8"></div>
+          <span class="lb">Saturday · host</span>
+          <div class="ti">7 of 8 have Golf Board</div>
+          <div class="gap16"></div>
+          <div class="setrow anc"><span class="pin">1</span><div class="rw">Scoring opens at 8:10<small>by itself, 30 min before the first tee time</small></div><span class="bg">Open now</span></div>
+          <div class="gap8"></div>
+          <div class="setrow"><div class="rw">Tee times and teams<small>change them until the first score</small></div><i data-i="right"></i></div>
+          <div class="gap16"></div>
+          <span class="lb">Everyone</span>
+          <div class="gap8"></div>
+          <div class="box" style="gap:0;padding-block:4px">
+            <div class="mrow"><b>Andrew</b><span class="ok"><i data-i="check"></i>organizer</span></div>
+            <div class="mrow"><b>Jake</b><span class="bg">Share</span></div>
+            <div class="mrow"><b>Sean</b><span class="ok"><i data-i="check"></i>has it</span></div>
+            <div class="mrow"><b>Sam</b><span class="ok"><i data-i="check"></i>has it</span></div>
+            <div class="mrow"><b>Mike</b><span class="ok"><i data-i="check"></i>has it</span></div>
+            <div class="mrow"><b>Tyler</b><span class="ok"><i data-i="check"></i>has it</span></div>
+          </div>
+          <div class="bot"><div class="bp">Share the invite</div></div>
+        </div>
+        <figcaption><b>Organizer lobby · any game</b><ol class="notes"><li>One row says when scoring opens and lets you open it now. Players who don’t have the app yet sort to the top with Share.</li></ol></figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ================= 030 ================= -->
+  <section class="part" id="b030">
+    <div class="part-head">
+      <span class="badge"><span class="num">030</span><span class="covers">To-do 7 · one Teams step, one Tee times step, then the lobby</span></span>
+      <h2>One setup</h2>
+      <p class="goal">Setup asks the same questions in the same order for every game: course, players, game, teams (only if the game has teams), tee times, invite. Course, players and game are already shared; this brief is the last three.</p>
+    </div>
+    <p class="refs-label">Today “Who rides together?” is built three times, and tee times exist in Setup for Rider Cup only:</p>
+    <div class="refs">
+      <button class="ref" data-src="today/setup-2v2.jpg"><img src="today/setup-2v2.jpg" alt="Today: 2v2 partners"><span>2v2 partners</span></button>
+      <button class="ref" data-src="today/setup-carts.jpg"><img src="today/setup-carts.jpg" alt="Today: Rider carts"><span>Rider Cup carts</span></button>
+      <button class="ref" data-src="today/setup-ryder-teams.jpg"><img src="today/setup-ryder-teams.jpg" alt="Today: Ryder carts"><span>Team Ryder Cup carts</span></button>
+      <button class="ref" data-src="today/setup-tee.jpg"><img src="today/setup-tee.jpg" alt="Today: Rider tee times"><span>Rider Cup tee times</span></button>
+      <button class="ref" data-src="today/host-rules.jpg"><img src="today/host-rules.jpg" alt="Today: tee times in Host rules"><span>Everyone else: tee times in Host</span></button>
+    </div>
+
+    <div class="cols">
+      <div class="panel">
+        <span class="kicker">Teams step: one frame</span>
+        <ul>
+          <li>Title by grouping: <b>“Who’s partners?”</b> (2v2), <b>“Who rides together?”</b> (Rider Cup, Team Ryder Cup).</li>
+          <li>Tap two names to swap; Shuffle.</li>
+          <li>Under it, only the game’s own setting: 2v2 switch partners; Rider Cup matchups (optional, a row that opens a sheet); Team Ryder Cup draft now or later.</li>
+          <li>Skipped for Match play and Scorecard: they have no teams.</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <span class="kicker">Tee times step: every game</span>
+        <ul>
+          <li><b>“Who tees off together?”</b> Groups in tee order, each with an optional time.</li>
+          <li>Tap two names (or two carts) to swap between groups.</li>
+          <li><b>Add a tee time</b> is the last row (027 rule 5).</li>
+          <li>Four players or fewer: one group, the time only.</li>
+          <li>The button says <b>Next: invite</b> and lands on the organizer lobby (029). “Round is live” retires.</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <span class="kicker">States to draw</span>
+        <ul>
+          <li>3, 4, 5–6, 8 and 16 players.</li>
+          <li>Times not set; one set; all set.</li>
+          <li>A group of 5 or 6 (Match play), and a group of one (warn: “Sam is alone at 9:00”).</li>
+          <li>Cart games: two carts per group, each in its cart color.</li>
+          <li>Swiping right goes back a step (already the rule).</li>
+        </ul>
+      </div>
+      <div class="panel decided">
+        <span class="kicker">Decided by Andrew · Nov 18</span>
+        <ul>
+          <li>Team Ryder Cup can form teams in Setup or in the lobby today. Pick one place? <span class="lean">Decided: Setup always makes the <b>carts</b>; the captains’ <b>draft</b> happens only in the lobby.</span></li>
+          <li>Scorecard with four or fewer: show the tee times step at all? <span class="lean">Decided: <b>yes, one group with a time</b>, so the lobby can count down.</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="mocks">
+      <figure class="mock">
+        <div class="ph">
+          <div class="sb"><span>9:05</span><i class="island"></i><span class="bat"></span></div>
+          <div class="su"><span class="back"><i data-i="left"></i>Game</span><span class="prog"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></span></div>
+          <div class="gap12"></div>
+          <span class="lb">Step 4 · Teams · 2v2</span>
+          <div class="ti">Who’s partners?</div>
+          <div class="gap8"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center"><span class="bd">Tap two names to swap.</span><span class="bg">Shuffle</span></div>
+          <div class="gap16"></div>
+          <div class="row2">
+            <div class="tc you"><span class="lb you">Team 1</span><span class="chip">Andrew</span><span class="chip">Sam</span></div>
+            <div class="tc b"><span class="lb cb">Team 2</span><span class="chip">Sean</span><span class="chip">Jake</span></div>
+          </div>
+          <div class="gap24"></div>
+          <span class="lb">Switch partners</span>
+          <div class="gap8"></div>
+          <div class="seg anc"><span class="pin">1</span><span class="on">Never</span><span>Every 6</span><span>At the turn</span></div>
+          <div class="gap8"></div>
+          <div class="bd">Same partner all 18.</div>
+          <div class="bot"><div class="bp">Next: tee times</div></div>
+        </div>
+        <figcaption><b>Teams · pairs</b><ol class="notes"><li>The game’s own setting sits under the teams. It’s the only part that changes between games on this step.</li></ol></figcaption>
+      </figure>
+
+      <figure class="mock">
+        <div class="ph">
+          <div class="sb"><span>9:05</span><i class="island"></i><span class="bat"></span></div>
+          <div class="su"><span class="back"><i data-i="left"></i>Game</span><span class="prog"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></span></div>
+          <div class="gap12"></div>
+          <span class="lb">Step 4 · Teams · Partner “Rider” Cup</span>
+          <div class="ti">Who rides together?</div>
+          <div class="gap8"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center"><span class="bd">Tap two names to swap.</span><span class="bg">Shuffle</span></div>
+          <div class="gap16"></div>
+          <div class="row2">
+            <div class="tc you"><span class="lb you">Cart A</span><span class="chip">Andrew</span><span class="chip">Sean</span></div>
+            <div class="tc b"><span class="lb cb">Cart B</span><span class="chip">Mike</span><span class="chip">Tyler</span></div>
+            <div class="tc c"><span class="lb cc">Cart C</span><span class="chip">Sam</span><span class="chip">Jake</span></div>
+            <div class="tc d"><span class="lb cd">Cart D</span><span class="chip">Chris</span><span class="chip">Matt</span></div>
+          </div>
+          <div class="gap16"></div>
+          <div class="setrow anc"><span class="pin">1</span><div class="rw">Matchups<small>standard: everyone plays everyone</small></div><i data-i="right"></i></div>
+          <div class="bot"><div class="bp">Next: tee times</div></div>
+        </div>
+        <figcaption><b>Teams · carts</b><ol class="notes"><li>Same frame as pairs. Rider Cup’s setting is the optional matchups row; cart names move to the lobby, where each cart names itself.</li></ol></figcaption>
+      </figure>
+
+      <figure class="mock">
+        <div class="ph">
+          <div class="sb"><span>9:06</span><i class="island"></i><span class="bat"></span></div>
+          <div class="su"><span class="back"><i data-i="left"></i>Game</span><span class="prog"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span></div>
+          <div class="gap12"></div>
+          <span class="lb">Step 4 · Tee times · Match play · 8</span>
+          <div class="ti">Who tees off together?</div>
+          <div class="gap8"></div>
+          <div class="bd">Tap two names to swap. Times are optional.</div>
+          <div class="gap16"></div>
+          <div class="box">
+            <div style="display:flex;justify-content:space-between;align-items:center"><span class="lb">1st</span><span class="tm"><i data-i="clock"></i>8:40</span></div>
+            <div class="row2"><span class="chip">Andrew</span><span class="chip">Sean</span><span class="chip">Sam</span><span class="chip">Jake</span></div>
+          </div>
+          <div class="gap8"></div>
+          <div class="box">
+            <div style="display:flex;justify-content:space-between;align-items:center"><span class="lb">2nd</span><span class="tm empty"><i data-i="clock"></i>Add time</span></div>
+            <div class="row2"><span class="chip">Mike</span><span class="chip">Tyler</span><span class="chip">Chris</span><span class="chip">Matt</span></div>
+          </div>
+          <div class="gap8"></div>
+          <div class="addrow anc"><span class="pin">1</span><i data-i="plus"></i>Add a tee time</div>
+          <div class="bot"><div class="bp">Next: invite</div></div>
+        </div>
+        <figcaption><b>Tee times · every game</b><ol class="notes"><li>New things go at the end. Match play has no teams step, so this is step 4 for it; the step count follows the game.</li></ol></figcaption>
+      </figure>
+
+      <figure class="mock">
+        <div class="ph">
+          <div class="sb"><span>9:06</span><i class="island"></i><span class="bat"></span></div>
+          <div class="su"><span class="back"><i data-i="left"></i>Teams</span><span class="prog"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span></div>
+          <div class="gap12"></div>
+          <span class="lb">Step 5 · Tee times · Partner “Rider” Cup</span>
+          <div class="ti">Who tees off together?</div>
+          <div class="gap8"></div>
+          <div class="bd">Tap two carts to swap. Your first match is the other cart in your group.</div>
+          <div class="gap16"></div>
+          <div class="box">
+            <div style="display:flex;justify-content:space-between;align-items:center"><span class="lb">1st</span><span class="tm"><i data-i="clock"></i>8:40</span></div>
+            <div class="row2"><span class="chip you" style="background:var(--tyou)">Cart A</span><span class="chip cb" style="background:var(--tb)">Cart B</span></div>
+          </div>
+          <div class="gap8"></div>
+          <div class="box">
+            <div style="display:flex;justify-content:space-between;align-items:center"><span class="lb">2nd</span><span class="tm"><i data-i="clock"></i>8:50</span></div>
+            <div class="row2"><span class="chip cc" style="background:var(--tc)">Cart C</span><span class="chip cd" style="background:var(--td)">Cart D</span></div>
+          </div>
+          <div class="gap8"></div>
+          <div class="addrow"><i data-i="plus"></i>Add a tee time</div>
+          <div class="gap16"></div>
+          <div class="box peek anc"><span class="pin">1</span><span class="lb">Your matches · 1–6 Cart B · 7–12 Cart C · 13–18 Cart D</span></div>
+          <div class="bot"><div class="bp">Next: invite</div></div>
+        </div>
+        <figcaption><b>Tee times · carts</b><ol class="notes"><li>Same screen, carts instead of names. What your tee times mean for your matches peeks underneath.</li></ol></figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ================= 032 ================= -->
+  <section class="part" id="b032">
+    <div class="part-head">
+      <span class="badge"><span class="num">032</span><span class="covers">Changes 030’s Game step and the five games in Read first · send back as <code>features/032-games-by-player-count</code></span></span>
+      <h2>Games by player count</h2>
+      <p class="goal">Setup already knows how many are playing when it reaches the Game step. Show only the games that fit that number. Instead of five games there are three, and how a hole is scored becomes a setting of the game you pick.</p>
+      <p class="lede">Why: two of today’s games are really one game. “Match play” is split point. “2v2” and “Partner Rider Cup” are both you and your cart partner against another cart, once for 4 players and once for 8. Most rounds are a foursome, so the foursome is drawn first.</p>
+    </div>
+    <p class="refs-label">Today’s partner and cart steps, which 030 already folds into one Teams step:</p>
+    <div class="refs">
+      <button class="ref" data-src="today/setup-2v2.jpg"><img src="today/setup-2v2.jpg" alt="Today: 2v2 partners"><span>2v2 partners</span></button>
+      <button class="ref" data-src="today/setup-carts.jpg"><img src="today/setup-carts.jpg" alt="Today: Rider carts"><span>Rider Cup carts</span></button>
+    </div>
+
+    <div class="cols">
+      <div class="panel">
+        <span class="kicker">The three games</span>
+        <ul>
+          <li><b>Everyone alone:</b> a point a hole. The low net score takes it; a tie for low splits it. 2–6 players. (Today’s Match play / split point.)</li>
+          <li><b>2v2 with your partner:</b> real match play. Your cart against theirs; win the hole and go 1 up, a tie pushes (“2 UP”, “3 &amp; 2”). 4, 6 or 8 players. (Today’s 2v2 and Partner “Rider” Cup.)</li>
+          <li><b>Stroke play:</b> just the scorecard; the lowest total wins. Any number. (Today’s Scorecard only.)</li>
+          <li><b>Team Ryder Cup</b> stays as it is for 16, under its own name.</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <span class="kicker">The Game step: one frame</span>
+        <ul>
+          <li>The kicker says the count: “Step 3 · Game · 4 players”. Under the title, one line names the shape: “A foursome.”, “Two foursomes.”</li>
+          <li>The list shows only the games that fit. <b>Nothing is greyed out</b>, and “Add 2 more players to play this” goes away.</li>
+          <li>Each row says what the game is in one line, not what it’s called in the code.</li>
+          <li>The picked row <b>grows in place</b> (027 rule 1) to show its one scoring setting. Nothing else changes on the step.</li>
+          <li>If only one game fits (1, 7, 9–15 players), show Stroke play already picked with one line saying why, not an empty choice.</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <span class="kicker">What each game shows when it grows</span>
+        <ul>
+          <li><b>2v2:</b> “A hole is won by” · Best ball (default) · Best ball + total (2 points a hole) · Scramble <span class="tag">later</span>.</li>
+          <li><b>2v2 for 8:</b> “Opponents” · Same all day (the cart in your tee time) · Rotate (every other cart, 6 holes each; today’s Rider Cup). Rotate keeps 030’s optional Matchups row on the Teams step.</li>
+          <li><b>Everyone alone:</b> “A tie for low” · Splits it (default) · Carries over <span class="tag">later</span> (skins).</li>
+          <li><b>Stroke play:</b> no setting.</li>
+          <li>Partners, Switch partners and carts stay on 030’s Teams step. Everyone alone and Stroke play skip it.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="tablewrap" role="region" aria-label="Games by player count" tabindex="0">
+      <table class="map">
+        <thead><tr><th>Players</th><th>Stroke play</th><th>Everyone alone</th><th>2v2 with your partner</th><th>Team Ryder Cup</th><th>Replaces today</th></tr></thead>
+        <tbody>
+          <tr><th>1</th><td class="same">Only choice</td><td class="na">—</td><td class="na">—</td><td class="na">—</td><td class="na">Scorecard only</td></tr>
+          <tr><th>2</th><td class="same">Yes</td><td><b>1v1 match play</b>: with two players a point a hole is match play, so it reads “2 UP”, not points</td><td class="na">—</td><td class="na">—</td><td class="na">Scorecard, Match play</td></tr>
+          <tr><th>3, 5</th><td class="same">Yes</td><td class="same">A point a hole</td><td class="na">—</td><td class="na">—</td><td class="na">Scorecard, Match play</td></tr>
+          <tr class="four"><th>4</th><td class="same">Yes</td><td class="same">A point a hole</td><td><b>Your cart against theirs</b></td><td class="na">—</td><td class="na">Scorecard, Match play, 2v2</td></tr>
+          <tr><th>6</th><td class="same">Yes</td><td class="same">A point a hole</td><td><b>3 carts</b>: every cart plays the other two at once (as today)</td><td class="na">—</td><td class="na">Scorecard, Match play, Rider Cup for 6</td></tr>
+          <tr><th>7, 9–15</th><td class="same">Only choice</td><td class="na">—</td><td class="na">—</td><td class="na">—</td><td class="na">Scorecard only</td></tr>
+          <tr><th>8</th><td class="same">Yes</td><td class="na">— (not now)</td><td><b>In every foursome</b>; opponents the same all day, or rotate</td><td class="na">—</td><td class="na">Scorecard, Rider Cup</td></tr>
+          <tr><th>16</th><td class="same">Yes</td><td class="na">—</td><td class="na">—</td><td><b>As is</b></td><td class="na">Scorecard, Team Ryder Cup</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="cols">
+      <div class="panel">
+        <span class="kicker">States to draw</span>
+        <ul>
+          <li>The Game step for 2, 3, 4, 6, 8 and 16 players, and the one-choice case (7 players).</li>
+          <li>Each game picked and grown: 2v2 for 4, 2v2 for 8, Everyone alone. Stroke play picked (it doesn’t grow).</li>
+          <li>Switching the pick: the old row folds, the new one grows.</li>
+          <li>Scramble and Carries over drawn as options so they’re ready, but marked for later (see Decided).</li>
+          <li>The button: “Next: partners” (2v2 for 4), “Next: carts” (8), “Next: tee times” (Everyone alone, Stroke play), as 030 sets the order.</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <span class="kicker">Words</span>
+        <ul>
+          <li><b>Match play</b> means only head to head with holes up: 2v2, 1v1, a cart against a cart.</li>
+          <li><b>“Split point”</b> and <b>“Partner Rider Cup”</b> leave the app. The game names are Everyone alone, 2v2 with your partner, Stroke play and Team Ryder Cup.</li>
+          <li>The Rules sheet, the “How today’s game works” card and Home’s round summary use the same names.</li>
+        </ul>
+      </div>
+      <div class="panel decided">
+        <span class="kicker">Decided by Andrew · Nov 18</span>
+        <ul>
+          <li>2v2 counts holes up instead of points per player? <span class="lean">Decided: <b>yes</b>, best ball by default. Best ball + total stays at 2 points a hole. With a partner switch, each stretch is its own match, and the day goes to whoever wins the most of them.</span></li>
+          <li>Everyone alone for 7 or 8, across two tee times? <span class="lean">Decided: <b>not now</b>; 2–6 players as today.</span></li>
+          <li>Names? <span class="lean">Decided: say what the game is. “Split point” and “Partner Rider Cup” go; <b>Team Ryder Cup</b> keeps its name.</span></li>
+          <li>Scramble and carry over? <span class="lean">Decided: built <b>after the one-Board work</b>. Setup ships first with what’s already built.</span></li>
+        </ul>
+      </div>
+      <div class="panel decided">
+        <span class="kicker">Also decided · Nov 18 · 8 players</span>
+        <ul>
+          <li><b>Rotate</b>: keep Rider Cup’s points scoring as it is? <span class="lean">Decided: <b>yes</b>. It has been played for real; changing it can wait.</span></li>
+          <li><b>Same all day</b>: how are the four carts ranked on one Board when each played a different match? <span class="lean">Decided: <b>by result</b> (won, halved, lost), then by how many holes up.</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="mocks">
+      <figure class="mock">
+        <div class="ph">
+          <div class="sb"><span>9:02</span><i class="island"></i><span class="bat"></span></div>
+          <div class="su"><span class="back"><i data-i="left"></i>Players</span><span class="prog"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i></span></div>
+          <div class="gap12"></div>
+          <span class="lb">Step 3 · Game · 4 players</span>
+          <div class="ti">Pick a game</div>
+          <div class="gap8"></div>
+          <div class="bd">A foursome.</div>
+          <div class="gap16"></div>
+          <div class="gl">
+            <div class="gm"><i class="rd"></i><b>Everyone alone</b><span>A point a hole to the low net score.</span></div>
+            <div class="gm on anc"><span class="pin">1</span><i class="rd"></i><b>2v2 with your partner</b><span>Your cart against theirs. Win the hole, go 1 up. Ties push.</span>
+              <div class="fld anc"><span class="pin">2</span><span class="lb">A hole is won by</span>
+                <div class="seg two"><span class="on">Best ball<small>low ball</small></span><span>Ball + total<small>2 a hole</small></span><span>Scramble<small class="nw">later</small></span></div>
+              </div>
+            </div>
+            <div class="gm"><i class="rd"></i><b>Stroke play</b><span>Just the scorecard. Lowest total wins.</span></div>
+          </div>
+          <div class="bot"><div class="bp">Next: partners</div></div>
+        </div>
+        <figcaption><b>Game · 4 players · 2v2 picked</b><ol class="notes"><li>Only the three games that fit four. The picked row grows in place.</li><li>Its one setting lives inside it. Partners and Switch partners stay on the Teams step (030).</li></ol></figcaption>
+      </figure>
+
+      <figure class="mock">
+        <div class="ph">
+          <div class="sb"><span>9:02</span><i class="island"></i><span class="bat"></span></div>
+          <div class="su"><span class="back"><i data-i="left"></i>Players</span><span class="prog"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></span></div>
+          <div class="gap12"></div>
+          <span class="lb">Step 3 · Game · 4 players</span>
+          <div class="ti">Pick a game</div>
+          <div class="gap8"></div>
+          <div class="bd">A foursome.</div>
+          <div class="gap16"></div>
+          <div class="gl">
+            <div class="gm on anc"><span class="pin">1</span><i class="rd"></i><b>Everyone alone</b><span>A point a hole to the low net score.</span>
+              <div class="fld"><span class="lb">A tie for low</span>
+                <div class="seg two"><span class="on">Splits it<small>½ each</small></span><span>Carries over<small class="nw">later · skins</small></span></div>
+              </div>
+            </div>
+            <div class="gm"><i class="rd"></i><b>2v2 with your partner</b><span>Your cart against theirs. Win the hole, go 1 up. Ties push.</span></div>
+            <div class="gm"><i class="rd"></i><b>Stroke play</b><span>Just the scorecard. Lowest total wins.</span></div>
+          </div>
+          <div class="bot"><div class="bp">Next: tee times</div></div>
+        </div>
+        <figcaption><b>Game · 4 players · Everyone alone picked</b><ol class="notes"><li>Same list, a different row grown. There’s no Teams step, so the button goes straight to tee times and the progress bar has one step fewer.</li></ol></figcaption>
+      </figure>
+
+      <figure class="mock">
+        <div class="ph">
+          <div class="sb"><span>9:02</span><i class="island"></i><span class="bat"></span></div>
+          <div class="su"><span class="back"><i data-i="left"></i>Players</span><span class="prog"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i></span></div>
+          <div class="gap12"></div>
+          <span class="lb">Step 3 · Game · 8 players</span>
+          <div class="ti">Pick a game</div>
+          <div class="gap8"></div>
+          <div class="bd">Two foursomes.</div>
+          <div class="gap16"></div>
+          <div class="gl">
+            <div class="gm on anc"><span class="pin">1</span><i class="rd"></i><b>2v2 in every foursome</b><span>Each cart plays a cart. All four carts on one Board.</span>
+              <div class="fld anc"><span class="pin">2</span><span class="lb">Opponents</span>
+                <div class="seg two"><span class="on">Same all day<small>your tee time</small></span><span>Rotate<small>every cart · 6 holes</small></span></div>
+              </div>
+            </div>
+            <div class="gm"><i class="rd"></i><b>Stroke play</b><span>Just the scorecard. Lowest total wins.</span></div>
+          </div>
+          <div class="bot"><div class="bp">Next: carts</div></div>
+        </div>
+        <figcaption><b>Game · 8 players</b><ol class="notes"><li>The same 2v2 game, once in each foursome.</li><li>Rotate is today’s Partner “Rider” Cup, now a setting. A hole is still won by best ball or best ball + total; that row sits under Opponents and isn’t drawn here.</li></ol></figcaption>
+      </figure>
+
+      <figure class="mock">
+        <div class="ph">
+          <div class="sb"><span>9:02</span><i class="island"></i><span class="bat"></span></div>
+          <div class="su"><span class="back"><i data-i="left"></i>Players</span><span class="prog"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></span></div>
+          <div class="gap12"></div>
+          <span class="lb">Step 3 · Game · 7 players</span>
+          <div class="ti">Pick a game</div>
+          <div class="gap8"></div>
+          <div class="bd">Two tee times, of 4 and 3.</div>
+          <div class="gap16"></div>
+          <div class="gl">
+            <div class="gm on anc"><span class="pin">1</span><i class="rd"></i><b>Stroke play</b><span>Just the scorecard. Lowest total wins.</span></div>
+          </div>
+          <div class="gap12"></div>
+          <p class="hint">Everyone alone needs 2–6 players; 2v2 needs 4, 6 or 8. Remove one player to play either.</p>
+          <div class="bot"><div class="bp">Next: tee times</div></div>
+        </div>
+        <figcaption><b>Game · one choice</b><ol class="notes"><li>When only Stroke play fits, it’s already picked, and one line says why. There are no greyed-out rows to read past.</li></ol></figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ================= NO DESIGN ================= -->
+  <section class="part" id="skip">
+    <div class="part-head"><span class="kicker">Not in these briefs</span><h2>No design needed</h2><p class="lede">These copy a Team Ryder Cup screen as it is, so they go straight to the build.</p></div>
+    <div class="cols">
+      <div class="panel">
+        <h3>To-do 4 · One final card</h3>
+        <p class="muted">Every game ends on Team Ryder Cup’s final card. The only new part is each game’s winner line, which is in brief 028’s table.</p>
+      </div>
+      <div class="panel">
+        <h3>To-do 5 · One front door</h3>
+        <p class="muted">Every round link opens on the invite (026), then the full-screen “Which one are you?”, then “You’re Sean?”. The name sheet retires.</p>
+      </div>
+      <div class="panel">
+        <h3>2v2 onto the match card</h3>
+        <p class="muted">2v2 is already one pair against another, so its Matches tab moves onto the match card and hole strip unchanged.</p>
+      </div>
+      <div class="panel ask">
+        <span class="kicker">Still open · build calls, not design</span>
+        <ul>
+          <li>Naming your cart: into the lobby (029), or cut? <span class="lean">Decided: <b>lobby</b>.</span></li>
+          <li>“Switch it up” card and the clinch alert: every game with matches, or cut?</li>
+          <li>Coach tips: rewrite for the calm Enter, or cut?</li>
+          <li>Season standings only count Rider Cup points: fix with this work, or after?</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p>The phones are first passes drawn in this page with the app’s dark tokens, at 72% of real size. The small screenshots are today’s live app (main @ b865c66), from the Golf Board map.</p>
+    <p>Feel reference: the Anchor concept by Alexpuda, sent as two screen recordings alongside this page. It is described here in words; none of its frames are reproduced.</p>
+    <p>Comment on anything with the comment button. Andrew’s decisions (Nov 18) are marked “Decided”.</p>
+  </footer>
+</div>
+
+<dialog id="lb" aria-label="Today’s screen">
+  <div class="lbx"><img id="lb-img" alt=""><button class="btn" id="lb-close">Close</button></div>
+</dialog>
+
+<script>
+const ICONS = {
+  left: '<path d="M15 18l-6-6 6-6"/>',
+  right: '<path d="M9 18l6-6-6-6"/>',
+  dots: '<circle cx="5" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.6" fill="currentColor" stroke="none"/>',
+  flag: '<path d="M6 21V4"/><path d="M6 4h11l-3 4 3 4H6"/>',
+  rings: '<circle cx="8.5" cy="12" r="4.5"/><circle cx="15.5" cy="12" r="4.5"/>',
+  bars: '<path d="M5 7h14M5 12h10M5 17h7"/>',
+  grid: '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 10h16M4 15h16M10 4v16M15 4v16"/>',
+  check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  clock: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
+  lock: '<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+  trophy: '<path d="M8 4h8v5a4 4 0 0 1-8 0V4z"/><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8.5 20h7M10 17h4"/>',
+};
+document.querySelectorAll('.ph i[data-i]').forEach((el) => {
+  const p = ICONS[el.dataset.i];
+  if (p) el.outerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true">${p}</svg>`;
+});
+const dlg = document.getElementById('lb');
+document.addEventListener('click', (e) => {
+  const r = e.target.closest('.ref');
+  if (r) { const img = document.getElementById('lb-img'); img.src = r.dataset.src; img.alt = r.querySelector('img').alt; dlg.showModal(); return; }
+  if (e.target === dlg || e.target.classList.contains('lbx')) dlg.close();
+});
+document.getElementById('lb-close').onclick = () => dlg.close();
+</script>
