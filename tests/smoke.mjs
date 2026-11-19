@@ -37,7 +37,7 @@ const srv = await serve();
 const be = createBackend();
 const r = seedRound(be);
 const link = `${srv.origin}/#/e/${r.code}`;
-const browser = await chromium.launch();
+const browser = await chromium.launch(process.env.PW_CHROMIUM ? { executablePath: process.env.PW_CHROMIUM } : {}); // PW_CHROMIUM: a browser path when Playwright's own isn't installed
 const results = [];
 let failed = 0;
 
