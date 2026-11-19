@@ -97,6 +97,11 @@ tr.tpl th, tr.tpl td { background: var(--tint-you); }
 .ref img { width: 92px; aspect-ratio: 393 / 852; object-fit: cover; border-radius: 10px; border: 1px solid var(--line); display: block; background: var(--surface-2); }
 .ref span { font-size: 12px; line-height: 1.3; color: var(--text-muted); }
 .ref:focus-visible img { outline: 2px solid var(--note); outline-offset: 2px; }
+.shots { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px 16px; }
+.shots .ref { width: auto; }
+.shots .ref img { width: 100%; aspect-ratio: 393 / 659; border-radius: 16px; }
+.shots .ref span { font-size: 13px; }
+.shots .ref span b { color: var(--text); font-weight: 600; display: block; }
 
 .mocks { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 32px 20px; }
 figure.mock { margin: 0; display: grid; gap: 12px; justify-items: center; align-content: start; min-width: 0; }
@@ -294,7 +299,7 @@ table.map tr.four th, table.map tr.four td { background: var(--tint-you); }
 
 <div class="wrap">
   <header class="top">
-    <span class="kicker">Golf Live Board · design briefs 027–030 · Nov 17, 2026 · 032 added Nov 18</span>
+    <span class="kicker">Golf Live Board · design briefs 027–030 · Nov 17, 2026 · 032 added Nov 18 · agreed designs added Nov 19</span>
     <h1>One app for every game</h1>
     <p class="lede">Team Ryder Cup is the most finished game in the app: the invite, the lobby, the calm Enter, the cup Board and the final card. These four briefs ask for the pieces needed to give every other game that same journey. Each brief says what stays fixed, the few places a game may differ, the states to draw, and which questions are still open. The phones are first passes drawn with the app’s own tokens so you have something concrete to react to. Rebuild them in the components; don’t trace them.</p>
   </header>
@@ -302,6 +307,7 @@ table.map tr.four th, table.map tr.four td { background: var(--tint-you); }
   <nav class="toc" aria-label="Briefs">
     <ol>
       <li><a href="#start">Read first</a></li>
+      <li><a href="#agreed"><span class="n">New</span>Agreed · Nov 19</a></li>
       <li><a href="#b027"><span class="n">027</span>The feel</a></li>
       <li><a href="#b028"><span class="n">028</span>Game slots</a></li>
       <li><a href="#b029"><span class="n">029</span>A lobby for every round</a></li>
@@ -353,6 +359,107 @@ table.map tr.four th, table.map tr.four td { background: var(--tint-you); }
           <li>Start new screens from the <b>North star</b> page of the App Screens canvas.</li>
           <li><b>Order:</b> 027 first, because the others use its rules. Then 028, 029, 030.</li>
           <li>“Decided” boxes are Andrew’s calls (Nov 18): draw what they say. The one amber box left is for the build, not for you.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= AGREED · NOV 19 ================= -->
+  <section class="part" id="agreed">
+    <div class="part-head">
+      <span class="kicker">Nov 19 · worked out on the Claude Design canvas</span>
+      <h2>What we agreed, and what’s still open</h2>
+      <p class="goal">The Board, Matches and the Game step were redrawn over four passes on the canvas. This is where they landed. Where it differs from briefs 028 and 032 below, this section wins.</p>
+    </div>
+    <p class="refs-label">Every drawing, including the ones we dropped, is on the canvas: <a href="https://claude.ai/artifact/6d76RhvkedJGkb7R3gM6MR">Golf Board · briefs 028–032</a>, page “Fourth pass · who you play for”. Nothing here has gone to the engineer yet.</p>
+
+    <h3>The rule: who are you playing for?</h3>
+    <div class="tablewrap" role="region" aria-label="Who you play for" tabindex="0">
+      <table>
+        <thead><tr><th>You’re playing for</th><th>How it’s set up</th><th>The Board is about</th><th>Matches shows</th></tr></thead>
+        <tbody>
+          <tr><th>Yourself</th><td>Partners switch (a foursome, or 8)</td><td>You: your place and points on a players leaderboard, then your matches</td><td>The stretch you’re in now, one tab per partner</td></tr>
+          <tr><th>Your cart</th><td>Partner fixed, opponents switch (8 players, or three carts for 6)</td><td>Your team: carts ranked, then the matches that made the score</td><td>Your match, one tab per opponent</td></tr>
+          <tr><th>Your cart, one match</th><td>Partner and opponents the same all day (a foursome, or each foursome of 8)</td><td>That match: two totals and one bar</td><td>The hole calendar</td></tr>
+          <tr><th>Yourself, no partner</th><td>Everyone alone (2–6)</td><td>The leaderboard, nothing above it but your place</td><td>The race</td></tr>
+          <tr><th>Nobody: just your score</th><td>Stroke play (any number)</td><td>The leaderboard, to par</td><td>Your group’s last three holes</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Agreed: the race, and a player’s round</h3>
+    <div class="shots">
+      <button class="ref" data-src="agreed/r-1.png"><img src="agreed/r-1.png" alt="After hole 1"><span><b>After hole 1</b>Just the leaderboard, plus “How it works” for the first few holes.</span></button>
+      <button class="ref" data-src="agreed/r-9.png"><img src="agreed/r-9.png" alt="At the turn"><span><b>At the turn</b>Place, Pts and Back. Nothing else until it matters.</span></button>
+      <button class="ref" data-src="agreed/r-15.png"><img src="agreed/r-15.png" alt="3 holes left"><span><b>3 holes left</b>The amber card says what this hole decides. Out of reach = under the line.</span></button>
+      <button class="ref" data-src="agreed/r-won.png"><img src="agreed/r-won.png" alt="Clinched"><span><b>Clinched</b>The winner is alone above the line. You’re told what you’re still playing for.</span></button>
+      <button class="ref" data-src="agreed/b-player-open.png"><img src="agreed/b-player-open.png" alt="Tap a player"><span><b>Tap a player</b>The round card the app already has, with one line for the game.</span></button>
+    </div>
+
+    <div class="cols">
+      <div class="panel decided">
+        <span class="kicker">Agreed by Andrew · Nov 19</span>
+        <ul>
+          <li><b>Partner swap and opponent swap are different games.</b> The table above decides what every screen shows.</li>
+          <li><b>The race:</b> the leaderboard with Pts and Back, an “Out of reach” line that appears when someone can’t catch up, and a card on top only when a hole decides something. No bars, no lock number.</li>
+          <li><b>Tap a player</b> opens the round card the app already has.</li>
+          <li><b>Headlines are short:</b> your place (“2nd”), with the detail small beside it.</li>
+          <li><b>No hole-by-hole bar on the Board.</b> Totals and one bar that fills up. Its middle line is always half the points, labeled with what wins (“9½ to win”).</li>
+          <li><b>The hole calendar</b> lives on Matches, with empty holes outlined.</li>
+          <li><b>Never two scoreboards:</b> a mini leaderboard only where the matches under it make up the standings.</li>
+          <li><b>The glow</b> goes on the one live thing on each screen.</li>
+          <li><b>Not built yet = “coming soon”</b> (Scramble, Carries over).</li>
+          <li><b>How we work:</b> design on the canvas, you approve, then one brief for the engineer. The 031 and 032 folders in the repo are drafts, not to be built from.</li>
+        </ul>
+      </div>
+      <div class="panel ask">
+        <span class="kicker">Still open before the hand-off</span>
+        <ul>
+          <li><b>Switch partners scoring.</b> I drew points (every hole you win or halve counts, added up over all your partners). On Nov 18 you said the day goes to whoever wins the most stretches. Which one?</li>
+          <li><b>Cart colors off everywhere?</b> Everything above is drawn green for you, white or grey for everyone else.</li>
+          <li><b>One decimal for point totals</b> (4.3, not 4⅓)?</li>
+          <li><b>A warning before you’re out?</b> Without the bar, nothing tells you you’re one hole from the line. Option: the amber card one hole earlier.</li>
+          <li><b>The names.</b> “Switch partners”, “Keep your partner”, “Everyone alone”, “Stroke play”: are these what Rules, the lobby and Home call the games?</li>
+          <li><b>8 players switching partners.</b> Do you switch within your foursome, or across both?</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>Drawn on the fourth pass, waiting on your OK</h3>
+    <div class="shots">
+      <button class="ref" data-src="agreed/f-setup4.png"><img src="agreed/f-setup4.png" alt="Setup · 4 players"><span><b>Setup · 4 players</b>“How are you playing?” replaces “Pick a game”.</span></button>
+      <button class="ref" data-src="agreed/f-setup8.png"><img src="agreed/f-setup8.png" alt="Setup · 8 players"><span><b>Setup · 8 players</b>Keep your partner, then: opponents switch or stay.</span></button>
+      <button class="ref" data-src="agreed/f-sw-board.png"><img src="agreed/f-sw-board.png" alt="Switch partners · Board"><span><b>Switch partners · Board</b>About you: your place and points, then your matches.</span></button>
+      <button class="ref" data-src="agreed/f-sw-match.png"><img src="agreed/f-sw-match.png" alt="Switch partners · Matches"><span><b>Switch partners · Matches</b>The stretch you’re in, one tab per partner.</span></button>
+      <button class="ref" data-src="agreed/f-rot-board.png"><img src="agreed/f-rot-board.png" alt="Opponents switch · Board"><span><b>Opponents switch · Board</b>Carts ranked, then the live matches.</span></button>
+      <button class="ref" data-src="agreed/f-rot-match.png"><img src="agreed/f-rot-match.png" alt="Opponents switch · Matches"><span><b>Opponents switch · Matches</b>One tab per six holes. The line says what wins.</span></button>
+      <button class="ref" data-src="agreed/f-3c-board.png"><img src="agreed/f-3c-board.png" alt="Three carts · Board"><span><b>Three carts · Board</b>Same Board with three carts.</span></button>
+      <button class="ref" data-src="agreed/f-1m-board.png"><img src="agreed/f-1m-board.png" alt="One match · Board"><span><b>One match · Board</b>Two totals and one bar, like the cup card.</span></button>
+      <button class="ref" data-src="agreed/f-1m-match.png"><img src="agreed/f-1m-match.png" alt="One match · Matches"><span><b>One match · Matches</b>The hole calendar: W, L or ½ on every hole.</span></button>
+      <button class="ref" data-src="agreed/f-8same-board.png"><img src="agreed/f-8same-board.png" alt="One match each · 8 players"><span><b>One match each · 8 players</b>Both matches, yours lit.</span></button>
+      <button class="ref" data-src="agreed/f-stroke-board.png"><img src="agreed/f-stroke-board.png" alt="Stroke play · Board"><span><b>Stroke play · Board</b>Place, then the table. No second scoreboard.</span></button>
+    </div>
+
+    <div class="cols">
+      <div class="panel">
+        <span class="kicker">Not drawn yet</span>
+        <ul>
+          <li>The <b>final card</b> for each way of playing (the race’s “clinched” state is drawn; the others aren’t).</li>
+          <li><b>Enter’s top line</b> for each way of playing. 028 drew it for the old five games.</li>
+          <li>Each Board <b>before the first score</b>.</li>
+          <li><b>Setup</b> with the new question for 2, 3, 5, 6, 7 and 16 players, and what the Teams step asks when partners switch.</li>
+          <li><b>Matches for three carts</b> and for 8 players switching partners.</li>
+          <li><b>Light mode</b> for all of the above.</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <span class="kicker">What this does to the briefs below</span>
+        <ul>
+          <li><b>027 The feel:</b> stands.</li>
+          <li><b>028 Game slots:</b> Enter stands. The Board, Matches and final card are replaced by this section.</li>
+          <li><b>029 Lobby:</b> stands, with the new game names.</li>
+          <li><b>030 One setup:</b> Teams and Tee times stand. The Game step is replaced.</li>
+          <li><b>032 Games by player count:</b> the count still decides what’s offered. “Pick a game” becomes “How are you playing?”.</li>
         </ul>
       </div>
     </div>
@@ -509,6 +616,7 @@ table.map tr.four th, table.map tr.four td { background: var(--tint-you); }
 
   <!-- ================= 028 ================= -->
   <section class="part" id="b028">
+    <div class="panel ask"><span class="kicker">Changed Nov 19</span><p>Enter in this brief stands. The Board, Matches and final card were redrawn on the canvas. See <a href="#agreed">Agreed · Nov 19</a>.</p></div>
     <div class="part-head">
       <span class="badge"><span class="num">028</span><span class="covers">To-do 1 One Enter · 2 One Matches · 3 One Board · 4 the final card’s words</span></span>
       <h2>Game slots: one round screen for every game</h2>
@@ -1022,6 +1130,7 @@ table.map tr.four th, table.map tr.four td { background: var(--tint-you); }
 
   <!-- ================= 032 ================= -->
   <section class="part" id="b032">
+    <div class="panel ask"><span class="kicker">Changed Nov 19</span><p>The player count still decides what’s offered, but the step now asks “How are you playing?” (keep your partner or switch). See <a href="#agreed">Agreed · Nov 19</a>.</p></div>
     <div class="part-head">
       <span class="badge"><span class="num">032</span><span class="covers">Changes 030’s Game step and the five games in Read first · send back as <code>features/032-games-by-player-count</code></span></span>
       <h2>Games by player count</h2>
