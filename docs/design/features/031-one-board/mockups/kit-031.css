@@ -176,3 +176,43 @@
 .pstat b { font: 700 32px/36px var(--font-mono); letter-spacing: -1px; }
 .pstat span { font-size: 13px; line-height: 18px; color: var(--text-muted); }
 .phl { margin-top: 12px; border-radius: var(--radius-lg); background: var(--surface-2); padding: 10px 14px; }
+
+/* ── third pass: game by game (Nov 19) ── */
+/* Matches: Team Ryder Cup's match screen, as built (js/screens/ryder.js) */
+.mt { margin-top: 4px; flex: none; } .mt + span { color: var(--text-muted); }
+.mpick { margin-top: 8px; }
+.mcard { background: var(--surface-1); border-radius: var(--radius-xl); padding: 14px 16px 12px; box-shadow: var(--shadow-card); flex: none; display: grid; gap: 4px; }
+.mcard .k { color: var(--text-muted); }
+.mcard .two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-items: end; }
+.mcard .two > div { display: grid; gap: 0; min-width: 0; }
+.mcard .two > div:last-child { text-align: right; }
+.mcard .two b { font: 600 17px/22px var(--font-sans); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mcard .two .them b, .mcard .two .them .t-xl { color: var(--text-muted); }
+.mcard .two .them .t-xl { color: var(--text); }
+.cbar { position: relative; height: 12px; border-radius: 6px; background: var(--surface-2); margin: 10px 0 2px; overflow: visible; }
+.cbar .l { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 6px; background: var(--cart-you); }
+.cbar .r { position: absolute; right: 0; top: 0; bottom: 0; border-radius: 6px; background: var(--text-muted); }
+.cbar .mid { position: absolute; left: 50%; top: -4px; width: 2px; height: 20px; margin-left: -1px; background: var(--text); border-radius: 1px; }
+.mcard .ft { display: grid; grid-template-columns: 1fr auto 1fr; color: var(--text-muted); }
+.mcard .ft span:nth-child(2) { color: var(--text); font-weight: 600; }
+.hg { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); row-gap: 2px; margin-top: 10px; flex: none; }
+.hg span { height: 46px; border-radius: var(--radius-lg); display: grid; place-items: center; align-content: center; gap: 2px; font: 600 15px/18px var(--font-mono); color: var(--text-muted); }
+.hg span em { font-style: normal; font-weight: 700; font-size: 15px; line-height: 18px; color: var(--text-muted); height: 18px; }
+.hg span em.w { color: var(--cart-you-text); }
+.hg span.sel { background: var(--surface-1); color: var(--text); }
+.hg span.lit { background: var(--tint-you); box-shadow: inset 0 0 0 1.5px var(--cart-you), var(--glow-you); color: var(--text); }
+.hs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); justify-items: center; gap: 6px; padding-top: 10px; margin-top: 4px; border-top: 1px solid var(--line-faint); flex: none; }
+.hs b { font: 600 15px/20px var(--font-sans); color: var(--text-muted); } .hs b.you { color: var(--cart-you-text); }
+.hs > div { display: grid; justify-items: center; gap: 6px; }
+.lowl { display: grid; grid-template-columns: 96px minmax(0, 1fr) auto; height: 32px; align-items: center; flex: none; }
+.lowl span:first-child { color: var(--text-muted); } .lowl b { font-weight: 600; } .lowl .pt { font: 700 15px var(--font-mono); }
+/* Board: the one-line strip for games where the table is the Board */
+.strip { background: var(--surface-1); border-radius: var(--radius-xl); padding: 12px 16px; box-shadow: var(--shadow-card); flex: none; display: grid; gap: 2px; }
+.strip .k { color: var(--text-muted); }
+.strip b { font: 600 17px/22px var(--font-sans); }
+.ptab .tr.lit { margin: 0 -8px; padding: 0 8px; border-radius: var(--radius-md); border-top-color: transparent; }
+.ptab .tr.lit + .tr { border-top-color: transparent; }
+.shot { width: 393px; height: 659px; object-fit: cover; object-position: top; display: block; }
+.tag { position: absolute; left: 12px; top: 12px; background: var(--warn-bg); color: var(--warn); border-radius: var(--radius-sm); padding: 4px 8px; }
+.mcard .ft span.you { color: var(--cart-you-text); }
+.tag { top: auto; bottom: 150px; }
