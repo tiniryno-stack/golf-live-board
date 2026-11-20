@@ -16,6 +16,13 @@ The animated "Today's game" slides (one small scene + one headline per slide, a 
 Andrew Nov 20 with `prototype.html` and 31 screenshots in that folder. Also: "set" replaces "stretch" in UI copy.
 Handed off on branch `claude/affectionate-lamport-gp7ecm`; not built.
 
+## Today's game (032, Nov 20, branch `claude/cool-heisenberg-j444xa`)
+
+Animated rules slides per game: pure model `js/todaysgame.js` (`todaysGame(snap, meId)`, test `tests/todaysgame032.test.mjs`),
+player + scenes `js/screens/todaysgame.js` (`tg-*` CSS at the end of styles.css), opened by `toasts.showBrief`; old shapes
+keep `brief.js`. Opens on its own once per phone on the first Enter of an open round (`autoBrief` in app.js). UI copy says
+**set**, not stretch. 4-player 2v2 picks its team score again (`settings.pairTeamScore` in Setup only). ARCHITECTURE.md 13a.
+
 ## What it is / where things stand
 
 - Mobile web app for Andrew's friend group: each foursome enters hole-by-hole scores on their

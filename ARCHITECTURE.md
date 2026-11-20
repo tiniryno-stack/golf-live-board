@@ -948,6 +948,38 @@ Still open: nothing blocking. Design direction (section 9) is final.
     offline queue), the 8-cart round from one phone, Same all 18, Stroke play. `tests/smoke.mjs` has been stale since
     the calm Enter (021, Nov 5): it still taps 016's `.ry-ecard` pads and stops at hole 1 (on `main` too).
 
+- **032 · Today's game, played out (Nov 20, branch `claude/cool-heisenberg-j444xa`; brief
+  `docs/design/features/032-todays-game/SPEC.md`).** The text card becomes three or four short animated slides per game.
+  - **Model:** pure `js/todaysgame.js` `todaysGame(snap, meId)` → `{ kicker, game, slides: [{ h, s, scene, args, ms }] }`
+    by `playFor`, `snap.teams.length` (3 carts) and `settings.teamScore`; real display names from the viewer's seat
+    (watching = the first player, by name); scripted example scores (SPEC §2.3); slide lengths from §2.4 with the 0.9 pace.
+    `null` for `legacy` shapes and Plus/Minus → `brief.js`'s old text card. Test: `tests/todaysgame032.test.mjs`.
+  - **Player:** `js/screens/todaysgame.js` `playerHtml` / `startPlayer` (top bar kicker + Replay + one progress segment per
+    slide, a `clamp(282px, 44vh, 400px)` stage, one headline + sentence with 027's blur swap, Let's play pinned). Tap the
+    scene = next (`tg-next`), `tg-replay`, `brief-done` = Let's play; after the last slide Replay turns `text` and Let's play
+    bumps. Timers are per player and cleared on every slide change and close. `toasts.showBrief` opens it in the overlay
+    root (so 024's no-coach-over-it rule holds); reduced motion = end states, plain fades, same slide lengths.
+  - **Scenes** (all `tg-*` classes, the design system's tokens and `.ts-*` type styles): `meet` (names pop in as a row and
+    sort into pairs / three cart rows / alone tiles / a list / Ryder dots), `tug` (halfway bar: fills to the middle line,
+    holds, pushes past, clinches), `swap`, `sets`, `carts`, `bars`, `race`, `board`, `ryderRot`, `matches`, and `hole`
+    (SVG tile `viewBox 0 0 353 172` in a `perspective: 700px` wrapper tilted `rotateX(26deg)`; four shapes fitted onto it;
+    three-circle trees kept on the tile; shots on arcs with ground shadows and dotted tracers; the team-score results:
+    best ball, low ball + total with two point slots from the start, aggregate, three carts, low score, stroke play).
+    Screen-local pace: `--motion-grow: 270ms` on `.fullcard.tg` only. New patterns flagged in SPEC §4 (3D tile, several
+    glowing things, story segments, sorting name chips).
+  - **Set, not stretch** in every user-visible string (Enter's Switch it up card for every game, 031 Board "Leaderboard ·
+    sets won", the old Board line, Rules sheet, `gameBlurb`). Code names (`dayBy: 'stretches'`, `stretchesWon`) stay.
+  - **Andrew's answers (SPEC §6, Nov 20):** Today's game opens on its own **once per phone, the first time you're on Enter in
+    a round open for scoring** (`autoBrief` in app.js, after every draw on Enter; never over a sheet / picker / card, never
+    during the join sequence, never once the round is over, never watching; `glb.brief.CODE` as before; lobby rounds: right
+    after Scoring is open → Go to hole 1). **4-player 2v2 picks its team score again** in Setup → Rules (Best ball default /
+    Low ball + total / Aggregate; Setup keeps it in `settings.pairTeamScore`, stripped on save: best ball = `holePoint`,
+    the others = that `teamScore` with ½ ties and no bonus). Everyone alone / Stroke play slides show **you + your whole tee
+    time, up to 6** (topped up to four from other tee times). Not drawn, built from the nearest slides: partners at the turn
+    ("Partners switch at 10.", two sets), three carts with low ball + total (copy only), older partner rounds without
+    `dayBy` (bars instead of sets won). Light mode not reviewed.
+  - Touches the join sequence (step 6) and Setup's 2v2 settings: smoke run (`test:smoke031`, `test:lobby`) before it ships.
+
 ## 13. V2 backlog (running list)
 
 - **Carryovers (skins-style):** a tied point rolls onto the next hole instead of halving, so the next hole can be worth 3–4 points. Open design question: does an unresolved carry die at the end of a 6-hole rotation, or roll into the next opponent?
