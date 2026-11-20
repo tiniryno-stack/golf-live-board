@@ -117,6 +117,7 @@ button { font-family: inherit; } button:focus-visible { outline: 2px solid var(-
 .lgs:has(.best) .lg:not(.best) { opacity: var(--peek); }
 .lg.best.y .cn { background: var(--cart-you); color: var(--bg); box-shadow: var(--glow-you); }
 .lg.best.t .cn { background: var(--surface-3); }
+.lg.tot .cn { box-shadow: none; }
 .lg.best.a .cn, .lg.best.b .cn { background: var(--surface-3); }
 /* first slide: names arrive, then sort into their sides */
 .mt { position: relative; height: 250px; }
@@ -286,6 +287,7 @@ button { font-family: inherit; } button:focus-visible { outline: 2px solid var(-
   <div class="scrim" id="scrim" hidden></div>
   <div class="sheet pad" id="sheet" hidden>
     <div class="label muted">Game</div><div class="chips" id="games"></div>
+    <div class="label muted">Team score · 2v2 games</div><div class="chips" id="tss"></div>
     <div class="label muted">Bottom half</div><div class="chips" id="bots"></div>
     <button class="btn" type="button" id="close">Done</button>
   </div>
@@ -595,7 +597,7 @@ function courseSvg(sh) {
     <path d="M${cx} ${cy} V${cy - 34}" stroke="var(--text)" stroke-width="1.5"/><path d="M${cx} ${cy - 34} l15 5 l-15 5z" fill="var(--text)"/>
     ${trees}<g class="trl"></g><g class="bls"></g>`;
 }
-S.course = ({ shape = 'dogleg', par = 4, label, players, mode, win }) => ({ html: `<div class="sc hsc">
+S.course = ({ shape = 'dogleg', par = 4, label, players, mode, win, score = 'bestBall' }) => ({ html: `<div class="sc hsc">
     <div class="label muted e hlbl" style="--d:0ms">${label || `Hole 4 · Par ${par}`}</div>
     <div class="e crsw" style="--d:60ms"><svg class="crs" viewBox="0 0 353 172" aria-hidden="true">${courseSvg(SHAPES[shape])}</svg></div>
     <div class="lgs e" style="--d:120ms;grid-template-columns:repeat(${players.length},1fr)">${players.map(([n, , side], i) => `<div class="lg ${side}" data-p="${i}"><span class="nm">${n}</span><span class="cn">0</span></div>`).join('')}</div>
@@ -614,6 +616,22 @@ S.course = ({ shape = 'dogleg', par = 4, label, players, mode, win }) => ({ html
       const best = (side) => Math.min(...P.filter(p => p.side === side).map(p => p.s));
       const light = (side, v) => P.find(p => p.side === side && p.s === v).tile.classList.add('best');
       let pill = '';
+      if (mode === 'best' && score !== 'bestBall') {
+        // 032: Low ball + total (2 points a hole) and Aggregate (both scores added, 1 point a hole)
+        const sum = (side) => P.filter(p => p.side === side).reduce((a, p) => a + p.s, 0), tu = sum('y'), tt = sum('t'), bu = best('y'), bt = best('t');
+        const r = (a, b) => (a < b ? 1 : a > b ? 0 : .5), word = (x) => (x === 1 ? 'yours' : x === 0 ? 'theirs' : '½ each');
+        const show = (html) => { if (pl.firstElementChild) swapIn(pl, html); else pl.innerHTML = html; };
+        const totals = () => { P.forEach(p => p.tile.classList.remove('best')); const w = r(tu, tt); P.forEach(p => { if ((w === 1 && p.side === 'y') || (w === 0 && p.side === 't')) p.tile.classList.add('best', 'tot'); });
+          if (w === .5) P.forEach(p => p.tile.classList.add('best', 'tot')); el.querySelector('.lgs').classList.add('judged'); };
+        if (score === 'aggregate') { totals(); const w = r(tu, tt);
+          show(`<span class="pt ${w === 1 ? 'y' : 't'}" style="--d:250ms">${w === 1 ? (win || '+1 point') : w === .5 ? '½ point each' : '+1 to them'} · ${tu} v ${tt}</span>`); return; }
+        light('y', bu); light('t', bt); el.querySelector('.lgs').classList.add('judged');
+        const a1 = r(bu, bt), a2 = r(tu, tt);
+        show(`<span class="pt ${a1 ? 'y' : 't'}" style="--d:150ms">Low ball ${bu} v ${bt} · ${word(a1)}</span>`);
+        later(1300, () => { totals(); show(`<span class="pt ${a2 ? 'y' : 't'}" style="--d:0ms">Low total ${tu} v ${tt} · ${word(a2)}</span>`); });
+        later(2600, () => { const n = a1 + a2; show(`<span class="pt ${n ? 'y' : 't'}" style="--d:0ms">${n ? '+' + half(n) + (n > 1 ? ' points' : ' point') + ' to you and Mike' : 'No points'}</span>`); });
+        return;
+      }
       if (mode === 'best') { const bu = best('y'), bt = best('t'); light('y', bu); light('t', bt);
         pill = bu < bt ? `<span class="pt y" style="--d:250ms">${win || '+1 point'}</span>` : `<span class="pt t" style="--d:250ms">½ point each</span>`; }
       else if (mode === 'three') { const bu = best('y'), ba = best('a'), bb = best('b'); light('y', bu); light('a', ba); light('b', bb);
@@ -644,21 +662,34 @@ S.course = ({ shape = 'dogleg', par = 4, label, players, mode, win }) => ({ html
   } });
 
 // ── slides ──
-const SHOT = 900, FLY = 760; // one shot every 0.9 s, so the hole fills its slide and the result lands near the end
+const SHOT = 620, FLY = 520; // a shot every 0.62 s
 const hole = (o) => ({ hold: 500 + Math.max(...o.players.map(p => p[1])) * SHOT + 400 + 2600, sc: ['course', o] });
-const GAMES = {
+const SHOT_HOLD = 0;
+// 032: the 2v2 hole slide follows the round's team score (Setup → Team score)
+const SCORES = { bestBall: 'Best ball', bbAgg: 'Low ball + total', aggregate: 'Aggregate' };
+function team(ts, base) {
+  const ys = base.players.filter(p => p[2] === 'y').map(p => p[1]), th = base.players.filter(p => p[2] === 't').map(p => p[1]);
+  const bu = Math.min(...ys), bt = Math.min(...th), tu = ys[0] + ys[1], tt = th[0] + th[1], r = (a, b) => (a < b ? 1 : a > b ? 0 : .5);
+  const o = { ...base, mode: 'best', score: ts }; delete o.h; delete o.s;
+  let h = base.h, s = base.s;
+  if (ts === 'bbAgg') { const n = r(bu, bt) + r(tu, tt); h = 'Low ball and low total.'; s = `Two points a hole. Your best ${bu} v their ${bt}, then ${tu} v ${tt} added up: ${n === 2 ? 'both yours' : half(n) + (n === 1 ? ' point' : ' points') + ' to you'}.`; }
+  if (ts === 'aggregate') { const n = r(tu, tt); h = 'Both scores count.'; s = `Add your two scores. ${ys[0]} + ${ys[1]} = ${tu} v their ${tt}: ${n === 1 ? 'one point to you' : n === .5 ? '½ point each' : 'their point'}.`; }
+  return { h, s, hold: 500 + Math.max(...base.players.map(p => p[1])) * SHOT + 400 + 2600 + (ts === 'bbAgg' ? 2600 : 0), sc: ['course', o] };
+}
+function build(ts) { return {
   oneMatch: { name: '2v2', tag: 'same partners', slides: [
     { h: 'You and Mike vs Tyler and Sam.', s: 'Same partners, all 18.', sc: ['meet', { kind: 'pairs', groups: [{ label: 'Your side', you: 1, names: ['You', 'Mike'] }, { label: 'Them', names: ['Tyler', 'Sam'] }] }] },
-    { h: 'Best ball takes the hole.', s: 'Your 4 beats their 5. One point.', ...hole({ shape: 'dogleg', players: [['You', 4, 'y'], ['Mike', 6, 'y'], ['Tyler', 5, 't'], ['Sam', 5, 't']], mode: 'best', win: '+1 to you and Mike' }) },
-    { h: 'First to 9½ wins.', s: '18 points out there. Get past halfway and nobody can catch you.', sc: ['tug', { total: 18, us: 9.5, them: 6.5, lbl: 'Halfway · 9', win: '9½ · Clinched' }] } ] },
+    team(ts, { h: 'Best ball takes the hole.', s: 'Your 4 beats their 5. One point.', shape: 'dogleg', players: [['You', 4, 'y'], ['Mike', 6, 'y'], ['Tyler', 5, 't'], ['Sam', 6, 't']], win: '+1 to you and Mike' }),
+    ts === 'bbAgg' ? { h: 'First to 18½ wins.', s: '36 points out there, two a hole. Get past halfway and nobody can catch you.', sc: ['tug', { total: 36, us: 18.5, them: 12.5, lbl: 'Halfway · 18', win: '18½ · Clinched' }] }
+      : { h: 'First to 9½ wins.', s: '18 points out there. Get past halfway and nobody can catch you.', sc: ['tug', { total: 18, us: 9.5, them: 6.5, lbl: 'Halfway · 9', win: '9½ · Clinched' }] } ] },
   partners: { name: '2v2', tag: 'partners switch', slides: [
     { h: 'You and Mike vs Tyler and Sam.', s: 'For the first 6 holes.', sc: ['meet', { kind: 'pairs', sub: 'Holes 1–6', groups: [{ label: 'Your side', you: 1, names: ['You', 'Mike'] }, { label: 'Them', names: ['Tyler', 'Sam'] }] }] },
-    { h: "Your partner's ball counts too.", s: "Mike's 4 is your side's best. One point to you both.", ...hole({ shape: 'bend', label: 'Hole 2 · with Mike', players: [['You', 6, 'y'], ['Mike', 4, 'y'], ['Tyler', 5, 't'], ['Sam', 5, 't']], mode: 'best', win: '+1 to you and Mike' }) },
+    team(ts, { h: "Your partner's ball counts too.", s: "Mike's 4 is your side's best. One point to you both.", shape: 'bend', label: 'Hole 2 · with Mike', players: [['You', 6, 'y'], ['Mike', 4, 'y'], ['Tyler', 5, 't'], ['Sam', 6, 't']], win: '+1 to you and Mike' }),
     { h: 'Partners switch at 7 and 13.', s: 'Every 6 holes is a new set, with a new partner. You play with everyone once.', sc: ['swap', {}] },
     { h: 'Most sets won takes the day.', s: 'Each set is its own match. Level on sets? Most points wins.', hold: 4200, sc: ['stretches', { res: [['1–6', 'W', 'Mike'], ['7–12', 'L', 'Tyler'], ['13–18', 'W', 'Sam']] }] } ] },
   cart: { name: '2v2', tag: '8 players · 4 carts', slides: [
     { h: 'You and Mike are a cart.', s: 'Four carts of two today.', sc: ['meet', { kind: 'pairs', sub: 'Holes 1–6', groups: [{ label: 'Your cart', you: 1, names: ['You', 'Mike'] }, { label: 'First up', names: ['Tyler', 'Sam'] }] }] },
-    { h: 'A tie splits it.', s: "Both carts' best is a 3. ½ point each.", ...hole({ shape: 'short', par: 3, label: 'Hole 3 · Par 3', players: [['You', 3, 'y'], ['Mike', 4, 'y'], ['Tyler', 3, 't'], ['Sam', 5, 't']], mode: 'best' }) },
+    team(ts, { h: 'A tie splits it.', s: "Both carts' best is a 3. ½ point each.", shape: 'short', par: 3, label: 'Hole 3 · Par 3', players: [['You', 3, 'y'], ['Mike', 4, 'y'], ['Tyler', 3, 't'], ['Sam', 5, 't']] }),
     { h: 'A new cart every 6 holes.', s: 'Some of them are in the other tee time. Nobody moves; the app scores it.', hold: 4400, sc: ['carts', { mine: 'You + Mike', others: [['Tyler + Sam', 'a'], ['Chris + Jake', 'b'], ['Ben + Luke', 'c']] }] },
     { h: 'Most points takes the day.', s: 'Every hole against every cart adds to your total.', sc: ['bars', { max: 16, rows: [['You + Mike', 12, true], ['Chris + Jake', 10.5], ['Tyler + Sam', 7.5], ['Ben + Luke', 6]], note: 'After 18' }] } ] },
   threeCarts: { name: '2v2', tag: '6 players · 3 carts', slides: [
@@ -678,13 +709,15 @@ const GAMES = {
     { h: 'A new cart every 6 holes.', s: 'Your cart plays three of theirs, one every 6 holes.', hold: 4200, sc: ['ryderRot', { mine: 'You + Mike', opps: ['Tyler + Sam', 'Chris + Jake', 'Ben + Luke'] }] },
     { h: 'Cart against cart.', s: 'Win the hole, win a point toward your match. Most points over 6 holes wins it.', ...hole({ shape: 'dogleg', label: 'Hole 1 · vs Tyler + Sam', players: [['You', 4, 'y'], ['Mike', 5, 'y'], ['Tyler', 5, 't'], ['Sam', 5, 't']], mode: 'best', win: '+1 in your match' }) },
     { h: '6½ wins the cup.', s: '12 matches, a point each. Get past halfway and the cup is yours.', sc: ['matches', { lbl: 'Halfway · 6', win: '6½ · Cup won', seq: ['w', 'l', 'w', 'w', 'h', 'l', 'w', 'w', 'l', 'w', 'h', 'l'] }] } ] },
-};
+}; }
+let TS = 'bestBall', GAMES = build(TS);
+const PAIRS = ['oneMatch', 'partners', 'cart'];
 const BOTS = { lines: 'The lines', head: 'One headline' };
 
 // ── run ──
 let game = 'oneMatch', bot = 'lines', cur = 0, SL = [];
-try { const s = JSON.parse(localStorage.getItem('g032v4') || '{}'); if (GAMES[s.game]) game = s.game; if (BOTS[s.bot]) bot = s.bot; } catch (e) {}
-const save = () => { try { localStorage.setItem('g032v4', JSON.stringify({ game, bot })); } catch (e) {} };
+try { const s = JSON.parse(localStorage.getItem('g032v4') || '{}'); if (GAMES[s.game]) game = s.game; if (BOTS[s.bot]) bot = s.bot; if (SCORES[s.ts]) { TS = s.ts; GAMES = build(TS); } } catch (e) {}
+const save = () => { try { localStorage.setItem('g032v4', JSON.stringify({ game, bot, ts: TS })); } catch (e) {} };
 const bumpBtn = (n) => { n.classList.remove('bmp'); void n.offsetWidth; n.classList.add('bmp'); };
 function setCopy(c, first) { const html = `<div><p class="h">${c.h}</p><p class="s">${c.s}</p></div>`, box = $('copy'); if (first || RM) box.innerHTML = html; else swapIn(box, html); }
 function segTo(k, dur) { [...$('segs').children].forEach((s, i) => { const b = s.firstChild; b.style.transition = 'none'; b.style.transform = i < k ? 'scaleX(1)' : 'scaleX(0)';
@@ -697,7 +730,7 @@ function go(k, first) { if (k >= SL.length) { $('replay').classList.add('done');
   const run = () => { if (old) old.remove(); const dur = show(st, b); if (bot === 'head') segTo(k, dur); wait(dur, () => go(k + 1)); };
   if (first || RM || !old) run(); else { old.classList.add('out'); wait(120, run); } }
 function start() { clearAll(); const g = GAMES[game]; SL = g.slides; $('app').classList.toggle('four', SL.length > 3); $('replay').classList.remove('done'); $('stage').innerHTML = '';
-  $('kick').textContent = `Today's game · ${g.name === 'Team Ryder Cup' ? 'Ryder Cup' : g.name === 'Everyone alone' ? 'Alone' : g.name}`;
+  $('kick').textContent = PAIRS.includes(game) && TS !== 'bestBall' ? `${g.name} · ${SCORES[TS]}` : `Today's game · ${g.name === 'Team Ryder Cup' ? 'Ryder Cup' : g.name === 'Everyone alone' ? 'Alone' : g.name}`;
   const lines = bot === 'lines'; $('lines').hidden = !lines; $('copy').hidden = lines; $('segs').hidden = lines; $('copy').innerHTML = '';
   $('segs').innerHTML = SL.map(() => '<i><b></b></i>').join('');
   $('lines').innerHTML = SL.map((b, i) => `<button class="ln" type="button" data-k="${i}"><span class="n">${i + 1}</span><span><span class="t">${b.h}</span><span class="sub"><span>${b.s}</span></span></span></button>`).join('');
@@ -707,7 +740,9 @@ $('lines').addEventListener('click', (e) => { const b = e.target.closest('[data-
 $('replay').addEventListener('click', start);
 const sheet = (on) => { $('sheet').hidden = $('scrim').hidden = !on; if (!on) return;
   $('games').innerHTML = Object.entries(GAMES).map(([k, g]) => `<button class="chip" type="button" data-g="${k}" aria-pressed="${k === game}">${g.name} <small>${g.tag}</small></button>`).join('');
-  $('bots').innerHTML = Object.entries(BOTS).map(([k, n]) => `<button class="chip" type="button" data-b="${k}" aria-pressed="${k === bot}">${n}</button>`).join(''); };
+  $('bots').innerHTML = Object.entries(BOTS).map(([k, n]) => `<button class="chip" type="button" data-b="${k}" aria-pressed="${k === bot}">${n}</button>`).join('');
+  $('tss').innerHTML = Object.entries(SCORES).map(([k, n]) => `<button class="chip" type="button" data-t="${k}" aria-pressed="${k === TS}">${n}</button>`).join(''); };
+$('tss').addEventListener('click', (e) => { const b = e.target.closest('[data-t]'); if (b) { TS = b.dataset.t; GAMES = build(TS); if (!PAIRS.includes(game)) game = 'oneMatch'; save(); sheet(true); } });
 $('opt').addEventListener('click', () => sheet(true)); $('scrim').addEventListener('click', () => sheet(false)); $('close').addEventListener('click', () => { sheet(false); start(); });
 $('games').addEventListener('click', (e) => { const b = e.target.closest('[data-g]'); if (b) { game = b.dataset.g; save(); sheet(true); } });
 $('bots').addEventListener('click', (e) => { const b = e.target.closest('[data-b]'); if (b) { bot = b.dataset.b; save(); sheet(true); } });
