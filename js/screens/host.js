@@ -53,7 +53,7 @@ function teeTimesField(d) {
   return `<div class="field"><span class="label">Tee times</span>
     <p class="help" style="margin:0 0 8px">Optional. Shown on the Board and the rules; blank says “1st tee time”.</p>
     ${groups.map((g, i) => `<label class="tee-row"><span class="tee-k">${esc(teeTimeName({ teeTimes: [] }, i))}<small class="ellipsis">${esc(who(g))}</small></span>
-      <input class="input tee-in" type="time" value="${esc(times[i] || '')}" data-input="host-tee" data-i="${i}" aria-label="${esc(teeTimeName({ teeTimes: [] }, i))}"></label>`).join('')}
+      <span class="tee-t"><input class="ry-time mono tee-in${times[i] ? ' set' : ''}" type="time" value="${esc(times[i] || '')}" data-input="host-tee" data-i="${i}" aria-label="${esc(teeTimeName({ teeTimes: [] }, i))}"><span class="ry-time-ph"${times[i] ? ' hidden' : ''}>Add time</span></span></label>`).join('')}
   </div>`;
 }
 
@@ -366,6 +366,10 @@ export default {
       times[Number(el.dataset.i)] = /^\d{1,2}:\d{2}$/.test(el.value) ? el.value : '';
       while (times.length && !times[times.length - 1]) times.pop();
       st.teeTimes = Array.from(times, (t) => t || '');
+      // the pill follows the pick right away (no redraw: the iPhone time wheel stays open on this input)
+      const set = !!times[Number(el.dataset.i)];
+      el.classList.toggle('set', set);
+      el.nextElementSibling?.toggleAttribute('hidden', set);
       touch(app);
     },
     'host-allow': (el, ev, app) => {
