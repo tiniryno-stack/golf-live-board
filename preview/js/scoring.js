@@ -40,7 +40,7 @@ export const GAMES = [
   {
     id: 'carts', name: 'Partner “Rider” Cup', count: '6 OR 8 PLAYERS', min: 6, max: 8, sizes: [6, 8],
     desc: '4 carts of 2. Opponents rotate.',
-    desc6: '3 carts of 2. Everyone plays everyone.',
+    desc6: '3 carts of 2. A new cart every 6 holes.',
   },
   {
     id: 'ryder', name: 'Team Ryder Cup', count: 'EXACTLY 16', min: 16, max: 16,
@@ -206,7 +206,20 @@ export function cartRotation(schedule = 'six', opps = null, me = 'A') {
   });
 }
 
-/** Partner “Rider” Cup with 6 players: 3 carts, every cart plays both others on every hole, all 18. */
+/**
+ * 2v2 with 6 players (Andrew, Nov 20): three carts, one opponent at a time, like the 8-player game.
+ * every 6 = A v B (1–6), A v C (7–12), B v C (13–18): everyone plays everyone once, each cart sits out a set.
+ * at the turn = A v B on the front nine, A v C on the back.
+ */
+export function sixCartRotation(schedule = 'six') {
+  if (schedule === 'turn') return [{ holes: [1, 9], matches: [['A', 'B']] }, { holes: [10, HOLES], matches: [['A', 'C']] }];
+  return [{ holes: [1, 6], matches: [['A', 'B']] }, { holes: [7, 12], matches: [['A', 'C']] }, { holes: [13, HOLES], matches: [['B', 'C']] }];
+}
+
+/** A round where three carts all play each other at once (6 players before Nov 20; old rounds still score this way). */
+export const allAtOnce = (settings) => (settings?.rotation || []).some((r) => (r.matches || []).length > 1 && new Set(r.matches.flat()).size < r.matches.length * 2);
+
+/** Old (before Nov 20) Partner “Rider” Cup with 6 players: every cart plays both others on every hole, all 18. */
 export function threeCartRotation() {
   return [{ holes: [1, HOLES], matches: [['A', 'B'], ['A', 'C'], ['B', 'C']] }];
 }

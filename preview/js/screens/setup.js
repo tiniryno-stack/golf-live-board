@@ -13,7 +13,7 @@
 import { esc, icon, seg, todayISO, prettyDate, copyText, roundLink, empty } from '../ui.js';
 import { COURSES } from '../courses.js';
 import * as cd from '../coursedata.js';
-import { DEFAULT_SETTINGS, DEFAULT_ROTATION, GAMES, gameFix, autoGroups, cartRotation, threeCartRotation, sameOppsRotation, cartIdsFor, ryderSetup, teeTimeName } from '../scoring.js';
+import { DEFAULT_SETTINGS, DEFAULT_ROTATION, GAMES, gameFix, autoGroups, cartRotation, sixCartRotation, sameOppsRotation, cartIdsFor, ryderSetup, teeTimeName } from '../scoring.js';
 import { sideColor } from '../teams.js';
 import * as db from '../db.js';
 import * as names from '../names.js';
@@ -424,7 +424,7 @@ function buildRound(s) {
   const game = gameOf(s);
   const shown = names.displayNames(s.players);
   if (game === 'ryder') return buildRyder(s, c, shown);
-  const three = game === 'carts' && s.players.length === 6; // 3 carts: everyone plays everyone, all 18
+  const three = game === 'carts' && s.players.length === 6; // 3 carts: one opponent at a time (Nov 20), A + B tee off together
   const rotation = game === 'carts' ? cartRot(s) : clone(DEFAULT_ROTATION);
   // 031 step 3, new rounds only: a hole is one point (best ball, ½ a tie, no bonus); partner stretches decide the day.
   // 032 §6 (Andrew, Nov 20): 4-player 2v2 picks its team score again (best ball by default). Best ball keeps holePoint;
@@ -778,7 +778,12 @@ function gameSettings(s, id) {
       ${optSeg('setup-schedule', [['six', 'Switch', s.schedule === 'turn' ? 'at the turn' : 'every 6'], ['same', 'Same', 'all 18']], s.schedule === 'same' ? 'same' : 'six')}
       <p class="gs-hint">${s.schedule === 'same' ? 'Your cart plays the other cart in your group, all 18. One match, a point a hole.' : s.schedule === 'turn' ? 'Your cart plays two of the other three carts, nine holes each.' : 'Your cart plays each of the other three carts for six holes.'}</p></div>`;
   }
-  if (id === 'carts') return '<div class="gs-set"><p class="gs-hint">Every cart plays both other carts on every hole, all 18.</p></div>';
+  if (id === 'carts') { // 6 players (Nov 20): three carts, one opponent at a time, like 8
+    const turn = s.schedule === 'turn';
+    return `<div class="gs-set"><span class="ts-label">Opponents</span>
+      ${optSeg('setup-schedule', [['six', 'Switch', 'every 6'], ['turn', 'Switch', 'at the turn']], turn ? 'turn' : 'six')}
+      <p class="gs-hint">${turn ? 'One cart plays both nines; the other two play nine holes each.' : 'Every cart plays both others once, six holes each, and sits out six.'}</p></div>`;
+  }
   return '';
 }
 
@@ -1236,12 +1241,12 @@ function cartsView(s) {
   return `${topBar(s)}${headline('Step 4 · Teams · 2v2', 'Who rides together?')}
     <div class="nr-line"><span class="meta">${s.swapSel != null ? 'Now tap a name in another cart.' : s.pairedFromLast ? 'Paired like your last round · tap two names to swap.' : 'Tap two names to swap.'}</span><button class="btn small" data-act="setup-shuffle">${icon('shuffle', 18)} Shuffle</button></div>
     ${rows}
-    ${three ? '<p class="gs-hint tt-hint">3 carts: every cart plays both others on every hole, 18 holes.</p>' : ''}
+    ${three ? `<p class="gs-hint tt-hint">3 carts: ${s.schedule === 'turn' ? 'a new cart at the turn' : 'a new cart every 6 holes, so every cart plays both others once'}.</p>` : ''}
     ${bottom('Next: tee times', 'setup-go', { v: 'tee', arrow: true })}`;
 }
 
 /** The cart game's rotation: three carts, same opponents all 18 (031), or opponents switching. */
-const cartRot = (s) => (cartIds(s).length === 3 ? threeCartRotation() : s.schedule === 'same' ? sameOppsRotation() : cartRotation(s.schedule, s.opps));
+const cartRot = (s) => (cartIds(s).length === 3 ? sixCartRotation(s.schedule === 'turn' ? 'turn' : 'six') : s.schedule === 'same' ? sameOppsRotation() : cartRotation(s.schedule, s.opps));
 /** 031 step 3: new 2v2 rounds where a hole is one point (best ball, no bonus): 4 players, or 8 with the same opponents. */
 /** 4-player 2v2's team score (032 §6): Setup keeps it apart from settings.teamScore so best ball stays the default. */
 const pairScore = (s) => (['bestBall', 'bestBallAggregate', 'aggregate'].includes(s.settings.pairTeamScore) ? s.settings.pairTeamScore : 'bestBall');
@@ -1299,8 +1304,8 @@ function riderTeeView(s) {
       <div class="tt-chips two">${g.map(chip).join('')}</div></section>`).join('');
   const rot = cartRot(s);
   const mine = rot.flatMap((r) => r.matches.filter((m) => m.includes(myCart)).map((m) => `${r.holes[0]}–${r.holes[1]} ${cartLabel(s, m[0] === myCart ? m[1] : m[0])}`));
-  const sched = ids.length === 3 ? 'everyone plays everyone' : s.schedule === 'turn' ? 'switch at the turn' : 'switch every 6';
-  const fixedOpps = ids.length === 3 || s.schedule === 'same';
+  const sched = s.schedule === 'turn' ? 'switch at the turn' : s.schedule === 'same' && ids.length === 4 ? 'same all 18' : 'switch every 6';
+  const fixedOpps = ids.length === 4 && s.schedule === 'same';
   return `${topBar(s)}${headline(`Step 5 · Tee times · 2v2 · ${s.players.length}`, 'Who tees off together?', s.rySel ? 'Now tap the cart to swap with.' : 'Tap two carts to swap. Your first match is the other cart in your group.')}
     <div class="tt-list">${rows}</div>
     <div class="tt-peek peek"><span class="ts-label">Your matches · ${esc(cartLabel(s, myCart))}</span><span>${esc(mine.join(' · '))}</span></div>
@@ -1342,18 +1347,19 @@ function teeView(s) {
     ${inviteBtn(s)}`;
 }
 
-/** ④b with 3 carts: nothing to switch; every matchup runs all 18. Rules only. */
+/** ④b with 3 carts (Nov 20): one opponent at a time, switching every 6 or at the turn; the cart left out sits out. */
 function threeCartView(s) {
   const name = (id) => (id === 'A' ? 'A · You' : id);
   const chip = (id) => `<span class="mu-chip" style="--jersey:${CART_TINT[id]}">${name(id)}</span>`;
-  const rows = threeCartRotation()[0].matches
-    .map(([a, b]) => `<div class="mu-row"><span class="mono soft mu-h">1–18</span><span class="mu-m">${chip(a)}<small>vs</small>${chip(b)}</span></div>`).join('');
+  const rows = cartRot(s)
+    .map((r) => { const out = ['A', 'B', 'C'].find((c) => !r.matches[0].includes(c)); return `<div class="mu-row"><span class="mono soft mu-h">${r.holes[0]}–${r.holes[1]}</span><span class="mu-m">${chip(r.matches[0][0])}<small>vs</small>${chip(r.matches[0][1])}</span><span class="mono soft mu-rest">${out} sits out</span></div>`; }).join('');
   return `${topBar(s)}${headline('Step 5 · Optional · Defaults are set', 'Game &amp; matchups')}
-    <div class="nr-tip">${icon('bulb', 16)}<span>With 3 carts, every cart plays both other carts on every hole. Low ball and low total against each one, so a cart can win up to 4 points a hole.</span></div>
+    <div class="lbl nr-lbl">Switch opponents</div>
+    ${seg('setup-schedule', [['six', 'Every 6 holes'], ['turn', 'At the turn']], s.schedule === 'turn' ? 'turn' : 'six')}
     <div class="lbl nr-lbl">Matchups</div>
-    <div class="mu-card">${rows}<div class="mu-groups meta">1st tee time: A + B · 2nd: C, all 18. Nobody moves.</div></div>
+    <div class="mu-card">${rows}<div class="mu-groups meta">1st tee time: A + B · 2nd: C, all 18. Nobody moves; the app scores it.</div></div>
     ${rulesBlock(s)}
-    ${bottom(s.saving ? 'Starting…' : `Start round · ${s.players.length} players`, 'setup-save', { busy: s.saving })}`;
+    ${bottom('Back to tee times', 'setup-go', { v: 'tee' })}`;
 }
 
 /** ④b Game & matchups (optional; defaults set). */

@@ -10,7 +10,7 @@
 //   legacy    anything else (old shapes): today's screens
 
 import { isRider } from './riderview.js';
-import { fmtPts } from './scoring.js';
+import { fmtPts, allAtOnce } from './scoring.js';
 import { dec } from './race.js';
 
 export function playFor(snap) {
@@ -85,7 +85,7 @@ export function gameChoices(n) {
     || `${WORDS[tees] || tees} tee times.`;
   const games = [];
   if (n === 4) games.push({ id: '2v2', name: '2v2', desc: 'You and a partner against the other two.' });
-  if (n === 6) games.push({ id: 'carts', name: '2v2', tag: 'three carts', desc: 'Three carts of two. Every cart plays both others.' });
+  if (n === 6) games.push({ id: 'carts', name: '2v2', tag: 'three carts', desc: 'Three carts of two. A new cart every 6 holes.' });
   if (n === 8) games.push({ id: 'carts', name: '2v2', desc: 'Carts of two. Each cart plays a cart.' });
   if (n === 16) games.push({ id: 'ryder', name: 'Team Ryder Cup', desc: 'Two sides. Cart vs cart, 1 point a match.' });
   if (n >= 2 && n <= 6) games.push({ id: 'match', name: 'Everyone alone', desc: 'A point a hole to the low net score.' });
@@ -182,7 +182,9 @@ export function gameBlurb(snap) {
   const text = {
     partners: `Partners switch ${st.pairSwitch === 'turn' ? 'at the turn' : 'every 6 holes'}, so everyone plays with everyone. Each set is its own match. ${st.dayBy === 'stretches' ? 'Most sets won takes the day.' : 'Most points takes the day.'}`,
     oneMatch: `You and your partner against the other two, all 18. ${hole}`,
-    cart: snap?.teams?.length === 3 ? `Three carts of two. Every cart plays both others on every hole. ${hole}` : `Your cart plays a different cart every ${snap?.game?.rotations?.length === 2 ? '9' : '6'} holes. ${hole} Most points takes the day.`,
+    cart: allAtOnce(st) ? `Three carts of two. Every cart plays both others on every hole. ${hole}`
+      : snap?.teams?.length === 3 ? `Three carts of two. A new cart ${snap?.game?.rotations?.length === 2 ? 'at the turn' : 'every 6 holes'}; the third cart sits out. ${hole} Most points takes the day.`
+      : `Your cart plays a different cart every ${snap?.game?.rotations?.length === 2 ? '9' : '6'} holes. ${hole} Most points takes the day.`,
     alone: 'Everyone for themselves. A point a hole to the low net score; a tie splits it. Most points after 18 wins.',
     stroke: `Everyone plays their own ball. Lowest ${snap?.hasStrokes ? 'net ' : ''}total wins.`,
     ryder: 'Two sides, cart against cart. Each match is a point to your side.',

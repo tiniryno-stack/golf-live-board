@@ -20,7 +20,7 @@
 //   matches  { seq: ['w' | 'l' | 'h'], lbl, win, total }
 
 import { playFor } from './playfor.js';
-import { holeAt, holesLabel, fmtPts, sideOf } from './scoring.js';
+import { holeAt, holesLabel, fmtPts, sideOf, allAtOnce } from './scoring.js';
 
 export const PACE = 0.9; // 032: everything 10% quicker than the first build
 
@@ -199,7 +199,55 @@ function fourCarts(snap, Y, ts) {
   ];
 }
 
-// ───────────────────────────────────────────── 2v2 with 6: three carts, both others every hole
+// ───────────────────────────────────────────── 2v2 with 6 (Nov 20): three carts, a new cart every 6 or at the turn
+
+function sixCarts(snap, Y, ts) {
+  const st = snap.settings;
+  const mine = snap.playerById.get(Y.me)?.teamId;
+  const us = meFirst(Y, teamOf(snap, mine));
+  const pa = Y.name(us.find((p) => p !== Y.me));
+  const cartName = (tid) => teamOf(snap, tid).map(Y.name).join(' + ');
+  const ranges = st.rotation.map((r) => holesLabel(st, r.holes[0], r.holes[1]));
+  const oppAt = st.rotation.map((r) => { const m = r.matches.find((x) => x.includes(mine)); return m ? m.find((t) => t !== mine) : null; });
+  const others = [...new Set([...oppAt.filter(Boolean), ...snap.teams.map((t) => t.id)])].filter((t) => t !== mine);
+  const seq = oppAt.map((t) => (t ? others.indexOf(t) : -1));
+  const first = oppAt.find(Boolean) || others[0];
+  const firstAt = oppAt.indexOf(first);
+  const [t0, t1] = teamOf(snap, first).map(Y.name);
+  const turn = st.rotation.length === 2;
+  const nPlay = oppAt.filter(Boolean).length;
+  const myGroup = snap.playerById.get(Y.me)?.groupId;
+  const short = (i) => ranges[i]?.replace(/^Holes /, '') || '';
+  const rows = [[mine, 7.5], [others[0], 6], [others[1], 4.5]].filter(([t]) => t);
+  return [
+    {
+      h: 'Three carts of two.',
+      s: `${Y.You} and ${pa} are a cart. ${turn ? 'A new cart at the turn.' : `${Y.playing ? 'You play' : 'They play'} each other cart once.`}`,
+      scene: 'meet', ms: MS.meet,
+      args: { kind: 'carts3', groups: [{ label: 'Your cart', you: true, names: us.map((p) => chip(Y, p)) }, ...others.map((t) => ({ label: seq.includes(others.indexOf(t)) ? short(seq.indexOf(others.indexOf(t))) : 'Cart', names: teamOf(snap, t).map((p) => chip(Y, p)) }))] },
+    },
+    teamHole(Y, ts, {
+      h: 'Cart against cart.', s: `Best ball: ${Y.your} 4 beats their 5. One point.`, shape: 'dogleg', par: 4,
+      label: `Hole ${holeAt(st, st.rotation[Math.max(0, firstAt)].holes[0])} · vs ${t0} + ${t1}`,
+      players: [{ name: Y.You, s: 4, side: 'y', you: true }, { name: pa, s: 6, side: 'y' }, { name: t0, s: 5, side: 't' }, { name: t1, s: 6, side: 't' }],
+      win: `+1 to ${Y.playing ? 'you' : Y.You} and ${pa}`,
+    }),
+    {
+      h: turn ? 'A new cart at the turn.' : 'A new cart every 6 holes.',
+      s: nPlay < st.rotation.length
+        ? `${Y.playing ? 'You' : 'They'} sit out ${turn ? 'one nine' : 'one set'} while the other two carts play. Keep entering your scores.`
+        : `${Y.playing ? 'You play' : 'They play'} one cart on the front and the other on the back. Nobody moves; the app scores it.`,
+      scene: 'carts', ms: MS.carts,
+      args: { mine: cartName(mine), ranges, seq, others: others.map((t) => ({ name: cartName(t), color: t.toLowerCase(), away: teamOf(snap, t).some((p) => snap.playerById.get(p)?.groupId !== myGroup) })) },
+    },
+    {
+      h: 'Most points takes the day.', s: 'Every hole you play adds to your cart’s total.', scene: 'bars', ms: MS.bars,
+      args: { max: 12, note: 'After 18', rows: rows.map(([t, v]) => ({ name: cartName(t), v, you: t === mine })) },
+    },
+  ];
+}
+
+// ───────────────────────────────────────────── 2v2 with 6 before Nov 20: three carts, both others every hole (old rounds)
 
 function threeCarts(snap, Y, ts) {
   const mine = snap.playerById.get(Y.me)?.teamId;
@@ -341,7 +389,7 @@ export function todaysGame(snap, meId) {
   let slides;
   if (v === 'oneMatch') slides = oneMatch(snap, Y, ts, ncomp);
   else if (v === 'partners') slides = partners(snap, Y, ts);
-  else if (v === 'cart') slides = snap.teams.length === 3 ? threeCarts(snap, Y, ts) : fourCarts(snap, Y, ts);
+  else if (v === 'cart') slides = snap.teams.length !== 3 ? fourCarts(snap, Y, ts) : allAtOnce(st) ? threeCarts(snap, Y, ts) : sixCarts(snap, Y, ts);
   else if (v === 'alone') slides = alone(snap, Y);
   else if (v === 'stroke') slides = stroke(snap, Y);
   else if (v === 'ryder') slides = ryder(snap, Y);
