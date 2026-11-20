@@ -58,8 +58,8 @@ button { font-family: inherit; } button:focus-visible { outline: 2px solid var(-
 .segs i { flex: 1; border-radius: 2px; background: var(--surface-3); overflow: hidden; position: relative; }
 .segs i b { position: absolute; inset: 0; background: var(--text); transform-origin: left; transform: scaleX(0); }
 /* top half: the one small animation, same size as the first prototype */
-.mid { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: center; gap: clamp(20px, 4vh, 44px); }
-.stage { height: clamp(320px, 42vh, 380px); flex: none; display: grid; cursor: pointer; }
+.mid { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: center; gap: clamp(12px, 3.5vh, 44px); }
+.stage { height: clamp(282px, 42vh, 380px); flex: none; display: grid; cursor: pointer; }
 .stage .sc { height: 100%; align-content: center; }
 .hsc { gap: clamp(10px, 1.6vh, 16px) !important; }
 .hsc .ptline { margin-top: 4px; }
@@ -70,7 +70,8 @@ button { font-family: inherit; } button:focus-visible { outline: 2px solid var(-
 .copy > div { grid-area: 1 / 1; }
 .h { font-size: 32px; line-height: 36px; font-weight: 800; letter-spacing: -1px; margin: 0; text-wrap: balance; }
 .s { font-size: 15px; line-height: 20px; font-weight: 500; color: var(--text-muted); margin: 6px 0 0; text-wrap: pretty; }
-.lines { display: grid; gap: 6px; }
+.lines { display: grid; gap: 4px; }
+.app.four .ln:not(.on) { padding-block: 8px; }
 .ln { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 10px; align-items: start; text-align: left; width: 100%; border: 0; color: var(--text); background: transparent;
   border-radius: var(--radius-lg); padding: 12px 14px; cursor: pointer; opacity: var(--peek); transition: background var(--motion-grow) var(--ease-grow), opacity var(--motion-grow) var(--ease-grow); }
 .ln .n { font: 600 12px/22px var(--font-mono); color: var(--text-muted); }
@@ -90,7 +91,7 @@ button { font-family: inherit; } button:focus-visible { outline: 2px solid var(-
 .chip[aria-pressed="true"] { background: var(--tint-you); border-color: var(--cart-you); }
 /* the hole (the compact one) */
 .crsw { perspective: 700px; }
-.crs { width: 100%; height: 164px; display: block; overflow: visible; transform: rotateX(26deg) scale(1.04); transform-origin: 50% 62%; }
+.crs { width: 100%; height: clamp(140px, 19vh, 168px); display: block; overflow: visible; transform: rotateX(26deg) scale(1.04); transform-origin: 50% 62%; }
 .crs .slab { fill: var(--surface-1); stroke: var(--line); stroke-width: 1.5; }
 .crs .slab-side { fill: var(--bg); stroke: var(--line); stroke-width: 1.5; }
 .crs .bk { fill: var(--bg); stroke: var(--line); stroke-width: 1.5; }
@@ -212,6 +213,11 @@ button { font-family: inherit; } button:focus-visible { outline: 2px solid var(-
 .tug .y { left: 0; background: var(--cart-you); box-shadow: var(--glow-you); }
 .tug .t { right: 0; background: var(--surface-3); }
 .tug .tick { position: absolute; top: -8px; bottom: -8px; width: 2px; background: var(--text); border-radius: 1px; }
+.tug2 .tick { left: calc(50% - 1px); z-index: 1; transition: background 300ms var(--ease-grow), box-shadow 300ms var(--ease-grow); }
+.tug2 .y, .tug2 .t { transition: width 1100ms cubic-bezier(.3,.7,.2,1); }
+.tug2.slow .y { transition-duration: 500ms; }
+.tug2.past .tick { background: var(--cart-you); box-shadow: var(--glow-you); }
+.flagchip { transition: background 300ms var(--ease-grow), color 300ms var(--ease-grow), box-shadow 300ms var(--ease-grow); }
 .tickl { position: relative; height: 16px; }
 .tickl span { position: absolute; transform: translateX(-50%); white-space: nowrap; transition: color 300ms var(--ease-grow); }
 .tickl span.lit { color: var(--cart-you-text); }
@@ -342,19 +348,14 @@ const S = {
         `<div class="tile ${w === 'W' ? 'you' : ''} e" style="--d:${i * 380}ms;text-align:center"><span class="label muted">${r}</span><span class="row ${w === 'W' ? 'youtxt' : ''}">${w === 'W' ? 'Won' : w === 'H' ? 'Halved' : 'Lost'}</span><span class="small muted">with ${p}</span></div>`).join('')}</div>
       <div class="e" style="--d:1400ms;display:flex;align-items:baseline;gap:10px;justify-content:center"><span class="nxl youtxt">2</span><span class="row">stretches won</span></div></div>` }),
 
-  tug: ({ total, toWin, us, them, unit = 'points', lbl }) => ({ html: `<div class="sc" style="gap:16px">
+  // 032: the line is halfway. Your bar fills to it, holds, then pushes past: past halfway = nobody can catch you.
+  tug: ({ total, us, them, lbl, win, unit = 'points' }) => ({ hold: 4800, html: `<div class="sc" style="gap:14px">
       <div class="e" style="--d:0ms;display:flex;justify-content:space-between;align-items:end">
-        <div><span class="label youtxt">You</span><div class="nxl youtxt" data-count="${us}">0</div></div>
-        <div style="text-align:right"><span class="label muted">Them</span><div class="ttl-mono muted" data-count="${them}">0</div></div></div>
-      <div class="tug e" style="--d:80ms"><span class="y" style="--d:300ms"></span><span class="t" style="--d:300ms"></span><span class="tick" style="left:calc(${toWin / total * 100}% - 1px)"></span></div>
-      <div class="tickl label muted e" style="--d:120ms"><span style="left:${toWin / total * 100}%" id="tl">${lbl}</span></div>
-      <div class="small muted e" style="--d:200ms;text-align:center">${total} ${unit} on the course</div></div>`,
-    play(el) {
-      later(40, () => { el.querySelector('.tug .y').style.width = `${us / total * 100}%`; el.querySelector('.tug .t').style.width = `${them / total * 100}%`; });
-      el.querySelectorAll('[data-count]').forEach(n => countUp(n, +n.dataset.count, 340, 1400));
-      later(1800, () => el.querySelector('#tl').classList.add('lit'));
-    } }),
-
+        <div><span class="label youtxt">You</span><div class="nxl youtxt" id="tu">0</div></div>
+        <div style="text-align:right"><span class="label muted">Them</span><div class="ttl-mono muted" id="tt">0</div></div></div>
+      ${tugBar(lbl)}
+      <div class="chipline e" style="--d:160ms"><span class="flagchip" id="tc">${total} ${unit} out there</span></div></div>`,
+    play(el) { tugRun(el, { total, us, them, win, delay: 300, nu: el.querySelector('#tu'), nt: el.querySelector('#tt') }); } }),
   carts: ({ mine, others }) => ({ html: `<div class="sc">
       <div class="label muted" style="text-align:center"><span id="cr">Holes 1–6</span></div>
       <div class="grid2">
@@ -472,16 +473,32 @@ const S = {
     play(el) { const r = ['Holes 1–6', 'Holes 7–12', 'Holes 13–18'], ro = el.querySelector('#ro'), rr = el.querySelector('#rr');
       [1, 2].forEach(k => later(k * 1100, () => { rr.textContent = r[k]; swapIn(ro, `<div class="tile"><span class="label muted">Their cart</span><span class="row">${opps[k]}</span></div>`); })); } }),
 
-  matches: ({ seq }) => ({ html: `<div class="sc" style="gap:16px">
+  matches: ({ seq, lbl, win }) => ({ hold: 5600, html: `<div class="sc" style="gap:14px">
       <div class="dots e" style="--d:0ms">${seq.map(() => '<i></i>').join('')}</div>
       <div class="e" style="--d:80ms;display:flex;justify-content:space-between;align-items:end">
-        <div><span class="label youtxt">Your side</span><div class="nxl youtxt" id="ms">0</div></div>
+        <div><span class="label youtxt">Your side</span><div class="ttl-mono youtxt" id="ms">0</div></div>
         <div style="text-align:right"><span class="label muted">Them</span><div class="ttl-mono muted" id="mt">0</div></div></div>
-      <div class="small muted e" style="--d:120ms;text-align:center">12 matches · 1 point each · a tie is ½</div></div>`,
-    play(el) { const ds = [...el.querySelectorAll('.dots i')]; let us = 0, th = 0;
+      ${tugBar(lbl)}
+      <div class="chipline e" style="--d:160ms"><span class="flagchip" id="tc">12 matches · 1 point each</span></div></div>`,
+    play(el) { const ds = [...el.querySelectorAll('.dots i')], total = seq.length; let us = 0, th = 0;
       seq.forEach((r, i) => later(300 + i * 140, () => { ds[i].className = r; if (r === 'w') us += 1; else if (r === 'l') th += 1; else { us += .5; th += .5; }
-        el.querySelector('#ms').textContent = half(us) || '0'; el.querySelector('#mt').textContent = half(th) || '0'; })); } }),
+        el.querySelector('#ms').textContent = half(us) || '0'; el.querySelector('#mt').textContent = half(th) || '0';
+        el.querySelector('.tug .y').style.width = us / total * 100 + '%'; el.querySelector('.tug .t').style.width = th / total * 100 + '%';
+        if (us > total / 2 && !el._won) { el._won = 1; clinch(el, win); } })); } }),
 };
+
+function tugBar(lbl) { return `<div class="tug e tug2" style="--d:80ms"><span class="y"></span><span class="t"></span><span class="tick"></span></div>
+      <div class="tickl label muted e" style="--d:120ms"><span style="left:50%" id="tl">${lbl}</span></div>`; }
+function clinch(el, win) { el.querySelector('.tug').classList.add('past'); const tl = el.querySelector('#tl'); tl.classList.add('lit');
+  const c = el.querySelector('#tc'); c.textContent = win; c.classList.add('lit'); bumpEl(c); }
+function tugRun(el, { total, us, them, win, delay, nu, nt }) {
+  const y = el.querySelector('.tug .y'), t = el.querySelector('.tug .t'), halfway = total / 2, set = (a, b) => { y.style.width = a / total * 100 + '%'; t.style.width = b / total * 100 + '%'; };
+  const count = (n, from, to, dur) => { if (RM) { n.textContent = half(to); return; } const t0 = performance.now(); const f = (tt) => { const p = Math.min(1, (tt - t0) / dur), v = from + (to - from) * (1 - (1 - p) ** 3);
+    n.textContent = p < 1 ? String(Math.floor(v)) : half(to); if (p < 1 && n.isConnected) requestAnimationFrame(f); }; requestAnimationFrame(f); };
+  later(delay, () => { set(halfway, them); count(nu, 0, halfway, 1100); count(nt, 0, them, 1100); });
+  later(delay + 1700, () => { el.querySelector('.tug').classList.add('slow'); set(us, them); count(nu, halfway, us, 500); });
+  later(delay + 2300, () => clinch(el, win));
+}
 
 function countUp(n, to, delay, dur, whole) {
   if (RM) { n.textContent = half(to); return; }
@@ -585,15 +602,17 @@ const GAMES = {
   oneMatch: { name: '2v2', tag: 'same partners', slides: [
     { h: 'You and Mike vs Tyler and Sam.', s: 'Same partners, all 18.', sc: ['meet', { kind: 'pairs', groups: [{ label: 'Your side', you: 1, names: ['You', 'Mike'] }, { label: 'Them', names: ['Tyler', 'Sam'] }] }] },
     { h: 'Best ball takes the hole.', s: 'Your 4 beats their 5. One point.', ...hole({ shape: 'dogleg', players: [['You', 4, 'y'], ['Mike', 6, 'y'], ['Tyler', 5, 't'], ['Sam', 5, 't']], mode: 'best', win: '+1 to you and Mike' }) },
-    { h: 'First to 9½ wins.', s: '18 points out there. 9½ is more than half, so nobody can catch you.', sc: ['tug', { total: 18, toWin: 9.5, us: 9.5, them: 6.5, lbl: '9½ to win' }] } ] },
+    { h: 'First to 9½ wins.', s: '18 points out there. Get past halfway and nobody can catch you.', sc: ['tug', { total: 18, us: 9.5, them: 6.5, lbl: 'Halfway · 9', win: '9½ · Clinched' }] } ] },
   partners: { name: '2v2', tag: 'partners switch', slides: [
     { h: 'You and Mike vs Tyler and Sam.', s: 'For the first 6 holes.', sc: ['meet', { kind: 'pairs', sub: 'Holes 1–6', groups: [{ label: 'Your side', you: 1, names: ['You', 'Mike'] }, { label: 'Them', names: ['Tyler', 'Sam'] }] }] },
     { h: "Your partner's ball counts too.", s: "Mike's 4 is your side's best. One point to you both.", ...hole({ shape: 'bend', label: 'Hole 2 · with Mike', players: [['You', 6, 'y'], ['Mike', 4, 'y'], ['Tyler', 5, 't'], ['Sam', 5, 't']], mode: 'best', win: '+1 to you and Mike' }) },
-    { h: 'Partners switch at 7 and 13.', s: 'Each stretch is its own match. Most stretches won takes the day.', hold: 4400, sc: ['switch', { partners: ['Mike', 'Tyler', 'Sam'] }] } ] },
+    { h: 'Partners switch at 7 and 13.', s: 'So you play with everyone once. The score starts over each time.', hold: 4400, sc: ['switch', { partners: ['Mike', 'Tyler', 'Sam'] }] },
+    { h: 'Most stretches won takes the day.', s: 'Each 6 holes is its own match. Win two of three.', hold: 4200, sc: ['stretches', { res: [['1–6', 'W', 'Mike'], ['7–12', 'L', 'Tyler'], ['13–18', 'W', 'Sam']] }] } ] },
   cart: { name: '2v2', tag: '8 players · 4 carts', slides: [
     { h: 'You and Mike are a cart.', s: 'Four carts of two today.', sc: ['meet', { kind: 'pairs', sub: 'Holes 1–6', groups: [{ label: 'Your cart', you: 1, names: ['You', 'Mike'] }, { label: 'First up', names: ['Tyler', 'Sam'] }] }] },
     { h: 'A tie splits it.', s: "Both carts' best is a 3. ½ point each.", ...hole({ shape: 'short', par: 3, label: 'Hole 3 · Par 3', players: [['You', 3, 'y'], ['Mike', 4, 'y'], ['Tyler', 3, 't'], ['Sam', 5, 't']], mode: 'best' }) },
-    { h: 'A new cart every 6 holes.', s: 'Most points takes the day. Some matches are with the other tee time; the app scores it.', hold: 4400, sc: ['carts', { mine: 'You + Mike', others: [['Tyler + Sam', 'a'], ['Chris + Jake', 'b'], ['Ben + Luke', 'c']] }] } ] },
+    { h: 'A new cart every 6 holes.', s: 'Some of them are in the other tee time. Nobody moves; the app scores it.', hold: 4400, sc: ['carts', { mine: 'You + Mike', others: [['Tyler + Sam', 'a'], ['Chris + Jake', 'b'], ['Ben + Luke', 'c']] }] },
+    { h: 'Most points takes the day.', s: 'Every hole against every cart adds to your total.', sc: ['bars', { max: 16, rows: [['You + Mike', 12, true], ['Chris + Jake', 10.5], ['Tyler + Sam', 7.5], ['Ben + Luke', 6]], note: 'After 18' }] } ] },
   threeCarts: { name: '2v2', tag: '6 players · 3 carts', slides: [
     { h: 'Three carts of two.', s: 'You and Mike are a cart. Every cart plays both others.', sc: ['meet', { kind: 'carts3', groups: [{ label: 'Your cart', you: 1, names: ['You', 'Mike'] }, { label: 'Cart', names: ['Tyler', 'Sam'] }, { label: 'Cart', names: ['Chris', 'Jake'] }] }] },
     { h: 'Both carts, every hole.', s: "Your 4 beats Tyler and Sam's 5 and ties Chris and Jake's 4. 1½ points.", ...hole({ shape: 'dogleg', players: [['You', 4, 'y'], ['Mike', 5, 'y'], ['Tyler', 5, 'a'], ['Sam', 6, 'a'], ['Chris', 4, 'b'], ['Jake', 6, 'b']], mode: 'three' }) },
@@ -607,11 +626,12 @@ const GAMES = {
     { h: 'Every stroke counts.', s: 'Five shots on a par 5. Your card stays level.', ...hole({ shape: 'long', par: 5, label: 'Hole 5 · Par 5', players: [['You', 5, 'y'], ['Chris', 6, 't'], ['Sam', 5, 't'], ['Jake', 7, 't']], mode: 'none', win: '5 on your card · E' }) },
     { h: 'Lowest total wins.', s: 'The Board shows where you stand, live.', hold: 4600, sc: ['board', { steps: [[['Sam', '+1'], ['Chris', '+2'], ['You', '+3', true], ['Jake', '+5']], [['Sam', '+1'], ['You', '+2', true], ['Chris', '+3'], ['Jake', '+5']], [['You', 'E', true], ['Sam', '+1'], ['Chris', '+3'], ['Jake', '+6']]] }] } ] },
   ryder: { name: 'Team Ryder Cup', tag: '16 players', slides: [
-    { h: 'Two sides of 8.', s: 'Four carts each. Your cart plays one of theirs, 6 holes at a time.', sc: ['meet', { kind: 'ryder' }] },
+    { h: 'Two sides of 8.', s: 'Four carts a side. You and Mike are one of yours.', sc: ['meet', { kind: 'ryder' }] },
+    { h: 'A new cart every 6 holes.', s: 'Your cart plays three of theirs: one each stretch.', hold: 4200, sc: ['ryderRot', { mine: 'You + Mike', opps: ['Tyler + Sam', 'Chris + Jake', 'Ben + Luke'] }] },
     { h: 'Cart against cart.', s: 'Win the hole, win a point toward your match. Most points over 6 holes wins it.', ...hole({ shape: 'dogleg', label: 'Hole 1 · vs Tyler + Sam', players: [['You', 4, 'y'], ['Mike', 5, 'y'], ['Tyler', 5, 't'], ['Sam', 5, 't']], mode: 'best', win: '+1 in your match' }) },
-    { h: '6½ wins the cup.', s: '12 matches, 1 point each. Your side needs more than half.', hold: 4600, sc: ['matches', { seq: ['w', 'l', 'w', 'w', 'h', 'l', 'w', 'w', 'l', 'w', 'h', 'l'] }] } ] },
+    { h: '6½ wins the cup.', s: '12 matches, a point each. Get past halfway and the cup is yours.', sc: ['matches', { lbl: 'Halfway · 6', win: '6½ · Cup won', seq: ['w', 'l', 'w', 'w', 'h', 'l', 'w', 'w', 'l', 'w', 'h', 'l'] }] } ] },
 };
-const BOTS = { lines: 'Three lines', head: 'One headline' };
+const BOTS = { lines: 'The lines', head: 'One headline' };
 
 // ── run ──
 let game = 'oneMatch', bot = 'lines', cur = 0, SL = [];
@@ -628,7 +648,7 @@ function go(k, first) { if (k >= SL.length) { $('replay').classList.add('done');
   if (bot === 'lines') [...$('lines').children].forEach((l, i) => l.classList.toggle('on', i === k)); else setCopy(b, first);
   const run = () => { if (old) old.remove(); const dur = show(st, b); if (bot === 'head') segTo(k, dur); wait(dur, () => go(k + 1)); };
   if (first || RM || !old) run(); else { old.classList.add('out'); wait(120, run); } }
-function start() { clearAll(); const g = GAMES[game]; SL = g.slides; $('replay').classList.remove('done'); $('stage').innerHTML = '';
+function start() { clearAll(); const g = GAMES[game]; SL = g.slides; $('app').classList.toggle('four', SL.length > 3); $('replay').classList.remove('done'); $('stage').innerHTML = '';
   $('kick').textContent = `Today's game · ${g.name === 'Team Ryder Cup' ? 'Ryder Cup' : g.name === 'Everyone alone' ? 'Alone' : g.name}`;
   const lines = bot === 'lines'; $('lines').hidden = !lines; $('copy').hidden = lines; $('segs').hidden = lines; $('copy').innerHTML = '';
   $('segs').innerHTML = SL.map(() => '<i><b></b></i>').join('');
