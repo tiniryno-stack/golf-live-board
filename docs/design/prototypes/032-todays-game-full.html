@@ -19,7 +19,7 @@
   --bad: #ff5a5f;
   --shadow-dock: inset 0 1px 0 rgba(255,255,255,0.10), 0 0 28px rgba(255,255,255,0.06);
   /* 027 */
-  --motion-grow: 300ms; --ease-grow: cubic-bezier(.2,.8,.2,1); --blur-swap: 8px;
+  --motion-grow: 270ms; --ease-grow: cubic-bezier(.2,.8,.2,1); --blur-swap: 8px;
   --glow-you: 0 0 20px rgba(61,220,132,.35); --peek: .6;
   /* page chrome only (outside the phone) */
   --page: #050607; --frame: #23262c; --tree: var(--surface-3); --svg-glow: url(#gl);
@@ -299,7 +299,8 @@ button { font-family: inherit; } button:focus-visible { outline: 2px solid var(-
 const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const $ = (id) => document.getElementById(id);
 let timers = [];
-const wait = (ms, f) => { timers.push(setTimeout(f, ms)); };          // real time: how long a slide stays
+const PACE = 0.9;                                                      // 032: everything 10% quicker
+const wait = (ms, f) => { timers.push(setTimeout(f, ms * PACE)); };   // real time: how long a slide stays
 const later = (ms, f) => wait(RM ? Math.min(ms, 1) : ms, f);          // inside a scene: instant with reduced motion
 const clearAll = () => { timers.forEach(clearTimeout); timers = []; };
 const half = (n) => { const w = Math.floor(n + 1e-9), h = n - w > 1e-9; return (w || !h ? String(w) : '') + (h ? '½' : ''); };
@@ -498,7 +499,7 @@ const S = {
       if (sub) extras.push(add('msub small muted', sub, { top: (kind === 'pairs' ? 230 : kind === 'list' ? 232 : 220) + 'px' }));
       all.forEach((c, i) => later(150 + i * 120, () => { c.el.classList.add('in2'); bumpEl(c.el.firstChild); }));
       const t1 = 300 + all.length * 120 + 500;
-      later(t1, () => cards.forEach((c, i) => setTimeout(() => c.classList.add('on'), RM ? 0 : i * 90)));
+      later(t1, () => cards.forEach((c, i) => setTimeout(() => c.classList.add('on'), RM ? 0 : i * 90 * PACE)));
       all.forEach((c, i) => later(t1 + 60 + c.gi * 90 + c.ni * 50, () => mv(c.el, ...c.b)));
       later(t1 + 700, () => extras.forEach(e => e.classList.add('on')));
     } }),
@@ -535,7 +536,7 @@ function clinch(el, win) { el.querySelector('.tug').classList.add('past'); const
   const c = el.querySelector('#tc'); c.textContent = win; c.classList.add('lit'); bumpEl(c); }
 function tugRun(el, { total, us, them, win, delay, nu, nt }) {
   const y = el.querySelector('.tug .y'), t = el.querySelector('.tug .t'), halfway = total / 2, set = (a, b) => { y.style.width = a / total * 100 + '%'; t.style.width = b / total * 100 + '%'; };
-  const count = (n, from, to, dur) => { if (RM) { n.textContent = half(to); return; } const t0 = performance.now(); const f = (tt) => { const p = Math.min(1, (tt - t0) / dur), v = from + (to - from) * (1 - (1 - p) ** 3);
+  const count = (n, from, to, dur) => { if (RM) { n.textContent = half(to); return; } const t0 = performance.now(); const f = (tt) => { const p = Math.min(1, (tt - t0) / (dur * PACE)), v = from + (to - from) * (1 - (1 - p) ** 3);
     n.textContent = p < 1 ? String(Math.floor(v)) : half(to); if (p < 1 && n.isConnected) requestAnimationFrame(f); }; requestAnimationFrame(f); };
   later(delay, () => { set(halfway, them); count(nu, 0, halfway, 1100); count(nt, 0, them, 1100); });
   later(delay + 1700, () => { el.querySelector('.tug').classList.add('slow'); set(us, them); count(nu, halfway, us, 500); });
@@ -545,7 +546,7 @@ function tugRun(el, { total, us, them, win, delay, nu, nt }) {
 function countUp(n, to, delay, dur, whole) {
   if (RM) { n.textContent = half(to); return; }
   later(delay, () => { const t0 = performance.now();
-    const tick = (t) => { const p = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - p, 3), v = to * e;
+    const tick = (t) => { const p = Math.min(1, (t - t0) / (dur * PACE)), e = 1 - Math.pow(1 - p, 3), v = to * e;
       n.textContent = whole || Number.isInteger(to) ? String(Math.round(v)) : (p < 1 ? String(Math.floor(v)) : half(to));
       if (p < 1 && n.isConnected) requestAnimationFrame(tick); };
     requestAnimationFrame(tick); });
@@ -560,7 +561,7 @@ function swapIn(box, html) {
 function tween(el, dur, fn, done) {
   if (RM) { fn(1); done && done(); return; }
   const t0 = performance.now();
-  const f = (t) => { if (!el.isConnected) return; const p = Math.min(1, (t - t0) / dur); fn(p); if (p < 1) requestAnimationFrame(f); else done && done(); };
+  const f = (t) => { if (!el.isConnected) return; const p = Math.min(1, (t - t0) / (dur * PACE)); fn(p); if (p < 1) requestAnimationFrame(f); else done && done(); };
   requestAnimationFrame(f);
 }
 const bumpEl = (n) => { n.classList.remove('bmp'); void n.offsetWidth; n.classList.add('bmp'); };
@@ -737,7 +738,7 @@ const save = () => { try { localStorage.setItem('g032v4', JSON.stringify({ game,
 const bumpBtn = (n) => { n.classList.remove('bmp'); void n.offsetWidth; n.classList.add('bmp'); };
 function setCopy(c, first) { const html = `<div><p class="h">${c.h}</p><p class="s">${c.s}</p></div>`, box = $('copy'); if (first || RM) box.innerHTML = html; else swapIn(box, html); }
 function segTo(k, dur) { [...$('segs').children].forEach((s, i) => { const b = s.firstChild; b.style.transition = 'none'; b.style.transform = i < k ? 'scaleX(1)' : 'scaleX(0)';
-  if (i === k) { b.getBoundingClientRect(); b.style.transition = `transform ${dur}ms linear`; b.style.transform = 'scaleX(1)'; } }); }
+  if (i === k) { b.getBoundingClientRect(); b.style.transition = `transform ${dur * PACE}ms linear`; b.style.transform = 'scaleX(1)'; } }); }
 function show(st, b) { const sc = S[b.sc[0]](b.sc[1]); st.innerHTML = sc.html; const el = st.firstElementChild;
   requestAnimationFrame(() => requestAnimationFrame(() => { el.classList.add('go'); if (sc.play) sc.play(el); })); return b.hold || sc.hold || 3600; }
 function go(k, first) { if (k >= SL.length) { $('replay').classList.add('done'); bumpBtn($('play')); return; }
