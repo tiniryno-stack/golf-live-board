@@ -606,8 +606,8 @@ const GAMES = {
   partners: { name: '2v2', tag: 'partners switch', slides: [
     { h: 'You and Mike vs Tyler and Sam.', s: 'For the first 6 holes.', sc: ['meet', { kind: 'pairs', sub: 'Holes 1–6', groups: [{ label: 'Your side', you: 1, names: ['You', 'Mike'] }, { label: 'Them', names: ['Tyler', 'Sam'] }] }] },
     { h: "Your partner's ball counts too.", s: "Mike's 4 is your side's best. One point to you both.", ...hole({ shape: 'bend', label: 'Hole 2 · with Mike', players: [['You', 6, 'y'], ['Mike', 4, 'y'], ['Tyler', 5, 't'], ['Sam', 5, 't']], mode: 'best', win: '+1 to you and Mike' }) },
-    { h: 'Partners switch at 7 and 13.', s: 'So you play with everyone once. The score starts over each time.', hold: 4400, sc: ['switch', { partners: ['Mike', 'Tyler', 'Sam'] }] },
-    { h: 'Most stretches won takes the day.', s: 'Each 6 holes is its own match. Win two of three.', hold: 4200, sc: ['stretches', { res: [['1–6', 'W', 'Mike'], ['7–12', 'L', 'Tyler'], ['13–18', 'W', 'Sam']] }] } ] },
+    { h: 'Partners switch at 7 and 13.', s: 'So you play with everyone once. Your points add up all day.', hold: 4400, sc: ['switch', { partners: ['Mike', 'Tyler', 'Sam'] }] },
+    { h: 'Most points takes the day.', s: 'Every point your side wins is yours too, whoever your partner was.', sc: ['bars', { max: 12, rows: [['You', 10.5, true], ['Sam', 9], ['Mike', 8.5], ['Tyler', 8]], note: 'After 18' }] } ] },
   cart: { name: '2v2', tag: '8 players · 4 carts', slides: [
     { h: 'You and Mike are a cart.', s: 'Four carts of two today.', sc: ['meet', { kind: 'pairs', sub: 'Holes 1–6', groups: [{ label: 'Your cart', you: 1, names: ['You', 'Mike'] }, { label: 'First up', names: ['Tyler', 'Sam'] }] }] },
     { h: 'A tie splits it.', s: "Both carts' best is a 3. ½ point each.", ...hole({ shape: 'short', par: 3, label: 'Hole 3 · Par 3', players: [['You', 3, 'y'], ['Mike', 4, 'y'], ['Tyler', 3, 't'], ['Sam', 5, 't']], mode: 'best' }) },
