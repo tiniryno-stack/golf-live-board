@@ -233,19 +233,22 @@ function threeCarts(snap, Y, ts) {
 
 // ───────────────────────────────────────────── no partners: Everyone alone, Stroke play
 
-/** You plus up to three others from your tee time (SPEC §3; open question for 5–6 in one group). */
+/**
+ * You plus your whole tee time, up to 6 (Andrew, Nov 20). A tee time smaller than four is topped up from the
+ * other tee times, so the slides always show at least four when the round has them.
+ */
 function tableMates(snap, Y) {
   const g = snap.playerById.get(Y.me)?.groupId;
-  const mates = snap.players.filter((p) => p.id !== Y.me && p.groupId === g);
-  const more = snap.players.filter((p) => p.id !== Y.me && p.groupId !== g);
-  return [Y.me, ...[...mates, ...more].slice(0, 3).map((p) => p.id)];
+  const mates = snap.players.filter((p) => p.id !== Y.me && p.groupId === g).slice(0, 5);
+  const more = snap.players.filter((p) => p.id !== Y.me && p.groupId !== g).slice(0, Math.max(0, 3 - mates.length));
+  return [Y.me, ...mates, ...more].map((p) => (typeof p === 'string' ? p : p.id));
 }
 
 function alone(snap, Y) {
   const ids = tableMates(snap, Y);
   const n = ids.map(Y.name);
-  const S = [3, 4, 5, 4];
-  const R = [7, 4, 3, 2];
+  const S = [3, 4, 5, 4, 5, 6];
+  const R = [7, 4, 3, 2, 2, 1];
   return [
     { h: 'Everyone for themselves.', s: 'No partners today.', scene: 'meet', ms: MS.meet, args: { kind: 'alone', groups: ids.map((p) => ({ you: p === Y.me, names: [chip(Y, p)] })) } },
     {
@@ -262,13 +265,13 @@ function alone(snap, Y) {
 
 function stroke(snap, Y) {
   const ids = tableMates(snap, Y);
-  const [y, o0, o1, o2] = ids;
-  const S = [5, 6, 5, 7];
+  const [y, o0, o1, o2, o3, o4] = ids;
+  const S = [5, 6, 5, 7, 6, 8];
   const row = (pid, v) => (pid ? { name: Y.name(pid), v, you: pid === Y.me } : null);
   const steps = [
-    [row(o1, '+1'), row(o0, '+2'), row(y, '+3'), row(o2, '+5')],
-    [row(o1, '+1'), row(y, '+2'), row(o0, '+3'), row(o2, '+5')],
-    [row(y, 'E'), row(o1, '+1'), row(o0, '+3'), row(o2, '+6')],
+    [row(o1, '+1'), row(o0, '+2'), row(y, '+3'), row(o2, '+5'), row(o3, '+6'), row(o4, '+8')],
+    [row(o1, '+1'), row(y, '+2'), row(o0, '+3'), row(o2, '+5'), row(o3, '+6'), row(o4, '+8')],
+    [row(y, 'E'), row(o1, '+1'), row(o0, '+3'), row(o3, '+5'), row(o2, '+6'), row(o4, '+9')],
   ].map((st) => st.filter(Boolean));
   return [
     { h: 'Just your score.', s: 'Everyone plays their own ball.', scene: 'meet', ms: MS.meet, args: { kind: 'list', groups: ids.map((p) => ({ you: p === Y.me, names: [chip(Y, p)], val: 'E' })) } },

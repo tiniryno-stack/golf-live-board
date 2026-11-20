@@ -118,7 +118,8 @@ export const SCENES = {
       }
       const all = groups.flatMap((g, gi) => g.names.map((c, ni) => ({ ...c, gi, ni })));
       all.forEach((c) => { c.el = add(`tg-mc${c.you ? ' y' : ''}`, `<i>${initial(c.name)}</i><span>${esc(c.name)}</span>`); });
-      const maxW = kind === 'alone' ? (W - 12) / 2 - 16 : (W - 36) / 2;
+      const cols = kind === 'alone' && groups.length > 4 ? 3 : 2; // 5–6 alone: three across
+      const maxW = kind === 'alone' ? (W - 12 * (cols - 1)) / cols - 12 : (W - 36) / 2;
       all.forEach((c) => { c.el.style.maxWidth = px(maxW); c.w = c.el.offsetWidth; });
       // the row they arrive in (two rows past four names)
       const rows = all.length > 4 ? 2 : 1, per = Math.ceil(all.length / rows), CG = 8;
@@ -141,17 +142,18 @@ export const SCENES = {
         groups.forEach((g, gi) => { const y = 4 + gi * (H + 10); card(0, y, W, H, g, ' rl'); slots(gi, 12, y + 12); });
       }
       if (kind === 'alone') {
-        const w = (W - 12) / 2, H = 76;
+        const w = (W - 12 * (cols - 1)) / cols, H = 76;
         groups.forEach((g, gi) => {
-          const x = (gi % 2) * (w + 12), y = 24 + Math.floor(gi / 2) * (H + 12);
+          const x = (gi % cols) * (w + 12), y = 24 + Math.floor(gi / cols) * (H + 12);
           card(x, y, w, H, g);
           const c = all.find((cc) => cc.gi === gi);
           c.b = [x + (w - c.w) / 2, y + (H - 36) / 2];
         });
       }
       if (kind === 'list') {
-        const H = 46;
-        groups.forEach((g, gi) => { const y = 12 + gi * (H + 8); card(0, y, W, H, g); slots(gi, 6, y + 5); });
+        const H = groups.length > 4 ? 40 : 46, G = groups.length > 4 ? 4 : 8, y0 = groups.length > 4 ? 0 : 12; // 5–6 rows: tighter
+        groups.forEach((g, gi) => { const y = y0 + gi * (H + G); card(0, y, W, H, g); slots(gi, 6, y + (H - 36) / 2); });
+        box.style.height = px(Math.max(250, y0 + groups.length * (H + G)));
       }
       if (sub) extras.push(add('tg-msub', esc(sub), { top: px(kind === 'pairs' ? 230 : kind === 'list' ? 232 : 220) }));
       all.forEach((c, i) => k.later(150 + i * 120, () => { c.el.classList.add('in'); bumpEl(c.el.firstChild); }));
@@ -276,15 +278,17 @@ export const SCENES = {
   },
 
   // Stroke play: the Board's rows slide to their new places as the numbers change.
-  board: ({ steps = [[]] }) => ({
+  board: ({ steps = [[]] }) => {
+    const pitch = steps[0].length > 4 ? 44 : 52; // 5–6 rows: tighter
+    return {
     html: `<div class="tg-sc"><div class="ts-label tg-e" style="--d:0ms">The Board · live</div>
-      <div class="tg-lb tg-e" style="--d:60ms;height:${steps[0].length * 52}px">${steps[0].map((r) => `<div class="tg-lbr${r.you ? ' you' : ''}" data-n="${esc(r.name)}"><span class="pos"></span><span class="nm">${esc(r.name)}</span><span class="v">${esc(r.v)}</span></div>`).join('')}</div></div>`,
+      <div class="tg-lb${pitch < 52 ? ' tight' : ''} tg-e" style="--d:60ms;height:${steps[0].length * pitch}px">${steps[0].map((r) => `<div class="tg-lbr${r.you ? ' you' : ''}" data-n="${esc(r.name)}"><span class="pos"></span><span class="nm">${esc(r.name)}</span><span class="v">${esc(r.v)}</span></div>`).join('')}</div></div>`,
     play(el, k) {
       const rowsEl = [...el.querySelectorAll('.tg-lbr')];
       const place = (st) => st.forEach((r, i) => {
         const n = rowsEl.find((x) => x.dataset.n === r.name);
         if (!n) return;
-        n.style.transform = `translateY(${i * 52}px)`;
+        n.style.transform = `translateY(${i * pitch}px)`;
         n.querySelector('.v').textContent = r.v;
         n.querySelector('.pos').textContent = i + 1;
       });
@@ -292,7 +296,8 @@ export const SCENES = {
       if (k.RM) return place(steps[steps.length - 1]);
       steps.slice(1).forEach((st, i) => k.later(1100 + i * 1100, () => place(st)));
     },
-  }),
+    };
+  },
 
   // Team Ryder Cup: your cart stays; their cart swaps each 6 holes.
   ryderRot: ({ mine, opps = [], ranges = [] }) => ({

@@ -2713,3 +2713,4 @@ html.light .gs-seg, [data-theme="light"] .gs-seg { background: var(--bg); }
   .tg-pt { animation: fade-in-027 150ms linear both; }
   .tg-lg, .tg-lg .cn { transition-duration: 150ms; }
 }
+.tg-lb.tight .tg-lbr { height: 40px; }

@@ -57,6 +57,9 @@ test('032 todaysGame: slides per game, real names, team score, old rounds keep t
   assert.equal(al.kicker, 'Today’s game · Alone');
   assert.deepEqual(heads(al), ['Everyone for themselves.', 'Low score takes the point.', 'The race.']);
   assert.deepEqual(al.slides[0].args.groups.map((g) => g.names[0].name), ['You', 'Andrew', 'Tyler', 'Sam']);
+  const big = four({ solo: true });
+  big.roster.players.push(...['ch', 'ja'].map((id, i) => ({ id, personId: id, name: NAMES[4 + i], teamId: null, groupId: 'g1', strokes: null })));
+  assert.equal(todaysGame(compute(big, []), 'an').slides[0].args.groups.length, 6, 'you + your whole tee time, up to 6');
   const sp = todaysGame(compute(four({}), []), 'an');
   assert.equal(sp.kicker, 'Today’s game · Stroke play');
   assert.deepEqual(heads(sp), ['Just your score.', 'Every stroke counts.', 'Lowest total wins.']);

@@ -201,6 +201,7 @@ async function loadFrom(app, code) {
     const nCarts = (ev.roster.teams || []).length;
     s.game = ryder ? 'ryder' : settings.pairs ? '2v2' : settings.solo ? 'match' : nCarts === 4 || nCarts === 3 ? 'carts' : 'scorecard';
     s.pairSwitch = settings.pairSwitch || 'never';
+    if (settings.pairs) s.settings.pairTeamScore = settings.holePoint ? 'bestBall' : settings.teamScore || 'bestBall'; // 032 §6
     if (Array.isArray(rotation) && rotation.length === 2) s.schedule = 'turn';
     if (Array.isArray(rotation) && rotation.length === 1 && nCarts === 4) s.schedule = 'same'; // 031: same opponents all 18
     if (Array.isArray(rotation) && rotation.length) s.opps = rotation.map((r) => r.matches?.[0]?.[1]).filter(Boolean);
@@ -426,7 +427,10 @@ function buildRound(s) {
   const three = game === 'carts' && s.players.length === 6; // 3 carts: everyone plays everyone, all 18
   const rotation = game === 'carts' ? cartRot(s) : clone(DEFAULT_ROTATION);
   // 031 step 3, new rounds only: a hole is one point (best ball, ½ a tie, no bonus); partner stretches decide the day.
-  const hp = holeMatch(s) ? { holePoint: true, teamScore: 'bestBall', matchBonus: 0, halvedHolePoints: 0.5 } : {};
+  // 032 §6 (Andrew, Nov 20): 4-player 2v2 picks its team score again (best ball by default). Best ball keeps holePoint;
+  // low ball + total / aggregate keep the 031 rules (½ a tie, no bonus) with that team score.
+  const pts = game === '2v2' ? pairScore(s) : 'bestBall';
+  const hp = !holeMatch(s) ? {} : pts === 'bestBall' ? { holePoint: true, teamScore: 'bestBall', matchBonus: 0, halvedHolePoints: 0.5 } : { teamScore: pts, matchBonus: 0, halvedHolePoints: 0.5 };
   const groupOfTeam = three ? { A: 'g1', B: 'g1', C: 'g2' } : {};
   if (!three) rotation[0].matches.forEach((m, i) => m.forEach((t) => (groupOfTeam[t] = `g${i + 1}`)));
   const auto = autoGroups(s.players.length);
@@ -444,7 +448,7 @@ function buildRound(s) {
   }));
   const nGroups = Math.max(...players.map((p) => Number(p.groupId.slice(1))));
   const teams = game === 'carts' ? cartIds(s).map((id) => ({ id, name: teamName(s, id).slice(0, 20) })) : [];
-  const base = { ...s.settings };
+  const { pairTeamScore: _pts, ...base } = s.settings;
   const settings = game === 'carts'
     ? { ...base, solo: false, pairs: false, rotation, ...hp, ...(three || hp.holePoint ? { rotationMode: 'fixed' } : {}), ...(hp.holePoint ? { game: 'rotationMatch' } : {}) }
     : game === '2v2'
@@ -806,7 +810,7 @@ function rulesSummary(s) {
   const st = s.settings;
   const parts = [];
   if (s.game === 'carts') parts.push(st.game === 'rotationPlusMinus' ? 'Plus/Minus' : st.game === 'none' ? 'No game' : 'Match play');
-  parts.push(holeMatch(s) ? 'Best ball · 1 a hole' : { bestBallAggregate: 'Low ball + total', bestBall: 'Best ball', aggregate: 'Aggregate' }[st.teamScore] || 'Low ball + total');
+  parts.push(gameOf(s) === '2v2' && pairScore(s) !== 'bestBall' ? TEAM_SCORE[pairScore(s)] : holeMatch(s) ? 'Best ball · 1 a hole' : { bestBallAggregate: 'Low ball + total', bestBall: 'Best ball', aggregate: 'Aggregate' }[st.teamScore] || 'Low ball + total');
   parts.push({ doublePar: 'double par max', netDoubleBogey: 'net double bogey max', none: 'no max' }[st.maxHoleScore] || 'double par max');
   if (st.game !== 'rotationPlusMinus') parts.push(Number(st.halvedHolePoints) ? '½ ties' : 'no points for ties');
   if (st.game !== 'rotationPlusMinus' && s.game !== 'ryder' && !holeMatch(s) && Number(st.matchBonus ?? 1)) parts.push(`+${st.matchBonus ?? 1} win`);
@@ -821,6 +825,7 @@ function rulesBlock(s) {
     ${s.rulesOpen ? `<div class="rules-body">
       ${s.game === 'carts' && !holeMatch(s) ? `<div class="field"><span class="label">Game</span>${seg('setup-set', [['rotationMatch', 'Match play'], ['rotationPlusMinus', 'Plus/Minus'], ['none', 'None']], st.game, 'data-k="game"')}</div>` : ''}
       ${st.game !== 'none' && !holeMatch(s) ? `<div class="field"><span class="label">Team score</span>${seg('setup-set', [['bestBallAggregate', 'Low ball + total'], ['bestBall', 'Best ball'], ['aggregate', 'Aggregate']], st.teamScore, 'data-k="teamScore"')}</div>` : ''}
+      ${gameOf(s) === '2v2' ? `<div class="field"><span class="label">Team score</span>${seg('setup-set', [['bestBall', 'Best ball'], ['bestBallAggregate', 'Low ball + total'], ['aggregate', 'Aggregate']], pairScore(s), 'data-k="pairTeamScore"')}</div>` : ''}
       <div class="field"><span class="label">Max hole score</span>${seg('setup-set', [['doublePar', 'Double par'], ['netDoubleBogey', 'Net dbl bogey'], ['none', 'None']], st.maxHoleScore, 'data-k="maxHoleScore"')}</div>
       ${!pm && st.game !== 'none' ? `<div class="field"><span class="label">Ties</span>${seg('setup-set', [['0.5', '½ each'], ['0', 'Nothing']], String(st.halvedHolePoints), 'data-k="halvedHolePoints"')}</div>
       ${s.game === 'ryder' || holeMatch(s) ? '' : `<div class="field"><span class="label">Matchup win bonus</span>${seg('setup-set', [['1', '+1 point'], ['0', 'None']], String(st.matchBonus ?? 1), 'data-k="matchBonus"')}</div>`}` : ''}
@@ -1238,6 +1243,9 @@ function cartsView(s) {
 /** The cart game's rotation: three carts, same opponents all 18 (031), or opponents switching. */
 const cartRot = (s) => (cartIds(s).length === 3 ? threeCartRotation() : s.schedule === 'same' ? sameOppsRotation() : cartRotation(s.schedule, s.opps));
 /** 031 step 3: new 2v2 rounds where a hole is one point (best ball, no bonus): 4 players, or 8 with the same opponents. */
+/** 4-player 2v2's team score (032 §6): Setup keeps it apart from settings.teamScore so best ball stays the default. */
+const pairScore = (s) => (['bestBall', 'bestBallAggregate', 'aggregate'].includes(s.settings.pairTeamScore) ? s.settings.pairTeamScore : 'bestBall');
+const TEAM_SCORE = { bestBallAggregate: 'Low ball + total · 2 a hole', bestBall: 'Best ball', aggregate: 'Aggregate · 1 a hole' };
 const holeMatch = (s) => gameOf(s) === '2v2' || (gameOf(s) === 'carts' && s.players.length === 8 && s.schedule === 'same');
 
 /** Partner “Rider” Cup tee times: who tees off together = the first matchups. */
