@@ -1,0 +1,240 @@
+/* 033 · Enter motion: louder score picks (Part 1) and the card turns to the next hole (Part 2).
+   The exact values from prototype.html, which loads this file as it is. Copy it; don't re-derive it.
+
+   This file is complete: it repeats the 022 reward rules that stay (marked "022") so the prototype runs from it
+   alone. When building, replace the 022 block at the end of css/styles.css (`.ce-pad .ce-ln` … the reduced-motion
+   block) with Part 1 below, and add Part 2. Class names are the app's own (.ce-*), plus:
+
+     .ce-pad.k-eagle|k-birdie|k-par|k-bogey|k-double  the NET result of the pick (reward().kind), on the picked pad,
+                                                       only on the render right after the tap (with .anim)
+     .ce-pulse         one span inside a par pad            .ce-burst > i × 8   eagle-or-better sparks (--a = angle)
+     .ce-word.par      par's word, now `text`               .ce-word.lift       birdie's word (17px, lifts in)
+
+     .ce[data-turn][data-dir]  set on the Enter root for one turn: data-turn = flip (a) | page (b) | fade (reduced
+                               motion); data-dir = fwd | back. Removed when the turn ends (or a tap jumps it to the end).
+     .ce-turn-layer    an absolutely positioned layer holding the OUTGOING faces (pointer-events: none)
+     .t-panel.t-out    an outgoing panel (the score card, a quiet row, the read-only rows), at its old place
+     .t-panel.t-in     the same panel for the new hole, in the flow     --t-lag = its index (0 = the score card)
+     .ce-pad.t-land    a pad on the new hole                            --t-r = row index, --t-i = pad index
+     .t-roll           a rolling number: .t-sz (the new value, invisible: sets width + baseline) and .t-col
+                       (.t-o old + .t-n new stacked; fwd = old then new, back = new then old). --t-h = one line
+     .t-swap-out / .t-swap-in   027's blur swap (green picture, match line, a yardage card that comes or goes)
+     .t-move           the block under the yardage card, when the card comes or goes (FLIP: --t-dy = old − new top)
+     .t-movex          "Par 4" when the hole number changes width (FLIP: --t-dx)
+
+   Only transform, opacity and filter animate (plus the individual translate / rotate / scale properties, which are
+   transforms). Nothing here changes a box's size, so the measured pad height (enter.mount's Regular / Compact
+   choice) never sees the motion. All colors are tokens. */
+
+.ce { --ce-line: rgba(255,255,255,.05); --ce-dbl-pill: #b42318; --t-shade: .5; }   /* --t-shade: how dark a panel gets edge-on (flip) */
+.light .ce, [data-theme="light"] .ce { --ce-line: rgba(11,13,16,.06); --t-shade: .88; }
+
+
+/* ═════════════════════════════════ PART 1 · SCORE PICKS ═════════════════════════════════
+   Each result has its own feel, bigger as it gets rarer. What drives what (SPEC §1.2):
+     the mark (circle / square drawn on the pad)  = GROSS, the scorecard rule (022, unchanged)
+     everything else (pop, pulse, ripple, burst, shake, stamp, the word)  = NET, the result that counts      */
+
+/* ── resting styles (022) ───────────────────────────────────────────────────────────────── */
+.ce-pad .ce-ln { fill: none; stroke: var(--text-muted); stroke-width: 1.5; }
+.ce-pad.sel .ce-ln { stroke: var(--bg); stroke-width: 1.75; }
+.ce-pad.sel.dbl .ce-ln { stroke: var(--ce-dbl-pill); stroke-width: 2; }
+.ce-pad.sel.dbl .ce-n { color: var(--ce-dbl-pill); }
+.ce-pad .ce-ln.draw { opacity: 0; }
+.ce-pad.sel .ce-ln.draw { opacity: 1; }
+.ce-ripple { position: absolute; inset: 0; margin: auto; width: 56px; height: 56px; border-radius: 50%;
+             box-shadow: 0 0 0 2px var(--text); opacity: 0; pointer-events: none; }
+.ce-word { font-size: 15px; font-weight: 700; opacity: 0; color: var(--text); flex: none; }
+.ce-word.quiet { color: var(--text-muted); }                 /* bogey */
+.ce-word.dbl { color: var(--double); }                       /* double or worse */
+.ce-word.par { color: var(--text); }                         /* NEW 033: par was quiet (grey); now full text */
+.ce-word.big, .ce-word.lift { font-size: 17px; }             /* eagle+ (022) and NEW 033 birdie: 17 = the row size */
+
+/* ── NEW 033: pulse (par) and burst (eagle or better) ───────────────────────────────────── */
+.ce-pulse { position: absolute; inset: 0; border-radius: inherit; box-shadow: 0 0 0 2px var(--text);
+            opacity: 0; pointer-events: none; }
+.ce-burst { position: absolute; left: 50%; top: 50%; width: 0; height: 0; pointer-events: none; }
+.ce-burst i { position: absolute; left: -1px; top: -4px; width: 2px; height: 8px; border-radius: 1px;
+              background: var(--text); opacity: 0; transform: rotate(var(--a)) translateY(-36px); }
+/* 8 sparks: --a = 0, 45, 90 … 315deg */
+
+/* ── keyframes (022, unchanged) ─────────────────────────────────────────────────────────── */
+@keyframes ce-bump   { 0% { transform: scale(.92) } 55% { transform: scale(1.06) } 100% { transform: scale(1) } }
+@keyframes ce-draw   { from { stroke-dashoffset: var(--len) } to { stroke-dashoffset: 0 } }
+@keyframes ce-word   { 0% { opacity: 0; transform: translateY(6px) } 15% { opacity: 1; transform: none } 75% { opacity: 1 } 100% { opacity: 0 } }
+@keyframes ce-tilt   { 0% { transform: rotate(-4deg) translateY(4px) } 100% { transform: none } }
+@keyframes ce-ripple { 0% { opacity: .55; transform: scale(.7) } 100% { opacity: 0; transform: scale(1.35) } }
+@keyframes ce-stamp  { 0% { transform: scale(1.45) rotate(-4deg); opacity: .35 } 60% { transform: scale(.95) rotate(1deg); opacity: 1 } 100% { transform: none; opacity: 1 } }
+@keyframes ce-thud   { 0%, 100% { transform: none } 40% { transform: translateY(2px) scale(.98) } }
+@keyframes ce-roll   { from { transform: translateY(0) } to { transform: translateY(-20px) } }
+@keyframes ce-wonin  { 0% { opacity: 0; transform: translateX(8px) } 20% { opacity: 1; transform: none } 80% { opacity: 1 } 100% { opacity: 0 } }
+@keyframes ce-vsout  { 0% { opacity: 1 } 12% { opacity: 0 } 85% { opacity: 0 } 100% { opacity: 1 } }
+@keyframes ce-fadeonly { 0% { opacity: 0 } 15% { opacity: 1 } 75% { opacity: 1 } 100% { opacity: 0 } }
+
+/* ── keyframes (NEW 033) ────────────────────────────────────────────────────────────────── */
+/* par: a bigger pop than the 022 bump (1.10 vs 1.06) */
+@keyframes ce-pop    { 0% { transform: scale(.9) } 50% { transform: scale(1.1) } 100% { transform: scale(1) } }
+/* par: one soft ring off the pill's own shape (rounded square, not the birdie's circle) */
+@keyframes ce-pulse  { 0% { opacity: .4; transform: scale(1) } 100% { opacity: 0; transform: scale(1.16) } }
+/* birdie / eagle word: lifts in from 10px below with a 2px overshoot, holds, fades */
+@keyframes ce-lift   { 0% { opacity: 0; transform: translateY(10px) } 12% { opacity: 1; transform: translateY(-2px) }
+                       20% { transform: none } 82% { opacity: 1 } 100% { opacity: 0; transform: none } }
+/* eagle: 8 sparks fly out from the pill edge (36px from centre) to 54px and fade */
+@keyframes ce-spark  { 0% { opacity: 0; transform: rotate(var(--a)) translateY(-34px) scaleY(.4) } 25% { opacity: 1 }
+                       100% { opacity: 0; transform: rotate(var(--a)) translateY(-54px) scaleY(1) } }
+/* bogey: the "wince", one decaying side-to-side shake of the picked pill, with a slight twist.
+   Uses the individual translate / rotate properties so it composes with the bump's transform. */
+@keyframes ce-wince  { 0% { translate: 0; rotate: 0deg } 15% { translate: -6px; rotate: -1.5deg } 35% { translate: 5px; rotate: 1.2deg }
+                       55% { translate: -3px; rotate: -.6deg } 75% { translate: 2px; rotate: .3deg } 100% { translate: 0; rotate: 0deg } }
+/* double or worse: the same wince, harder and one swing longer */
+@keyframes ce-wince2 { 0% { translate: 0; rotate: 0deg } 12% { translate: -9px; rotate: -2.5deg } 30% { translate: 8px; rotate: 2deg }
+                       48% { translate: -6px; rotate: -1.2deg } 66% { translate: 4px; rotate: .6deg } 84% { translate: -2px; rotate: 0deg }
+                       100% { translate: 0; rotate: 0deg } }
+
+/* ── every pick: the mark draws over its faint copy (022) ───────────────────────────────── */
+.ce-pad.sel.anim .ce-ln.base { opacity: .3; animation: none; stroke-dasharray: none; }
+.ce-pad.sel.anim .ce-ln.draw { stroke-dasharray: var(--len); animation: ce-draw .32s .06s cubic-bezier(.3,.7,.2,1) both; }
+/* a second outline (double ring / double square) starts 120ms later: animation-delay .18s on the 2nd .ce-ln.draw */
+
+/* ── eagle or better: bump · 2 ripples · burst · word 17px lifts in, holds 3s ───────────── */
+.ce-pad.sel.anim.k-eagle { animation: ce-bump .22s cubic-bezier(.2,.8,.2,1); }
+.ce-ripple.anim { animation: ce-ripple .45s .1s ease-out both; }
+.ce-ripple.anim.r2 { animation-delay: .25s; }
+.ce-burst.anim i { animation: ce-spark .5s .14s cubic-bezier(.2,.8,.2,1) both; }
+.ce-word.big.anim { animation: ce-lift 3s ease-out both; }
+
+/* ── birdie: bump · 1 ripple · word 17px lifts in, holds 2.2s ───────────────────────────── */
+.ce-pad.sel.anim.k-birdie { animation: ce-bump .22s cubic-bezier(.2,.8,.2,1); }
+.ce-word.lift.anim { animation: ce-lift 2.2s ease-out both; }
+
+/* ── par: bigger pop · one soft pulse · word in `text`, 1.6s ────────────────────────────── */
+.ce-pad.sel.anim.k-par { animation: ce-pop .26s cubic-bezier(.2,.8,.2,1); }
+.ce-pulse.anim { animation: ce-pulse .5s .12s ease-out both; }
+
+/* ── bogey: bump, then the wince on that one pad · word quiet, 1.6s ─────────────────────── */
+.ce-pad.sel.anim.k-bogey { animation: ce-bump .22s cubic-bezier(.2,.8,.2,1), ce-wince .36s .16s ease-out; }
+
+/* ── double or worse: the mark stamps in, the pad thuds, then the hard wince · word tilts, red ─ */
+.ce-pad.sel.anim.dbl:not(.stamp) .ce-ln.draw { stroke-dasharray: var(--len); animation: ce-draw .32s .06s cubic-bezier(.3,.7,.2,1) both; }
+.ce-pad.sel.anim.stamp { animation: ce-thud .22s .14s ease-out, ce-wince2 .42s .3s ease-out; }
+.ce-pad.sel.anim.stamp svg.ce-m { animation: ce-stamp .16s cubic-bezier(.2,.8,.2,1) both; }
+.ce-pad.sel.anim.stamp .ce-ln.draw { animation: none; stroke-dasharray: none; }
+/* (.stamp = a NET double or worse, so it is always also a gross double: the red mark is always there to stamp.
+    A gross double that is only a net bogey keeps .dbl, draws its red mark, and gets the bogey wince.) */
+
+/* ── the word (022 for quiet / par / dbl) ───────────────────────────────────────────────── */
+.ce-word.anim { animation: ce-word 1.6s ease-out both; }
+.ce-word.dbl.anim { animation: ce-word 1.6s ease-out both, ce-tilt .3s .05s cubic-bezier(.2,.8,.2,1) both; }
+
+/* ── the hole's points (022, unchanged) ─────────────────────────────────────────────────── */
+.ce-next.go.anim { animation: ce-bump .22s .05s cubic-bezier(.2,.8,.2,1); }
+.ce-up.anim .ce-roll { animation: ce-roll .3s .2s cubic-bezier(.3,.7,.2,1) both; }
+.ce-up.anim .ce-roll.dn { animation-direction: reverse; }
+.ce-vs.anim { animation: ce-vsout 2.6s .45s ease-out both; }
+.ce-won.anim { animation: ce-wonin 2.4s .5s ease-out both; }
+
+/* ── "you missed a score" (unchanged, for comparison with the wince; SPEC §1.4) ─────────── */
+@keyframes nudge { 0%, 100% { transform: none; } 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+.ce-row.nudge .ce-pad { animation: nudge .45s ease-in-out 2; }
+
+
+/* ═════════════════════════════════ PART 2 · THE TURN ═════════════════════════════════
+   One tap on Next hole / ◀ / ▶ / a hole in the grid = one turn. Timeline (forward; back mirrors it):
+       0ms        the new hole is rendered; outgoing faces sit on .ce-turn-layer
+       0–300      hole number rolls (Par rolls +40ms when it changes)
+       0–120      green picture blurs out; 60–300 the new green sharpens in
+       60–460     FRONT / MIDDLE / BACK digits roll (only the digits that change)
+       (a) 0–150  the score card turns away; 140–300 the new card turns in. Each quiet row 40ms behind.
+       (b) 0–150  the score card slides + tilts out; 100–300 the new one slides + tilts in. Rows 30ms behind.
+       240–584    the new pads land, 24ms apart along a row, 48ms per row (2 rows of 5)
+   Pinned things never move: the ◀ ▶ ⋯ buttons, Next hole, the tab bar.                                       */
+
+.ce-turn-layer { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
+.ce .ce-turn-layer > * { position: absolute; margin: 0; }   /* beats .ce-card / .ce-line's own position */
+.ce[data-turn] .t-panel { backface-visibility: hidden; transform-origin: 50% 50%; }
+
+/* ── (a) scoreboard flip: the panel turns over around its middle (forward: the top goes away, the new face
+       comes up from below, like the numbers rolling up) ──────────────────────────────────────────────── */
+@keyframes t-flip-out-fwd  { from { transform: perspective(1200px) rotateX(0);      filter: brightness(1) }
+                             to   { transform: perspective(1200px) rotateX(90deg);  filter: brightness(var(--t-shade)) } }
+@keyframes t-flip-in-fwd   { from { transform: perspective(1200px) rotateX(-90deg); filter: brightness(var(--t-shade)) }
+                             to   { transform: perspective(1200px) rotateX(0);      filter: brightness(1) } }
+@keyframes t-flip-out-back { from { transform: perspective(1200px) rotateX(0);      filter: brightness(1) }
+                             to   { transform: perspective(1200px) rotateX(-90deg); filter: brightness(var(--t-shade)) } }
+@keyframes t-flip-in-back  { from { transform: perspective(1200px) rotateX(90deg);  filter: brightness(var(--t-shade)) }
+                             to   { transform: perspective(1200px) rotateX(0);      filter: brightness(1) } }
+.ce[data-turn="flip"][data-dir="fwd"]  .t-panel.t-out { animation: t-flip-out-fwd  150ms cubic-bezier(.4,0,1,1)  calc(var(--t-lag, 0) * 40ms) both; }
+.ce[data-turn="flip"][data-dir="fwd"]  .t-panel.t-in  { animation: t-flip-in-fwd   160ms cubic-bezier(.2,.8,.2,1) calc(140ms + var(--t-lag, 0) * 40ms) both; }
+.ce[data-turn="flip"][data-dir="back"] .t-panel.t-out { animation: t-flip-out-back 160ms cubic-bezier(.4,0,1,1)  calc(var(--t-lag, 0) * 40ms) both; }
+.ce[data-turn="flip"][data-dir="back"] .t-panel.t-in  { animation: t-flip-in-back  170ms cubic-bezier(.2,.8,.2,1) calc(130ms + var(--t-lag, 0) * 40ms) both; }
+
+/* ── (b) page turn: the panel slides 56px and tilts 18° out; the new one slides + tilts in from the other side
+       (forward: out to the left, in from the right; back: the other way) ─────────────────────────────── */
+@keyframes t-page-out-fwd  { from { transform: perspective(1200px) translateX(0) rotateY(0); opacity: 1 }
+                             to   { transform: perspective(1200px) translateX(-56px) rotateY(-18deg); opacity: 0 } }
+@keyframes t-page-in-fwd   { from { transform: perspective(1200px) translateX(56px) rotateY(18deg); opacity: 0 }
+                             to   { transform: perspective(1200px) translateX(0) rotateY(0); opacity: 1 } }
+@keyframes t-page-out-back { from { transform: perspective(1200px) translateX(0) rotateY(0); opacity: 1 }
+                             to   { transform: perspective(1200px) translateX(56px) rotateY(18deg); opacity: 0 } }
+@keyframes t-page-in-back  { from { transform: perspective(1200px) translateX(-56px) rotateY(-18deg); opacity: 0 }
+                             to   { transform: perspective(1200px) translateX(0) rotateY(0); opacity: 1 } }
+.ce[data-turn="page"][data-dir="fwd"]  .t-panel.t-out { animation: t-page-out-fwd  150ms cubic-bezier(.4,0,1,1)  calc(var(--t-lag, 0) * 30ms) both; }
+.ce[data-turn="page"][data-dir="fwd"]  .t-panel.t-in  { animation: t-page-in-fwd   200ms cubic-bezier(.2,.8,.2,1) calc(100ms + var(--t-lag, 0) * 30ms) both; }
+.ce[data-turn="page"][data-dir="back"] .t-panel.t-out { animation: t-page-out-back 180ms cubic-bezier(.4,0,1,1)  calc(var(--t-lag, 0) * 30ms) both; }
+.ce[data-turn="page"][data-dir="back"] .t-panel.t-in  { animation: t-page-in-back  210ms cubic-bezier(.2,.8,.2,1) calc(90ms + var(--t-lag, 0) * 30ms) both; }
+
+/* ── the new pads land (both options): fade + scale .82 → 1.04 → 1, after the card has nearly settled ─── */
+@keyframes t-land { 0% { opacity: 0; scale: .82 } 65% { opacity: 1; scale: 1.04 } 100% { opacity: 1; scale: 1 } }
+.ce[data-turn="flip"] .ce-pad.t-land,
+.ce[data-turn="page"] .ce-pad.t-land { animation: t-land 200ms cubic-bezier(.2,.8,.2,1) calc(240ms + var(--t-r, 0) * 48ms + var(--t-i, 0) * 24ms) both; }
+
+/* ── rolling numbers: the hole number, Par, and each changed yardage digit ──────────────────────────────
+   Forward rolls up (the new value comes from below), back rolls down. Same curve as 022's standing roll. */
+.t-roll { position: relative; display: inline-block; clip-path: inset(0 -24px); }
+.t-roll > .t-sz { visibility: hidden; display: inline-block; height: var(--t-h); line-height: var(--t-h); }
+.t-roll > .t-col { position: absolute; left: 0; top: 0; display: flex; flex-direction: column; }
+.t-roll > .t-col > span { display: block; height: var(--t-h); line-height: var(--t-h); white-space: pre; }
+@keyframes t-roll-fwd  { from { transform: translateY(0) } to { transform: translateY(calc(-1 * var(--t-h))) } }
+@keyframes t-roll-back { from { transform: translateY(calc(-1 * var(--t-h))) } to { transform: translateY(0) } }
+.ce[data-dir="fwd"]:not([data-turn="fade"])  .t-roll > .t-col { animation: t-roll-fwd  300ms cubic-bezier(.3,.7,.2,1) var(--t-d, 0ms) both; }
+.ce[data-dir="back"]:not([data-turn="fade"]) .t-roll > .t-col { animation: t-roll-back 300ms cubic-bezier(.3,.7,.2,1) var(--t-d, 0ms) both; }
+/* --t-d: hole number 0ms · Par 40ms · yardage digits 60ms + 20ms per number (front, middle, back) + 30ms per
+   changed digit, left to right. --t-h: hole number 32px · Par 22px · MIDDLE 32px · FRONT / BACK 17px. */
+
+/* ── FLIPs (transform only): the body under a yardage card that comes or goes; "Par" when the number's width changes */
+@keyframes t-move  { from { translate: 0 var(--t-dy) } to { translate: 0 0 } }
+@keyframes t-movex { from { translate: var(--t-dx) 0 } to { translate: 0 0 } }
+.ce[data-turn]:not([data-turn="fade"]) .t-move  { animation: t-move  300ms cubic-bezier(.2,.8,.2,1) both; }
+.ce[data-turn]:not([data-turn="fade"]) .t-movex { animation: t-movex 300ms cubic-bezier(.2,.8,.2,1) both; }
+
+/* ── 027's blur swap: the green picture, the match line when it changes, a yardage card that comes or goes ─ */
+@keyframes swap-out { from { opacity: 1; filter: blur(0) } to { opacity: 0; filter: blur(var(--blur-swap, 8px)) } }
+@keyframes swap-in  { from { opacity: 0; filter: blur(var(--blur-swap, 8px)) } to { opacity: 1; filter: blur(0) } }
+.ce[data-turn]:not([data-turn="fade"]) .t-swap-out { animation: swap-out 120ms cubic-bezier(.4,0,1,1) both; }
+.ce[data-turn]:not([data-turn="fade"]) .t-swap-in  { animation: swap-in 240ms 60ms cubic-bezier(.2,.8,.2,1) both; }
+
+
+/* ═════════════════════════════════ REDUCED MOTION ═════════════════════════════════
+   The app adds class `rm` on <html> while matchMedia('(prefers-reduced-motion: reduce)') matches (one listener in
+   app.js), and sets data-turn="fade" instead of flip / page. The prototype's Motion → Reduced does the same.
+   Picks: no bump, pop, pulse, ripple, burst, shake, stamp or draw; the mark is there at once, the word fades.
+   Turn: a 150ms cross-fade of every face that changes; numbers cross-fade in place; nothing moves.           */
+@keyframes ce-fade-in  { from { opacity: 0 } to { opacity: 1 } }
+@keyframes ce-fade-out { from { opacity: 1 } to { opacity: 0 } }
+
+.rm .ce-pad.sel.anim, .rm .ce-pad.sel.anim *, .rm .ce-ripple.anim, .rm .ce-burst.anim i, .rm .ce-pulse.anim,
+.rm .ce-next.go.anim, .rm .ce-up.anim .ce-roll, .rm .ce-vs.anim, .rm .ce-won.anim, .rm .ce-row.nudge .ce-pad { animation: none !important; }
+.rm .ce-word.anim { animation: ce-fadeonly 1.6s linear both !important; }
+.rm .ce-word.lift.anim { animation-duration: 2.2s !important; }
+.rm .ce-word.big.anim { animation-duration: 3s !important; }
+.rm .ce-won.anim { opacity: 1; }
+.rm .ce-vs.anim { opacity: 0; }
+.rm .ce-up.anim .ce-roll { transform: translateY(-20px); }
+.rm .ce-up.anim .ce-roll.dn { transform: none; }
+
+.ce[data-turn="fade"] .t-panel.t-out, .ce[data-turn="fade"] .t-swap-out { animation: ce-fade-out 150ms linear both; }
+.ce[data-turn="fade"] .t-panel.t-in,  .ce[data-turn="fade"] .t-swap-in  { animation: ce-fade-in 150ms linear both; }
+.ce[data-turn="fade"] .t-roll > .t-col { display: grid; }
+.ce[data-turn="fade"] .t-roll > .t-col > span { grid-area: 1 / 1; }
+.ce[data-turn="fade"] .t-roll .t-o { animation: ce-fade-out 150ms linear both; }
+.ce[data-turn="fade"] .t-roll .t-n { animation: ce-fade-in 150ms linear both; }
