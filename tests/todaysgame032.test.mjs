@@ -2,7 +2,7 @@
 // replace the prototype's examples, and old rounds keep the text card (null).
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { compute, ryderSetup, threeCartRotation } from '../js/scoring.js';
+import { compute, ryderSetup, threeCartRotation, sixCartRotation, allAtOnce } from '../js/scoring.js';
 import { todaysGame } from '../js/todaysgame.js';
 import { makeEvent } from './helpers.mjs';
 
@@ -44,7 +44,16 @@ test('032 todaysGame: slides per game, real names, team score, old rounds keep t
   assert.deepEqual(carts.slides[0].args.groups[1].names.map((n) => n.name), ['Tyler', 'Sam']);
   assert.deepEqual(carts.slides[2].args.others.map((o) => o.name), ['Tyler + Sam', 'Chris + Jake', 'Ben + Luke']);
 
-  // 2v2 with 6, three carts.
+  // 2v2 with 6 (Nov 20): three carts, one at a time; every 6 = everyone plays everyone once and sits out a set.
+  const sixEv = (sch) => { const e = named(makeEvent({ rotationMode: 'fixed', holePoint: true, rotation: sixCartRotation(sch) })); e.roster.teams = e.roster.teams.slice(0, 3); e.roster.players = e.roster.players.filter((p) => p.teamId !== 'D'); return e; };
+  const s6 = compute(sixEv('six'), []);
+  assert.equal(allAtOnce(s6.settings), false);
+  const n6 = todaysGame(s6, 'b1'); // Tyler: plays A on 1–6, sits out 7–12, plays C on 13–18
+  assert.deepEqual(heads(n6), ['Three carts of two.', 'Cart against cart.', 'A new cart every 6 holes.', 'Most points takes the day.']);
+  assert.deepEqual(n6.slides[2].args.seq, [0, -1, 1]);
+  assert.match(n6.slides[2].s, /^You sit out one set/);
+  assert.equal(todaysGame(compute(sixEv('turn'), []), 'a1').slides[2].h, 'A new cart at the turn.');
+  // Old 6-player rounds (all three carts at once) keep their slides.
   const ev6 = named(makeEvent({ rotationMode: 'fixed', holePoint: true, rotation: threeCartRotation() }));
   ev6.roster.teams = ev6.roster.teams.slice(0, 3);
   ev6.roster.players = ev6.roster.players.filter((p) => p.teamId !== 'D');

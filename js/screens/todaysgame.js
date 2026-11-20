@@ -231,7 +231,8 @@ export const SCENES = {
   }),
 
   // A new cart every 6: the opponent lights in its away color, one per set.
-  carts: ({ mine, others = [], ranges = [] }) => ({
+  // 6 players: `seq` = which of `others` you play in each set, -1 = your cart sits out.
+  carts: ({ mine, others = [], ranges = [], seq = null }) => ({
     html: `<div class="tg-sc">
       <div class="ts-label tg-center" data-r>${esc(ranges[0] || '')}</div>
       <div class="tg-grid">
@@ -241,13 +242,15 @@ export const SCENES = {
       <div class="ts-small tg-muted tg-center tg-e" style="--d:500ms" data-vs>&nbsp;</div></div>`,
     play(el, k) {
       const cs = [...el.querySelectorAll('[data-c]')], r = el.querySelector('[data-r]'), vs = el.querySelector('[data-vs]');
+      const order = seq || others.map((_, i) => i);
       const step = (i) => {
-        cs.forEach((c, j) => { c.classList.toggle(c.dataset.c, j === i); c.classList.toggle('dim', j !== i); });
+        const o = order[i];
+        cs.forEach((c, j) => { c.classList.toggle(c.dataset.c, j === o); c.classList.toggle('dim', j !== o); });
         r.textContent = ranges[i] || '';
-        vs.textContent = `vs ${others[i].name}${others[i].away ? ' · other tee time' : ''}`;
+        vs.textContent = o < 0 ? 'You sit out · the other two play' : `vs ${others[o].name}${others[o].away ? ' · other tee time' : ''}`;
       };
-      if (k.RM) return step(others.length - 1);
-      others.forEach((_, i) => k.later(600 + i * 1000, () => step(i)));
+      if (k.RM) return step(order.length - 1);
+      order.forEach((_, i) => k.later(600 + i * 1000, () => step(i)));
     },
   }),
 

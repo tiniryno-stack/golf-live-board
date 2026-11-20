@@ -980,6 +980,19 @@ Still open: nothing blocking. Design direction (section 9) is final.
     `dayBy` (bars instead of sets won). Light mode not reviewed.
   - Touches the join sequence (step 6) and Setup's 2v2 settings: smoke run (`test:smoke031`, `test:lobby`) before it ships.
 
+- **2v2 with 6: one cart at a time (Andrew, Nov 20, same branch as 032).** "Every cart plays both others on every hole"
+  is retired for new rounds. Six players = three carts that switch opponents like the 8-player game:
+  `scoring.sixCartRotation('six')` = A v B (1–6), A v C (7–12), B v C (13–18): everyone plays everyone once, each cart
+  sits out one set (12 holes each, so points are even); `'turn'` = A v B front nine, A v C back nine (cart A plays both
+  nines, B and C nine each). Tee times stay A + B / C (fixed: the app scores cross-group matches). Setup: the Game step's
+  2v2 for 6 has Opponents · Switch every 6 (default) / at the turn; Tee times → Game & matchups shows the sets with who
+  sits out. `scoring.allAtOnce(settings)` marks old rounds (a cart in two matches in one rotation): they keep scoring and
+  reading exactly as before (Rules sheet, old brief, `gameBlurb`, Today's game `threeCarts`). Enter: `sitOut(app, h)`
+  → "Sitting out · back on 13 vs Chris + Jake" on the match line, and the switch card says "You sit this one out".
+  Today's game `sixCarts`: three cart rows labelled by when you play them, a cart-v-cart hole, the new-cart scene with the
+  sit-out set dimmed ("You sit out · the other two play"), bars. Ranking stays most points. No SQL change.
+  **Touches the engine's rotation and Setup: smoke run before it ships.**
+
 ## 13. V2 backlog (running list)
 
 - **Carryovers (skins-style):** a tied point rolls onto the next hole instead of halving, so the next hole can be worth 3–4 points. Open design question: does an unresolved carry die at the end of a 6-hole rotation, or roll into the next opponent?

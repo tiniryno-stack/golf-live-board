@@ -170,9 +170,11 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
   **2v2** (`settings.pairs` + `pairSwitch` never/six/turn: `pairView` makes one team per pairing with
   `members`; `game.people` = each player's summed points; `sideOn()` = your pair on a hole),
   **Partner “Rider” Cup** (game id `carts`; 8 = 4 carts, `cartRotation('six'|'turn', opps)`,
-  `rotationMode` fixed = keep tee times = new default; **6 = 3 carts**, `threeCartRotation()`: one
-  18-hole rotation with A v B, A v C, B v C at once, groups A + B / C, always fixed; a cart has two
-  matches per hole, so use `matchesFor()`; `matchFor()` returns the first).
+  `rotationMode` fixed = keep tee times = new default; **6 = 3 carts**, since Nov 20 `sixCartRotation('six'|'turn')`:
+  one opponent at a time like 8 (every 6: A v B 1–6, A v C 7–12, B v C 13–18, each cart sits out a set; at the turn:
+  A v B front, A v C back), groups A + B / C, always fixed; Enter says "Sitting out · back on 13 vs …". Old rounds keep
+  `threeCartRotation()` (A v B, A v C, B v C at once, `allAtOnce(settings)` = true: a cart has two matches per hole,
+  so use `matchesFor()`; `matchFor()` returns the first).
 - **Team Ryder Cup (Nov 3, game id `ryder`, built for the Nov 9 birthday round; ARCHITECTURE.md 13a):** 8/12/16
   players = 2–4 carts a side, `roster.sides`, cart ids `1A`…`2D` (side + letter), `settings.ryder`, `settings.lineups`
   (Host → Rules → New lineup from hole N: carts ride together and play each other from then on; `sameFoursome` and
