@@ -14,9 +14,9 @@ still open. **Built and merged to `main` Nov 19 (53bc4c8)**; ARCHITECTURE.md 13a
 
 The animated "Today's game" slides (one small scene + one headline per slide, a 3D hole for every game), approved by
 Andrew Nov 20 with `prototype.html` and 31 screenshots in that folder. Also: "set" replaces "stretch" in UI copy.
-Handed off on branch `claude/affectionate-lamport-gp7ecm`; not built.
+**Built and merged to `main` Nov 20 (417f6e0)**, with the 6-player one-cart-at-a-time game.
 
-## Today's game (032, Nov 20, branch `claude/cool-heisenberg-j444xa`)
+## Today's game (032, Nov 20, live on `main`)
 
 Animated rules slides per game: pure model `js/todaysgame.js` (`todaysGame(snap, meId)`, test `tests/todaysgame032.test.mjs`),
 player + scenes `js/screens/todaysgame.js` (`tg-*` CSS at the end of styles.css), opened by `toasts.showBrief`; old shapes

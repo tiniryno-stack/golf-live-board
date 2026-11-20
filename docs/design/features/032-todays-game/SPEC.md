@@ -1,6 +1,6 @@
 # 032 · Today's game: the rules, played out in front of you
 
-Status: built in c486974 (branch `claude/cool-heisenberg-j444xa`, Nov 20, 2026). Not on `main` yet.
+Status: built in c486974 (branch `claude/cool-heisenberg-j444xa`), merged to `main` Nov 20, 2026 (417f6e0).
 
 **What this is.** The engineer brief for a new "Today's game" screen. It replaces today's text-only card
 (`js/screens/brief.js`) with three or four short animated slides per game. Each slide has one small animation in the
