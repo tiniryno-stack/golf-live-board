@@ -59,9 +59,10 @@ button { font-family: inherit; } button:focus-visible { outline: 2px solid var(-
 .segs i b { position: absolute; inset: 0; background: var(--text); transform-origin: left; transform: scaleX(0); }
 /* top half: the one small animation, same size as the first prototype */
 .mid { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: center; gap: clamp(12px, 3.5vh, 44px); }
-.stage { height: clamp(282px, 42vh, 380px); flex: none; display: grid; cursor: pointer; }
+.stage { height: clamp(282px, 44vh, 400px); flex: none; display: grid; cursor: pointer; }
 .stage .sc { height: 100%; align-content: center; }
-.hsc { gap: clamp(10px, 1.6vh, 16px) !important; }
+.hsc { gap: clamp(10px, 1.6vh, 16px) !important; grid-template-columns: minmax(0, 1fr); position: relative; }
+.hsc > .hlbl { position: absolute; top: 0; left: 0; z-index: 2; }
 .hsc .ptline { margin-top: 4px; }
 .stage > * { grid-area: 1 / 1; min-width: 0; }
 /* bottom half */
@@ -90,8 +91,8 @@ button { font-family: inherit; } button:focus-visible { outline: 2px solid var(-
 .chip small { font: 500 13px/18px var(--font-sans); color: var(--text-muted); }
 .chip[aria-pressed="true"] { background: var(--tint-you); border-color: var(--cart-you); }
 /* the hole (the compact one) */
-.crsw { perspective: 700px; }
-.crs { width: 100%; height: clamp(140px, 19vh, 168px); display: block; overflow: visible; transform: rotateX(26deg) scale(1.04); transform-origin: 50% 62%; }
+.crsw { perspective: 700px; display: flex; justify-content: center; min-width: 0; }
+.crs { flex: none; --ch: clamp(140px, calc(44vh - 110px), 250px); height: var(--ch); width: calc(var(--ch) * 2.05); display: block; overflow: visible; transform: rotateX(26deg) scale(1.04); transform-origin: 50% 62%; }
 .crs .slab { fill: var(--surface-1); stroke: var(--line); stroke-width: 1.5; }
 .crs .slab-side { fill: var(--bg); stroke: var(--line); stroke-width: 1.5; }
 .crs .bk { fill: var(--bg); stroke: var(--line); stroke-width: 1.5; }
@@ -225,6 +226,8 @@ button { font-family: inherit; } button:focus-visible { outline: 2px solid var(-
 .hb { display: grid; grid-template-columns: 74px minmax(0,1fr) 36px; align-items: center; gap: 10px; }
 .hb .nm { font-size: 15px; line-height: 20px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hb .trk { height: 14px; border-radius: 7px; background: var(--surface-2); position: relative; }
+.hb .bon { position: absolute; top: 0; bottom: 0; width: 0; margin-left: 2px; border-radius: 7px; background: var(--surface-3); box-shadow: inset 0 0 0 1.5px var(--text-muted); transition: width 500ms var(--ease-grow); }
+.hb.you .bon { background: var(--cart-you); box-shadow: var(--glow-you); }
 .hb .fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; border-radius: 7px; background: var(--surface-3); transition: width 1200ms cubic-bezier(.3,.7,.2,1); transition-delay: var(--d, 0ms); }
 .hb.you .fill { background: var(--cart-you); box-shadow: var(--glow-you); }
 .hb.you .nm { color: var(--cart-you-text); font-weight: 600; }
@@ -343,6 +346,39 @@ const S = {
       later(300, () => step(0)); later(1300, () => step(1)); later(2300, () => step(2));
     } }),
 
+  // 032: partners switch, with names. Your partner's chip slides out, the next one slides into your card.
+  swap: ({ others = ['Mike', 'Tyler', 'Sam'] }) => ({ hold: 5200, html: `<div class="sc"><div class="mt" style="height:262px"></div></div>`,
+    play(el) {
+      const box = el.querySelector('.mt'), W = box.clientWidth, CW = 84, add = (cls, html, css) => { const d = document.createElement('div'); d.className = cls; d.innerHTML = html; Object.assign(d.style, css || {}); box.appendChild(d); return d; };
+      const mv = (n, [x, y]) => { n.style.transform = `translate(${x}px, ${y}px)`; }, H = 84, Y = [0, H + 34];
+      const top = add('mcard you on', '<span class="label" id="sl">Holes 1–6 · Your side</span>', { left: '0px', top: Y[0] + 'px', width: W + 'px', height: H + 'px' });
+      add('mcard on', '<span class="label">Them</span>', { left: '0px', top: Y[1] + 'px', width: W + 'px', height: H + 'px' });
+      add('mvs label muted on', 'vs', { top: Y[0] + H + 9 + 'px' });
+      const slot = { me: [14, Y[0] + 38], p: [14 + CW + 8, Y[0] + 38], t0: [14, Y[1] + 38], t1: [14 + CW + 8, Y[1] + 38] };
+      const chip = (n, you) => { const c = add('mc in2' + (you ? ' y' : ''), `<i>${n[0]}</i><span>${n}</span>`); return c; };
+      const me = chip('You', 1), c = Object.fromEntries(others.map(n => [n, chip(n)]));
+      mv(me, slot.me); mv(c[others[0]], slot.p); mv(c[others[1]], slot.t0); mv(c[others[2]], slot.t1);
+      const strip = add('strip', Array.from({ length: 18 }, () => '<i></i>').join(''), { position: 'absolute', left: '0px', right: '0px', top: Y[1] + H + 26 + 'px' });
+      const lbls = add('stretch-lbls label', '<span>1–6</span><span>7–12</span><span>13–18</span>', { position: 'absolute', left: '0px', right: '0px', top: Y[1] + H + 54 + 'px' });
+      const cells = [...strip.children], L = [...lbls.children], R = ['1–6', '7–12', '13–18'];
+      const step = (k) => { cells.forEach((x, i) => { x.className = Math.floor(i / 6) === k ? 'on' : Math.floor(i / 6) < k ? 'past' : ''; }); L.forEach((x, i) => x.classList.toggle('on', i === k)); };
+      const sl = top.querySelector('#sl');
+      later(200, () => step(0));
+      // stretch 2: Tyler comes up, Mike goes down. Stretch 3: Sam comes up, Tyler goes down.
+      later(1700, () => { step(1); mv(c[others[1]], slot.p); mv(c[others[0]], slot.t0); bumpEl(top); sl.textContent = 'Holes 7–12 · Your side'; });
+      later(3300, () => { step(2); mv(c[others[2]], slot.p); mv(c[others[1]], slot.t1); bumpEl(top); sl.textContent = 'Holes 13–18 · Your side'; });
+    } }),
+  // 032: points take the day, and each stretch you win adds a bonus point on the end of your bar.
+  bonus: ({ rows, max }) => ({ hold: 5400, html: `<div class="sc" style="gap:12px">
+      <div class="hbars">${rows.map(([n, p, b, you], i) => `<div class="hb ${you ? 'you' : ''} e" style="--d:${i * 80}ms"><span class="nm">${n}</span><span class="trk"><span class="fill" data-w="${p / max * 100}" style="--d:${250 + i * 80}ms"></span><span class="bon" style="left:${p / max * 100}%" data-w="${b / max * 100}"></span></span><span class="v" data-p="${p}" data-b="${b}">0</span></div>`).join('')}</div>
+      <div class="chipline e" style="--d:300ms"><span class="flagchip" id="bc">Points after 18</span></div></div>`,
+    play(el) {
+      later(40, () => el.querySelectorAll('.fill').forEach(f => f.style.width = f.dataset.w + '%'));
+      el.querySelectorAll('[data-p]').forEach((n, i) => countUp(n, +n.dataset.p, 250 + i * 80, 1200));
+      later(2200, () => { const c = el.querySelector('#bc'); c.textContent = '+1 for each stretch won'; c.classList.add('lit'); bumpEl(c);
+        el.querySelectorAll('.bon').forEach(b => { b.style.width = `calc(${b.dataset.w}% - 2px)`; });
+        el.querySelectorAll('[data-p]').forEach(n => { const p = +n.dataset.p, b = +n.dataset.b; if (b) { n.textContent = half(p + b); bumpEl(n); } }); });
+    } }),
   stretches: ({ res }) => ({ html: `<div class="sc">
       <div class="grid3" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">${res.map(([r, w, p], i) =>
         `<div class="tile ${w === 'W' ? 'you' : ''} e" style="--d:${i * 380}ms;text-align:center"><span class="label muted">${r}</span><span class="row ${w === 'W' ? 'youtxt' : ''}">${w === 'W' ? 'Won' : w === 'H' ? 'Halved' : 'Lost'}</span><span class="small muted">with ${p}</span></div>`).join('')}</div>
@@ -557,7 +593,7 @@ function courseSvg(sh) {
     <g class="trl"></g><g class="bls"></g>${trees}`;
 }
 S.course = ({ shape = 'dogleg', par = 4, label, players, mode, win }) => ({ html: `<div class="sc hsc">
-    <div class="label muted e" style="--d:0ms">${label || `Hole 4 · Par ${par}`}</div>
+    <div class="label muted e hlbl" style="--d:0ms">${label || `Hole 4 · Par ${par}`}</div>
     <div class="e crsw" style="--d:60ms"><svg class="crs" viewBox="0 0 353 172" aria-hidden="true">${courseSvg(SHAPES[shape])}</svg></div>
     <div class="lgs e" style="--d:120ms;grid-template-columns:repeat(${players.length},1fr)">${players.map(([n, , side], i) => `<div class="lg ${side}" data-p="${i}"><span class="nm">${n}</span><span class="cn">0</span></div>`).join('')}</div>
     <div class="ptline" style="grid-template-columns:1fr"></div></div>`,
@@ -606,8 +642,8 @@ const GAMES = {
   partners: { name: '2v2', tag: 'partners switch', slides: [
     { h: 'You and Mike vs Tyler and Sam.', s: 'For the first 6 holes.', sc: ['meet', { kind: 'pairs', sub: 'Holes 1–6', groups: [{ label: 'Your side', you: 1, names: ['You', 'Mike'] }, { label: 'Them', names: ['Tyler', 'Sam'] }] }] },
     { h: "Your partner's ball counts too.", s: "Mike's 4 is your side's best. One point to you both.", ...hole({ shape: 'bend', label: 'Hole 2 · with Mike', players: [['You', 6, 'y'], ['Mike', 4, 'y'], ['Tyler', 5, 't'], ['Sam', 5, 't']], mode: 'best', win: '+1 to you and Mike' }) },
-    { h: 'Partners switch at 7 and 13.', s: 'So you play with everyone once. Your points add up all day.', hold: 4400, sc: ['switch', { partners: ['Mike', 'Tyler', 'Sam'] }] },
-    { h: 'Most points takes the day.', s: 'Every point your side wins is yours too, whoever your partner was.', sc: ['bars', { max: 12, rows: [['You', 10.5, true], ['Sam', 9], ['Mike', 8.5], ['Tyler', 8]], note: 'After 18' }] } ] },
+    { h: 'Partners switch at 7 and 13.', s: 'So you play with everyone once. Your points add up all day.', sc: ['swap', {}] },
+    { h: 'Most points takes the day.', s: 'Every hole your side wins is a point for you. Win a stretch and get 1 more.', sc: ['bonus', { max: 14, rows: [['You', 11, 2, true], ['Sam', 10, 2], ['Mike', 9, 2], ['Tyler', 6, 0]] }] } ] },
   cart: { name: '2v2', tag: '8 players · 4 carts', slides: [
     { h: 'You and Mike are a cart.', s: 'Four carts of two today.', sc: ['meet', { kind: 'pairs', sub: 'Holes 1–6', groups: [{ label: 'Your cart', you: 1, names: ['You', 'Mike'] }, { label: 'First up', names: ['Tyler', 'Sam'] }] }] },
     { h: 'A tie splits it.', s: "Both carts' best is a 3. ½ point each.", ...hole({ shape: 'short', par: 3, label: 'Hole 3 · Par 3', players: [['You', 3, 'y'], ['Mike', 4, 'y'], ['Tyler', 3, 't'], ['Sam', 5, 't']], mode: 'best' }) },
