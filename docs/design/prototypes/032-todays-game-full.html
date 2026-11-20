@@ -92,7 +92,7 @@ button { font-family: inherit; } button:focus-visible { outline: 2px solid var(-
 .chip[aria-pressed="true"] { background: var(--tint-you); border-color: var(--cart-you); }
 /* the hole (the compact one) */
 .crsw { perspective: 700px; display: flex; justify-content: center; min-width: 0; }
-.crs { flex: none; --ch: clamp(140px, calc(44vh - 110px), 238px); height: var(--ch); width: calc(var(--ch) * 2.05); display: block; overflow: visible; transform: rotateX(26deg) scale(1.04); transform-origin: 50% 62%; }
+.crs { flex: none; --ch: clamp(140px, 19vh, 168px); height: var(--ch); width: 100%; display: block; overflow: visible; transform: rotateX(26deg) scale(1.04); transform-origin: 50% 62%; }
 .crs .slab { fill: var(--surface-1); stroke: var(--line); stroke-width: 1.5; }
 .crs .slab-side { fill: var(--bg); stroke: var(--line); stroke-width: 1.5; }
 .crs .bk { fill: var(--bg); stroke: var(--line); stroke-width: 1.5; }
@@ -578,14 +578,15 @@ function courseSvg(sh) {
   const at = (f, side, off) => { const p = cub(sh, f), n = nrm(f); return [p[0] + n[0] * off * side, p[1] + n[1] * off * side]; };
   const b1 = at(.5, 1, 24), b2 = at(.86, -1, 30);
   let trees = '';
-  for (let k = 0; k < 128; k++) { const x = -56 + (k % 16) * 30 + (Math.floor(k / 16) % 2) * 15, y = -26 + Math.floor(k / 16) * 24, r = 8 + ((k * 7) % 5);
-    if (x + r > 420 || x - r < -72 || y + r > 150 || (k * 5) % 3 === 0) continue;
+  for (let k = 0; k < 66; k++) { const x = 24 + (k % 11) * 30 + (Math.floor(k / 11) % 2) * 15, y = 26 + Math.floor(k / 11) * 24, r = 8 + ((k * 7) % 5);
+    // everything stays on the tile: canopy, its raised side and its shadow
+    if (x - r < 20 || x + r + 6 > 333 || y - r < 20 || y + r + 8 > 150 || (k * 5) % 3 === 0) continue;
     if (dist(x, y) < 32 + r || Math.hypot(x - sh.C[0], y - sh.C[1]) < 36 + r || Math.hypot(x - b1[0], y - b1[1]) < 18 + r || Math.hypot(x - b2[0], y - b2[1]) < 18 + r) continue;
     const bl = [[-.38 * r, .12 * r, .66 * r], [.36 * r, .16 * r, .62 * r], [0, -.32 * r, .68 * r]];
     trees += `<g class="tree" transform="translate(${x} ${y})"><ellipse cx="5" cy="${(r * .6).toFixed(1)}" rx="${(r * 1.1).toFixed(1)}" ry="${(r * .5).toFixed(1)}" class="tsh"/><g class="tsd">${bl.map(([a, b, c]) => `<circle cx="${a.toFixed(1)}" cy="${(b + 3).toFixed(1)}" r="${c.toFixed(1)}"/>`).join('')}</g><g class="tcn">${bl.map(([a, b, c]) => `<circle cx="${a.toFixed(1)}" cy="${b.toFixed(1)}" r="${c.toFixed(1)}"/>`).join('')}</g></g>`; }
   const [cx, cy] = sh.C, [tx, ty] = sh.T;
   return `<defs><filter id="gl" x="-1" y="-1" width="3" height="3"><feGaussianBlur stdDeviation="3.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
-    <rect class="slab-side" x="-80" y="-32" width="513" height="200" rx="30"/><rect class="slab" x="-80" y="-42" width="513" height="200" rx="30"/>
+    <rect class="slab-side" x="6" y="18" width="341" height="150" rx="30"/><rect class="slab" x="6" y="8" width="341" height="150" rx="30"/>
     <path d="${R}" fill="none" stroke="var(--line)" stroke-width="62" stroke-linecap="round" transform="translate(0 3)"/>
     <path d="${R}" fill="none" stroke="var(--surface-2)" stroke-width="58" stroke-linecap="round"/>
     <path d="${R}" fill="none" stroke="var(--surface-3)" stroke-width="36" stroke-linecap="round"/>
@@ -650,7 +651,7 @@ S.course = ({ shape = 'dogleg', par = 4, label, players, mode, win, score = 'bes
         sh.setAttribute('cx', x.toFixed(1)); sh.setAttribute('cy', (y + 5).toFixed(1)); sh.setAttribute('rx', (7 - lift * .08).toFixed(1)); sh.style.opacity = (.55 - lift * .008).toFixed(2); };
       place(p.pts[0][0], p.pts[0][1], 0, 1);
       for (let r = 0; r < p.s; r++) later(500 + r * SHOT + pi * 140, () => {
-        const a = p.pts[r], b = p.pts[r + 1], d = Math.hypot(b[0] - a[0], b[1] - a[1]), last = r === p.s - 1, H = d > 30 ? Math.min(46, d * .42) : 0;
+        const a = p.pts[r], b = p.pts[r + 1], d = Math.hypot(b[0] - a[0], b[1] - a[1]), last = r === p.s - 1, H = d > 30 ? Math.max(0, Math.min(46, d * .42, Math.min(a[1], b[1]) - 22)) : 0;
         const path = document.createElementNS(NS, 'path'); path.setAttribute('class', 'trc' + (p.side === 'y' ? ' y' : '')); tr.appendChild(path);
         const at = (u) => { const g = H ? u : 1 - (1 - u) ** 2; return [a[0] + (b[0] - a[0]) * g, a[1] + (b[1] - a[1]) * g, 4 * H * u * (1 - u)]; };
         tween(el, H ? FLY : 520, (t) => { const [x, y, lift] = at(t); place(x, y, lift, (1 + lift / 46 * .55) * (last && t > .8 ? 1 - (t - .8) * 2.5 : 1));
