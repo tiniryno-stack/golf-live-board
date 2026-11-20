@@ -112,6 +112,33 @@ button { font-family: inherit; } button:focus-visible { outline: 2px solid var(-
 .lgs:has(.best) .lg:not(.best) { opacity: var(--peek); }
 .lg.best.y .cn { background: var(--cart-you); color: var(--bg); box-shadow: var(--glow-you); }
 .lg.best.t .cn { background: var(--surface-3); }
+.lg.best.a .cn, .lg.best.b .cn { background: var(--surface-3); }
+/* first slide: names arrive, then sort into their sides */
+.mt { position: relative; height: 250px; }
+.mc { position: absolute; left: 0; top: 0; width: 84px; height: 36px; padding: 0 10px 0 4px; border-radius: 999px; background: var(--surface-2); display: flex; align-items: center; gap: 8px;
+  font: 600 15px/20px var(--font-sans); white-space: nowrap; opacity: 0; z-index: 2;
+  transition: transform 620ms var(--ease-grow), background 300ms var(--ease-grow), opacity 200ms linear; }
+.mc i { width: 28px; height: 28px; flex: none; border-radius: 50%; background: var(--surface-3); display: grid; place-items: center; font: 700 12px/16px var(--font-mono); font-style: normal; }
+.mc.y i { background: var(--cart-you); color: var(--bg); box-shadow: var(--glow-you); }
+.mc.y { color: var(--cart-you-text); }
+.mc.in2 { opacity: 1; }
+.md { position: absolute; left: 0; top: 0; width: 22px; height: 22px; border-radius: 50%; background: var(--surface-3); opacity: 0; z-index: 2;
+  transition: transform 700ms var(--ease-grow), background 300ms var(--ease-grow), opacity 200ms linear; }
+.md.y { background: var(--cart-you); }
+.md.me { box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px var(--cart-you), var(--glow-you); }
+.mcard { position: absolute; border-radius: var(--radius-xl); background: var(--surface-1); opacity: 0; transform: scale(.94); z-index: 1;
+  transition: opacity 300ms var(--ease-grow), transform 420ms var(--ease-grow), box-shadow 300ms var(--ease-grow); }
+.mcard.you { background: var(--tint-you); box-shadow: inset 0 0 0 1.5px var(--cart-you), var(--glow-you); }
+.mcard.on { opacity: 1; transform: none; }
+.mcard .label { position: absolute; left: 14px; top: 12px; color: var(--text-muted); }
+.mcard.you .label { color: var(--cart-you-text); }
+.mcard.rl .label { left: auto; right: 14px; top: 50%; transform: translateY(-50%); }
+.mcard .val { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); font: 700 17px/22px var(--font-mono); opacity: 0; transition: opacity 300ms var(--ease-grow); }
+.mcard.on .val { opacity: 1; transition-delay: 500ms; }
+.mvs, .msub { position: absolute; left: 0; right: 0; text-align: center; opacity: 0; transition: opacity 300ms var(--ease-grow); }
+.mvs.on, .msub.on { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .mc, .md, .mcard, .mvs, .msub { transition-duration: 1ms !important; transition-delay: 0ms !important; } }
+
 
 /* 027 blur swap */
 @keyframes swap-out { from { opacity: 1; filter: blur(0) } to { opacity: 0; filter: blur(var(--blur-swap)) } }
@@ -389,6 +416,49 @@ const S = {
       place(steps[0]); steps.slice(1).forEach((st, k) => later(1100 + k * 1100, () => place(st)));
     } }),
 
+  // 032 first slide: everyone pops in as a row, then sorts into their side.
+  // kind: 'pairs' (2 cards + vs), 'carts3' (3 cards), 'alone' (2×2 tiles), 'list' (a list, like the Board), 'ryder' (16 dots → two sides)
+  meet: ({ kind, groups = [], sub }) => ({ html: `<div class="sc"><div class="mt"></div></div>`, hold: 4400,
+    play(el) {
+      const box = el.querySelector('.mt'), W = box.clientWidth, CW = 84, CG = 8, add = (cls, html, css) => { const d = document.createElement('div'); d.className = cls; if (html) d.innerHTML = html; Object.assign(d.style, css || {}); box.appendChild(d); return d; };
+      const mv = (n, x, y) => { n.style.transform = `translate(${x}px, ${y}px)`; };
+      const chips = [], cards = [], extras = [];
+      if (kind === 'ryder') {
+        const order = [5, 12, 0, 9, 14, 2, 7, 11, 3, 15, 6, 1, 10, 4, 13, 8], g0 = 4 * 22 + 3 * 10, x0 = (W - g0) / 2, cw = (W - 10) / 2;
+        const dots = Array.from({ length: 16 }, (_, i) => add('md' + (i < 8 ? ' y' : '') + (i === 0 ? ' me' : '')));
+        dots.forEach((d, i) => { const k = order[i]; d._a = [x0 + (k % 4) * 32, 40 + Math.floor(k / 4) * 32];
+          const side = i < 8 ? 0 : 1, j = i % 8; d._b = [side * (cw + 10) + (cw - g0) / 2 + (j % 4) * 32, 92 + Math.floor(j / 4) * 32]; mv(d, ...d._a); });
+        cards.push(add('mcard you', '<span class="label">Your side</span>', { left: '0px', top: '40px', width: cw + 'px', height: '134px' }));
+        cards.push(add('mcard', '<span class="label">Them</span>', { left: cw + 10 + 'px', top: '40px', width: cw + 'px', height: '134px' }));
+        extras.push(add('msub small muted', 'Four carts a side. Yours is green.', { top: '190px' }));
+        dots.forEach((d, i) => later(150 + i * 45, () => { d.style.opacity = 1; }));
+        later(1300, () => cards.forEach(c => c.classList.add('on')));
+        dots.forEach((d, i) => later(1200 + (i % 8) * 40, () => mv(d, ...d._b)));
+        later(1900, () => extras.forEach(e => e.classList.add('on')));
+        return;
+      }
+      const all = groups.flatMap((g, gi) => g.names.map((n, ni) => ({ n, gi, ni, you: n === 'You' })));
+      const rows = all.length > 4 ? 2 : 1, per = Math.ceil(all.length / rows);
+      all.forEach((c, i) => { const r = Math.floor(i / per), k = i % per, cnt = Math.min(per, all.length - r * per), rw = cnt * CW + (cnt - 1) * CG;
+        c.a = [(W - rw) / 2 + k * (CW + CG), (rows === 1 ? 104 : 82 + r * 44)];
+        c.el = add('mc' + (c.you ? ' y' : ''), `<i>${c.n[0]}</i><span>${c.n}</span>`); mv(c.el, ...c.a); chips.push(c); });
+      const card = (x, y, w, h, g, cls = '') => cards.push(add('mcard ' + cls + (g.you ? ' you' : ''), `${g.label ? `<span class="label">${g.label}</span>` : ''}${g.val ? `<span class="val">${g.val}</span>` : ''}`, { left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px' }));
+      if (kind === 'pairs') { const H = 84, Y = [8, 8 + H + 40];
+        groups.forEach((g, gi) => { card(0, Y[gi], W, H, g); g.names.forEach((_, ni) => { const c = all.find(x => x.gi === gi && x.ni === ni); c.b = [14 + ni * (CW + CG), Y[gi] + 38]; }); });
+        extras.push(add('mvs label muted', 'vs', { top: Y[0] + H + 12 + 'px' })); }
+      if (kind === 'carts3') { const H = 60;
+        groups.forEach((g, gi) => { const y = 4 + gi * (H + 10); card(0, y, W, H, g, 'rl'); g.names.forEach((_, ni) => { const c = all.find(x => x.gi === gi && x.ni === ni); c.b = [12 + ni * (CW + CG), y + 12]; }); }); }
+      if (kind === 'alone') { const w = (W - 12) / 2, H = 76;
+        groups.forEach((g, gi) => { const x = (gi % 2) * (w + 12), y = 24 + Math.floor(gi / 2) * (H + 12); card(x, y, w, H, g); all.find(c => c.gi === gi).b = [x + (w - CW) / 2, y + (H - 36) / 2]; }); }
+      if (kind === 'list') { const H = 46;
+        groups.forEach((g, gi) => { const y = 12 + gi * (H + 8); card(0, y, W, H, g); all.find(c => c.gi === gi).b = [6, y + 5]; }); }
+      if (sub) extras.push(add('msub small muted', sub, { top: (kind === 'pairs' ? 230 : kind === 'list' ? 232 : 220) + 'px' }));
+      all.forEach((c, i) => later(150 + i * 120, () => { c.el.classList.add('in2'); bumpEl(c.el.firstChild); }));
+      const t1 = 300 + all.length * 120 + 500;
+      later(t1, () => cards.forEach((c, i) => setTimeout(() => c.classList.add('on'), RM ? 0 : i * 90)));
+      all.forEach((c, i) => later(t1 + 60 + c.gi * 90 + c.ni * 50, () => mv(c.el, ...c.b)));
+      later(t1 + 700, () => extras.forEach(e => e.classList.add('on')));
+    } }),
   sides: () => ({ html: `<div class="sc"><div class="grid2">
       <div class="tile you e" style="--d:0ms"><span class="label youtxt">Your side</span><div class="dots" style="grid-template-columns:repeat(4,22px);justify-content:start;gap:8px;margin-top:6px">${'<i class="w"></i>'.repeat(4)}</div><span class="small muted">4 carts · 8 players</span></div>
       <div class="tile e" style="--d:200ms"><span class="label muted">Them</span><div class="dots" style="grid-template-columns:repeat(4,22px);justify-content:start;gap:8px;margin-top:6px">${'<i class="l"></i>'.repeat(4)}</div><span class="small muted">4 carts · 8 players</span></div>
@@ -490,6 +560,9 @@ S.course = ({ shape = 'dogleg', par = 4, label, players, mode, win }) => ({ html
       let pill = '';
       if (mode === 'best') { const bu = best('y'), bt = best('t'); light('y', bu); light('t', bt);
         pill = bu < bt ? `<span class="pt y" style="--d:250ms">${win || '+1 point'}</span>` : `<span class="pt t" style="--d:250ms">½ point each</span>`; }
+      else if (mode === 'three') { const bu = best('y'), ba = best('a'), bb = best('b'); light('y', bu); light('a', ba); light('b', bb);
+        const pts = (bu < ba ? 1 : bu === ba ? .5 : 0) + (bu < bb ? 1 : bu === bb ? .5 : 0);
+        pill = `<span class="pt y" style="--d:250ms">${win || '+' + half(pts) + ' points'}</span>`; }
       else if (mode === 'low') { const low = Math.min(...P.map(p => p.s)); P.filter(p => p.s === low).forEach(p => { p.tile.classList.add('best'); });
         pill = `<span class="pt y" style="--d:250ms">${win || '+1 point'}</span>`; }
       else { P[0].tile.classList.add('best'); pill = `<span class="pt y" style="--d:250ms">${win || P[0].s + ' on your card'}</span>`; }
@@ -510,27 +583,31 @@ S.course = ({ shape = 'dogleg', par = 4, label, players, mode, win }) => ({ html
 const hole = (o) => ({ hold: 500 + Math.max(...o.players.map(p => p[1])) * 560 + 3200, sc: ['course', o] });
 const GAMES = {
   oneMatch: { name: '2v2', tag: 'same partners', slides: [
-    { h: 'You and Mike vs Tyler and Sam.', s: 'Same partners, all 18.', sc: ['versus', { us: 'You + Mike', them: 'Tyler + Sam' }] },
+    { h: 'You and Mike vs Tyler and Sam.', s: 'Same partners, all 18.', sc: ['meet', { kind: 'pairs', groups: [{ label: 'Your side', you: 1, names: ['You', 'Mike'] }, { label: 'Them', names: ['Tyler', 'Sam'] }] }] },
     { h: 'Best ball takes the hole.', s: 'Your 4 beats their 5. One point.', ...hole({ shape: 'dogleg', players: [['You', 4, 'y'], ['Mike', 6, 'y'], ['Tyler', 5, 't'], ['Sam', 5, 't']], mode: 'best', win: '+1 to you and Mike' }) },
     { h: 'First to 9½ wins.', s: '18 points out there. 9½ is more than half, so nobody can catch you.', sc: ['tug', { total: 18, toWin: 9.5, us: 9.5, them: 6.5, lbl: '9½ to win' }] } ] },
   partners: { name: '2v2', tag: 'partners switch', slides: [
-    { h: 'You and Mike vs Tyler and Sam.', s: 'For the first 6 holes.', sc: ['versus', { us: 'You + Mike', them: 'Tyler + Sam', sub: 'Holes 1–6' }] },
+    { h: 'You and Mike vs Tyler and Sam.', s: 'For the first 6 holes.', sc: ['meet', { kind: 'pairs', sub: 'Holes 1–6', groups: [{ label: 'Your side', you: 1, names: ['You', 'Mike'] }, { label: 'Them', names: ['Tyler', 'Sam'] }] }] },
     { h: "Your partner's ball counts too.", s: "Mike's 4 is your side's best. One point to you both.", ...hole({ shape: 'bend', label: 'Hole 2 · with Mike', players: [['You', 6, 'y'], ['Mike', 4, 'y'], ['Tyler', 5, 't'], ['Sam', 5, 't']], mode: 'best', win: '+1 to you and Mike' }) },
     { h: 'Partners switch at 7 and 13.', s: 'Each stretch is its own match. Most stretches won takes the day.', hold: 4400, sc: ['switch', { partners: ['Mike', 'Tyler', 'Sam'] }] } ] },
   cart: { name: '2v2', tag: '8 players · 4 carts', slides: [
-    { h: 'You and Mike are a cart.', s: 'Four carts of two today.', sc: ['versus', { us: 'You + Mike', them: 'Tyler + Sam', usLbl: 'Your cart', themLbl: 'First up', sub: 'Holes 1–6' }] },
+    { h: 'You and Mike are a cart.', s: 'Four carts of two today.', sc: ['meet', { kind: 'pairs', sub: 'Holes 1–6', groups: [{ label: 'Your cart', you: 1, names: ['You', 'Mike'] }, { label: 'First up', names: ['Tyler', 'Sam'] }] }] },
     { h: 'A tie splits it.', s: "Both carts' best is a 3. ½ point each.", ...hole({ shape: 'short', par: 3, label: 'Hole 3 · Par 3', players: [['You', 3, 'y'], ['Mike', 4, 'y'], ['Tyler', 3, 't'], ['Sam', 5, 't']], mode: 'best' }) },
     { h: 'A new cart every 6 holes.', s: 'Most points takes the day. Some matches are with the other tee time; the app scores it.', hold: 4400, sc: ['carts', { mine: 'You + Mike', others: [['Tyler + Sam', 'a'], ['Chris + Jake', 'b'], ['Ben + Luke', 'c']] }] } ] },
+  threeCarts: { name: '2v2', tag: '6 players · 3 carts', slides: [
+    { h: 'Three carts of two.', s: 'You and Mike are a cart. Every cart plays both others.', sc: ['meet', { kind: 'carts3', groups: [{ label: 'Your cart', you: 1, names: ['You', 'Mike'] }, { label: 'Cart', names: ['Tyler', 'Sam'] }, { label: 'Cart', names: ['Chris', 'Jake'] }] }] },
+    { h: 'Both carts, every hole.', s: "Your 4 beats Tyler and Sam's 5 and ties Chris and Jake's 4. 1½ points.", ...hole({ shape: 'dogleg', players: [['You', 4, 'y'], ['Mike', 5, 'y'], ['Tyler', 5, 'a'], ['Sam', 6, 'a'], ['Chris', 4, 'b'], ['Jake', 6, 'b']], mode: 'three' }) },
+    { h: 'Most points takes the day.', s: 'Two chances every hole: one against each cart.', sc: ['bars', { max: 30, rows: [['You + Mike', 24, true], ['Chris + Jake', 19.5], ['Tyler + Sam', 16.5]], note: 'After 18' }] } ] },
   alone: { name: 'Everyone alone', tag: '2–6 players', slides: [
-    { h: 'Everyone for themselves.', s: 'No partners today.', sc: ['players', { names: ['You', 'Chris', 'Sam', 'Jake'] }] },
+    { h: 'Everyone for themselves.', s: 'No partners today.', sc: ['meet', { kind: 'alone', groups: [{ you: 1, names: ['You'] }, { names: ['Chris'] }, { names: ['Sam'] }, { names: ['Jake'] }] }] },
     { h: 'Low score takes the point.', s: 'Your 3 is the lowest. One point. A tie splits it.', ...hole({ shape: 'bend', players: [['You', 3, 'y'], ['Chris', 4, 't'], ['Sam', 5, 't'], ['Jake', 4, 't']], mode: 'low', win: '+1 to you' }) },
     { h: 'The race.', s: "Most points wins. Once your lead is more than they can make up, it's locked.", hold: 4600, sc: ['race', { left: 2, rows: [['You', 7, true], ['Chris', 4], ['Sam', 3], ['Jake', 2]] }] } ] },
   stroke: { name: 'Stroke play', tag: 'any number', slides: [
-    { h: 'Just your score.', s: 'Everyone plays their own ball.', sc: ['players', { names: ['You', 'Chris', 'Sam', 'Jake'] }] },
+    { h: 'Just your score.', s: 'Everyone plays their own ball.', sc: ['meet', { kind: 'list', groups: [{ you: 1, names: ['You'], val: 'E' }, { names: ['Chris'], val: 'E' }, { names: ['Sam'], val: 'E' }, { names: ['Jake'], val: 'E' }] }] },
     { h: 'Every stroke counts.', s: 'Five shots on a par 5. Your card stays level.', ...hole({ shape: 'long', par: 5, label: 'Hole 5 · Par 5', players: [['You', 5, 'y'], ['Chris', 6, 't'], ['Sam', 5, 't'], ['Jake', 7, 't']], mode: 'none', win: '5 on your card · E' }) },
     { h: 'Lowest total wins.', s: 'The Board shows where you stand, live.', hold: 4600, sc: ['board', { steps: [[['Sam', '+1'], ['Chris', '+2'], ['You', '+3', true], ['Jake', '+5']], [['Sam', '+1'], ['You', '+2', true], ['Chris', '+3'], ['Jake', '+5']], [['You', 'E', true], ['Sam', '+1'], ['Chris', '+3'], ['Jake', '+6']]] }] } ] },
   ryder: { name: 'Team Ryder Cup', tag: '16 players', slides: [
-    { h: 'Two sides of 8.', s: 'Four carts each. Your cart plays one of theirs, 6 holes at a time.', sc: ['sides', {}] },
+    { h: 'Two sides of 8.', s: 'Four carts each. Your cart plays one of theirs, 6 holes at a time.', sc: ['meet', { kind: 'ryder' }] },
     { h: 'Cart against cart.', s: 'Win the hole, win a point toward your match. Most points over 6 holes wins it.', ...hole({ shape: 'dogleg', label: 'Hole 1 · vs Tyler + Sam', players: [['You', 4, 'y'], ['Mike', 5, 'y'], ['Tyler', 5, 't'], ['Sam', 5, 't']], mode: 'best', win: '+1 in your match' }) },
     { h: '6½ wins the cup.', s: '12 matches, 1 point each. Your side needs more than half.', hold: 4600, sc: ['matches', { seq: ['w', 'l', 'w', 'w', 'h', 'l', 'w', 'w', 'l', 'w', 'h', 'l'] }] } ] },
 };
@@ -545,7 +622,7 @@ function setCopy(c, first) { const html = `<div><p class="h">${c.h}</p><p class=
 function segTo(k, dur) { [...$('segs').children].forEach((s, i) => { const b = s.firstChild; b.style.transition = 'none'; b.style.transform = i < k ? 'scaleX(1)' : 'scaleX(0)';
   if (i === k) { b.getBoundingClientRect(); b.style.transition = `transform ${dur}ms linear`; b.style.transform = 'scaleX(1)'; } }); }
 function show(st, b) { const sc = S[b.sc[0]](b.sc[1]); st.innerHTML = sc.html; const el = st.firstElementChild;
-  requestAnimationFrame(() => requestAnimationFrame(() => { el.classList.add('go'); if (sc.play) sc.play(el); })); return b.hold || 3600; }
+  requestAnimationFrame(() => requestAnimationFrame(() => { el.classList.add('go'); if (sc.play) sc.play(el); })); return b.hold || sc.hold || 3600; }
 function go(k, first) { if (k >= SL.length) { $('replay').classList.add('done'); bumpBtn($('play')); return; }
   clearAll(); cur = k; const b = SL[k], st = $('stage'), old = st.firstElementChild;
   if (bot === 'lines') [...$('lines').children].forEach((l, i) => l.classList.toggle('on', i === k)); else setCopy(b, first);
