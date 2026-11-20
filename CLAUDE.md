@@ -10,6 +10,12 @@ New Boards and Matches by who you play for, the race, Setup's game step, season 
 and names off. That one brief has the decisions, the 22 target screens, what's built, the build order and what's
 still open. **Built and merged to `main` Nov 19 (53bc4c8)**; ARCHITECTURE.md 13a has what each step did.
 
+## Building Today's game (032)? Read `docs/design/features/032-todays-game/SPEC.md` first
+
+The animated "Today's game" slides (one small scene + one headline per slide, a 3D hole for every game), approved by
+Andrew Nov 20 with `prototype.html` and 31 screenshots in that folder. Also: "set" replaces "stretch" in UI copy.
+Handed off on branch `claude/affectionate-lamport-gp7ecm`; not built.
+
 ## What it is / where things stand
 
 - Mobile web app for Andrew's friend group: each foursome enters hole-by-hole scores on their

@@ -289,7 +289,6 @@ button { font-family: inherit; } button:focus-visible { outline: 2px solid var(-
   <div class="sheet pad" id="sheet" hidden>
     <div class="label muted">Game</div><div class="chips" id="games"></div>
     <div class="label muted">Team score · 2v2 games</div><div class="chips" id="tss"></div>
-    <div class="label muted">Bottom half</div><div class="chips" id="bots"></div>
     <button class="btn" type="button" id="close">Done</button>
   </div>
 </div>
@@ -724,7 +723,7 @@ function build(ts) { return {
   ryder: { name: 'Team Ryder Cup', tag: '16 players', slides: [
     { h: 'Two sides of 8.', s: 'Four carts a side. You and Mike are one of yours.', sc: ['meet', { kind: 'ryder' }] },
     { h: 'A new cart every 6 holes.', s: 'Your cart plays three of theirs, one every 6 holes.', hold: 4200, sc: ['ryderRot', { mine: 'You + Mike', opps: ['Tyler + Sam', 'Chris + Jake', 'Ben + Luke'] }] },
-    { h: 'Cart against cart.', s: 'Win the hole, win a point toward your match. Most points over 6 holes wins it.', ...hole({ shape: 'dogleg', label: 'Hole 1 · vs Tyler + Sam', players: [['You', 4, 'y'], ['Mike', 5, 'y'], ['Tyler', 5, 't'], ['Sam', 5, 't']], mode: 'best', win: '+1 in your match' }) },
+    { ...team('bbAgg', { shape: 'dogleg', label: 'Hole 1 · vs Tyler + Sam', players: [['You', 4, 'y'], ['Mike', 5, 'y'], ['Tyler', 5, 't'], ['Sam', 5, 't']] }), h: 'Cart against cart.', s: 'Two hole points every hole: low ball and low total. Most hole points over the 6 holes wins the match.' },
     { h: '6½ wins the cup.', s: '12 matches, a point each. Get past halfway and the cup is yours.', sc: ['matches', { lbl: 'Halfway · 6', win: '6½ · Cup won', seq: ['w', 'l', 'w', 'w', 'h', 'l', 'w', 'w', 'l', 'w', 'h', 'l'] }] } ] },
 }; }
 let TS = 'bestBall', GAMES = build(TS);
@@ -732,8 +731,8 @@ const PAIRS = ['oneMatch', 'partners', 'cart'];
 const BOTS = { lines: 'The lines', head: 'One headline' };
 
 // ── run ──
-let game = 'oneMatch', bot = 'lines', cur = 0, SL = [];
-try { const s = JSON.parse(localStorage.getItem('g032v4') || '{}'); if (GAMES[s.game]) game = s.game; if (BOTS[s.bot]) bot = s.bot; if (SCORES[s.ts]) { TS = s.ts; GAMES = build(TS); } } catch (e) {}
+let game = 'oneMatch', bot = 'head', cur = 0, SL = []; // Andrew, Nov 20: one headline under the animation
+try { const s = JSON.parse(localStorage.getItem('g032v4') || '{}'); if (GAMES[s.game]) game = s.game; if (SCORES[s.ts]) { TS = s.ts; GAMES = build(TS); } } catch (e) {}
 const save = () => { try { localStorage.setItem('g032v4', JSON.stringify({ game, bot, ts: TS })); } catch (e) {} };
 const bumpBtn = (n) => { n.classList.remove('bmp'); void n.offsetWidth; n.classList.add('bmp'); };
 function setCopy(c, first) { const html = `<div><p class="h">${c.h}</p><p class="s">${c.s}</p></div>`, box = $('copy'); if (first || RM) box.innerHTML = html; else swapIn(box, html); }
@@ -755,14 +754,14 @@ function start() { clearAll(); const g = GAMES[game]; SL = g.slides; $('app').cl
 $('stage').addEventListener('click', () => { if (cur < SL.length - 1) go(cur + 1); });
 $('lines').addEventListener('click', (e) => { const b = e.target.closest('[data-k]'); if (b) go(+b.dataset.k); });
 $('replay').addEventListener('click', start);
+// for docs/design/features/032-todays-game/shoot.mjs: jump to a slide / switch game
+window.__032 = { go: (k) => go(k), slides: () => SL, pace: PACE, hold: (k) => { const x = SL[k]; return x.hold || S[x.sc[0]](x.sc[1]).hold || 3600; }, set: (g, ts = 'bestBall') => { game = g; TS = ts; GAMES = build(TS); start(); } };
 const sheet = (on) => { $('sheet').hidden = $('scrim').hidden = !on; if (!on) return;
   $('games').innerHTML = Object.entries(GAMES).map(([k, g]) => `<button class="chip" type="button" data-g="${k}" aria-pressed="${k === game}">${g.name} <small>${g.tag}</small></button>`).join('');
-  $('bots').innerHTML = Object.entries(BOTS).map(([k, n]) => `<button class="chip" type="button" data-b="${k}" aria-pressed="${k === bot}">${n}</button>`).join('');
   $('tss').innerHTML = Object.entries(SCORES).map(([k, n]) => `<button class="chip" type="button" data-t="${k}" aria-pressed="${k === TS}">${n}</button>`).join(''); };
 $('tss').addEventListener('click', (e) => { const b = e.target.closest('[data-t]'); if (b) { TS = b.dataset.t; GAMES = build(TS); if (!PAIRS.includes(game)) game = 'oneMatch'; save(); sheet(true); } });
 $('opt').addEventListener('click', () => sheet(true)); $('scrim').addEventListener('click', () => sheet(false)); $('close').addEventListener('click', () => { sheet(false); start(); });
 $('games').addEventListener('click', (e) => { const b = e.target.closest('[data-g]'); if (b) { game = b.dataset.g; save(); sheet(true); } });
-$('bots').addEventListener('click', (e) => { const b = e.target.closest('[data-b]'); if (b) { bot = b.dataset.b; save(); sheet(true); } });
 start();
 })();
 </script>
