@@ -217,19 +217,65 @@ header p { margin: 0; font-size: 15px; line-height: 20px; color: var(--text-mute
 .dk .strip i { background: var(--surface-3); }
 .deck.moving .dk { filter: blur(2px); }
 
-/* ── direction D: mood ── */
-.mood { position: absolute; inset: 0; z-index: -1; }
-.mood canvas { width: 100%; height: 100%; display: block; }
-.mood::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 62%; background: linear-gradient(to bottom, transparent, var(--bg) 46%); }
-.dstage { padding: 0 20px; display: grid; align-content: end; }
-.dname { font-size: 32px; line-height: 36px; font-weight: 800; letter-spacing: -1px; }
-.dlines { display: grid; gap: 10px; }
-.dline { display: flex; gap: 10px; align-items: baseline; }
-.dline .label { color: var(--text-muted); width: 18px; flex: none; }
+/* ── mini phone (E, F) ── */
+.mp, .dvp { width: 393px; border-radius: 44px; background: var(--bg); box-shadow: 0 0 0 6px var(--surface-3), 0 0 0 7px var(--line), 0 30px 60px rgba(0,0,0,.4); overflow: hidden; }
+.mp { height: 600px; position: relative; }
+.mp-st { height: 34px; display: flex; justify-content: space-between; align-items: end; padding: 0 30px; font: 600 13px/18px var(--font-sans); }
+.mp-st i { width: 90px; height: 24px; border-radius: 12px; background: var(--surface-2); align-self: center; }
+.mp-ti { height: 66px; padding: 8px 20px 0; }
+.mp-body { position: absolute; left: 20px; right: 20px; top: 100px; height: 282px; }
+.mp-tabs { position: absolute; left: 16px; right: 16px; bottom: 22px; height: 60px; border-radius: 30px; background: var(--surface-1); box-shadow: var(--shadow-dock);
+  display: grid; grid-template-columns: repeat(4, 1fr); align-items: center; justify-items: center; }
+.mp-tabs i { width: 22px; height: 22px; border-radius: 7px; background: var(--surface-3); }
+.mp-tabs i.on { background: var(--text); }
+.stage.clip { overflow: hidden; }
+.stage.clipc { clip-path: inset(18px 0 0 0); }
+.stage.fade { -webkit-mask-image: linear-gradient(#000 80%, transparent); mask-image: linear-gradient(#000 80%, transparent); }
+
+/* ── E: a phone on screen ── */
+.pd { position: relative; height: 282px; transform-style: preserve-3d; }
+.mpw { position: absolute; left: 0; top: 0; width: 228px; height: 348px; transition: transform 600ms var(--ease-grow); will-change: transform; }
+.mpw .mp { transform: scale(.58); transform-origin: top left; }
+.call { position: absolute; top: 70px; width: 112px; display: grid; gap: 6px; justify-items: center; text-align: center; }
+.call.r { right: 0; } .call.l { left: 0; }
+.call .cv { animation: ptin 420ms var(--ease-grow) both; animation-delay: 450ms; }
+.tap { position: absolute; inset: -10px; border-radius: 50%; border: 2px solid var(--text); opacity: 0; animation: ripple .45s .1s ease-out both; pointer-events: none; }
+@keyframes ripple { 0% { opacity: .55; transform: scale(.7) } 100% { opacity: 0; transform: scale(1.35) } }
+
+/* ── F: dive in ── */
+.dv { position: relative; height: 282px; }
+.dvcam { position: absolute; left: 0; top: 0; transform-origin: 0 0; will-change: transform; }
+.dvp { position: absolute; top: 0; height: 500px; }
+
+/* ── G: watch a hole ── */
+.crs { width: 100%; height: 150px; display: block; overflow: visible; }
+.ball { transition: opacity 200ms linear; }
+.ball circle { fill: var(--surface-3); stroke: var(--text-muted); stroke-width: 1.5; }
+.ball text { font: 700 12px var(--font-mono); fill: var(--text); }
+.ball.y circle { fill: var(--cart-you); stroke: none; } .ball.y text { fill: var(--bg); }
+.trl line { stroke: var(--text-muted); stroke-width: 1.5; stroke-dasharray: 1 5; stroke-linecap: round; opacity: .45; }
+.trl line.y { stroke: var(--cart-you); opacity: .7; }
+.lgs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.lg { background: var(--surface-1); border-radius: 12px; padding: 6px 4px; text-align: center; display: grid; gap: 2px; transition: background 300ms var(--ease-grow), box-shadow 300ms var(--ease-grow); }
+.lg .nm { font-size: 13px; line-height: 18px; font-weight: 500; color: var(--text-muted); }
+.lg.y .nm { color: var(--cart-you-text); }
+.lg .cn { font: 700 17px/22px var(--font-mono); }
+.lg.best.y { background: var(--tint-you); box-shadow: inset 0 0 0 1.5px var(--cart-you), var(--glow-you); }
+.lg.best.t { background: var(--surface-2); box-shadow: inset 0 0 0 1.5px var(--text-muted); }
+.bmp { animation: bump .22s cubic-bezier(.2,.8,.2,1); }
+
+/* ── H: fast-forward ── */
+.strip i.w { background: var(--cart-you); } .strip i.l { background: var(--surface-3); } .strip i.d { background: var(--bad); }
+.strip i.h { background: linear-gradient(90deg, var(--cart-you) 50%, var(--surface-3) 50%); }
+.strip i.cur { box-shadow: 0 0 0 1.5px var(--bg), 0 0 0 3px var(--text); }
+.strip.s3 i:nth-child(6), .strip.s3 i:nth-child(12) { margin-right: 6px; }
+.ffm .tug .y, .ffm .tug .t, .ffm .hb .fill { transition: width 300ms var(--ease-grow); transition-delay: 0ms; }
+.ffoot { display: flex; gap: 6px; justify-content: center; align-items: center; min-height: 28px; }
 
 @media (prefers-reduced-motion: reduce) {
-  .e, .tug .y, .tug .t, .hb .fill, .lockline, .lbr, .dk, .pr, .strip i, .dots i { transition-duration: 1ms !important; transition-delay: 0ms !important; filter: none !important; }
-  .go .sco.pop, .go .sco svg path, .go .pt, .btn.bump { animation: none !important; opacity: 1; }
+  .e, .tug .y, .tug .t, .hb .fill, .lockline, .lbr, .dk, .pr, .strip i, .dots i, .mpw, .lg { transition-duration: 1ms !important; transition-delay: 0ms !important; filter: none !important; }
+  .go .sco.pop, .go .sco svg path, .go .pt, .btn.bump, .call .cv, .tap, .bmp { animation: none !important; opacity: 1; }
+  .tap { opacity: 0 !important; }
   .go .sco svg path { stroke-dashoffset: 0; }
   .go .pt { opacity: 1; transform: none; }
   .out, .in, .flipcard.fo, .flipcard.fi { animation-name: none !important; }
@@ -240,7 +286,7 @@ header p { margin: 0; font-size: 15px; line-height: 20px; color: var(--text-mute
   <header>
     <div class="lbl muted">Golf Live Board · 032 brainstorm</div>
     <h1>Today's game, in motion</h1>
-    <p>Pick a game and a direction. Each one plays itself in under 15 seconds. Tap the scene to skip ahead; <b>Let's play</b> is always there.</p>
+    <p>Pick a game and a direction. Round two: A, B and C stay, and E to H are new. Everything here is animated code, not video. Tap the scene to skip ahead; <b>Let's play</b> is always there.</p>
   </header>
 
   <div class="ctl">
@@ -253,7 +299,6 @@ header p { margin: 0; font-size: 15px; line-height: 20px; color: var(--text-mute
   <div class="stagewrap">
     <div class="fitbox" id="fitbox"><div class="fit" id="fit">
       <div class="phone" id="phone">
-        <div class="mood" id="mood" hidden><canvas id="cv"></canvas></div>
         <div class="top">
           <div class="toprow"><span class="label">Today's game</span><button id="replay" type="button">Replay</button></div>
           <div class="segs" id="segs"></div>
@@ -444,59 +489,232 @@ function swapIn(box, html) {
   if (!RM) el.classList.add('in'); box.appendChild(el);
 }
 
-// ── the games: current names + rules (031 §2.1 / §2.3, 13a step 3) ──
+// ── G: a hole from above ──
+function tween(el, dur, fn, done) {
+  if (RM) { fn(1); done && done(); return; }
+  const t0 = performance.now();
+  const f = (t) => { if (!el.isConnected) return; const p = Math.min(1, (t - t0) / dur); fn(p); if (p < 1) requestAnimationFrame(f); else done && done(); };
+  requestAnimationFrame(f);
+}
+const bumpEl = (n) => { n.classList.remove('bmp'); void n.offsetWidth; n.classList.add('bmp'); };
+S.course = ({ par = 4, hole = 4, players, mode }) => ({ html: `<div class="sc" style="gap:8px;align-content:start">
+    <div class="label muted e" style="--d:0ms">Hole ${hole} · Par ${par}</div>
+    <svg class="crs e" style="--d:60ms" viewBox="0 0 353 150" aria-hidden="true">
+      <path d="M40 110 Q 160 150 298 46" fill="none" stroke="var(--surface-1)" stroke-width="84" stroke-linecap="round"/>
+      <path d="M40 110 Q 160 150 298 46" fill="none" stroke="var(--surface-2)" stroke-width="52" stroke-linecap="round"/>
+      <ellipse cx="206" cy="52" rx="20" ry="11" fill="var(--bg)" stroke="var(--line)" stroke-width="1.5"/>
+      <ellipse cx="258" cy="112" rx="15" ry="9" fill="var(--bg)" stroke="var(--line)" stroke-width="1.5"/>
+      <circle cx="298" cy="46" r="36" fill="var(--surface-3)"/>
+      <rect x="24" y="98" width="30" height="24" rx="7" fill="var(--surface-3)"/>
+      <circle cx="298" cy="46" r="4.5" fill="var(--bg)"/>
+      <path d="M298 46 V16" stroke="var(--text)" stroke-width="1.5"/><path d="M298 16 l15 5 l-15 5z" fill="var(--text)"/>
+      <g class="trl"></g><g class="bls"></g>
+    </svg>
+    <div class="lgs e" style="--d:120ms;grid-template-columns:repeat(${players.length},1fr)">${players.map(([n, , side], i) => `<div class="lg ${side}" data-p="${i}"><span class="nm">${n}</span><span class="cn">0</span></div>`).join('')}</div>
+    <div class="ptline" style="grid-template-columns:1fr"></div></div>`,
+  play(el) {
+    const NS = 'http://www.w3.org/2000/svg', tr = el.querySelector('.trl'), bl = el.querySelector('.bls'), pl = el.querySelector('.ptline');
+    const T = [40, 110], Q = [160, 150], C = [298, 46];
+    const bez = (f) => [0, 1].map(a => (1 - f) * (1 - f) * T[a] + 2 * (1 - f) * f * Q[a] + f * f * C[a]);
+    const P = players.map(([n, s, side], pi) => {
+      const wild = s >= par + 2 ? 2 : 1, pts = [[T[0], T[1] + (pi - (players.length - 1) / 2) * 7]];
+      for (let i = 1; i <= s; i++) { const f = 1 - Math.pow(1 - i / s, 2), [x, y] = bez(f), j = (((pi * 37 + i * 53) % 21) - 10) * (1.15 - f) * 2.6 * wild; pts.push(i === s ? C : [x + j * .5, y + j]); }
+      const g = document.createElementNS(NS, 'g'); g.setAttribute('class', 'ball ' + side); g.innerHTML = `<circle r="9"/><text y="4" text-anchor="middle">${n[0]}</text>`;
+      g.setAttribute('transform', `translate(${pts[0][0]} ${pts[0][1]})`); bl.appendChild(g);
+      const tile = el.querySelector(`[data-p="${pi}"]`); return { s, side, pts, g, tile, cnt: tile.querySelector('.cn') };
+    });
+    const max = Math.max(...P.map(p => p.s));
+    const finish = () => {
+      const best = (side) => Math.min(...P.filter(p => p.side === side).map(p => p.s));
+      const light = (side, v) => P.find(p => p.side === side && p.s === v).tile.classList.add('best');
+      let pill = '';
+      if (mode === 'best') { const bu = best('y'), bt = best('t'); light('y', bu); light('t', bt);
+        pill = bu < bt ? `<span class="pt y" style="--d:250ms">+1 · your ${bu} beats their ${bt}</span>` : `<span class="pt t" style="--d:250ms">${bu} and ${bt} · ½ each</span>`; }
+      else if (mode === 'low') { const low = Math.min(...P.map(p => p.s)); P.filter(p => p.s === low).forEach(p => { p.tile.classList.add('best'); });
+        pill = `<span class="pt y" style="--d:250ms">+1 · low score takes it</span>`; }
+      else { P[0].tile.classList.add('best'); pill = `<span class="pt t" style="--d:250ms">${P[0].s} on your card</span>`; }
+      pl.innerHTML = pill;
+    };
+    if (RM) { P.forEach(p => { p.cnt.textContent = p.s; p.g.style.opacity = 0; }); finish(); return; }
+    P.forEach((p, pi) => { for (let r = 0; r < p.s; r++) later(500 + r * 560 + pi * 90, () => {
+      const a = p.pts[r], b = p.pts[r + 1], d = Math.hypot(b[0] - a[0], b[1] - a[1]), last = r === p.s - 1;
+      const ln = document.createElementNS(NS, 'line'); if (p.side === 'y') ln.setAttribute('class', 'y'); [['x1', a[0]], ['y1', a[1]], ['x2', a[0]], ['y2', a[1]]].forEach(([k, v]) => ln.setAttribute(k, v)); tr.appendChild(ln);
+      tween(el, 420, (t) => { const e = 1 - Math.pow(1 - t, 3), air = Math.sin(Math.PI * t) * (d > 40 ? 1 : 0), x = a[0] + (b[0] - a[0]) * e, y = a[1] + (b[1] - a[1]) * e;
+        p.g.setAttribute('transform', `translate(${x} ${y - air * d * .1}) scale(${(1 + air * .5) * (last ? 1 - .5 * e : 1)})`); ln.setAttribute('x2', x); ln.setAttribute('y2', y); },
+        () => { p.cnt.textContent = r + 1; bumpEl(p.cnt); if (last) p.g.style.opacity = 0; });
+    }); });
+    later(500 + max * 560 + 300, finish);
+  } });
+
+// ── the games: current names + rules (031 §2.1 / §2.3, 13a step 3). call = E's callout [label, value] ──
 const GAMES = {
-  partners: { name: '2v2', tag: 'partners switch', blurb: ['Partners switch every 6 holes, so everyone plays with everyone.', 'Best ball, a point a hole. A tie is ½ each.', 'Each stretch is its own match. Most stretches won takes the day.'], hero: 'switch', beats: [
-    { h: 'You and Mike vs Tyler and Sam.', s: 'For the first 6 holes. Best ball, a point a hole.', sc: ['versus', { us: 'You + Mike', them: 'Tyler + Sam', sub: 'Holes 1–6' }] },
-    { h: 'Best ball takes the hole.', s: 'Your 4 beats their 5. One point. A tie is ½ each.', sc: ['hole', { us: [['You', 4], ['Mike', 6]], them: [['Tyler', 5], ['Sam', 5]] }] },
-    { h: 'Partners switch at 7 and 13.', s: 'So you play with everyone once.', sc: ['switch', { partners: ['Mike', 'Tyler', 'Sam'] }] },
-    { h: 'Each stretch is its own match.', s: 'Most stretches won takes the day.', sc: ['stretches', { res: [['1–6', 'W', 'Mike'], ['7–12', 'L', 'Tyler'], ['13–18', 'W', 'Sam']] }] } ] },
-  oneMatch: { name: '2v2', tag: 'same partners', blurb: ['You and your partner against the other two, all 18.', 'Best ball, a point a hole. A tie is ½ each.', '9½ wins it.'], hero: 'tug', beats: [
-    { h: 'You and Mike vs Tyler and Sam.', s: 'Same partners all 18.', sc: ['versus', { us: 'You + Mike', them: 'Tyler + Sam' }] },
-    { h: 'Best ball takes the hole.', s: 'Your 4 beats their 5. One point.', sc: ['hole', { us: [['You', 4], ['Mike', 6]], them: [['Tyler', 5], ['Sam', 5]] }] },
-    { h: 'A tie splits it.', s: '4 against 4: ½ each.', sc: ['hole', { hole: 5, par: 3, us: [['You', 4], ['Mike', 3]], them: [['Tyler', 3], ['Sam', 4]], tie: true }] },
-    { h: 'First to 9½ wins.', s: '18 points out there. 9½ is more than half, so nobody can catch you.', sc: ['tug', { total: 18, toWin: 9.5, us: 9.5, them: 6.5, lbl: '9½ to win' }] } ] },
-  cart: { name: '2v2', tag: '8 players · 4 carts', blurb: ['Your cart plays a different cart every 6 holes.', 'Best ball, a point a hole. A tie is ½ each.', 'Most points takes the day.'], hero: 'carts', beats: [
-    { h: 'You and Mike are a cart.', s: 'Four carts of two today.', sc: ['carts', { mine: 'You + Mike', others: [['Tyler + Sam', 'a'], ['Chris + Jake', 'b'], ['Ben + Luke', 'c']] }], noplay: true },
-    { h: 'Best ball takes the hole.', s: "Your cart's best score against theirs. One point.", sc: ['hole', { us: [['You', 5], ['Mike', 4]], them: [['Tyler', 5], ['Sam', 6]] }] },
-    { h: 'A new cart every 6 holes.', s: 'Some matches are with the other tee time. Nobody moves; the app scores it.', sc: ['carts', { mine: 'You + Mike', others: [['Tyler + Sam', 'a'], ['Chris + Jake', 'b'], ['Ben + Luke', 'c']] }] },
-    { h: 'Most points takes the day.', s: 'Every hole adds to your cart.', sc: ['bars', { max: 16, rows: [['You + Mike', 12, true], ['Chris + Jake', 10.5], ['Tyler + Sam', 7.5], ['Ben + Luke', 6]], note: 'After 18' }] } ] },
-  alone: { name: 'Everyone alone', tag: '2–6 players', blurb: ['Everyone for themselves. No partners.', 'A point a hole to the low net score; a tie splits it.', 'Most points after 18 wins.'], hero: 'race', beats: [
-    { h: 'Everyone for themselves.', s: 'No partners today.', sc: ['players', { names: ['You', 'Chris', 'Sam', 'Jake'] }] },
-    { h: 'Low score takes the point.', s: 'One point a hole, on net scores.', sc: ['aloneHole', { scores: [['You', 3], ['Chris', 4], ['Sam', 5], ['Jake', 4]] }] },
-    { h: 'A tie splits it.', s: 'Two tied for low: ½ each.', sc: ['aloneHole', { hole: 8, scores: [['You', 4], ['Chris', 4], ['Sam', 5], ['Jake', 6]] }] },
-    { h: 'The race.', s: "Once your lead is more than they can make up, it's locked.", sc: ['race', { left: 2, rows: [['You', 7, true], ['Chris', 4], ['Sam', 3], ['Jake', 2]] }] } ] },
-  stroke: { name: 'Stroke play', tag: 'any number', blurb: ['Everyone plays their own ball.', 'Every stroke counts.', 'Lowest total wins.'], hero: 'board', beats: [
-    { h: 'Just your score.', s: 'Everyone plays their own ball.', sc: ['players', { names: ['You', 'Chris', 'Sam', 'Jake'] }] },
-    { h: 'Every stroke counts.', s: 'Your total builds hole by hole.', sc: ['card9', { pars: [4, 4, 3, 5, 4, 4, 3, 5, 4], scores: [4, 5, 3, 4, 4, 6, 3, 5, 4] }] },
-    { h: 'Lowest total wins.', s: 'The Board shows where you stand, live.', sc: ['board', { steps: [[['Sam', '+1'], ['Chris', '+2'], ['You', '+3', true], ['Jake', '+5']], [['Sam', '+1'], ['You', '+2', true], ['Chris', '+3'], ['Jake', '+5']], [['You', 'E', true], ['Sam', '+1'], ['Chris', '+3'], ['Jake', '+6']]] }] } ] },
-  ryder: { name: 'Team Ryder Cup', tag: '16 players', blurb: ['Two sides, cart against cart.', 'A new cart from their side every 6 holes.', 'Each match is a point to your side. 6½ wins.'], hero: 'matches', beats: [
-    { h: 'Two sides of 8.', s: 'Four carts each. Your side against theirs.', sc: ['sides', {}] },
-    { h: 'Cart vs cart, 6 holes at a time.', s: 'A different cart from their side each stretch.', sc: ['ryderRot', { mine: 'You + Mike', opps: ['Tyler + Sam', 'Chris + Jake', 'Ben + Luke'] }] },
-    { h: 'Win the match, win a point.', s: 'Most hole points over the 6 holes takes the match.', sc: ['hole', { us: [['You', 4], ['Mike', 5]], them: [['Tyler', 5], ['Sam', 5]] }] },
-    { h: '6½ wins the cup.', s: '12 matches. Your side needs more than half.', sc: ['matches', { seq: ['w', 'l', 'w', 'w', 'h', 'l', 'w', 'w', 'l', 'w', 'h', 'l'] }] } ] },
+  partners: { name: '2v2', tag: 'partners switch', intro: 'Partners switch every 6 holes, so everyone plays with everyone.', beats: [
+    { h: 'You and Mike vs Tyler and Sam.', s: 'For the first 6 holes. Best ball, a point a hole.', call: ['Holes 1–6', 'with Mike'], sc: ['versus', { us: 'You + Mike', them: 'Tyler + Sam', sub: 'Holes 1–6' }] },
+    { h: 'Best ball takes the hole.', s: 'Your 4 beats their 5. One point. A tie is ½ each.', call: ['This hole', '+1'], sc: ['hole', { us: [['You', 4], ['Mike', 6]], them: [['Tyler', 5], ['Sam', 5]] }] },
+    { h: 'Partners switch at 7 and 13.', s: 'So you play with everyone once.', call: ['Switch at', '7 · 13'], sc: ['switch', { partners: ['Mike', 'Tyler', 'Sam'] }] },
+    { h: 'Each stretch is its own match.', s: 'Most stretches won takes the day.', call: ['Stretches won', '2'], sc: ['stretches', { res: [['1–6', 'W', 'Mike'], ['7–12', 'L', 'Tyler'], ['13–18', 'W', 'Sam']] }] } ] },
+  oneMatch: { name: '2v2', tag: 'same partners', intro: 'You and your partner against the other two, all 18.', beats: [
+    { h: 'You and Mike vs Tyler and Sam.', s: 'Same partners all 18.', call: ['All 18', 'with Mike'], sc: ['versus', { us: 'You + Mike', them: 'Tyler + Sam' }] },
+    { h: 'Best ball takes the hole.', s: 'Your 4 beats their 5. One point.', call: ['This hole', '+1'], sc: ['hole', { us: [['You', 4], ['Mike', 6]], them: [['Tyler', 5], ['Sam', 5]] }] },
+    { h: 'A tie splits it.', s: '4 against 4: ½ each.', call: ['A tie', '½'], sc: ['hole', { hole: 5, par: 3, us: [['You', 4], ['Mike', 3]], them: [['Tyler', 3], ['Sam', 4]], tie: true }] },
+    { h: 'First to 9½ wins.', s: '18 points out there. 9½ is more than half, so nobody can catch you.', call: ['To win', '9½'], sc: ['tug', { total: 18, toWin: 9.5, us: 9.5, them: 6.5, lbl: '9½ to win' }] } ] },
+  cart: { name: '2v2', tag: '8 players · 4 carts', intro: 'Your cart plays a different cart every 6 holes.', beats: [
+    { h: 'You and Mike are a cart.', s: 'Four carts of two today.', call: ['Your cart', 'You + Mike'], sc: ['carts', { mine: 'You + Mike', others: [['Tyler + Sam', 'a'], ['Chris + Jake', 'b'], ['Ben + Luke', 'c']] }], noplay: true },
+    { h: 'Best ball takes the hole.', s: "Your cart's best score against theirs. One point.", call: ['This hole', '+1'], sc: ['hole', { us: [['You', 5], ['Mike', 4]], them: [['Tyler', 5], ['Sam', 6]] }] },
+    { h: 'A new cart every 6 holes.', s: 'Some matches are with the other tee time. Nobody moves; the app scores it.', call: ['New cart at', '7 · 13'], sc: ['carts', { mine: 'You + Mike', others: [['Tyler + Sam', 'a'], ['Chris + Jake', 'b'], ['Ben + Luke', 'c']] }] },
+    { h: 'Most points takes the day.', s: 'Every hole adds to your cart.', call: ['Your cart', '12'], sc: ['bars', { max: 16, rows: [['You + Mike', 12, true], ['Chris + Jake', 10.5], ['Tyler + Sam', 7.5], ['Ben + Luke', 6]], note: 'After 18' }] } ] },
+  alone: { name: 'Everyone alone', tag: '2–6 players', intro: 'Everyone for themselves. A point a hole to the low score.', beats: [
+    { h: 'Everyone for themselves.', s: 'No partners today.', call: ['Today', 'No partners'], sc: ['players', { names: ['You', 'Chris', 'Sam', 'Jake'] }] },
+    { h: 'Low score takes the point.', s: 'One point a hole, on net scores.', call: ['Low score', '+1'], sc: ['aloneHole', { scores: [['You', 3], ['Chris', 4], ['Sam', 5], ['Jake', 4]] }] },
+    { h: 'A tie splits it.', s: 'Two tied for low: ½ each.', call: ['Two tied', '½'], sc: ['aloneHole', { hole: 8, tie: true, scores: [['You', 4], ['Chris', 4], ['Sam', 5], ['Jake', 6]] }] },
+    { h: 'The race.', s: "Once your lead is more than they can make up, it's locked.", call: ['Your lead', 'Locked'], sc: ['race', { left: 2, rows: [['You', 7, true], ['Chris', 4], ['Sam', 3], ['Jake', 2]] }] } ] },
+  stroke: { name: 'Stroke play', tag: 'any number', intro: 'Everyone plays their own ball. Lowest total wins.', beats: [
+    { h: 'Just your score.', s: 'Everyone plays their own ball.', call: ['Today', 'Your ball'], sc: ['players', { names: ['You', 'Chris', 'Sam', 'Jake'] }] },
+    { h: 'Every stroke counts.', s: 'Your total builds hole by hole.', call: ['Front 9', '38'], sc: ['card9', { pars: [4, 4, 3, 5, 4, 4, 3, 5, 4], scores: [4, 5, 3, 4, 4, 6, 3, 5, 4] }] },
+    { h: 'Lowest total wins.', s: 'The Board shows where you stand, live.', call: ['Your place', '1st'], sc: ['board', { steps: [[['Sam', '+1'], ['Chris', '+2'], ['You', '+3', true], ['Jake', '+5']], [['Sam', '+1'], ['You', '+2', true], ['Chris', '+3'], ['Jake', '+5']], [['You', 'E', true], ['Sam', '+1'], ['Chris', '+3'], ['Jake', '+6']]] }] } ] },
+  ryder: { name: 'Team Ryder Cup', tag: '16 players', intro: 'Two sides, cart against cart. Each match is a point to your side.', beats: [
+    { h: 'Two sides of 8.', s: 'Four carts each. Your side against theirs.', call: ['Your side', '8'], sc: ['sides', {}] },
+    { h: 'Cart vs cart, 6 holes at a time.', s: 'A different cart from their side each stretch.', call: ['A new cart', 'every 6'], sc: ['ryderRot', { mine: 'You + Mike', opps: ['Tyler + Sam', 'Chris + Jake', 'Ben + Luke'] }] },
+    { h: 'Win the match, win a point.', s: 'Most hole points over the 6 holes takes the match.', call: ['A match', '1 pt'], sc: ['hole', { us: [['You', 4], ['Mike', 5]], them: [['Tyler', 5], ['Sam', 5]] }] },
+    { h: '6½ wins the cup.', s: '12 matches. Your side needs more than half.', call: ['To win', '6½'], sc: ['matches', { seq: ['w', 'l', 'w', 'w', 'h', 'l', 'w', 'w', 'l', 'w', 'h', 'l'] }] } ] },
 };
+
+// ── H: the whole round, fast ──
+function tugFrames(stretches, per = 1) { const fr = []; stretches.forEach((st, si) => { let u = 0, t = 0;
+  [...st.res].forEach((r) => { const us = r === 'w' ? per : r === 'l' ? 0 : r === 'h' ? per / 2 : r; u += us; t += per - us; fr.push({ cell: us > per / 2 ? 'w' : us < per / 2 ? 'l' : 'h', us: u, them: t, si, sub: st.sub }); }); }); return fr; }
+const chipsFoot = (lbl, arr) => `<span class="small muted">${lbl}</span>${arr.map(r => `<span class="flagchip${r === 'W' ? ' lit' : ''}">${r === 'W' ? 'Won' : r === 'L' ? 'Lost' : '—'}</span>`).join('')}`;
+const SIMS = {
+  oneMatch: () => ({ kind: 'tug', total: 18, tick: [9.5, '9½ to win'], frames: tugFrames([{ sub: 'You + Mike vs Tyler + Sam', res: 'wlwhwlwwhlwwlhw' }]),
+    pauses: { 1: { h: 'Best ball takes the hole.', s: 'Your 4 beats their 5. One point.' }, 4: { h: 'A tie splits it.', s: '4 against 4: ½ each.' }, 15: { h: "9½. That's the match.", s: 'More than half of 18, so they can’t catch you. Three holes to spare.' } } }),
+  partners: () => { const fr = tugFrames([{ sub: 'Holes 1–6 · with Mike', res: 'whlwwh' }, { sub: 'Holes 7–12 · with Tyler', res: 'lwlhlw' }, { sub: 'Holes 13–18 · with Sam', res: 'wwhlww' }]);
+    const R = ['W', 'L', 'W']; fr.forEach((f, i) => { const done = Math.floor((i + 1) / 6); f.foot = chipsFoot('Stretches', [0, 1, 2].map(k => k < done ? R[k] : '')); });
+    return { kind: 'tug', total: 6, s3: true, frames: fr, pauses: { 1: { h: 'Best ball takes the hole.', s: 'A point a hole. A tie is ½ each.' }, 7: { h: 'New partner at 7.', s: "Now you're with Tyler. The score starts over." }, 13: { h: 'And again at 13.', s: "Now with Sam. You've played with everyone." }, 18: { h: 'Most stretches won takes the day.', s: 'You won 2 of 3.' } } }; },
+  cart: () => { const fr = tugFrames([{ sub: 'Holes 1–6 · vs Tyler + Sam', res: 'wwhlwh' }, { sub: 'Holes 7–12 · vs Chris + Jake', res: 'lhwwlw' }, { sub: 'Holes 13–18 · vs Ben + Luke', res: 'whwwlw' }]);
+    const base = [0, 4, 7.5]; fr.forEach((f) => { f.foot = `<span class="small muted">Your cart today</span><span class="flagchip lit">${half(base[f.si] + f.us)} pts</span>`; });
+    return { kind: 'tug', total: 6, s3: true, frames: fr, pauses: { 1: { h: 'Best ball takes the hole.', s: "Your cart's best score against theirs. One point." }, 7: { h: 'A new cart at 7.', s: "Chris + Jake are in the other tee time. Nobody moves; the app scores it." }, 13: { h: 'And again at 13.', s: 'Three carts, three matches.' }, 18: { h: 'Most points takes the day.', s: '12 for your cart.' } } }; },
+  ryder: () => { const fr = tugFrames([{ sub: 'Holes 1–6 · vs Tyler + Sam', res: [2, 1, 1.5, 0, 2, 1] }, { sub: 'Holes 7–12 · vs Chris + Jake', res: [1, 0, 1, .5, 2, 1] }, { sub: 'Holes 13–18 · vs Ben + Luke', res: [2, 1, 2, 1, .5, 1.5] }], 2);
+    const side = [['0', '0'], ['2½', '1½'], ['4½', '3½'], ['7', '5']]; fr.forEach((f, i) => { const [a, b] = side[Math.floor((i + 1) / 6)]; f.foot = `<span class="small muted">The cup</span><span class="flagchip lit">Your side ${a}</span><span class="flagchip">Them ${b}</span>`; });
+    return { kind: 'tug', total: 12, s3: true, frames: fr, pauses: { 1: { h: 'Win the hole, win points.', s: 'Your cart against theirs, hole by hole.' }, 6: { h: 'Win the match, win a point.', s: '7½ to 4½ over six holes. One point to your side.' }, 12: { h: 'Lose it, they get the point.', s: "Every cart's match counts the same." }, 18: { h: '6½ wins the cup.', s: 'Your side 7, them 5.' } } }; },
+  alone: () => { const N = ['Y', 'C', 'S', 'J'], v = [0, 0, 0, 0];
+    const fr = ['Y', 'C', 'YC', 'S', 'Y', 'J', 'Y', 'YC', 'C', 'Y', 'S', 'Y', 'J', 'C', 'Y', 'S'].map((w) => { [...w].forEach(c => v[N.indexOf(c)] += 1 / w.length); return { cell: w === 'Y' ? 'w' : w.includes('Y') ? 'h' : 'l', vals: [...v] }; });
+    return { kind: 'bars', names: ['You', 'Chris', 'Sam', 'Jake'], max: 10, frames: fr, pauses: { 1: { h: 'Low score takes the point.', s: 'One point a hole, on net scores.' }, 3: { h: 'A tie splits it.', s: 'You and Chris: ½ each.' }, 16: { h: 'Locked.', s: 'Two holes left. The best Chris can do is 6. You have 7.', lock: [4, 2] } } }; },
+  stroke: () => { const d = [0, 1, 0, -1, 0, 2, 0, 0, 0, 0, 0, 0, 1, 0, -1, 0, 0, -1], pos = ['2nd', '3rd', '3rd', '2nd', '2nd', '3rd', '3rd', '3rd', '3rd', '3rd', '3rd', '3rd', '3rd', '3rd', '2nd', '2nd', '2nd', '1st']; let run = 0;
+    return { kind: 'stroke', frames: d.map((x, i) => { run += x; return { cell: x < 0 ? 'w' : x >= 2 ? 'd' : 'l', par: run, pos: pos[i] }; }),
+      pauses: { 4: { h: 'Every stroke counts.', s: 'A birdie on 4 takes one off.' }, 6: { h: 'It all adds up.', s: 'A double on 6 puts two back on.' }, 18: { h: 'Lowest total wins.', s: '+1. One clear of Sam.' } } }; },
+};
+function ffHtml(sim) {
+  const strip = `<div class="strip e${sim.s3 ? ' s3' : ''}" style="--d:60ms">${sim.frames.length === 18 || true ? Array.from({ length: 18 }, () => '<i></i>').join('') : ''}</div>`;
+  const meter = sim.kind === 'tug' ? `<div class="e" style="--d:120ms;display:flex;justify-content:space-between;align-items:end">
+        <div><span class="label youtxt">You</span><div class="nxl youtxt" id="fu">0</div></div>
+        <div style="text-align:right"><span class="label muted">Them</span><div class="ttl-mono muted" id="ft">0</div></div></div>
+      <div class="tug e" style="--d:160ms"><span class="y"></span><span class="t"></span>${sim.tick ? `<span class="tick" style="left:calc(${sim.tick[0] / sim.total * 100}% - 1px)"></span>` : ''}</div>
+      ${sim.tick ? `<div class="tickl label muted e" style="--d:160ms"><span style="left:${sim.tick[0] / sim.total * 100}%" id="tl">${sim.tick[1]}</span></div>` : ''}`
+    : sim.kind === 'bars' ? `<div class="hbars e" style="--d:120ms">${sim.names.map((n, i) => `<div class="hb ${i ? '' : 'you'}"><span class="nm">${n}</span><span class="trk"><span class="fill"></span>${i === 1 ? '<span class="lockline" style="opacity:0"></span>' : ''}</span><span class="v">0</span></div>`).join('')}</div>`
+    : `<div class="e" style="--d:120ms;display:flex;justify-content:space-between;align-items:end">
+        <div><span class="label muted">To par</span><div class="nxl" id="fp">E</div></div>
+        <div style="text-align:right"><span class="label muted">Place</span><div class="ttl-mono" id="fpos">–</div></div></div>`;
+  return `<div class="sc ffm" style="gap:10px">
+    <div class="e" style="--d:0ms;display:flex;justify-content:space-between;align-items:baseline"><div style="display:flex;gap:10px;align-items:baseline"><span class="label muted">Hole</span><span class="ttl-mono" id="fh">1</span></div><span class="small muted" id="fsub"></span></div>
+    ${strip}${meter}<div class="ffoot" id="ffoot"></div></div>`;
+}
+function ffApply(el, sim, f, n) {
+  const q = (s) => el.querySelector(s), cells = el.querySelectorAll('.strip i');
+  q('#fh').textContent = n; cells.forEach(c => c.classList.remove('cur')); cells[n - 1].className = f.cell + ' cur';
+  if (sim.kind === 'tug') { q('#fu').textContent = half(f.us); q('#ft').textContent = half(f.them); q('.tug .y').style.width = f.us / sim.total * 100 + '%'; q('.tug .t').style.width = f.them / sim.total * 100 + '%'; q('#fsub').textContent = f.sub;
+    if (sim.tick && f.us >= sim.tick[0]) q('#tl').classList.add('lit'); }
+  else if (sim.kind === 'bars') el.querySelectorAll('.hb').forEach((r, i) => { r.querySelector('.fill').style.width = f.vals[i] / sim.max * 100 + '%'; r.querySelector('.v').textContent = half(f.vals[i]); });
+  else { q('#fp').textContent = f.par === 0 ? 'E' : (f.par > 0 ? '+' : '−') + Math.abs(f.par); q('#fpos').textContent = f.pos; }
+  if (f.foot) q('#ffoot').innerHTML = f.foot;
+}
+let ff = null;
+function startFF(g) {
+  const sim = SIMS[game](), stage = $('stage'); stage.innerHTML = ffHtml(sim); const el = stage.firstElementChild;
+  requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('go')));
+  setCopy({ h: 'The whole round, fast.', s: g.intro }, true);
+  ff = { i: 0, fast: false, paused: false };
+  ff.step = () => { ff.paused = false; if (ff.i >= sim.frames.length) return finish();
+    const f = sim.frames[ff.i++]; ffApply(el, sim, f, ff.i); const p = sim.pauses[ff.i];
+    if (p) { ff.fast = false; ff.paused = true; setCopy(p);
+      if (p.lock) { const l = el.querySelector('.lockline'); l.style.opacity = 1; l.style.left = p.lock[0] / sim.max * 100 + '%'; later(500, () => { l.style.left = (p.lock[0] + p.lock[1]) / sim.max * 100 + '%'; }); }
+      later(2700, ff.step); }
+    else later(ff.fast ? 50 : 300, ff.step); };
+  later(1500, ff.step);
+}
+
+// ── directions ──
+const TABS = { hole: ['Enter', 0], aloneHole: ['Enter', 0], course: ['Enter', 0], card9: ['Scorecard', 3], board: ['Board', 2], versus: ['Today', -1], players: ['Today', -1], sides: ['Today', -1] };
+const tabOf = (b) => TABS[b.sc[0]] || ['Matches', 1];
+const chromeTop = (b) => { const k = b.sc[0], a = b.sc[1], t = tabOf(b);
+  return `<span class="label muted">${t[1] < 0 ? 'Sat · 8:40 tee time' : 'Twin Creeks'}</span><div class="h">${t[0] === 'Enter' ? `Hole ${a.hole ?? (k === 'aloneHole' ? 7 : 4)}` : t[0]}</div>`; };
+const chromeTabs = (b) => [0, 1, 2, 3].map(i => `<i class="${i === tabOf(b)[1] ? 'on' : ''}"></i>`).join('');
+const PW = 463, cam = (k, s) => s === 1 ? `translate(${-(k * PW + 20)}px, -100px) scale(1)` : `translate(${(353 - 393 * s) / 2 - k * PW * s}px, ${(282 - 500 * s) / 2}px) scale(${s})`;
+
 const DIRS = {
-  play: { name: 'A · Play it out', ref: 'Reference 1 (bank card)', notes: `<h2>A · Play it out</h2>
-    <p>Each beat plays the rule as a tiny live moment: scores land with the 022 marks, the best ball lights, the point flies in. The text under it changes with the 027 blur swap. The top shows story-style progress; tap the scene to jump ahead.</p>
-    <ul><li>Feels like the app itself, so it teaches the screens they'll use.</li><li>Fully in the design system, nothing new to approve except the progress bar.</li><li>Least "wow" of the four.</li></ul>
-    <div class="flag"><b>Flag:</b> the story progress bar (3px segments) isn't a component yet.</div>` },
-  flip: { name: 'B · One card', ref: 'Reference 1, the 3D flip', notes: `<h2>B · One card</h2>
-    <p>One card is the hero and never leaves. Between beats it flips edge-on and comes back with the next idea on its face, the way the bank card flips between Activate and Set PIN. Text below swaps on the same beat.</p>
-    <ul><li>The strongest "this is an object" feeling; people watch a flip.</li><li>The card reads like the Board and Matches cards, so it carries into the round.</li><li>A flip every 3 seconds can feel busy; it may want slower beats.</li></ul>
-    <div class="flag"><b>Flag:</b> 3D flip (rotateY, 140ms out + 260ms in, 2px blur at edge-on) is a new motion pattern beyond 027.</div>` },
-  deck: { name: 'C · The deck', ref: 'Reference 2 (book fan)', notes: `<h2>C · The deck</h2>
-    <p>All the beats sit in a fanned 3D stack. The front card holds while its scene plays, then snaps away and the next one comes forward. The next card always peeks at 0.6, so people can see there's more and how much.</p>
-    <ul><li>The peek shows how long it is, which makes people less likely to bail.</li><li>Swipeable later with no new idea needed.</li><li>Busiest of the four on a small phone.</li></ul>
-    <div class="flag"><b>Flag:</b> the fanned stack (rotateY + translateZ, cards behind at --peek) is a new pattern. Uses --motion-grow and 027's peek.</div>` },
-  mood: { name: 'D · Mood + 3 lines', ref: 'Reference 3 (chess loop)', notes: `<h2>D · Mood + 3 lines</h2>
-    <p>No steps at all. A slow ambient loop fills the top (the glowing ball, standing in for the Higgsfield video), the game name sits under it, and the three lines from <code>gameBlurb</code> arrive one at a time. One live element plays the key rule for this game.</p>
-    <ul><li>Calmest and quickest: one screen, about 4 seconds.</li><li>The same look works for Home and first-time onboarding.</li><li>Teaches the least; the rules are told rather than shown.</li></ul>
-    <div class="flag"><b>Flag:</b> video in the app is a new pattern: muted MP4 + a still for Low Power Mode and reduced motion, faded into --bg under the text. Here it's drawn in code because the artifact can't load the clip.</div>` },
+  play: { name: 'A · Play it out', notes: `<h2>A · Play it out</h2>
+    <p>Each beat plays the rule as a tiny live moment: scores land, the best ball lights, the point flies in. The text under it changes with a soft blur.</p>
+    <ul><li>Feels like the app itself, so it teaches the screens they'll use.</li><li>Nothing new to approve except the progress bar.</li><li>The quietest of the set.</li></ul>`,
+    show(k, b, first) { const st = $('stage'); if (first || RM) mountScene(st, b); else { st.firstElementChild?.classList.add('out'); later(120, () => mountScene(st, b)); } } },
+  flip: { name: 'B · One card', notes: `<h2>B · One card</h2>
+    <p>One card is the hero and never leaves. Between beats it flips edge-on and comes back with the next idea on its face, like the bank card.</p>
+    <ul><li>Strongest "this is an object" feeling.</li><li>A flip every 3 seconds can feel busy.</li></ul>
+    <div class="flag"><b>Flag:</b> the 3D flip is a new motion pattern.</div>`,
+    setup() { $('stage').innerHTML = '<div class="flipcard"></div>'; },
+    show(k, b, first) { const card = $('stage').firstElementChild; if (first || RM) return mountScene(card, b);
+      card.className = 'flipcard fo'; later(140, () => { mountScene(card, b); card.className = 'flipcard fi'; }); } },
+  deck: { name: 'C · The deck', notes: `<h2>C · The deck</h2>
+    <p>All the beats sit in a fanned stack. The front card plays, then snaps away. The next one always peeks, so people see how much is left.</p>
+    <ul><li>The peek makes people less likely to bail.</li><li>Busiest on a small phone.</li></ul>
+    <div class="flag"><b>Flag:</b> the fanned stack is a new pattern.</div>`,
+    setup() { const st = $('stage'); st.innerHTML = `<div class="deck">${BEATS.map(() => '<div class="dk"></div>').join('')}</div>`;
+      deckCards = [...st.querySelectorAll('.dk')]; deckCards.forEach((c, i) => { c.innerHTML = `<span class="dkn label muted">${i + 1} of ${BEATS.length}</span><div class="dkb"></div>`; mountScene(c.querySelector('.dkb'), BEATS[i], false); }); },
+    show(k, b, first) { const deck = $('stage').firstElementChild; if (!first && !RM) { deck.classList.add('moving'); later(160, () => deck.classList.remove('moving')); }
+      deckPos(); runScene(deckCards[k].querySelector('.dkb').firstElementChild, sceneOf(b), b); } },
+  phone: { name: 'E · Phone on screen', extra: 400, notes: `<h2>E · Phone on screen</h2>
+    <p>A small phone sits on the screen, tilted in 3D, showing the real app screen for each idea. A tap ring lands where you'd tap, and the one thing to remember pops out beside it, big. Each beat the phone swings to the other side.</p>
+    <ul><li>Shows where things live in the app: Enter, Matches, Board.</li><li>The big number beside it is what sticks: +1, ½, 9½.</li><li>The mini screen is small; the callout and the line below carry the meaning.</li></ul>
+    <div class="flag"><b>Flag:</b> a phone-in-phone frame and the 3D tilt are new patterns.</div>`,
+    setup() { $('stage').innerHTML = `<div class="pd"><div class="mpw"><div class="mp"><div class="mp-st"><span>9:41</span><i></i><span></span></div><div class="mp-ti"></div><div class="mp-body"></div><div class="mp-tabs"></div></div></div><div class="call"></div></div>`; },
+    show(k, b, first) { const pd = $('stage').firstElementChild, q = (s) => pd.querySelector(s), left = k % 2 === 0, body = q('.mp-body');
+      q('.mpw').style.transform = left ? 'translateX(0) rotateY(16deg) rotateX(3deg)' : 'translateX(125px) rotateY(-16deg) rotateX(3deg)';
+      const put = () => { q('.mp-ti').innerHTML = chromeTop(b); q('.mp-tabs').innerHTML = chromeTabs(b); const { el } = mountScene(body, b);
+        const s0 = el.querySelector('.sco'); if (s0 && tabOf(b)[0] === 'Enter') s0.insertAdjacentHTML('beforeend', '<span class="tap"></span>'); };
+      if (first || RM) put(); else { body.firstElementChild?.classList.add('out'); later(140, put); }
+      const [l, v] = b.call, c = q('.call'); c.className = 'call ' + (left ? 'r' : 'l');
+      c.innerHTML = `<span class="label muted">${l}</span><span class="cv ${v.length <= 3 ? 'nxl youtxt' : v.length <= 6 ? 'h' : 'row'}">${v}</span>`; } },
+  dive: { name: 'F · Dive in', extra: 900, notes: `<h2>F · Dive in</h2>
+    <p>It opens on a row of small phones, one per idea. The camera dives into the first until it fills your screen, plays it, pulls back, slides to the next and dives again. It ends pulled back on the whole row.</p>
+    <ul><li>The most "motion graphics" of the set; the zoom is the hook.</li><li>You see how many ideas there are before it starts.</li><li>Most movement, so it needs the calmest scenes inside.</li></ul>
+    <div class="flag"><b>Flag:</b> the camera zoom (about 1 second between ideas) is a new pattern, and longer than our 300ms motion.</div>`,
+    setup() { $('stage').innerHTML = `<div class="dv"><div class="dvcam">${BEATS.map((b, i) => `<div class="dvp" style="left:${i * PW}px"><div class="mp-st"><span>9:41</span><i></i><span></span></div><div class="mp-ti">${chromeTop(b)}</div><div class="mp-body"></div><div class="mp-tabs" style="bottom:22px">${chromeTabs(b)}</div></div>`).join('')}</div></div>`;
+      $('stage').querySelector('.dvcam').style.transform = cam(0, RM ? 1 : .44); },
+    show(k, b, first) { const c = $('stage').querySelector('.dvcam'), body = c.children[k].querySelector('.mp-body');
+      if (RM) { c.style.transform = cam(k, 1); return mountScene(body, b); }
+      const kf = first ? [{ transform: cam(0, .44) }, { transform: cam(0, .44), offset: .5 }, { transform: cam(0, 1) }]
+        : [{ transform: cam(k - 1, 1) }, { transform: cam(k - 1, .44), offset: .32 }, { transform: cam(k, .44), offset: .64 }, { transform: cam(k, 1) }];
+      c.animate(kf, { duration: first ? 1300 : 1000, easing: 'cubic-bezier(.45,0,.2,1)', fill: 'forwards' });
+      later(first ? 1150 : 850, () => mountScene(body, b)); },
+    end() { const c = $('stage').querySelector('.dvcam'), k = BEATS.length - 1; if (!RM) c.animate([{ transform: cam(k, 1) }, { transform: cam(k - .5, .44) }], { duration: 700, easing: 'cubic-bezier(.45,0,.2,1)', fill: 'forwards' }); } },
+  course: { name: 'G · Watch a hole', notes: `<h2>G · Watch a hole</h2>
+    <p>The middle beat is a hole seen from above. Everyone's ball flies shot by shot, the counters tick, the balls drop, and the point goes to whoever earned it. The other beats stay simple.</p>
+    <ul><li>The only one that looks like golf, not like an app.</li><li>The rule is shown by playing it: nobody needs to read.</li><li>The hole takes about 7 seconds, the longest single beat.</li></ul>
+    <div class="flag"><b>Flag:</b> the top-down hole drawing is a new illustration style (built only from our surface colours).</div>`,
+    beats(g) { const out = []; let done = false; const tie = g.beats.some(b => b.sc[1].tie);
+      for (const b of g.beats) { const k = b.sc[0], a = b.sc[1];
+        if (!['hole', 'aloneHole', 'card9'].includes(k)) { out.push(b); continue; }
+        if (done) continue; done = true;
+        const players = k === 'hole' ? [...a.us.map(([n, s]) => [n, s, 'y']), ...a.them.map(([n, s]) => [n, s, 't'])] : k === 'aloneHole' ? a.scores.map(([n, s], i) => [n, s, i ? 't' : 'y']) : [['You', 4, 'y'], ['Chris', 5, 't'], ['Sam', 4, 't'], ['Jake', 6, 't']];
+        const s = k === 'card9' ? 'Each shot adds one. No partners, no points.' : b.s + (tie && !/tie/i.test(b.s) ? ' A tie splits it.' : '');
+        out.push({ h: b.h, s, call: b.call, hold: 500 + Math.max(...players.map(p => p[1])) * 560 + 2900, sc: ['course', { par: 4, hole: 4, players, mode: k === 'hole' ? 'best' : k === 'aloneHole' ? 'low' : 'none' }] }); }
+      return out; },
+    show(k, b, first) { DIRS.play.show(k, b, first); } },
+  ff: { name: 'H · Fast-forward', notes: `<h2>H · Fast-forward</h2>
+    <p>No steps. One round plays through in about 15 seconds: the hole counter runs, the 18 squares fill, the score moves. It stops itself at the moments that matter (the first point, a tie, the switch at 7, the winning point) and the line below explains just that moment. Tap to jump to the next one.</p>
+    <ul><li>Shows the shape of the whole day, which the others don't.</li><li>The rules arrive at the moment they matter.</li><li>One screen, so nothing to page through.</li></ul>
+    <div class="flag"><b>Flag:</b> nothing new except the pacing: it runs and pauses on its own.</div>` },
 };
 
 // ── state + render ──
-let game = 'oneMatch', dir = 'play', cur = 0;
+let game = 'oneMatch', dir = 'play', cur = 0, BEATS = [], deckCards = [];
 try { const s = JSON.parse(localStorage.getItem('g032') || '{}'); if (GAMES[s.game]) game = s.game; if (DIRS[s.dir]) dir = s.dir; } catch (e) {}
 const save = () => { try { localStorage.setItem('g032', JSON.stringify({ game, dir })); } catch (e) {} };
 
@@ -507,113 +725,38 @@ function chips() {
 $('games').addEventListener('click', (e) => { const b = e.target.closest('[data-g]'); if (b) { game = b.dataset.g; save(); chips(); start(); } });
 $('dirs').addEventListener('click', (e) => { const b = e.target.closest('[data-d]'); if (b) { dir = b.dataset.d; save(); chips(); start(); } });
 
-const beats = () => GAMES[game].beats;
 const HOLD = 3600;
 function sceneOf(b) { const [k, a] = b.sc; return S[k](a); }
-function mountScene(host, b, playNow = true) {
-  const sc = sceneOf(b); host.innerHTML = sc.html; const el = host.firstElementChild;
-  if (playNow) runScene(el, sc, b); return { el, sc };
-}
+function mountScene(host, b, playNow = true) { const sc = sceneOf(b); host.innerHTML = sc.html; const el = host.firstElementChild; if (playNow) runScene(el, sc, b); return { el, sc }; }
 function runScene(el, sc, b) { requestAnimationFrame(() => requestAnimationFrame(() => { el.classList.add('go'); if (sc.play && !b.noplay) sc.play(el); })); }
-
 function segs(n) { $('segs').innerHTML = Array.from({ length: n }, () => '<i><b></b></i>').join(''); }
-function segTo(k) {
-  [...$('segs').children].forEach((s, i) => { const b = s.firstChild; b.style.transition = 'none';
-    b.style.transform = i < k ? 'scaleX(1)' : 'scaleX(0)'; if (i === k && !RM) { b.getBoundingClientRect(); b.style.transition = `transform ${HOLD}ms linear`; b.style.transform = 'scaleX(1)'; } });
-}
+function segTo(k, hold) { [...$('segs').children].forEach((s, i) => { const b = s.firstChild; b.style.transition = 'none';
+  b.style.transform = i < k ? 'scaleX(1)' : 'scaleX(0)'; if (i === k && !RM) { b.getBoundingClientRect(); b.style.transition = `transform ${hold}ms linear`; b.style.transform = 'scaleX(1)'; } }); }
 function setCopy(b, first) {
-  const html = `<div><p class="h">${b.h}</p><p class="s" style="margin-top:8px">${b.s}</p></div>`;
-  const box = $('copy'); if (first || RM) { box.innerHTML = html; if (!RM && !first) box.firstElementChild.classList.add('in'); return; }
-  box.style.display = 'grid'; [...box.children].forEach(c => c.style.gridArea = '1/1'); swapIn(box, html); box.lastElementChild.style.gridArea = '1/1';
+  const html = `<div><p class="h">${b.h}</p><p class="s" style="margin-top:8px">${b.s}</p></div>`, box = $('copy');
+  if (first || RM) { box.innerHTML = html; return; }
+  [...box.children].forEach(c => c.style.gridArea = '1/1'); swapIn(box, html); box.lastElementChild.style.gridArea = '1/1';
 }
-let deckCards = [];
-function deckPos() {
-  deckCards.forEach((c, i) => { const k = i - cur;
-    c.style.zIndex = 50 - Math.abs(k);
-    c.style.opacity = k < 0 ? 0 : k === 0 ? 1 : k === 1 ? 'var(--peek)' : k === 2 ? .3 : 0;
-    c.style.transform = k < 0 ? 'translateX(-115%) rotateY(28deg) translateZ(-40px)' : k === 0 ? 'none'
-      : `translateX(${k * 26}px) translateZ(${-k * 70}px) rotateY(${-k * 9}deg)`;
-    c.style.pointerEvents = k === 0 ? 'auto' : 'none'; });
-}
+function deckPos() { deckCards.forEach((c, i) => { const k = i - cur; c.style.zIndex = 50 - Math.abs(k);
+  c.style.opacity = k < 0 ? 0 : k === 0 ? 1 : k === 1 ? 'var(--peek)' : k === 2 ? .3 : 0;
+  c.style.transform = k < 0 ? 'translateX(-115%) rotateY(28deg) translateZ(-40px)' : k === 0 ? 'none' : `translateX(${k * 26}px) translateZ(${-k * 70}px) rotateY(${-k * 9}deg)`; }); }
+function finish() { $('hint').textContent = 'Tap Replay to watch it again'; const p = $('play'); p.classList.remove('bump'); void p.offsetWidth; p.classList.add('bump'); DIRS[dir].end && DIRS[dir].end(); }
 function go(k, first) {
-  const bs = beats(); if (k >= bs.length) { $('hint').textContent = 'Tap Replay to watch it again'; const p = $('play'); p.classList.remove('bump'); void p.offsetWidth; p.classList.add('bump'); return; }
-  clearAll(); cur = k; const b = bs[k]; segTo(k); setCopy(b, first); $('hint').textContent = '';
-  const stage = $('stage');
-  if (dir === 'play') {
-    if (first || RM) mountScene(stage, b);
-    else { const old = stage.firstElementChild; if (old) old.classList.add('out'); later(120, () => mountScene(stage, b)); }
-  } else if (dir === 'flip') {
-    let card = stage.querySelector('.flipcard');
-    if (!card) { stage.innerHTML = '<div class="flipcard"></div>'; card = stage.firstElementChild; mountScene(card, b); }
-    else if (RM) mountScene(card, b);
-    else { card.className = 'flipcard fo'; later(140, () => { mountScene(card, b); card.className = 'flipcard fi'; }); }
-  } else if (dir === 'deck') {
-    const deck = stage.querySelector('.deck');
-    if (!first && !RM) { deck.classList.add('moving'); later(160, () => deck.classList.remove('moving')); }
-    deckPos(); const c = deckCards[k]; const el = c.querySelector('.dkb').firstElementChild; const sc = sceneOf(b); runScene(el, sc, b);
-  }
-  later(HOLD, () => go(k + 1));
+  if (k >= BEATS.length) { clearAll(); return finish(); }
+  clearAll(); cur = k; const b = BEATS[k], hold = (b.hold || HOLD) + (DIRS[dir].extra || 0);
+  segTo(k, hold); setCopy(b, first); $('hint').textContent = ''; DIRS[dir].show(k, b, first); later(hold, () => go(k + 1));
 }
 function start() {
-  $('stage').style.padding = ''; clearAll(); cur = 0; const g = GAMES[game];
-  $('notes').innerHTML = DIRS[dir].notes; $('hint').textContent = '';
-  const stage = $('stage'); stage.innerHTML = ''; $('copy').innerHTML = '';
-  const mood = dir === 'mood'; $('mood').hidden = !mood; $('segs').classList.toggle('hide', mood); moodOn(mood);
-  $('phone').style.gridTemplateRows = mood ? 'auto 1fr auto auto' : 'auto 300px 1fr auto';
-  if (mood) return startMood(g);
-  segs(g.beats.length);
-  if (dir === 'deck') {
-    stage.innerHTML = `<div class="deck">${g.beats.map(() => '<div class="dk"></div>').join('')}</div>`;
-    deckCards = [...stage.querySelectorAll('.dk')];
-    deckCards.forEach((c, i) => { c.innerHTML = `<span class="dkn label muted">${i + 1} of ${g.beats.length}</span><div class="dkb"></div>`; mountScene(c.querySelector('.dkb'), g.beats[i], false); });
-  }
-  go(0, true);
+  clearAll(); cur = 0; ff = null; const g = GAMES[game], d = DIRS[dir], st = $('stage');
+  $('notes').innerHTML = d.notes + '<p class="small muted">D (mood + 3 lines) is retired.</p>'; $('hint').textContent = ''; st.innerHTML = ''; $('copy').innerHTML = '';
+  st.className = 'stage' + (dir === 'phone' ? ' clip fade' : dir === 'dive' ? ' clip clipc' : '');
+  $('segs').classList.toggle('hide', dir === 'ff');
+  if (dir === 'ff') return startFF(g);
+  BEATS = d.beats ? d.beats(g) : g.beats; segs(BEATS.length); d.setup && d.setup(); go(0, true);
 }
-function startMood(g) {
-  const stage = $('stage'); stage.style.padding = '0';
-  const heroBeat = [...g.beats].reverse().find(b => b.sc[0] === g.hero) || g.beats[g.beats.length - 1];
-  stage.innerHTML = `<div class="dstage"><div class="label muted e" style="--d:200ms">Today's game</div><div class="dname e" style="--d:300ms">${g.name}</div></div>`;
-  const el = stage.firstElementChild; requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('go')));
-  const copy = $('copy'); copy.innerHTML = `<div class="dlines">${g.blurb.map((l, i) => `<div class="dline e" style="--d:${700 + i * 700}ms"><span class="label">${i + 1}</span><span class="body">${l}</span></div>`).join('')}</div>`;
-  requestAnimationFrame(() => requestAnimationFrame(() => copy.firstElementChild.classList.add('go')));
-  const box = document.createElement('div'); box.style.cssText = 'margin-top:6px;height:186px;overflow:hidden';
-  const mini = document.createElement('div'); mini.style.cssText = 'width:151.5%;transform:scale(.66);transform-origin:top left';
-  box.appendChild(mini); copy.appendChild(box);
-  later(2600, () => { const { el: m, sc } = mountScene(mini, heroBeat, false); runScene(m, sc, heroBeat); });
-}
-$('stage').addEventListener('click', () => { if (dir !== 'mood') go(cur + 1); });
+$('stage').addEventListener('click', () => { if (dir !== 'ff') return go(cur + 1); if (!ff) return; if (ff.paused) { clearAll(); ff.step(); } else ff.fast = true; });
 $('replay').addEventListener('click', () => start());
 $('play').addEventListener('click', () => { $('hint').textContent = 'In the app this opens Enter on hole 1.'; });
-
-// ── mood canvas: the glowing ball and dark balls drifting past (stand-in for the Higgsfield loop) ──
-const cv = $('cv'), ctx = cv.getContext('2d'); let raf = 0, t0 = 0;
-const balls = Array.from({ length: 7 }, (_, i) => ({ a: i / 7 * Math.PI * 2, r: 70 + (i % 3) * 45, sp: .00012 + (i % 4) * .00004, s: 18 + (i % 3) * 12, y: (i % 2 ? -1 : 1) * (20 + i * 6), rim: i % 2 ? 'g' : 'a' }));
-function css(v) { return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
-function drawMood(t) {
-  const W = cv.clientWidth, H = cv.clientHeight, dpr = Math.min(2, devicePixelRatio || 1);
-  if (cv.width !== W * dpr) { cv.width = W * dpr; cv.height = H * dpr; }
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
-  ctx.fillStyle = css('--bg'); ctx.fillRect(0, 0, W, H);
-  const cx = W / 2, cy = H * .2, dark = css('--bg').toLowerCase() === '#0a0b0d';
-  const green = css('--cart-you'), amber = css('--cart-a');
-  const items = balls.map(b => { const ang = b.a + t * b.sp * 6; return { x: cx + Math.cos(ang) * b.r * 1.3, y: cy + b.y + Math.sin(ang * 1.3) * 26, z: Math.sin(ang), s: b.s, rim: b.rim }; });
-  const drawBall = (o) => { const s = o.s * (1 + o.z * .35); ctx.save(); ctx.globalAlpha = .55 + (o.z + 1) * .2;
-    const g = ctx.createRadialGradient(o.x - s * .3, o.y - s * .3, s * .1, o.x, o.y, s);
-    g.addColorStop(0, dark ? '#2a2e35' : '#d5d9df'); g.addColorStop(1, dark ? '#0a0b0d' : '#a7acb4'); ctx.fillStyle = g;
-    ctx.beginPath(); ctx.arc(o.x, o.y, s, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = o.rim === 'g' ? green : amber; ctx.lineWidth = 1.5; ctx.globalAlpha *= .8;
-    ctx.beginPath(); ctx.arc(o.x, o.y, s - .75, o.rim === 'g' ? -2.4 : -.6, o.rim === 'g' ? -1.0 : .9); ctx.stroke(); ctx.restore(); };
-  items.filter(o => o.z < 0).forEach(drawBall);
-  const pulse = 1 + Math.sin(t / 900) * .04, R = 38;
-  const halo = ctx.createRadialGradient(cx, cy, R * .6, cx, cy, R * 3.2 * pulse); halo.addColorStop(0, dark ? 'rgba(244,245,247,.22)' : 'rgba(18,163,92,.16)'); halo.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.fillStyle = halo; ctx.beginPath(); ctx.arc(cx, cy, R * 3.2 * pulse, 0, Math.PI * 2); ctx.fill();
-  const core = ctx.createRadialGradient(cx - 10, cy - 12, 4, cx, cy, R); core.addColorStop(0, '#ffffff'); core.addColorStop(1, dark ? '#d9dce1' : '#e8eaee');
-  ctx.fillStyle = core; ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = 'rgba(11,13,16,.08)'; for (let i = 0; i < 26; i++) { const a = i * 2.4, rr = R * Math.sqrt((i + .5) / 26) * .9; ctx.beginPath(); ctx.arc(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, 2.2, 0, Math.PI * 2); ctx.fill(); }
-  items.filter(o => o.z >= 0).forEach(drawBall);
-}
-function loop(t) { drawMood(t); raf = requestAnimationFrame(loop); }
-function moodOn(on) { cancelAnimationFrame(raf); if (!on) return; if (RM) drawMood(2000); else raf = requestAnimationFrame(loop); }
 
 // ── fit the 393 × 659 phone to narrow screens ──
 function fit() { const w = $('fitbox').parentElement.clientWidth, s = Math.min(1, (w - 8) / 393);
