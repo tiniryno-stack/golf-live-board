@@ -19,7 +19,7 @@ node tools/stamp.mjs "$WT/preview"
 cd "$WT"
 git add -A preview
 if git diff --cached --quiet; then echo "preview already up to date"; else
-  git commit -q -m "Preview: $BRANCH @ $SHA (under /preview/, live app untouched)" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+  git commit -q -m "Preview: $BRANCH @ $SHA (under /preview/, live app untouched)" -m "${PREVIEW_TRAILERS:-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>}"
   git push -q origin HEAD:main
   echo "published $BRANCH @ $SHA → https://tiniryno-stack.github.io/golf-live-board/preview/ (live in ~1 min)"
 fi

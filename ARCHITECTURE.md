@@ -992,6 +992,14 @@ Still open: nothing blocking. Design direction (section 9) is final.
   Today's game `sixCarts`: three cart rows labelled by when you play them, a cart-v-cart hole, the new-cart scene with the
   sit-out set dimmed ("You sit out · the other two play"), bars. Ranking stays most points. No SQL change.
   **Touches the engine's rotation and Setup: smoke run before it ships.**
+- **Housekeeping (Andrew, Nov 20, branch `claude/gifted-hopper-lt6ygj`).** *Host → tee times:* the clock field took the
+  whole row and crushed its label ("1st te ti"): the lobby's full-width rule for date / time fields
+  (`.field input[type="time"]`) outranked the 132px box. It is now Setup's tee time pill (`.ry-time`, dashed "Add time",
+  solid once set) at the right of the row; `host-tee` flips the pill in place, no redraw. *Top bar dimmed on the home
+  screen app:* iOS 26+ draws its own soft blur over the top of a home screen app, reaching past the status bar into our
+  top bar. It skips that when a fixed, full-width, opaque box sits at the top edge, so `.top-band` (index.html, shown
+  only under `.standalone`) fills the status bar strip in the page color. A community workaround, not an Apple-documented
+  one: **confirm on a phone**. No engine, sync or DB change.
 
 ## 13. V2 backlog (running list)
 
