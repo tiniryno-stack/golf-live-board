@@ -2507,3 +2507,41 @@ html.light .gs-seg, [data-theme="light"] .gs-seg { background: var(--bg); }
    card has none (no jersey colors on Enter). */
 [data-grow="ce-mine"] .ce-mine.ce-card { position: relative; padding: 6px 16px 8px 32px; }
 [data-grow="ce-mine"] .ce-mine.ce-card::before { content: ''; position: absolute; left: 14px; top: 14px; bottom: 14px; width: 3px; border-radius: 2px; background: var(--cart-you); pointer-events: none; }
+
+/* ───────────────────────────────────────────── 032 · Today's game (docs/design/features/032-todays-game/SPEC.md)
+   Full screen: top bar (kicker, Replay, a progress segment per slide), one scene in a fixed-height stage, one
+   headline + one sentence, Let's play pinned to the bottom. Screen-local pace: --motion-grow 270ms here only. */
+.fullcard.tg {
+  --motion-grow: 270ms; --tg-svg-glow: url(#tg-gl);
+  background: var(--bg); color: var(--text); justify-content: flex-start; gap: 0;
+  padding: var(--sat) 0 0; animation: none;
+}
+[data-theme="light"] .fullcard.tg { --tg-svg-glow: none; }
+.tg-top, .tg-stage, .tg-copy, .tg-foot { padding-left: max(20px, env(safe-area-inset-left, 0px)); padding-right: max(20px, env(safe-area-inset-right, 0px)); }
+.tg-top { flex: none; padding-top: 14px; display: grid; gap: 10px; }
+.tg-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 30px; color: var(--text-muted); }
+.tg-row .lbl { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tg-replay { min-height: 44px; padding: 0 0 0 14px; font-size: 13px; line-height: 18px; font-weight: 500; color: var(--text-muted); transition: color var(--motion-grow) var(--ease-grow); }
+.tg-replay.done { color: var(--text); }
+.tg-segs { display: flex; gap: 4px; height: 3px; }
+.tg-segs i { flex: 1; border-radius: 2px; background: var(--surface-3); overflow: hidden; position: relative; }
+.tg-segs b { position: absolute; inset: 0; background: var(--text); transform-origin: left; transform: scaleX(0); }
+/* the animation and the headline sit together in the vertical middle of the free space */
+.tg-mid { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: center; gap: clamp(12px, 3.5vh, 44px); }
+.tg-stage { height: clamp(282px, 44vh, 400px); flex: none; display: grid; cursor: pointer; }
+.tg-stage > * { grid-area: 1 / 1; min-width: 0; }
+.tg-copy { display: grid; align-content: start; }
+.tg-copy > div { grid-area: 1 / 1; }
+.tg-h { font-size: 32px; line-height: 36px; font-weight: 800; letter-spacing: -1px; margin: 0; text-wrap: balance; }
+.tg-s { font-size: 15px; line-height: 20px; font-weight: 500; color: var(--text-muted); margin: 6px 0 0; text-wrap: pretty; }
+.tg-foot { flex: none; padding-top: 12px; padding-bottom: calc(var(--sab) + 20px); }
+.tg-ph { display: grid; place-items: center; height: 100%; color: var(--text-muted); }
+/* 027 blur swap + 022 bump, on this screen */
+.tg-out { animation: swap-out calc(var(--motion-grow) * .4) cubic-bezier(.4, 0, 1, 1) both; }
+.tg-in { animation: swap-in calc(var(--motion-grow) * .8) calc(var(--motion-grow) * .2) var(--ease-grow) both; }
+.tg-bmp { animation: ce-bump .22s cubic-bezier(.2, .8, .2, 1); }
+@media (prefers-reduced-motion: reduce) {
+  .tg-out { animation: fade-in-027 150ms linear reverse both; }
+  .tg-in { animation: fade-in-027 150ms linear both; }
+  .tg-bmp { animation: none; }
+}
