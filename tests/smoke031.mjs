@@ -177,7 +177,7 @@ async function next(ph) {
   ok(snap.ncomp === 1 && snap.won.p1 === 1 && snap.won.p2 === 1 && snap.won.p3 === 0, `holes are one point; Andrew + Sean won stretch 1 (${JSON.stringify(snap.won)})`);
   await open(A, `#/e/${R.code}/board`);
   const bd = await text(A);
-  ok(/stretches won/i.test(bd) && /Your matches/.test(bd) && /1st|T1/.test(bd), `031 Board: players by stretches won, your matches (${bd.slice(0, 80)}…)`);
+  ok(/sets won/i.test(bd) && /Your matches/.test(bd) && /1st|T1/.test(bd), `031 Board: players by sets won, your matches (${bd.slice(0, 80)}…)`);
   await open(A, `#/e/${R.code}/matches`);
   const mt = await text(A);
   ok(/^With Sam/.test(mt) && /to win/.test(mt), `031 Matches: one tab per partner (${mt.slice(0, 60)}…)`);
