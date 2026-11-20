@@ -92,7 +92,7 @@ button { font-family: inherit; } button:focus-visible { outline: 2px solid var(-
 .chip[aria-pressed="true"] { background: var(--tint-you); border-color: var(--cart-you); }
 /* the hole (the compact one) */
 .crsw { perspective: 700px; display: flex; justify-content: center; min-width: 0; }
-.crs { flex: none; --ch: clamp(140px, calc(44vh - 110px), 250px); height: var(--ch); width: calc(var(--ch) * 2.05); display: block; overflow: visible; transform: rotateX(26deg) scale(1.04); transform-origin: 50% 62%; }
+.crs { flex: none; --ch: clamp(140px, calc(44vh - 110px), 238px); height: var(--ch); width: calc(var(--ch) * 2.05); display: block; overflow: visible; transform: rotateX(26deg) scale(1.04); transform-origin: 50% 62%; }
 .crs .slab { fill: var(--surface-1); stroke: var(--line); stroke-width: 1.5; }
 .crs .slab-side { fill: var(--bg); stroke: var(--line); stroke-width: 1.5; }
 .crs .bk { fill: var(--bg); stroke: var(--line); stroke-width: 1.5; }
@@ -105,6 +105,9 @@ button { font-family: inherit; } button:focus-visible { outline: 2px solid var(-
 .ball.y circle { fill: var(--cart-you); stroke: none; } .ball.y text { fill: var(--bg); }
 .ball.y { filter: var(--svg-glow); }
 .trl line { stroke: var(--text-muted); stroke-width: 1.5; stroke-dasharray: 1 5; stroke-linecap: round; opacity: .45; }
+.trl .bsh { fill: var(--bg); }
+.trl .trc { fill: none; stroke: var(--text-muted); stroke-width: 1.5; stroke-dasharray: 1 5; stroke-linecap: round; opacity: .5; }
+.trl .trc.y { stroke: var(--cart-you); opacity: .95; filter: var(--svg-glow); }
 .trl line.y { stroke: var(--cart-you); opacity: .9; filter: var(--svg-glow); }
 .lgs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 .lg { background: var(--surface-1); border-radius: 12px; padding: 6px 4px; text-align: center; display: grid; gap: 2px; justify-items: center; transition: opacity 300ms var(--ease-grow); }
@@ -351,7 +354,7 @@ const S = {
     play(el) {
       const box = el.querySelector('.mt'), W = box.clientWidth, CW = 84, add = (cls, html, css) => { const d = document.createElement('div'); d.className = cls; d.innerHTML = html; Object.assign(d.style, css || {}); box.appendChild(d); return d; };
       const mv = (n, [x, y]) => { n.style.transform = `translate(${x}px, ${y}px)`; }, H = 84, Y = [0, H + 34];
-      const top = add('mcard you on', '<span class="label" id="sl">Holes 1–6 · Your side</span>', { left: '0px', top: Y[0] + 'px', width: W + 'px', height: H + 'px' });
+      const top = add('mcard you on', '<span class="label" id="sl">Set 1 · holes 1–6</span>', { left: '0px', top: Y[0] + 'px', width: W + 'px', height: H + 'px' });
       add('mcard on', '<span class="label">Them</span>', { left: '0px', top: Y[1] + 'px', width: W + 'px', height: H + 'px' });
       add('mvs label muted on', 'vs', { top: Y[0] + H + 9 + 'px' });
       const slot = { me: [14, Y[0] + 38], p: [14 + CW + 8, Y[0] + 38], t0: [14, Y[1] + 38], t1: [14 + CW + 8, Y[1] + 38] };
@@ -365,8 +368,8 @@ const S = {
       const sl = top.querySelector('#sl');
       later(200, () => step(0));
       // stretch 2: Tyler comes up, Mike goes down. Stretch 3: Sam comes up, Tyler goes down.
-      later(1700, () => { step(1); mv(c[others[1]], slot.p); mv(c[others[0]], slot.t0); bumpEl(top); sl.textContent = 'Holes 7–12 · Your side'; });
-      later(3300, () => { step(2); mv(c[others[2]], slot.p); mv(c[others[1]], slot.t1); bumpEl(top); sl.textContent = 'Holes 13–18 · Your side'; });
+      later(1700, () => { step(1); mv(c[others[1]], slot.p); mv(c[others[0]], slot.t0); bumpEl(top); sl.textContent = 'Set 2 · holes 7–12'; });
+      later(3300, () => { step(2); mv(c[others[2]], slot.p); mv(c[others[1]], slot.t1); bumpEl(top); sl.textContent = 'Set 3 · holes 13–18'; });
     } }),
   // 032: points take the day, and each stretch you win adds a bonus point on the end of your bar.
   bonus: ({ rows, max }) => ({ hold: 5400, html: `<div class="sc" style="gap:12px">
@@ -381,8 +384,8 @@ const S = {
     } }),
   stretches: ({ res }) => ({ html: `<div class="sc">
       <div class="grid3" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">${res.map(([r, w, p], i) =>
-        `<div class="tile ${w === 'W' ? 'you' : ''} e" style="--d:${i * 380}ms;text-align:center"><span class="label muted">${r}</span><span class="row ${w === 'W' ? 'youtxt' : ''}">${w === 'W' ? 'Won' : w === 'H' ? 'Halved' : 'Lost'}</span><span class="small muted">with ${p}</span></div>`).join('')}</div>
-      <div class="e" style="--d:1400ms;display:flex;align-items:baseline;gap:10px;justify-content:center"><span class="nxl youtxt">2</span><span class="row">stretches won</span></div></div>` }),
+        `<div class="tile ${w === 'W' ? 'you' : ''} e" style="--d:${i * 380}ms;text-align:center"><span class="label muted">Set ${i + 1}</span><span class="row ${w === 'W' ? 'youtxt' : ''}">${w === 'W' ? 'Won' : w === 'H' ? 'Halved' : 'Lost'}</span><span class="small muted">with ${p}</span></div>`).join('')}</div>
+      <div class="e" style="--d:1400ms;display:flex;align-items:baseline;gap:10px;justify-content:center"><span class="nxl youtxt">2</span><span class="row">sets won</span></div></div>` }),
 
   // 032: the line is halfway. Your bar fills to it, holds, then pushes past: past halfway = nobody can catch you.
   tug: ({ total, us, them, lbl, win, unit = 'points' }) => ({ hold: 4800, html: `<div class="sc" style="gap:14px">
@@ -560,10 +563,10 @@ function tween(el, dur, fn, done) {
 const bumpEl = (n) => { n.classList.remove('bmp'); void n.offsetWidth; n.classList.add('bmp'); };
 // ── the hole: a small 3D model, one shape per game ──
 const SHAPES = {
-  dogleg: { T: [46, 118], P1: [122, 139], P2: [205, 119], C: [292, 58] },
-  bend:   { T: [52, 126], P1: [116, 36], P2: [226, 26], C: [298, 98] },
+  dogleg: { T: [64, 118], P1: [134, 139], P2: [205, 119], C: [284, 58] },
+  bend:   { T: [68, 126], P1: [126, 36], P2: [222, 26], C: [288, 98] },
   short:  { T: [84, 128], P1: [142, 112], P2: [212, 82], C: [276, 64] },
-  long:   { T: [40, 128], P1: [176, 160], P2: [166, 8], C: [300, 62] },
+  long:   { T: [60, 128], P1: [180, 160], P2: [166, 8], C: [290, 62] },
 };
 const cub = (sh, f) => [0, 1].map(a => (1 - f) ** 3 * sh.T[a] + 3 * (1 - f) ** 2 * f * sh.P1[a] + 3 * (1 - f) * f * f * sh.P2[a] + f ** 3 * sh.C[a]);
 function courseSvg(sh) {
@@ -573,14 +576,14 @@ function courseSvg(sh) {
   const at = (f, side, off) => { const p = cub(sh, f), n = nrm(f); return [p[0] + n[0] * off * side, p[1] + n[1] * off * side]; };
   const b1 = at(.5, 1, 24), b2 = at(.86, -1, 30);
   let trees = '';
-  for (let k = 0; k < 64; k++) { const x = 24 + (k % 11) * 30 + (Math.floor(k / 11) % 2) * 15, y = 26 + Math.floor(k / 11) * 24, r = 8 + ((k * 7) % 5);
-    if (x + r > 336 || y + r > 150 || (k * 5) % 3 === 0) continue;
+  for (let k = 0; k < 96; k++) { const x = -56 + (k % 16) * 30 + (Math.floor(k / 16) % 2) * 15, y = 26 + Math.floor(k / 16) * 24, r = 8 + ((k * 7) % 5);
+    if (x + r > 420 || x - r < -72 || y + r > 150 || (k * 5) % 3 === 0) continue;
     if (dist(x, y) < 32 + r || Math.hypot(x - sh.C[0], y - sh.C[1]) < 36 + r || Math.hypot(x - b1[0], y - b1[1]) < 18 + r || Math.hypot(x - b2[0], y - b2[1]) < 18 + r) continue;
     const bl = [[-.38 * r, .12 * r, .66 * r], [.36 * r, .16 * r, .62 * r], [0, -.32 * r, .68 * r]];
     trees += `<g class="tree" transform="translate(${x} ${y})"><ellipse cx="5" cy="${(r * .6).toFixed(1)}" rx="${(r * 1.1).toFixed(1)}" ry="${(r * .5).toFixed(1)}" class="tsh"/><g class="tsd">${bl.map(([a, b, c]) => `<circle cx="${a.toFixed(1)}" cy="${(b + 3).toFixed(1)}" r="${c.toFixed(1)}"/>`).join('')}</g><g class="tcn">${bl.map(([a, b, c]) => `<circle cx="${a.toFixed(1)}" cy="${b.toFixed(1)}" r="${c.toFixed(1)}"/>`).join('')}</g></g>`; }
   const [cx, cy] = sh.C, [tx, ty] = sh.T;
   return `<defs><filter id="gl" x="-1" y="-1" width="3" height="3"><feGaussianBlur stdDeviation="3.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
-    <rect class="slab-side" x="6" y="18" width="341" height="150" rx="30"/><rect class="slab" x="6" y="8" width="341" height="150" rx="30"/>
+    <rect class="slab-side" x="-80" y="18" width="513" height="150" rx="30"/><rect class="slab" x="-80" y="8" width="513" height="150" rx="30"/>
     <path d="${R}" fill="none" stroke="var(--line)" stroke-width="62" stroke-linecap="round" transform="translate(0 3)"/>
     <path d="${R}" fill="none" stroke="var(--surface-2)" stroke-width="58" stroke-linecap="round"/>
     <path d="${R}" fill="none" stroke="var(--surface-3)" stroke-width="36" stroke-linecap="round"/>
@@ -590,7 +593,7 @@ function courseSvg(sh) {
     <rect x="${tx - 14}" y="${ty - 7}" width="28" height="20" rx="6" fill="var(--line)"/><rect x="${tx - 14}" y="${ty - 10}" width="28" height="20" rx="6" fill="var(--surface-3)"/>
     <circle cx="${cx}" cy="${cy}" r="4.5" fill="var(--bg)"/><ellipse cx="${cx + 8}" cy="${cy + 2}" rx="9" ry="2.5" fill="var(--bg)" opacity=".6"/>
     <path d="M${cx} ${cy} V${cy - 34}" stroke="var(--text)" stroke-width="1.5"/><path d="M${cx} ${cy - 34} l15 5 l-15 5z" fill="var(--text)"/>
-    <g class="trl"></g><g class="bls"></g>${trees}`;
+    ${trees}<g class="trl"></g><g class="bls"></g>`;
 }
 S.course = ({ shape = 'dogleg', par = 4, label, players, mode, win }) => ({ html: `<div class="sc hsc">
     <div class="label muted e hlbl" style="--d:0ms">${label || `Hole 4 · Par ${par}`}</div>
@@ -622,18 +625,27 @@ S.course = ({ shape = 'dogleg', par = 4, label, players, mode, win }) => ({ html
       pl.innerHTML = pill;
     };
     if (RM) { P.forEach(p => { p.cnt.textContent = p.s; p.g.style.opacity = 0; }); finish(); return; }
-    P.forEach((p, pi) => { for (let r = 0; r < p.s; r++) later(500 + r * 560 + pi * 90, () => {
-      const a = p.pts[r], b = p.pts[r + 1], d = Math.hypot(b[0] - a[0], b[1] - a[1]), last = r === p.s - 1;
-      const ln = document.createElementNS(NS, 'line'); if (p.side === 'y') ln.setAttribute('class', 'y'); [['x1', a[0]], ['y1', a[1]], ['x2', a[0]], ['y2', a[1]]].forEach(([k, v]) => ln.setAttribute(k, v)); tr.appendChild(ln);
-      tween(el, 420, (t) => { const e = 1 - Math.pow(1 - t, 3), air = Math.sin(Math.PI * t) * (d > 40 ? 1 : 0), x = a[0] + (b[0] - a[0]) * e, y = a[1] + (b[1] - a[1]) * e;
-        p.g.setAttribute('transform', `translate(${x} ${y - air * d * .1}) scale(${(1 + air * .5) * (last ? 1 - .5 * e : 1)})`); ln.setAttribute('x2', x); ln.setAttribute('y2', y); },
-        () => { p.cnt.textContent = r + 1; bumpEl(p.cnt); if (last) p.g.style.opacity = 0; });
-    }); });
-    later(500 + max * 560 + 300, finish);
+    // 032: shots fly in 3D. The ball rises on an arc while its shadow runs along the ground; the tracer follows the ball.
+    P.forEach((p, pi) => {
+      const sh = document.createElementNS(NS, 'ellipse'); sh.setAttribute('class', 'bsh'); sh.setAttribute('rx', 7); sh.setAttribute('ry', 3); tr.appendChild(sh); p.sh = sh;
+      const place = (x, y, lift, s) => { p.g.setAttribute('transform', `translate(${x.toFixed(1)} ${(y - lift).toFixed(1)}) scale(${s.toFixed(3)})`);
+        sh.setAttribute('cx', x.toFixed(1)); sh.setAttribute('cy', (y + 5).toFixed(1)); sh.setAttribute('rx', (7 - lift * .08).toFixed(1)); sh.style.opacity = (.55 - lift * .008).toFixed(2); };
+      place(p.pts[0][0], p.pts[0][1], 0, 1);
+      for (let r = 0; r < p.s; r++) later(500 + r * SHOT + pi * 140, () => {
+        const a = p.pts[r], b = p.pts[r + 1], d = Math.hypot(b[0] - a[0], b[1] - a[1]), last = r === p.s - 1, H = d > 30 ? Math.min(46, d * .42) : 0;
+        const path = document.createElementNS(NS, 'path'); path.setAttribute('class', 'trc' + (p.side === 'y' ? ' y' : '')); tr.appendChild(path);
+        const at = (u) => { const g = H ? u : 1 - (1 - u) ** 2; return [a[0] + (b[0] - a[0]) * g, a[1] + (b[1] - a[1]) * g, 4 * H * u * (1 - u)]; };
+        tween(el, H ? FLY : 520, (t) => { const [x, y, lift] = at(t); place(x, y, lift, (1 + lift / 46 * .55) * (last && t > .8 ? 1 - (t - .8) * 2.5 : 1));
+          let dd = `M${a[0]} ${a[1]}`; for (let k = 1; k <= 14; k++) { const [px, py, pl] = at(t * k / 14); dd += ` L${px.toFixed(1)} ${(py - pl).toFixed(1)}`; } path.setAttribute('d', dd); },
+          () => { p.cnt.textContent = r + 1; bumpEl(p.cnt); if (last) { p.g.style.opacity = 0; sh.style.opacity = 0; } });
+      });
+    });
+    later(500 + max * SHOT + 400, finish);
   } });
 
-// ── three slides a game: who, one hole, how you win (031 names and rules). Each game has its own hole. ──
-const hole = (o) => ({ hold: 500 + Math.max(...o.players.map(p => p[1])) * 560 + 3200, sc: ['course', o] });
+// ── slides ──
+const SHOT = 900, FLY = 760; // one shot every 0.9 s, so the hole fills its slide and the result lands near the end
+const hole = (o) => ({ hold: 500 + Math.max(...o.players.map(p => p[1])) * SHOT + 400 + 2600, sc: ['course', o] });
 const GAMES = {
   oneMatch: { name: '2v2', tag: 'same partners', slides: [
     { h: 'You and Mike vs Tyler and Sam.', s: 'Same partners, all 18.', sc: ['meet', { kind: 'pairs', groups: [{ label: 'Your side', you: 1, names: ['You', 'Mike'] }, { label: 'Them', names: ['Tyler', 'Sam'] }] }] },
@@ -642,8 +654,8 @@ const GAMES = {
   partners: { name: '2v2', tag: 'partners switch', slides: [
     { h: 'You and Mike vs Tyler and Sam.', s: 'For the first 6 holes.', sc: ['meet', { kind: 'pairs', sub: 'Holes 1–6', groups: [{ label: 'Your side', you: 1, names: ['You', 'Mike'] }, { label: 'Them', names: ['Tyler', 'Sam'] }] }] },
     { h: "Your partner's ball counts too.", s: "Mike's 4 is your side's best. One point to you both.", ...hole({ shape: 'bend', label: 'Hole 2 · with Mike', players: [['You', 6, 'y'], ['Mike', 4, 'y'], ['Tyler', 5, 't'], ['Sam', 5, 't']], mode: 'best', win: '+1 to you and Mike' }) },
-    { h: 'Partners switch at 7 and 13.', s: 'So you play with everyone once. Your points add up all day.', sc: ['swap', {}] },
-    { h: 'Most points takes the day.', s: 'Every hole your side wins is a point for you. Win a stretch and get 1 more.', sc: ['bonus', { max: 14, rows: [['You', 11, 2, true], ['Sam', 10, 2], ['Mike', 9, 2], ['Tyler', 6, 0]] }] } ] },
+    { h: 'Partners switch at 7 and 13.', s: 'Every 6 holes is a new set, with a new partner. You play with everyone once.', sc: ['swap', {}] },
+    { h: 'Most sets won takes the day.', s: 'Each set is its own match. Level on sets? Most points wins.', hold: 4200, sc: ['stretches', { res: [['1–6', 'W', 'Mike'], ['7–12', 'L', 'Tyler'], ['13–18', 'W', 'Sam']] }] } ] },
   cart: { name: '2v2', tag: '8 players · 4 carts', slides: [
     { h: 'You and Mike are a cart.', s: 'Four carts of two today.', sc: ['meet', { kind: 'pairs', sub: 'Holes 1–6', groups: [{ label: 'Your cart', you: 1, names: ['You', 'Mike'] }, { label: 'First up', names: ['Tyler', 'Sam'] }] }] },
     { h: 'A tie splits it.', s: "Both carts' best is a 3. ½ point each.", ...hole({ shape: 'short', par: 3, label: 'Hole 3 · Par 3', players: [['You', 3, 'y'], ['Mike', 4, 'y'], ['Tyler', 3, 't'], ['Sam', 5, 't']], mode: 'best' }) },
@@ -663,7 +675,7 @@ const GAMES = {
     { h: 'Lowest total wins.', s: 'The Board shows where you stand, live.', hold: 4600, sc: ['board', { steps: [[['Sam', '+1'], ['Chris', '+2'], ['You', '+3', true], ['Jake', '+5']], [['Sam', '+1'], ['You', '+2', true], ['Chris', '+3'], ['Jake', '+5']], [['You', 'E', true], ['Sam', '+1'], ['Chris', '+3'], ['Jake', '+6']]] }] } ] },
   ryder: { name: 'Team Ryder Cup', tag: '16 players', slides: [
     { h: 'Two sides of 8.', s: 'Four carts a side. You and Mike are one of yours.', sc: ['meet', { kind: 'ryder' }] },
-    { h: 'A new cart every 6 holes.', s: 'Your cart plays three of theirs: one each stretch.', hold: 4200, sc: ['ryderRot', { mine: 'You + Mike', opps: ['Tyler + Sam', 'Chris + Jake', 'Ben + Luke'] }] },
+    { h: 'A new cart every 6 holes.', s: 'Your cart plays three of theirs, one every 6 holes.', hold: 4200, sc: ['ryderRot', { mine: 'You + Mike', opps: ['Tyler + Sam', 'Chris + Jake', 'Ben + Luke'] }] },
     { h: 'Cart against cart.', s: 'Win the hole, win a point toward your match. Most points over 6 holes wins it.', ...hole({ shape: 'dogleg', label: 'Hole 1 · vs Tyler + Sam', players: [['You', 4, 'y'], ['Mike', 5, 'y'], ['Tyler', 5, 't'], ['Sam', 5, 't']], mode: 'best', win: '+1 in your match' }) },
     { h: '6½ wins the cup.', s: '12 matches, a point each. Get past halfway and the cup is yours.', sc: ['matches', { lbl: 'Halfway · 6', win: '6½ · Cup won', seq: ['w', 'l', 'w', 'w', 'h', 'l', 'w', 'w', 'l', 'w', 'h', 'l'] }] } ] },
 };
