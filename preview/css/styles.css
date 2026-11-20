@@ -222,7 +222,12 @@ a { color: inherit; }
 .field label.tee-row { display: flex; align-items: center; gap: var(--space-3); min-height: var(--tap-min); color: var(--text); font-size: 15px; font-weight: 500; }
 .tee-row .tee-k { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .tee-row .tee-k small { font-size: 13px; color: var(--text-muted); }
-.tee-row .tee-in { width: 132px; flex: none; font-family: var(--font-mono); font-size: 17px; }
+/* the clock = Setup's tee time pill (.ry-time: dashed "Add time", solid once set). The extra selector weight beats
+   the full-width rule for date / time fields further down (.field input[type="time"]). */
+.tee-row .tee-t { position: relative; flex: none; display: grid; place-items: center; }
+.field .tee-row input[type="time"].tee-in { display: block; width: 104px; height: 32px; line-height: 30px; text-align: center; }
+.field .tee-row input[type="time"].tee-in::-webkit-date-and-time-value { text-align: center; }
+.tee-row .ry-time-ph { position: absolute; left: 0; right: 0; padding: 0; text-align: center; }
 
 /* segmented control (designspec §3): s1 track, 48px segments, active = s3 + shadow */
 .seg {
@@ -1244,6 +1249,12 @@ details.fold summary::-webkit-details-marker { display: none; }
 .standalone, .standalone body { min-height: var(--app-h, 100dvh); }
 .standalone .app { height: max(100dvh, var(--app-h, 100dvh)); }
 .standalone .sheet-root, .standalone .overlay-root, .standalone .coach-scrim { bottom: auto; height: max(100dvh, var(--app-h, 100dvh)); }
+/* iOS 26+ home screen app: the system draws a soft blur over the top of the page (it reached ~40pt past the status
+   bar and dimmed the top bar). It skips that when a fixed, full-width, opaque box sits at the top edge, so the
+   status bar strip gets one in the page color. Must stay opaque and tappable (no pointer-events: none). */
+.top-band { display: none; }
+.standalone .top-band { display: block; position: fixed; top: 0; left: 0; right: 0; height: max(var(--sat), 12px); background: var(--bg); z-index: 7; }
+.standalone .app.has-hero ~ .top-band { background: var(--hero); }
 .standalone .nr-foot { padding-bottom: max(16px, calc(var(--sab) - 10px)); }
 .standalone .nr-manual-wrap { padding-bottom: max(18px, calc(var(--sab) - 10px)); }
 .standalone .panel { padding-bottom: max(20px, calc(var(--sab) - 6px)); }
