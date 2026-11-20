@@ -1,5 +1,5 @@
 {
- "v": "20261119114354",
+ "v": "20261120075311",
  "files": [
   "css/styles.css",
   "css/tokens.css",
@@ -43,9 +43,11 @@
   "js/screens/setup.js",
   "js/screens/sheets.js",
   "js/screens/toasts.js",
+  "js/screens/todaysgame.js",
   "js/seasons.js",
   "js/sim.js",
   "js/teams.js",
+  "js/todaysgame.js",
   "js/ui.js"
  ]
 }

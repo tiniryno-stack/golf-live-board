@@ -1106,15 +1106,15 @@ function nextHole(app) {
     let last = '';
     if (was) {
       const u = was.points[meBefore], t = was.points[other(was, meBefore)];
-      last = snap.game.type === 'rotationPlusMinus' ? `Last stretch: ${fmtSigned(was.margin[meBefore], 'E')}`
-        : `Last stretch: ${!was.final ? `${fmtPts(u)}–${fmtPts(t)} so far` : u > t ? `you won ${fmtPts(u)}–${fmtPts(t)}` : u < t ? `lost ${fmtPts(u)}–${fmtPts(t)}` : `halved ${fmtPts(u)}–${fmtPts(t)}`}`;
+      last = snap.game.type === 'rotationPlusMinus' ? `Last set: ${fmtSigned(was.margin[meBefore], 'E')}`
+        : `Last set: ${!was.final ? `${fmtPts(u)}–${fmtPts(t)} so far` : u > t ? `you won ${fmtPts(u)}–${fmtPts(t)}` : u < t ? `lost ${fmtPts(u)}–${fmtPts(t)}` : `halved ${fmtPts(u)}–${fmtPts(t)}`}`;
     }
     app.showCard({
       kicker: 'Switch it up',
       big: now ? (st.pairs ? `With ${firsts(meAfter, true)}` : `vs ${firsts(other(now, meAfter))}`) : `On to rotation ${(done?.rotation || 0) + 1}`,
       result: last,
       sub: now ? (st.pairs ? `vs ${firsts(other(now, meAfter))} · ${now.label.toLowerCase()}` : `${now.label} · with ${firsts(meAfter, true)}`) : sub,
-      sub2: st.pairs ? 'Same foursome, new partner. Each stretch is its own match.' : swap ? 'One cart waits, one moves up.' : 'Nobody moves. The app compares your scores with the other group.',
+      sub2: st.pairs ? 'Same foursome, new partner. Each set is its own match.' : swap ? 'One cart waits, one moves up.' : 'Nobody moves. The app compares your scores with the other group.',
       button: `Continue to hole ${nh}`,
       onContinue: () => goHole(app, nh, h),
     });

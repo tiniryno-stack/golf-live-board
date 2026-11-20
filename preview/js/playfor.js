@@ -180,7 +180,7 @@ export function gameBlurb(snap) {
   const name = gameName(snap);
   const hole = st.holePoint ? 'Best ball, a point a hole; a tie is ½ each.' : st.teamScore === 'bestBall' ? 'Best ball, a point a hole.' : 'Low ball and low total, a point each, every hole.';
   const text = {
-    partners: `Partners switch ${st.pairSwitch === 'turn' ? 'at the turn' : 'every 6 holes'}, so everyone plays with everyone. Each stretch is its own match. ${st.dayBy === 'stretches' ? 'Most stretches won takes the day.' : 'Most points takes the day.'}`,
+    partners: `Partners switch ${st.pairSwitch === 'turn' ? 'at the turn' : 'every 6 holes'}, so everyone plays with everyone. Each set is its own match. ${st.dayBy === 'stretches' ? 'Most sets won takes the day.' : 'Most points takes the day.'}`,
     oneMatch: `You and your partner against the other two, all 18. ${hole}`,
     cart: snap?.teams?.length === 3 ? `Three carts of two. Every cart plays both others on every hole. ${hole}` : `Your cart plays a different cart every ${snap?.game?.rotations?.length === 2 ? '9' : '6'} holes. ${hole} Most points takes the day.`,
     alone: 'Everyone for themselves. A point a hole to the low net score; a tie splits it. Most points after 18 wins.',

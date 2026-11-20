@@ -4,6 +4,8 @@
 
 import { esc, icon, reducedMotion } from '../ui.js';
 import { briefPages } from './brief.js';
+import { todaysGame } from '../todaysgame.js';
+import { playerHtml, startPlayer } from './todaysgame.js';
 import { recapImages, saveImage } from './recap.js';
 import { local } from '../db.js';
 import { TEAM_NAME_PICKS, isDefaultTeamName, headlineColor } from '../teams.js';
@@ -159,6 +161,7 @@ export function closeOverlay() {
   const root = $('overlay');
   if (!root) return;
   picker = null;
+  brief?.player?.stop();
   brief = null;
   recap = null;
   if (overlay?.away) overlay.onDismiss?.();
@@ -227,11 +230,20 @@ export function renderPicker(app) {
 
 // ───────────────────────────────────────────── Today's game (swipe through, then play)
 
-let brief = null; // { page, n, onDone }
+let brief = null; // { page, n, onDone } — or 032: { player, onDone }
 
 export const briefOpen = () => !!brief;
 
 export function showBrief(app, onDone) {
+  // 032: the slides, played out. Old rounds (playFor legacy, Plus/Minus) keep the text card below.
+  const tg = todaysGame(app.snapshot, app.me);
+  if (tg) {
+    const root = $('overlay');
+    root.innerHTML = playerHtml(tg);
+    root.classList.add('open');
+    brief = { onDone, player: startPlayer(root.querySelector('.tg'), tg) };
+    return true;
+  }
   const pages = briefPages(app);
   if (!pages.length) return false;
   brief = { page: 0, n: pages.length, onDone };
@@ -267,6 +279,7 @@ function syncBrief() {
 function closeBrief() {
   if (!brief) return;
   const done = brief.onDone;
+  brief.player?.stop();
   brief = null;
   const root = $('overlay');
   root.classList.remove('open');
@@ -407,6 +420,8 @@ export const actions = {
     track.scrollTo({ left: brief.page * track.clientWidth, behavior: reducedMotion() ? 'auto' : 'smooth' });
   },
   'brief-done': () => closeBrief(),
+  'tg-next': () => brief?.player?.next(),
+  'tg-replay': () => brief?.player?.replay(),
   'recap-close': () => closeRecap(),
   'recap-save': async (el, ev, app) => {
     const it = recap?.items[recap.page];

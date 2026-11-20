@@ -96,7 +96,7 @@ export function rulesRows(app) {
   rows.push(['Max score', ({ doublePar: 'Double par', netDoubleBogey: 'Net double bogey', none: 'None' })[st.maxHoleScore] || 'Double par',
     st.maxHoleScore === 'none' ? 'Play every hole out.' : `Pick up once you hit it; it counts as that score.${st.par3NoMax ? ' No max on par 3s.' : ''}`]);
   if (g && g.sides) rows.push(['Winner', `${fmtPts(g.sides[0].toWin)} match points`, `More than half of the ${g.sides[0].total} matches. Level at the end = the cup is shared.`]);
-  else if (g && st.dayBy === 'stretches') rows.push(['Winner', 'Most stretches won', 'Each stretch is its own match (½ when halved). Level on stretches: most points. Still level = shared.']);
+  else if (g && st.dayBy === 'stretches') rows.push(['Winner', 'Most sets won', 'Each set is its own match (½ when halved). Level on sets: most points. Still level = shared.']);
   else if (g && st.holePoint && !st.pairs) rows.push(['Winner', 'Each foursome’s match', 'Your cart against the other cart in your group, 18 holes. Carts are ranked by points.']);
   else if (g && st.holePoint) rows.push(['Winner', 'More holes won', 'Level after 18 = the match is halved.']);
   else if (g && g.type !== 'splitPoint') rows.push(['Winner', g.type === 'rotationPlusMinus' ? 'Best +/− after 18' : 'Most points after 18', 'Tie at the top: better matchup record, then who won between the two, then the stroke margin. Still tied = shared.']);
