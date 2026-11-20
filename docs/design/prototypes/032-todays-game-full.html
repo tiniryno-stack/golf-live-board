@@ -4,7 +4,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@500;600;800&family=Geist+Mono:wght@600;700&display=swap">
 <style>
-/* Layout: one full-height phone column. Top bar, the slide (takes all spare height), caption, Let's play. Only Golf Live Board tokens, the six type styles, 027 / 022 motion. */
+/* Layout: one full-height phone column. Top half: one small animation (300px, as in the first prototype).
+   Bottom half: the three lines, then Let's play. Only Golf Live Board tokens, the six type styles, 027 / 022 motion. */
 :root {
   --font-sans: Geist, system-ui, -apple-system, sans-serif;
   --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, monospace;
@@ -56,14 +57,26 @@ button { font-family: inherit; } button:focus-visible { outline: 2px solid var(-
 .segs { display: flex; gap: 4px; height: 3px; }
 .segs i { flex: 1; border-radius: 2px; background: var(--surface-3); overflow: hidden; position: relative; }
 .segs i b { position: absolute; inset: 0; background: var(--text); transform-origin: left; transform: scaleX(0); }
-.stage { flex: 1; min-height: 0; padding-top: 12px; display: grid; cursor: pointer; }
-.stage > * { grid-area: 1 / 1; min-width: 0; min-height: 0; }
-.copy { min-height: 144px; padding-top: 14px; padding-bottom: 12px; display: grid; align-content: start; flex: none; }
+/* top half: the one small animation, same size as the first prototype */
+.stage { height: 300px; flex: none; padding-top: 18px; display: grid; cursor: pointer; }
+.stage > * { grid-area: 1 / 1; min-width: 0; }
+/* bottom half */
+.rest { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: space-between; gap: 12px; padding-top: 14px; padding-bottom: 20px; }
+.copy { display: grid; align-content: start; }
 .copy > div { grid-area: 1 / 1; }
 .h { font-size: 32px; line-height: 36px; font-weight: 800; letter-spacing: -1px; margin: 0; text-wrap: balance; }
 .s { font-size: 15px; line-height: 20px; font-weight: 500; color: var(--text-muted); margin: 6px 0 0; text-wrap: pretty; }
-.foot { padding-bottom: 20px; flex: none; }
-.btn { height: 56px; border-radius: var(--radius-lg); border: 0; background: var(--text); color: var(--bg); font: 600 17px/22px var(--font-sans); cursor: pointer; width: 100%; }
+.lines { display: grid; gap: 6px; }
+.ln { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 10px; align-items: start; text-align: left; width: 100%; border: 0; color: var(--text); background: transparent;
+  border-radius: var(--radius-lg); padding: 12px 14px; cursor: pointer; opacity: var(--peek); transition: background var(--motion-grow) var(--ease-grow), opacity var(--motion-grow) var(--ease-grow); }
+.ln .n { font: 600 12px/22px var(--font-mono); color: var(--text-muted); }
+.ln .t { display: block; font-size: 17px; line-height: 22px; font-weight: 600; }
+.ln .sub { display: grid; grid-template-rows: 0fr; transition: grid-template-rows var(--motion-grow) var(--ease-grow); }
+.ln .sub > span { overflow: hidden; font-size: 15px; line-height: 20px; font-weight: 500; color: var(--text-muted); }
+.ln.on { background: var(--surface-1); opacity: 1; }
+.ln.on .sub { grid-template-rows: 1fr; } .ln.on .sub > span { padding-top: 4px; }
+.ln.on .n { color: var(--cart-you-text); }
+.btn { height: 56px; border-radius: var(--radius-lg); border: 0; background: var(--text); color: var(--bg); font: 600 17px/22px var(--font-sans); cursor: pointer; width: 100%; flex: none; }
 .bmp { animation: bump .22s cubic-bezier(.2,.8,.2,1); }
 .scrim { position: absolute; inset: 0; background: rgba(0,0,0,.5); z-index: 8; }
 .sheet { position: absolute; left: 0; right: 0; bottom: 0; z-index: 9; background: var(--surface-1); border-radius: 24px 24px 0 0; padding-top: 18px; padding-bottom: 24px; display: grid; gap: 12px; }
@@ -71,29 +84,22 @@ button { font-family: inherit; } button:focus-visible { outline: 2px solid var(-
 .chip { font: 600 13px/18px var(--font-sans); color: var(--text); background: var(--surface-2); border: 1px solid var(--line); border-radius: 999px; padding: 8px 12px; cursor: pointer; }
 .chip small { font: 500 13px/18px var(--font-sans); color: var(--text-muted); }
 .chip[aria-pressed="true"] { background: var(--tint-you); border-color: var(--cart-you); }
-
-/* the hole slide */
-.hs { display: flex; flex-direction: column; gap: 10px; }
-.hsv { flex: 1; min-height: 0; position: relative; margin: 0 -20px; }
-.hsv svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-.bk { fill: var(--bg); stroke: var(--line); stroke-width: 1.5; }
-.fn { font: 700 12px var(--font-mono); fill: var(--bg); }
+/* the hole (the compact one) */
+.crs { width: 100%; height: 150px; display: block; overflow: visible; }
+.ball { transition: opacity 200ms linear; }
 .ball circle { fill: var(--surface-3); stroke: var(--text-muted); stroke-width: 1.5; }
 .ball text { font: 700 12px var(--font-mono); fill: var(--text); }
 .ball.y circle { fill: var(--cart-you); stroke: none; } .ball.y text { fill: var(--bg); }
-.ball { transition: opacity 200ms linear; }
 .trl line { stroke: var(--text-muted); stroke-width: 1.5; stroke-dasharray: 1 5; stroke-linecap: round; opacity: .45; }
 .trl line.y { stroke: var(--cart-you); opacity: .7; }
-.lgs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; flex: none; }
-.lg { background: var(--surface-1); border-radius: 12px; padding: 6px 4px; height: 56px; text-align: center; display: grid; gap: 2px; justify-items: center; transition: opacity 300ms var(--ease-grow); }
+.lgs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.lg { background: var(--surface-1); border-radius: 12px; padding: 6px 4px; text-align: center; display: grid; gap: 2px; justify-items: center; transition: opacity 300ms var(--ease-grow); }
 .lg .nm { font-size: 13px; line-height: 18px; font-weight: 500; color: var(--text-muted); }
 .lg.y .nm { color: var(--cart-you-text); }
-.lg .cn { font: 700 17px/22px var(--font-mono); min-width: 34px; padding: 1px 8px; border-radius: 8px; transition: background 300ms var(--ease-grow), color 300ms var(--ease-grow), box-shadow 300ms var(--ease-grow); }
-.lgs.judged .lg:not(.best) { opacity: var(--peek); }
+.lg .cn { font: 700 17px/22px var(--font-mono); min-width: 34px; padding: 0 8px; border-radius: 8px; transition: background 300ms var(--ease-grow), color 300ms var(--ease-grow), box-shadow 300ms var(--ease-grow); }
+.lgs:has(.best) .lg:not(.best) { opacity: var(--peek); }
 .lg.best.y .cn { background: var(--cart-you); color: var(--bg); box-shadow: var(--glow-you); }
 .lg.best.t .cn { background: var(--surface-3); }
-.hs .ptline { grid-template-columns: 1fr; flex: none; }
-.stage .sc { height: 100%; }
 
 /* 027 blur swap */
 @keyframes swap-out { from { opacity: 1; filter: blur(0) } to { opacity: 0; filter: blur(var(--blur-swap)) } }
@@ -209,7 +215,7 @@ button { font-family: inherit; } button:focus-visible { outline: 2px solid var(-
 .card9 .sco { width: 32px; height: 32px; font-size: 15px; }
 
 @media (prefers-reduced-motion: reduce) {
-  .e, .tug .y, .tug .t, .hb .fill, .lockline, .lbr, .pr, .strip i, .dots i, .lg, .lg .cn { transition-duration: 1ms !important; transition-delay: 0ms !important; filter: none !important; }
+  .e, .tug .y, .tug .t, .hb .fill, .lockline, .lbr, .pr, .strip i, .dots i, .lg, .lg .cn, .ln, .ln .sub { transition-duration: 1ms !important; transition-delay: 0ms !important; filter: none !important; }
   .go .sco.pop, .go .sco svg path, .go .pt, .bmp { animation: none !important; opacity: 1; }
   .go .sco svg path { stroke-dashoffset: 0; } .go .pt { opacity: 1; transform: none; }
   .out, .in { animation-name: none !important; }
@@ -218,31 +224,31 @@ button { font-family: inherit; } button:focus-visible { outline: 2px solid var(-
 
 <div class="app" id="app">
   <div class="top pad">
-    <div class="toprow"><span class="label">Today's game</span><span><button type="button" id="opt">Game</button><button type="button" id="replay">Replay</button></span></div>
+    <div class="toprow"><span class="label" id="kick">Today's game</span><span><button type="button" id="opt">Options</button><button type="button" id="replay">Replay</button></span></div>
     <div class="segs" id="segs"></div>
   </div>
   <div class="stage pad" id="stage"></div>
-  <div class="copy pad" id="copy"></div>
-  <div class="foot pad"><button class="btn" id="play" type="button">Let's play</button></div>
+  <div class="rest pad">
+    <div><div class="lines" id="lines"></div><div class="copy" id="copy"></div></div>
+    <button class="btn" id="play" type="button">Let's play</button>
+  </div>
   <div class="scrim" id="scrim" hidden></div>
   <div class="sheet pad" id="sheet" hidden>
     <div class="label muted">Game</div><div class="chips" id="games"></div>
+    <div class="label muted">Bottom half</div><div class="chips" id="bots"></div>
     <button class="btn" type="button" id="close">Done</button>
   </div>
 </div>
 
 <script>
 (() => {
-const RM = matchMedia('(prefers-reduced-motion: reduce)').matches, NS = 'http://www.w3.org/2000/svg';
+const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const $ = (id) => document.getElementById(id);
-let timers = [], gen = 0;
-const wait = (ms, f) => { timers.push(setTimeout(f, ms)); };          // real time (slide length, shots)
+let timers = [];
+const wait = (ms, f) => { timers.push(setTimeout(f, ms)); };          // real time: how long a slide stays
 const later = (ms, f) => wait(RM ? Math.min(ms, 1) : ms, f);          // inside a scene: instant with reduced motion
-const clearAll = () => { timers.forEach(clearTimeout); timers = []; gen++; };
+const clearAll = () => { timers.forEach(clearTimeout); timers = []; };
 const half = (n) => { const w = Math.floor(n + 1e-9), h = n - w > 1e-9; return (w || !h ? String(w) : '') + (h ? '½' : ''); };
-const bumpEl = (n) => { n.classList.remove('bmp'); void n.offsetWidth; n.classList.add('bmp'); };
-function tween(dur, fn, done) { const g0 = gen; if (RM) { fn(1); done && done(); return; } const t0 = performance.now();
-  const f = (t) => { if (g0 !== gen) return; const p = Math.min(1, Math.max(0, (t - t0) / dur)); fn(p); if (p < 1) requestAnimationFrame(f); else done && done(); }; requestAnimationFrame(f); }
 
 // ── score mark (022 markPaths, gross) ──
 function mark(score, par, d, size = 40) {
@@ -409,47 +415,66 @@ function swapIn(box, html) {
   if (!RM) el.classList.add('in'); box.appendChild(el);
 }
 
-
-// ── the hole slide: one hole from above, sized to whatever room the screen has ──
-function holeSlide(host, { par = 4, players, mode }) {
-  host.innerHTML = `<div class="hs go"><div class="hsv"><svg aria-hidden="true"></svg></div>
-    <div class="lgs">${players.map(([n, , side]) => `<div class="lg ${side}"><span class="nm">${n}</span><span class="cn">0</span></div>`).join('')}</div><div class="ptline"></div></div>`;
-  const root = host.firstElementChild, box = root.querySelector('.hsv'), svg = box.querySelector('svg'), tiles = [...root.querySelectorAll('.lg')];
-  const W = box.clientWidth, H = box.clientHeight, T = [W * .24, H - 30], C = [W * .74, 50], P1 = [W * .1, H * .42], P2 = [W * .92, H * .62];
-  const fw = Math.max(40, Math.min(72, Math.min(W, H) * .19)), d = `M${T} C ${P1} ${P2} ${C}`;
-  const bz = (f) => [0, 1].map(a => (1 - f) ** 3 * T[a] + 3 * (1 - f) ** 2 * f * P1[a] + 3 * (1 - f) * f * f * P2[a] + f ** 3 * C[a]), b1 = bz(.42), b2 = bz(.8);
-  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-  svg.innerHTML = `<path d="${d}" fill="none" stroke="var(--surface-1)" stroke-width="${fw + 32}" stroke-linecap="round"/>
-    <path d="${d}" fill="none" stroke="var(--surface-2)" stroke-width="${fw}" stroke-linecap="round"/>
-    <ellipse class="bk" cx="${b1[0] + fw * .82}" cy="${b1[1] + fw * .1}" rx="${fw * .34}" ry="${fw * .2}"/>
-    <ellipse class="bk" cx="${b2[0] - fw * .86}" cy="${b2[1] - fw * .1}" rx="${fw * .3}" ry="${fw * .18}"/>
-    <circle cx="${C[0]}" cy="${C[1]}" r="${fw * .7 + 6}" fill="none" stroke="var(--line)" stroke-width="1.5"/>
-    <circle cx="${C[0]}" cy="${C[1]}" r="${fw * .7}" fill="var(--surface-3)"/>
-    <rect x="${T[0] - 26}" y="${T[1] - 15}" width="52" height="30" rx="8" fill="var(--surface-3)"/>
-    <circle cx="${C[0]}" cy="${C[1]}" r="5" fill="var(--bg)"/>
-    <path d="M${C[0]} ${C[1]} v-36" stroke="var(--text)" stroke-width="1.5"/><path d="M${C[0]} ${C[1] - 36} l17 6 l-17 6z" fill="var(--text)"/>
-    <g class="trl"></g><g class="bls"></g>`;
-  const put = (el, p, s = 1) => el.setAttribute('transform', `translate(${p[0].toFixed(1)} ${p[1].toFixed(1)}) scale(${s.toFixed(3)})`);
-  const max = Math.max(...players.map(p => p[1])), iv = 560;
-  players.forEach(([n, s, side], pi) => { const el = document.createElementNS(NS, 'g'); el.setAttribute('class', 'ball ' + side); el.innerHTML = `<circle r="10"/><text y="4" text-anchor="middle">${n[0]}</text>`;
-    svg.querySelector('.bls').appendChild(el); const pts = [[T[0] + (pi - 1.5) * 12, T[1] + (pi % 2 ? 5 : -5)]], wild = s >= par + 2 ? 1.8 : 1; put(el, pts[0]);
-    for (let k = 1; k <= s; k++) { const f = 1 - (1 - k / s) ** 2, [x, y] = bz(f), j = (((pi * 37 + k * 53) % 21) - 10) * (1.15 - f) * fw / 20 * wild; pts.push(k === s ? C : [x + j, y + j * .35]); }
-    for (let r = 0; r < s; r++) wait(600 + r * iv + pi * 80, () => { const a = pts[r], c = pts[r + 1], dist = Math.hypot(c[0] - a[0], c[1] - a[1]), last = r === s - 1, ln = document.createElementNS(NS, 'line');
-      if (side === 'y') ln.setAttribute('class', 'y'); [['x1', a[0]], ['y1', a[1]], ['x2', a[0]], ['y2', a[1]]].forEach(([k, v]) => ln.setAttribute(k, v)); svg.querySelector('.trl').appendChild(ln);
-      tween(420, (t) => { const e = 1 - (1 - t) ** 3, air = Math.sin(Math.PI * t) * (dist > 40 ? 1 : 0), x = a[0] + (c[0] - a[0]) * e, y = a[1] + (c[1] - a[1]) * e;
-        put(el, [x, y - air * dist * .08], (1 + air * .5) * (last ? 1 - .5 * e : 1)); ln.setAttribute('x2', x); ln.setAttribute('y2', y); },
-        () => { const c = tiles[pi].querySelector('.cn'); c.textContent = r + 1; bumpEl(c); if (last) el.style.opacity = 0; }); }); });
-  wait(600 + max * iv + 300, () => { const sc = players.map(p => p[1]), best = (side) => Math.min(...players.filter(p => p[2] === side).map(p => p[1])), first = (side, v) => players.findIndex(p => p[2] === side && p[1] === v);
-    let win = [], pill = '';
-    if (mode === 'low') { const low = Math.min(...sc); win = sc.map((s, i) => s === low ? i : -1).filter(i => i >= 0); pill = '<span class="pt y" style="--d:250ms">+1 point</span>'; }
-    else if (mode === 'none') { win = [0]; pill = `<span class="pt t" style="--d:250ms">${sc[0]} on your card</span>`; }
-    else { const bu = best('y'), bt = best('t'); win = [first('y', bu), first('t', bt)]; pill = bu < bt ? `<span class="pt y" style="--d:250ms">${mode === 'two' ? '+2 points' : '+1 point'}</span>` : '<span class="pt t" style="--d:250ms">½ each</span>'; }
-    root.querySelector('.lgs').classList.add('judged'); win.forEach(k => tiles[k].classList.add('best')); root.querySelector('.ptline').innerHTML = pill; });
-  return 600 + max * iv + 300 + 3000;
+// ── G: a hole from above ──
+function tween(el, dur, fn, done) {
+  if (RM) { fn(1); done && done(); return; }
+  const t0 = performance.now();
+  const f = (t) => { if (!el.isConnected) return; const p = Math.min(1, (t - t0) / dur); fn(p); if (p < 1) requestAnimationFrame(f); else done && done(); };
+  requestAnimationFrame(f);
 }
+const bumpEl = (n) => { n.classList.remove('bmp'); void n.offsetWidth; n.classList.add('bmp'); };
+S.course = ({ par = 4, hole = 4, players, mode }) => ({ html: `<div class="sc" style="gap:8px;align-content:start">
+    <div class="label muted e" style="--d:0ms">Hole ${hole} · Par ${par}</div>
+    <svg class="crs e" style="--d:60ms" viewBox="0 0 353 150" aria-hidden="true">
+      <path d="M40 110 Q 160 150 298 46" fill="none" stroke="var(--surface-1)" stroke-width="84" stroke-linecap="round"/>
+      <path d="M40 110 Q 160 150 298 46" fill="none" stroke="var(--surface-2)" stroke-width="52" stroke-linecap="round"/>
+      <ellipse cx="206" cy="52" rx="20" ry="11" fill="var(--bg)" stroke="var(--line)" stroke-width="1.5"/>
+      <ellipse cx="258" cy="112" rx="15" ry="9" fill="var(--bg)" stroke="var(--line)" stroke-width="1.5"/>
+      <circle cx="298" cy="46" r="36" fill="var(--surface-3)"/>
+      <rect x="24" y="98" width="30" height="24" rx="7" fill="var(--surface-3)"/>
+      <circle cx="298" cy="46" r="4.5" fill="var(--bg)"/>
+      <path d="M298 46 V16" stroke="var(--text)" stroke-width="1.5"/><path d="M298 16 l15 5 l-15 5z" fill="var(--text)"/>
+      <g class="trl"></g><g class="bls"></g>
+    </svg>
+    <div class="lgs e" style="--d:120ms;grid-template-columns:repeat(${players.length},1fr)">${players.map(([n, , side], i) => `<div class="lg ${side}" data-p="${i}"><span class="nm">${n}</span><span class="cn">0</span></div>`).join('')}</div>
+    <div class="ptline" style="grid-template-columns:1fr"></div></div>`,
+  play(el) {
+    const NS = 'http://www.w3.org/2000/svg', tr = el.querySelector('.trl'), bl = el.querySelector('.bls'), pl = el.querySelector('.ptline');
+    const T = [40, 110], Q = [160, 150], C = [298, 46];
+    const bez = (f) => [0, 1].map(a => (1 - f) * (1 - f) * T[a] + 2 * (1 - f) * f * Q[a] + f * f * C[a]);
+    const P = players.map(([n, s, side], pi) => {
+      const wild = s >= par + 2 ? 2 : 1, pts = [[T[0], T[1] + (pi - (players.length - 1) / 2) * 7]];
+      for (let i = 1; i <= s; i++) { const f = 1 - Math.pow(1 - i / s, 2), [x, y] = bez(f), j = (((pi * 37 + i * 53) % 21) - 10) * (1.15 - f) * 2.6 * wild; pts.push(i === s ? C : [x + j * .5, y + j]); }
+      const g = document.createElementNS(NS, 'g'); g.setAttribute('class', 'ball ' + side); g.innerHTML = `<circle r="9"/><text y="4" text-anchor="middle">${n[0]}</text>`;
+      g.setAttribute('transform', `translate(${pts[0][0]} ${pts[0][1]})`); bl.appendChild(g);
+      const tile = el.querySelector(`[data-p="${pi}"]`); return { s, side, pts, g, tile, cnt: tile.querySelector('.cn') };
+    });
+    const max = Math.max(...P.map(p => p.s));
+    const finish = () => {
+      const best = (side) => Math.min(...P.filter(p => p.side === side).map(p => p.s));
+      const light = (side, v) => P.find(p => p.side === side && p.s === v).tile.classList.add('best');
+      let pill = '';
+      if (mode === 'best') { const bu = best('y'), bt = best('t'); light('y', bu); light('t', bt);
+        pill = bu < bt ? `<span class="pt y" style="--d:250ms">+1 point</span>` : `<span class="pt t" style="--d:250ms">½ each</span>`; }
+      else if (mode === 'low') { const low = Math.min(...P.map(p => p.s)); P.filter(p => p.s === low).forEach(p => { p.tile.classList.add('best'); });
+        pill = `<span class="pt y" style="--d:250ms">+1 point</span>`; }
+      else { P[0].tile.classList.add('best'); pill = `<span class="pt t" style="--d:250ms">${P[0].s} on your card</span>`; }
+      pl.innerHTML = pill;
+    };
+    if (RM) { P.forEach(p => { p.cnt.textContent = p.s; p.g.style.opacity = 0; }); finish(); return; }
+    P.forEach((p, pi) => { for (let r = 0; r < p.s; r++) later(500 + r * 560 + pi * 90, () => {
+      const a = p.pts[r], b = p.pts[r + 1], d = Math.hypot(b[0] - a[0], b[1] - a[1]), last = r === p.s - 1;
+      const ln = document.createElementNS(NS, 'line'); if (p.side === 'y') ln.setAttribute('class', 'y'); [['x1', a[0]], ['y1', a[1]], ['x2', a[0]], ['y2', a[1]]].forEach(([k, v]) => ln.setAttribute(k, v)); tr.appendChild(ln);
+      tween(el, 420, (t) => { const e = 1 - Math.pow(1 - t, 3), air = Math.sin(Math.PI * t) * (d > 40 ? 1 : 0), x = a[0] + (b[0] - a[0]) * e, y = a[1] + (b[1] - a[1]) * e;
+        p.g.setAttribute('transform', `translate(${x} ${y - air * d * .1}) scale(${(1 + air * .5) * (last ? 1 - .5 * e : 1)})`); ln.setAttribute('x2', x); ln.setAttribute('y2', y); },
+        () => { p.cnt.textContent = r + 1; bumpEl(p.cnt); if (last) p.g.style.opacity = 0; });
+    }); });
+    later(500 + max * 560 + 300, finish);
+  } });
 
 // ── three slides a game: who, one hole, how you win (031 names and rules) ──
-const P4 = [['You', 4, 'y'], ['Mike', 6, 'y'], ['Tyler', 5, 't'], ['Sam', 5, 't']], WIN = { h: 'Best ball takes the hole.', s: 'Your 4 beats their 5. One point. A tie is ½ each.', hole: { players: P4, mode: 'best' } };
+const hole = (players, mode) => ({ hold: 500 + Math.max(...players.map(p => p[1])) * 560 + 3000, sc: ['course', { par: 4, hole: 4, players, mode }] });
+const P4 = [['You', 4, 'y'], ['Mike', 6, 'y'], ['Tyler', 5, 't'], ['Sam', 5, 't']], WIN = { h: 'Best ball takes the hole.', s: 'Your 4 beats their 5. One point. A tie is ½ each.', ...hole(P4, 'best') };
 const GAMES = {
   oneMatch: { name: '2v2', tag: 'same partners', slides: [
     { h: 'You and Mike vs Tyler and Sam.', s: 'Same partners, all 18.', sc: ['versus', { us: 'You + Mike', them: 'Tyler + Sam' }] }, WIN,
@@ -462,39 +487,49 @@ const GAMES = {
     { h: 'A new cart every 6 holes.', s: 'Most points takes the day. Some matches are with the other tee time; the app scores it.', hold: 4400, sc: ['carts', { mine: 'You + Mike', others: [['Tyler + Sam', 'a'], ['Chris + Jake', 'b'], ['Ben + Luke', 'c']] }] } ] },
   alone: { name: 'Everyone alone', tag: '2–6 players', slides: [
     { h: 'Everyone for themselves.', s: 'No partners today.', sc: ['players', { names: ['You', 'Chris', 'Sam', 'Jake'] }] },
-    { h: 'Low score takes the point.', s: 'Your 3 is the lowest. One point. A tie splits it.', hole: { players: [['You', 3, 'y'], ['Chris', 4, 't'], ['Sam', 5, 't'], ['Jake', 4, 't']], mode: 'low' } },
+    { h: 'Low score takes the point.', s: 'Your 3 is the lowest. One point. A tie splits it.', ...hole([['You', 3, 'y'], ['Chris', 4, 't'], ['Sam', 5, 't'], ['Jake', 4, 't']], 'low') },
     { h: 'The race.', s: "Most points wins. Once your lead is more than they can make up, it's locked.", hold: 4600, sc: ['race', { left: 2, rows: [['You', 7, true], ['Chris', 4], ['Sam', 3], ['Jake', 2]] }] } ] },
   stroke: { name: 'Stroke play', tag: 'any number', slides: [
     { h: 'Just your score.', s: 'Everyone plays their own ball.', sc: ['players', { names: ['You', 'Chris', 'Sam', 'Jake'] }] },
-    { h: 'Every stroke counts.', s: 'Each shot adds one to your card.', hole: { players: [['You', 4, 'y'], ['Chris', 5, 't'], ['Sam', 4, 't'], ['Jake', 6, 't']], mode: 'none' } },
+    { h: 'Every stroke counts.', s: 'Each shot adds one to your card.', ...hole([['You', 4, 'y'], ['Chris', 5, 't'], ['Sam', 4, 't'], ['Jake', 6, 't']], 'none') },
     { h: 'Lowest total wins.', s: 'The Board shows where you stand, live.', hold: 4600, sc: ['board', { steps: [[['Sam', '+1'], ['Chris', '+2'], ['You', '+3', true], ['Jake', '+5']], [['Sam', '+1'], ['You', '+2', true], ['Chris', '+3'], ['Jake', '+5']], [['You', 'E', true], ['Sam', '+1'], ['Chris', '+3'], ['Jake', '+6']]] }] } ] },
   ryder: { name: 'Team Ryder Cup', tag: '16 players', slides: [
     { h: 'Two sides of 8.', s: 'Four carts each. Your cart plays one of theirs, 6 holes at a time.', sc: ['sides', {}] },
-    { h: 'Cart against cart.', s: 'Low ball 1, low total 1. Most points over the 6 holes wins the match.', hole: { players: [['You', 4, 'y'], ['Mike', 5, 'y'], ['Tyler', 5, 't'], ['Sam', 5, 't']], mode: 'two' } },
+    { h: 'Cart against cart.', s: 'Hole by hole against their cart. Most points over the 6 holes wins the match.', ...hole([['You', 4, 'y'], ['Mike', 5, 'y'], ['Tyler', 5, 't'], ['Sam', 5, 't']], 'best') },
     { h: '6½ wins the cup.', s: '12 matches, 1 point each. Your side needs more than half.', hold: 4600, sc: ['matches', { seq: ['w', 'l', 'w', 'w', 'h', 'l', 'w', 'w', 'l', 'w', 'h', 'l'] }] } ] },
 };
+const BOTS = { lines: 'Three lines', head: 'One headline' };
 
 // ── run ──
-let game = 'oneMatch', cur = 0, SL = [];
-try { const s = JSON.parse(localStorage.getItem('g032v3') || '{}'); if (GAMES[s.game]) game = s.game; } catch (e) {}
+let game = 'oneMatch', bot = 'lines', cur = 0, SL = [];
+try { const s = JSON.parse(localStorage.getItem('g032v4') || '{}'); if (GAMES[s.game]) game = s.game; if (BOTS[s.bot]) bot = s.bot; } catch (e) {}
+const save = () => { try { localStorage.setItem('g032v4', JSON.stringify({ game, bot })); } catch (e) {} };
+const bumpBtn = (n) => { n.classList.remove('bmp'); void n.offsetWidth; n.classList.add('bmp'); };
 function setCopy(c, first) { const html = `<div><p class="h">${c.h}</p><p class="s">${c.s}</p></div>`, box = $('copy'); if (first || RM) box.innerHTML = html; else swapIn(box, html); }
 function segTo(k, dur) { [...$('segs').children].forEach((s, i) => { const b = s.firstChild; b.style.transition = 'none'; b.style.transform = i < k ? 'scaleX(1)' : 'scaleX(0)';
   if (i === k) { b.getBoundingClientRect(); b.style.transition = `transform ${dur}ms linear`; b.style.transform = 'scaleX(1)'; } }); }
-function show(st, b) { if (b.hole) return holeSlide(st, b.hole);
-  const sc = S[b.sc[0]](b.sc[1]); st.innerHTML = sc.html; const el = st.firstElementChild;
+function show(st, b) { const sc = S[b.sc[0]](b.sc[1]); st.innerHTML = sc.html; const el = st.firstElementChild;
   requestAnimationFrame(() => requestAnimationFrame(() => { el.classList.add('go'); if (sc.play) sc.play(el); })); return b.hold || 3600; }
-function go(k, first) { if (k >= SL.length) { $('replay').classList.add('done'); bumpEl($('play')); return; }
-  clearAll(); cur = k; const b = SL[k], st = $('stage'), old = st.firstElementChild; setCopy(b, first);
-  const run = () => { if (old) old.remove(); const dur = show(st, b); segTo(k, dur); wait(dur, () => go(k + 1)); };
+function go(k, first) { if (k >= SL.length) { $('replay').classList.add('done'); bumpBtn($('play')); return; }
+  clearAll(); cur = k; const b = SL[k], st = $('stage'), old = st.firstElementChild;
+  if (bot === 'lines') [...$('lines').children].forEach((l, i) => l.classList.toggle('on', i === k)); else setCopy(b, first);
+  const run = () => { if (old) old.remove(); const dur = show(st, b); if (bot === 'head') segTo(k, dur); wait(dur, () => go(k + 1)); };
   if (first || RM || !old) run(); else { old.classList.add('out'); wait(120, run); } }
-function start() { clearAll(); SL = GAMES[game].slides; $('replay').classList.remove('done'); $('segs').innerHTML = SL.map(() => '<i><b></b></i>').join(''); $('stage').innerHTML = ''; go(0, true); }
+function start() { clearAll(); const g = GAMES[game]; SL = g.slides; $('replay').classList.remove('done'); $('stage').innerHTML = '';
+  $('kick').textContent = `Today's game · ${g.name === 'Team Ryder Cup' ? 'Ryder Cup' : g.name === 'Everyone alone' ? 'Alone' : g.name}`;
+  const lines = bot === 'lines'; $('lines').hidden = !lines; $('copy').hidden = lines; $('segs').hidden = lines; $('copy').innerHTML = '';
+  $('segs').innerHTML = SL.map(() => '<i><b></b></i>').join('');
+  $('lines').innerHTML = SL.map((b, i) => `<button class="ln" type="button" data-k="${i}"><span class="n">${i + 1}</span><span><span class="t">${b.h}</span><span class="sub"><span>${b.s}</span></span></span></button>`).join('');
+  go(0, true); }
 $('stage').addEventListener('click', () => { if (cur < SL.length - 1) go(cur + 1); });
+$('lines').addEventListener('click', (e) => { const b = e.target.closest('[data-k]'); if (b) go(+b.dataset.k); });
 $('replay').addEventListener('click', start);
-const sheet = (on) => { $('sheet').hidden = $('scrim').hidden = !on; if (on) $('games').innerHTML = Object.entries(GAMES).map(([k, g]) => `<button class="chip" type="button" data-g="${k}" aria-pressed="${k === game}">${g.name} <small>${g.tag}</small></button>`).join(''); };
-$('opt').addEventListener('click', () => sheet(true)); $('scrim').addEventListener('click', () => sheet(false)); $('close').addEventListener('click', () => sheet(false));
-$('games').addEventListener('click', (e) => { const b = e.target.closest('[data-g]'); if (!b) return; game = b.dataset.g; try { localStorage.setItem('g032v3', JSON.stringify({ game })); } catch (e2) {} sheet(false); start(); });
-let rz = 0, lw = $('app').clientWidth, lh = $('app').clientHeight;
-addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { const a = $('app'); if (a.clientWidth !== lw || Math.abs(a.clientHeight - lh) > 40) { lw = a.clientWidth; lh = a.clientHeight; start(); } }, 250); });
+const sheet = (on) => { $('sheet').hidden = $('scrim').hidden = !on; if (!on) return;
+  $('games').innerHTML = Object.entries(GAMES).map(([k, g]) => `<button class="chip" type="button" data-g="${k}" aria-pressed="${k === game}">${g.name} <small>${g.tag}</small></button>`).join('');
+  $('bots').innerHTML = Object.entries(BOTS).map(([k, n]) => `<button class="chip" type="button" data-b="${k}" aria-pressed="${k === bot}">${n}</button>`).join(''); };
+$('opt').addEventListener('click', () => sheet(true)); $('scrim').addEventListener('click', () => sheet(false)); $('close').addEventListener('click', () => { sheet(false); start(); });
+$('games').addEventListener('click', (e) => { const b = e.target.closest('[data-g]'); if (b) { game = b.dataset.g; save(); sheet(true); } });
+$('bots').addEventListener('click', (e) => { const b = e.target.closest('[data-b]'); if (b) { bot = b.dataset.b; save(); sheet(true); } });
 start();
 })();
 </script>
