@@ -98,6 +98,7 @@ await refetch(app);
 ok(L.lobbyState(ev(), Date.now()).open, 'start times saved on the day → scoring open');
 ok(/scoring is open/i.test(await text(app)), 'app: Scoring is open');
 await tap(app, '[data-act="lb-go1"]'); await wait(1200);
+if (await app.locator('[data-act="brief-done"]').count()) { await tap(app, '[data-act="brief-done"]'); await wait(400); } // 032: Today's game opens once
 ok(await app.locator('#tabbar').isVisible(), 'app: tab bar back once open');
 await host.reload(); await wait(1500);
 ok(await host.locator('[data-act="lh-order"]').count() === 1, 'host: Order and carts still open before the first score');
