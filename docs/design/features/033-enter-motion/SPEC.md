@@ -29,7 +29,7 @@ No new colors, sizes or type styles. No new design tokens: every duration and cu
 
 | What | Where |
 |---|---|
-| The prototype: tap scores, Next hole, ◀ ▶, the hole number (grid), ⋯ for options | `prototype.html` (open in a browser at phone size; on a laptop the options sit beside the phone). Also published at the link in the handoff message. |
+| The prototype: tap scores, Next hole, ◀ ▶, the hole number (grid), ⋯ for options | `prototype.html` (open in a browser at phone size; on a laptop the options sit beside the phone). Also at https://claude.ai/artifact/XEedkFZGGfzYwXx2Ti33wy |
 | Exact motion values (durations, delays, easings, distances) | `motion.css`. The prototype loads it as it is. Copy it; don't re-derive it. |
 | Target screens | `screenshots/NN-name.png` (dark) and `NN-name-light.png`, 393 × 659 @2×. §5 lists them. Strips show several frames of one motion with their times. |
 | Re-render the screenshots | `npm install`, then `node docs/design/features/033-enter-motion/shoot.mjs` (or `… shoot.mjs 20 13` for some). Every frame is exact: the script pauses every animation at the stated millisecond. |
