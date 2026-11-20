@@ -1,0 +1,74 @@
+/* 034 · The turn, sideways: (c) slide and (d) book page. Exact values from prototype.html.
+   Loads AFTER 033's motion.css and only adds to it: Part 1 (score picks), reduced motion, the FLIPs and the
+   markup (.ce[data-turn][data-dir], .ce-turn-layer, .t-panel.t-out / .t-in, .t-roll > .t-col > .t-o / .t-n,
+   .t-swap-out / .t-swap-in, --t-lag, --t-d) are 033's, unchanged. data-turn gains two values: slide | book.
+
+   The idea: holes are laid out left to right, like the ◀ ▶ arrows. Next hole = the course moves left and the new
+   hole comes in from the right. Back = the other way. Everything that changes moves sideways, in the same
+   direction, so the screen never mixes up/down with left/right.
+     (c) slide  the score card and quiet rows slide out to the left as the new ones slide in from the right,
+                side by side with the 16px gutter between them, like cards on a table. No fades, no 3D.
+     (d) book   the score card is a page: Next turns it over to the left around its left edge, the new hole's page
+                is underneath. Back turns the previous page back over from the left.
+   In both, the new pads come with their card (no 033 landing stagger), and numbers slide sideways instead of
+   rolling up. Only transform, opacity and filter animate. */
+
+/* ── (c) slide: old and new move together, one card width + the gutter apart ───────────────────────────── */
+@keyframes t-slide-out-fwd  { from { transform: translateX(0) }                    to { transform: translateX(calc(-100% - 16px)) } }
+@keyframes t-slide-in-fwd   { from { transform: translateX(calc(100% + 16px)) }    to { transform: translateX(0) } }
+@keyframes t-slide-out-back { from { transform: translateX(0) }                    to { transform: translateX(calc(100% + 16px)) } }
+@keyframes t-slide-in-back  { from { transform: translateX(calc(-100% - 16px)) }   to { transform: translateX(0) } }
+.ce[data-turn="slide"][data-dir="fwd"]  .t-panel.t-out { animation: t-slide-out-fwd  300ms cubic-bezier(.2,.8,.2,1) calc(var(--t-lag, 0) * 20ms) both; }
+.ce[data-turn="slide"][data-dir="fwd"]  .t-panel.t-in  { animation: t-slide-in-fwd   300ms cubic-bezier(.2,.8,.2,1) calc(var(--t-lag, 0) * 20ms) both; }
+.ce[data-turn="slide"][data-dir="back"] .t-panel.t-out { animation: t-slide-out-back 300ms cubic-bezier(.2,.8,.2,1) calc(var(--t-lag, 0) * 20ms) both; }
+.ce[data-turn="slide"][data-dir="back"] .t-panel.t-in  { animation: t-slide-in-back  300ms cubic-bezier(.2,.8,.2,1) calc(var(--t-lag, 0) * 20ms) both; }
+
+/* ── (d) book page: hinged on the card's left edge ────────────────────────────────────────────────────────
+   Forward: the old page (on the turn layer, on top) swings to −90° (its right edge lifts toward you and over to
+   the left), darkening as it goes; the new page lies underneath, coming out of its shadow.
+   Back: the turn layer drops UNDER the body, and the previous page swings in from −90° to 0 over the old one,
+   which goes into shadow. */
+.ce[data-turn="book"] .t-panel { transform-origin: 0 50%; }
+.ce[data-turn="book"] .ce-body { position: relative; z-index: 1; }
+.ce[data-turn="book"][data-dir="back"] .ce-turn-layer { z-index: 0; }
+.ce[data-turn="book"] .t-panel:not(.ce-card) { background: var(--bg); }   /* quiet rows / read-only rows are pages too: opaque, or the text underneath shows through */
+@keyframes t-book-lift { from { transform: perspective(1200px) rotateY(0);      filter: brightness(1) }
+                         to   { transform: perspective(1200px) rotateY(-90deg); filter: brightness(var(--t-shade, .5)) } }
+@keyframes t-book-lay  { from { transform: perspective(1200px) rotateY(-90deg); filter: brightness(var(--t-shade, .5)) }
+                         to   { transform: perspective(1200px) rotateY(0);      filter: brightness(1) } }
+@keyframes t-book-lit  { from { filter: brightness(var(--t-shade, .5)) } to { filter: brightness(1) } }
+@keyframes t-book-dim  { from { filter: brightness(1) } to { filter: brightness(var(--t-shade, .5)) } }
+.ce[data-turn="book"][data-dir="fwd"]  .t-panel.t-out { animation: t-book-lift 300ms cubic-bezier(.4,0,.2,1) calc(var(--t-lag, 0) * 30ms) both; }
+.ce[data-turn="book"][data-dir="fwd"]  .t-panel.t-in  { animation: t-book-lit  300ms cubic-bezier(.4,0,.2,1) calc(var(--t-lag, 0) * 30ms) both; }
+.ce[data-turn="book"][data-dir="back"] .t-panel.t-in  { animation: t-book-lay  300ms cubic-bezier(.4,0,.2,1) calc(var(--t-lag, 0) * 30ms) both; }
+.ce[data-turn="book"][data-dir="back"] .t-panel.t-out { animation: t-book-dim  300ms cubic-bezier(.4,0,.2,1) calc(var(--t-lag, 0) * 30ms) both; }
+
+/* ── numbers slide sideways (hole number, Par, each changed yardage digit) ────────────────────────────────
+   Old value: out 14px toward the way the course moves, fading, 160ms ease-in. New value: in from 14px the other
+   side, 220ms from 60ms, ease-out. --t-d (033: hole 0 · Par 40 · digits 60 + 20 per number + 30 per digit)
+   still staggers them, so a number reads left to right like the card. */
+.ce[data-turn="slide"][data-dir] .t-roll > .t-col,
+.ce[data-turn="book"][data-dir]  .t-roll > .t-col { display: grid; animation: none; }
+.ce[data-turn="slide"] .t-roll > .t-col > span,
+.ce[data-turn="book"]  .t-roll > .t-col > span { grid-area: 1 / 1; }
+@keyframes t-num-out-fwd  { from { opacity: 1; transform: none } to { opacity: 0; transform: translateX(-14px) } }
+@keyframes t-num-in-fwd   { from { opacity: 0; transform: translateX(14px) }  to { opacity: 1; transform: none } }
+@keyframes t-num-out-back { from { opacity: 1; transform: none } to { opacity: 0; transform: translateX(14px) } }
+@keyframes t-num-in-back  { from { opacity: 0; transform: translateX(-14px) } to { opacity: 1; transform: none } }
+:is(.ce[data-turn="slide"], .ce[data-turn="book"])[data-dir="fwd"]  .t-roll .t-o { animation: t-num-out-fwd  160ms cubic-bezier(.4,0,1,1) var(--t-d, 0ms) both; }
+:is(.ce[data-turn="slide"], .ce[data-turn="book"])[data-dir="fwd"]  .t-roll .t-n { animation: t-num-in-fwd   220ms cubic-bezier(.2,.8,.2,1) calc(var(--t-d, 0ms) + 60ms) both; }
+:is(.ce[data-turn="slide"], .ce[data-turn="book"])[data-dir="back"] .t-roll .t-o { animation: t-num-out-back 160ms cubic-bezier(.4,0,1,1) var(--t-d, 0ms) both; }
+:is(.ce[data-turn="slide"], .ce[data-turn="book"])[data-dir="back"] .t-roll .t-n { animation: t-num-in-back  220ms cubic-bezier(.2,.8,.2,1) calc(var(--t-d, 0ms) + 60ms) both; }
+
+/* ── what 033 blur-swaps (green picture, a match line that changes, a yardage card that comes or goes) slides
+   sideways the same way: 24px, fading, no blur. The yardage card's frame still never moves. ───────────── */
+@keyframes t-side-out-fwd  { from { opacity: 1; transform: none } to { opacity: 0; transform: translateX(-24px) } }
+@keyframes t-side-in-fwd   { from { opacity: 0; transform: translateX(24px) }  to { opacity: 1; transform: none } }
+@keyframes t-side-out-back { from { opacity: 1; transform: none } to { opacity: 0; transform: translateX(24px) } }
+@keyframes t-side-in-back  { from { opacity: 0; transform: translateX(-24px) } to { opacity: 1; transform: none } }
+:is(.ce[data-turn="slide"], .ce[data-turn="book"])[data-dir="fwd"]  .t-swap-out { animation: t-side-out-fwd  150ms cubic-bezier(.4,0,1,1) both; }
+:is(.ce[data-turn="slide"], .ce[data-turn="book"])[data-dir="fwd"]  .t-swap-in  { animation: t-side-in-fwd   240ms cubic-bezier(.2,.8,.2,1) 60ms both; }
+:is(.ce[data-turn="slide"], .ce[data-turn="book"])[data-dir="back"] .t-swap-out { animation: t-side-out-back 150ms cubic-bezier(.4,0,1,1) both; }
+:is(.ce[data-turn="slide"], .ce[data-turn="book"])[data-dir="back"] .t-swap-in  { animation: t-side-in-back  240ms cubic-bezier(.2,.8,.2,1) 60ms both; }
+/* the green picture slides inside its fixed frame: clip it to the picture's own box */
+:is(.ce[data-turn="slide"], .ce[data-turn="book"]) .green-pic { clip-path: inset(0); }
