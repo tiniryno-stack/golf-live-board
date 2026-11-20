@@ -10,6 +10,19 @@ New Boards and Matches by who you play for, the race, Setup's game step, season 
 and names off. That one brief has the decisions, the 22 target screens, what's built, the build order and what's
 still open. **Built and merged to `main` Nov 19 (53bc4c8)**; ARCHITECTURE.md 13a has what each step did.
 
+## Building Today's game (032)? Read `docs/design/features/032-todays-game/SPEC.md` first
+
+The animated "Today's game" slides (one small scene + one headline per slide, a 3D hole for every game), approved by
+Andrew Nov 20 with `prototype.html` and 31 screenshots in that folder. Also: "set" replaces "stretch" in UI copy.
+Handed off on branch `claude/affectionate-lamport-gp7ecm`; not built.
+
+## Today's game (032, Nov 20, branch `claude/cool-heisenberg-j444xa`)
+
+Animated rules slides per game: pure model `js/todaysgame.js` (`todaysGame(snap, meId)`, test `tests/todaysgame032.test.mjs`),
+player + scenes `js/screens/todaysgame.js` (`tg-*` CSS at the end of styles.css), opened by `toasts.showBrief`; old shapes
+keep `brief.js`. Opens on its own once per phone on the first Enter of an open round (`autoBrief` in app.js). UI copy says
+**set**, not stretch. 4-player 2v2 picks its team score again (`settings.pairTeamScore` in Setup only). ARCHITECTURE.md 13a.
+
 ## What it is / where things stand
 
 - Mobile web app for Andrew's friend group: each foursome enters hole-by-hole scores on their
@@ -157,9 +170,11 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
   **2v2** (`settings.pairs` + `pairSwitch` never/six/turn: `pairView` makes one team per pairing with
   `members`; `game.people` = each player's summed points; `sideOn()` = your pair on a hole),
   **Partner “Rider” Cup** (game id `carts`; 8 = 4 carts, `cartRotation('six'|'turn', opps)`,
-  `rotationMode` fixed = keep tee times = new default; **6 = 3 carts**, `threeCartRotation()`: one
-  18-hole rotation with A v B, A v C, B v C at once, groups A + B / C, always fixed; a cart has two
-  matches per hole, so use `matchesFor()`; `matchFor()` returns the first).
+  `rotationMode` fixed = keep tee times = new default; **6 = 3 carts**, since Nov 20 `sixCartRotation('six'|'turn')`:
+  one opponent at a time like 8 (every 6: A v B 1–6, A v C 7–12, B v C 13–18, each cart sits out a set; at the turn:
+  A v B front, A v C back), groups A + B / C, always fixed; Enter says "Sitting out · back on 13 vs …". Old rounds keep
+  `threeCartRotation()` (A v B, A v C, B v C at once, `allAtOnce(settings)` = true: a cart has two matches per hole,
+  so use `matchesFor()`; `matchFor()` returns the first).
 - **Team Ryder Cup (Nov 3, game id `ryder`, built for the Nov 9 birthday round; ARCHITECTURE.md 13a):** 8/12/16
   players = 2–4 carts a side, `roster.sides`, cart ids `1A`…`2D` (side + letter), `settings.ryder`, `settings.lineups`
   (Host → Rules → New lineup from hole N: carts ride together and play each other from then on; `sameFoursome` and

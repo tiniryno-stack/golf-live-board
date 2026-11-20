@@ -357,6 +357,24 @@ function ceMatch(app, h, carts) {
   return here.find((x) => carts.some((c) => c.teamId === x.them.id)) || here[0] || null;
 }
 
+/**
+ * 2v2 with 6 (three carts, one at a time): your cart has no match on this hole → "Sitting out · back on 13 vs Tyler +
+ * Sam" (or "Sitting out · done" after your last match). null when your cart plays this hole or the game has no carts.
+ */
+export function sitOut(app, h) {
+  const snap = app.snapshot, myTeam = app.myTeam();
+  const g = snap?.game;
+  if (!g?.matches?.length || !myTeam || snap.settings.pairs || snap.settings.ryder) return null;
+  const pos = posOf(snap.settings, h);
+  const mine = g.matches.filter((m) => m.teams.includes(myTeam));
+  if (!mine.length || mine.some((m) => pos >= m.from && pos <= m.to)) return null;
+  const next = mine.filter((m) => m.from > pos).sort((a, b) => a.from - b.from)[0];
+  if (!next) return 'Sitting out · your matches are done';
+  const opp = next.teams.find((t) => t !== myTeam);
+  const names = (snap.teamById.get(opp)?.playerIds || []).map((id) => snap.playerById.get(id)?.name).filter(Boolean).join(' + ');
+  return `Sitting out · back on ${next.firstHole} vs ${names}`;
+}
+
 /** The standing from your side ("2 UP" / "AS" / "1 DN"), optionally only through play-order position `upto`. */
 function ceStanding(m, upto = null) {
   if (!m) return { text: 'AS', you: false, d: 0 };
@@ -565,6 +583,10 @@ function ryderEnterView(app, h, { gcard, carts, locked, ahead, pos, limitPos, la
     let left = names(us);
     // 028 §2.1: 2v2, the first hole with a new partner: "Holes 10–18 · with Sean".
     if (m && snap.settings.pairs && pos === m.from && m.from > 1) left = `${m.label} · with ${names(us.filter((p) => p.id !== app.me))}`;
+    if (!m && !individual(app)) { // 6 players (Nov 20): your cart sits out a set
+      const out = sitOut(app, h);
+      if (out) right = `<span class="ce-end"><span class="ce-swap"><span class="ce-vs">${esc(out)}</span></span></span>`;
+    }
     if (!m && individual(app)) {
       const l = enterLine(snap, app.me); // Everyone alone / Stroke play: "3½ PTS · 2ND  Chris +1"
       if (l) right = `<span class="ce-end"><span class="ce-up${l.you ? '' : ' muted'}"><span class="ce-roll"><span>${esc(l.standing)}</span></span></span><span class="ce-swap"><span class="ce-vs">${esc(l.context)}</span></span></span>`;
@@ -1106,15 +1128,16 @@ function nextHole(app) {
     let last = '';
     if (was) {
       const u = was.points[meBefore], t = was.points[other(was, meBefore)];
-      last = snap.game.type === 'rotationPlusMinus' ? `Last stretch: ${fmtSigned(was.margin[meBefore], 'E')}`
-        : `Last stretch: ${!was.final ? `${fmtPts(u)}–${fmtPts(t)} so far` : u > t ? `you won ${fmtPts(u)}–${fmtPts(t)}` : u < t ? `lost ${fmtPts(u)}–${fmtPts(t)}` : `halved ${fmtPts(u)}–${fmtPts(t)}`}`;
+      last = snap.game.type === 'rotationPlusMinus' ? `Last set: ${fmtSigned(was.margin[meBefore], 'E')}`
+        : `Last set: ${!was.final ? `${fmtPts(u)}–${fmtPts(t)} so far` : u > t ? `you won ${fmtPts(u)}–${fmtPts(t)}` : u < t ? `lost ${fmtPts(u)}–${fmtPts(t)}` : `halved ${fmtPts(u)}–${fmtPts(t)}`}`;
     }
+    const out = !now && !st.pairs ? sitOut(app, nh) : null; // 6 players: this set your cart sits out
     app.showCard({
       kicker: 'Switch it up',
-      big: now ? (st.pairs ? `With ${firsts(meAfter, true)}` : `vs ${firsts(other(now, meAfter))}`) : `On to rotation ${(done?.rotation || 0) + 1}`,
+      big: now ? (st.pairs ? `With ${firsts(meAfter, true)}` : `vs ${firsts(other(now, meAfter))}`) : out ? 'You sit this one out' : `On to rotation ${(done?.rotation || 0) + 1}`,
       result: last,
-      sub: now ? (st.pairs ? `vs ${firsts(other(now, meAfter))} · ${now.label.toLowerCase()}` : `${now.label} · with ${firsts(meAfter, true)}`) : sub,
-      sub2: st.pairs ? 'Same foursome, new partner. Each stretch is its own match.' : swap ? 'One cart waits, one moves up.' : 'Nobody moves. The app compares your scores with the other group.',
+      sub: now ? (st.pairs ? `vs ${firsts(other(now, meAfter))} · ${now.label.toLowerCase()}` : `${now.label} · with ${firsts(meAfter, true)}`) : out ? `${out.replace(/^Sitting out · /, '').replace(/^./, (c) => c.toUpperCase())}. Keep entering your scores.` : sub,
+      sub2: st.pairs ? 'Same foursome, new partner. Each set is its own match.' : swap ? 'One cart waits, one moves up.' : 'Nobody moves. The app compares your scores with the other group.',
       button: `Continue to hole ${nh}`,
       onContinue: () => goHole(app, nh, h),
     });

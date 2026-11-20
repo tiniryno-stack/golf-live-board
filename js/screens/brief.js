@@ -4,7 +4,7 @@
 // what's up for grabs, how the day is won.
 
 import { esc } from '../ui.js';
-import { componentNames, foursomeTeams, fmtPts, holesLabel, ryderState, teeTimeName, holeAt } from '../scoring.js';
+import { allAtOnce, componentNames, foursomeTeams, fmtPts, holesLabel, ryderState, teeTimeName, holeAt } from '../scoring.js';
 import { riderState, isRider } from '../riderview.js';
 import { teamColor } from '../teams.js';
 
@@ -53,7 +53,7 @@ function riderPage(app, snap, g) {
   const myMatches = mine ? rs.matches.filter((m) => m.us.id === mine) : [];
   const inGroup = (m) => !!app.me && foursomeTeams(snap.roster, st, app.me, holeAt(st, m.from)).includes(m.them.id);
   const rows = myMatches.map((m) => `<li><span class="rh">${esc(m.label.replace(/^Holes /, ''))}</span><span class="rv">vs <b style="color:${m.them.color}">${esc(m.them.name)}</b><small>${inGroup(m) ? 'your group' : esc(teeTimeName(st, m.them.tee))}</small></span></li>`).join('');
-  const rule = n === 3 ? 'Your cart plays both other carts on every hole, all 18.' : `${mine ? 'Your cart plays' : 'Each cart plays'} a different cart every ${rs.rotations.length === 2 ? '9' : '6'} holes.`;
+  const rule = allAtOnce(st) ? 'Your cart plays both other carts on every hole, all 18.' : `${mine ? 'Your cart plays' : 'Each cart plays'} a different cart every ${rs.rotations.length === 2 ? '9' : '6'} holes.`;
   const sentence = pm
     ? 'Your strokes against theirs on every hole; lowest over the match wins it.'
     : names.length > 1
@@ -84,7 +84,7 @@ function scoringPage(snap, g, playing) {
     'Low Total': 'Both partners added',
     Total: 'Both partners added',
   };
-  const three = !st.pairs && snap.teams.length === 3; // Partner “Rider” Cup for 6: both other carts at once
+  const three = !st.pairs && allAtOnce(st); // old Partner “Rider” Cup for 6: both other carts at once
   const title = st.pairs ? (pm ? 'Rotation Plus/Minus' : 'Rotation Match Play') : `Partner “Rider” Cup${pm ? ' · Plus/Minus' : ''}`;
   const sub = three
     ? `${playing ? 'Your cart plays' : 'Each cart plays'} both other carts on every hole, all 18.`

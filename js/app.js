@@ -581,7 +581,7 @@ function maybeBrief() {
     if (app.me && app.route.tab !== app.homeTab()) app.go(app.tabHash(app.homeTab()));
     else render();
   };
-  if (!app.me || !app.snapshot?.game || db.local.get(key) || app.roundOver()) return finish();
+  if (!app.me || !app.snapshot || db.local.get(key) || app.roundOver()) return finish(); // 032: stroke play has slides too
   const shown = fx.showBrief(app, () => {
     db.local.set(key, true);
     finish();
@@ -1329,6 +1329,23 @@ function draw(opts) {
   fx.renderBanners(app);
   if (fx.pickerOpen()) fx.renderPicker(app);
   if (inLobby || app.lobby()) scheduleLobbyTick();
+  if (ready && inRound && !inLobby && r.tab === 'enter') setTimeout(autoBrief, 0);
+}
+
+/**
+ * 032 step 6 (Andrew, Nov 20): Today's game opens on its own once per phone, the first time you're on Enter in a
+ * round that's open for scoring (on lobby rounds, right after Scoring is open → Go to hole 1). Never over a sheet,
+ * the cart-name picker or another card, never while the join sequence runs (it shows Today's game itself), never
+ * once the round is over, and never for someone watching. Remembered in glb.brief.CODE, as before.
+ */
+function autoBrief() {
+  if (!app.event || !app.snapshot || !app.me || app.route.tab !== 'enter' || app.gated() || app.roundOver()) return;
+  if (app.sheet || $('overlay')?.classList.contains('open') || fx.briefOpen() || fx.pickerOpen()) return;
+  if (app.joining && Date.now() - app.joining < 60000) return;
+  const key = `glb.brief.${app.code}`;
+  if (db.local.get(key)) return;
+  fx.clearCoach();
+  if (!fx.showBrief(app, () => db.local.set(key, true))) db.local.set(key, true);
 }
 
 // 025: while a lobby round waits to open, wake at opensAt (the server's clock), refetch so the server's stage and
