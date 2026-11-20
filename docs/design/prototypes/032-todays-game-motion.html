@@ -1,0 +1,624 @@
+<title>Today's Game in Motion</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@500;600;800&family=Geist+Mono:wght@600;700&display=swap">
+<style>
+/* Layout: a control strip (game × direction) over one phone at 393 × 659, notes under it.
+   Inside the phone: only Golf Live Board design-system tokens, the six type styles, 027 motion values. */
+:root {
+  --font-sans: Geist, system-ui, -apple-system, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, monospace;
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 20px; --space-6: 24px;
+  --radius-lg: 16px; --radius-xl: 18px;
+  /* dark (the app's default) */
+  --bg: #0a0b0d; --surface-1: #15171b; --surface-2: #1f2227; --surface-3: #2a2e35;
+  --text: #f4f5f7; --text-muted: #a7acb4; --line: #2b2f36;
+  --cart-you: #3ddc84; --cart-you-text: #3ddc84; --tint-you: rgba(61,220,132,0.10);
+  --cart-a: #ff9f43; --cart-b: #5b9bff; --cart-c: #ff6fb5; --tint-a: rgba(255,159,67,0.12); --tint-b: rgba(91,155,255,0.12); --tint-c: rgba(255,111,181,0.12);
+  --bad: #ff5a5f;
+  --shadow-dock: inset 0 1px 0 rgba(255,255,255,0.10), 0 0 28px rgba(255,255,255,0.06);
+  /* 027 */
+  --motion-grow: 300ms; --ease-grow: cubic-bezier(.2,.8,.2,1); --blur-swap: 8px;
+  --glow-you: 0 0 20px rgba(61,220,132,.35); --peek: .6;
+  /* page chrome only (outside the phone) */
+  --page: #050607; --frame: #23262c;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) {
+  --bg: #f2f3f5; --surface-1: #ffffff; --surface-2: #e8eaee; --surface-3: #ffffff;
+  --text: #0b0d10; --text-muted: #4f555e; --line: #d5d9df;
+  --cart-you: #12a35c; --cart-you-text: #0a7a43; --tint-you: rgba(18,163,92,0.09);
+  --cart-a: #b35c00; --cart-b: #1a5fd0; --cart-c: #c02a70; --tint-a: rgba(179,92,0,0.08); --tint-b: rgba(26,95,208,0.08); --tint-c: rgba(192,42,112,0.08);
+  --bad: #c62828; --shadow-dock: 0 8px 24px rgba(11,13,16,0.12); --glow-you: none;
+  --page: #e4e6ea; --frame: #c9cdd3; color-scheme: light; } }
+:root[data-theme="light"] {
+  --bg: #f2f3f5; --surface-1: #ffffff; --surface-2: #e8eaee; --surface-3: #ffffff;
+  --text: #0b0d10; --text-muted: #4f555e; --line: #d5d9df;
+  --cart-you: #12a35c; --cart-you-text: #0a7a43; --tint-you: rgba(18,163,92,0.09);
+  --cart-a: #b35c00; --cart-b: #1a5fd0; --cart-c: #c02a70; --tint-a: rgba(179,92,0,0.08); --tint-b: rgba(26,95,208,0.08); --tint-c: rgba(192,42,112,0.08);
+  --bad: #c62828; --shadow-dock: 0 8px 24px rgba(11,13,16,0.12); --glow-you: none;
+  --page: #e4e6ea; --frame: #c9cdd3; color-scheme: light; }
+
+* { box-sizing: border-box; }
+body { background: var(--page); color: var(--text); font-family: var(--font-sans); -webkit-font-smoothing: antialiased;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 20px 40px; }
+.wrap { max-width: 860px; margin: 0 auto; display: grid; gap: 18px; }
+.lbl, .label { font-family: var(--font-mono); font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; }
+.muted { color: var(--text-muted); }
+
+/* ── controls (page chrome) ── */
+header h1 { font-size: 32px; line-height: 36px; font-weight: 800; letter-spacing: -1px; margin: 4px 0 6px; text-wrap: balance; }
+header p { margin: 0; font-size: 15px; line-height: 20px; color: var(--text-muted); max-width: 60ch; }
+.ctl { display: grid; gap: 8px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font: 600 13px/18px var(--font-sans); color: var(--text); background: var(--surface-1); border: 1px solid var(--line);
+  border-radius: 999px; padding: 7px 12px; cursor: pointer; }
+.chip small { font: 500 13px/18px var(--font-sans); color: var(--text-muted); }
+.chip[aria-pressed="true"] { background: var(--tint-you); border-color: var(--cart-you); box-shadow: var(--glow-you); }
+.chip:focus-visible, button:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+.stagewrap { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 24px; align-items: start; }
+@media (max-width: 760px) { .stagewrap { grid-template-columns: minmax(0,1fr); } }
+.notes { display: grid; gap: 14px; font-size: 15px; line-height: 20px; min-width: 0; }
+.notes h2 { font-size: 17px; line-height: 22px; font-weight: 600; margin: 0; }
+.notes p { margin: 0; color: var(--text-muted); max-width: 62ch; }
+.notes ul { margin: 0; padding-left: 18px; color: var(--text-muted); display: grid; gap: 4px; }
+.flag { border: 1px dashed var(--line); border-radius: var(--radius-lg); padding: 12px 14px; display: grid; gap: 6px; }
+.flag b { color: var(--text); font-weight: 600; }
+
+/* ── the phone ── */
+.fit { width: 393px; height: 659px; transform-origin: top left; }
+.fitbox { position: relative; }
+.phone { width: 393px; height: 659px; border-radius: 44px; background: var(--bg); position: relative; overflow: hidden;
+  box-shadow: 0 0 0 8px var(--frame), 0 30px 60px rgba(0,0,0,.35); display: grid; grid-template-rows: auto 300px 1fr auto; isolation: isolate; }
+.top { padding: 22px 20px 0; display: grid; gap: 10px; }
+.toprow { display: flex; justify-content: space-between; align-items: center; color: var(--text-muted); }
+.toprow button { background: none; border: 0; color: var(--text-muted); font: 500 13px/18px var(--font-sans); padding: 6px 0 6px 12px; cursor: pointer; }
+.segs { display: flex; gap: 4px; height: 3px; }
+.segs i { flex: 1; border-radius: 2px; background: var(--surface-3); overflow: hidden; position: relative; }
+.segs i b { position: absolute; inset: 0; background: var(--text); transform-origin: left; transform: scaleX(0); }
+.segs i.done b { transform: scaleX(1); }
+.segs.hide { visibility: hidden; }
+
+.stage { position: relative; padding: 18px 20px 0; perspective: 900px; }
+.copy { padding: 12px 20px 0; display: grid; gap: 8px; align-content: start; }
+.h { font-size: 32px; line-height: 36px; font-weight: 800; letter-spacing: -1px; margin: 0; text-wrap: balance; }
+.s { font-size: 15px; line-height: 20px; font-weight: 500; color: var(--text-muted); margin: 0; text-wrap: pretty; }
+.foot { padding: 0 20px 26px; display: grid; gap: 10px; }
+.btn { height: 56px; border-radius: var(--radius-lg); border: 0; background: var(--text); color: var(--bg); font: 600 17px/22px var(--font-sans); cursor: pointer; width: 100%; }
+.btn.bump { animation: bump .22s cubic-bezier(.2,.8,.2,1); }
+.hint { text-align: center; font-size: 13px; line-height: 18px; color: var(--text-muted); min-height: 18px; }
+
+/* 027 blur swap */
+@keyframes swap-out { from { opacity: 1; filter: blur(0) } to { opacity: 0; filter: blur(var(--blur-swap)) } }
+@keyframes swap-in  { from { opacity: 0; filter: blur(var(--blur-swap)) } to { opacity: 1; filter: blur(0) } }
+.out { animation: swap-out calc(var(--motion-grow) * .4) cubic-bezier(.4,0,1,1) both; }
+.in  { animation: swap-in calc(var(--motion-grow) * .8) calc(var(--motion-grow) * .2) var(--ease-grow) both; }
+/* 022 reward keyframes */
+@keyframes bump { 0% { transform: scale(.92) } 55% { transform: scale(1.06) } 100% { transform: scale(1) } }
+@keyframes draw { from { stroke-dashoffset: var(--len) } to { stroke-dashoffset: 0 } }
+
+/* ── scene parts ── */
+.sc { position: relative; height: 282px; display: grid; align-content: center; gap: 12px; }
+.e { opacity: 0; filter: blur(var(--blur-swap)); transform: translateY(10px);
+  transition: opacity 240ms var(--ease-grow), filter 240ms var(--ease-grow), transform 300ms var(--ease-grow); transition-delay: var(--d, 0ms); }
+.go .e { opacity: 1; filter: blur(0); transform: none; }
+.tile { background: var(--surface-1); border-radius: var(--radius-xl); padding: 14px 16px; display: grid; gap: 4px; min-width: 0; }
+.tile.you { background: var(--tint-you); box-shadow: inset 0 0 0 1.5px var(--cart-you), var(--glow-you); }
+.tile.a { background: var(--tint-a); box-shadow: inset 0 0 0 1.5px var(--cart-a); }
+.tile.b { background: var(--tint-b); box-shadow: inset 0 0 0 1.5px var(--cart-b); }
+.tile.c { background: var(--tint-c); box-shadow: inset 0 0 0 1.5px var(--cart-c); }
+.tile.dim { opacity: var(--peek); }
+.row { font-size: 17px; line-height: 22px; font-weight: 600; }
+.body { font-size: 15px; line-height: 20px; font-weight: 500; }
+.small { font-size: 13px; line-height: 18px; font-weight: 500; }
+.num { font-family: var(--font-mono); }
+.nxl { font-family: var(--font-mono); font-size: 64px; line-height: 64px; font-weight: 700; letter-spacing: -2px; font-variant-numeric: tabular-nums; }
+.ttl-mono { font-family: var(--font-mono); font-size: 32px; line-height: 36px; font-weight: 700; letter-spacing: -1px; font-variant-numeric: tabular-nums; }
+.youtxt { color: var(--cart-you-text); }
+.vs { text-align: center; color: var(--text-muted); }
+
+/* score cell with mark */
+.sco { position: relative; width: 40px; height: 40px; display: grid; place-items: center; font: 700 17px/22px var(--font-mono); flex: none; }
+.sco svg { position: absolute; inset: 0; overflow: visible; }
+.sco svg path { fill: none; stroke: currentColor; stroke-width: 1.5; stroke-dasharray: var(--len); stroke-dashoffset: var(--len); }
+.sco.pop { opacity: 0; }
+.go .sco.pop { animation: bump .22s cubic-bezier(.2,.8,.2,1) both; animation-delay: var(--d); opacity: 1; transition: opacity 1ms var(--d); }
+.go .sco svg path { animation: draw .32s cubic-bezier(.3,.7,.2,1) both; animation-delay: calc(var(--d) + 60ms); }
+.sco.dbl { color: var(--bad); }
+
+/* hole scene */
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.col { background: var(--surface-1); border-radius: var(--radius-xl); padding: 10px; display: grid; gap: 6px; }
+.pr { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 2px 4px 2px 10px; border-radius: 12px;
+  transition: background 300ms var(--ease-grow), box-shadow 300ms var(--ease-grow); transition-delay: var(--d2, 0ms); }
+.pr .nm { font-size: 15px; line-height: 20px; font-weight: 500; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.go .pr.best.y { background: var(--tint-you); box-shadow: inset 0 0 0 1.5px var(--cart-you), var(--glow-you); }
+.go .pr.best.t { background: var(--surface-2); box-shadow: inset 0 0 0 1.5px var(--text-muted); }
+.ptline { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; text-align: center; height: 36px; align-items: center; }
+.pt { justify-self: center; font: 700 17px/22px var(--font-mono); padding: 6px 12px; border-radius: 999px; opacity: 0; transform: translateY(14px) scale(.9); }
+.pt.y { background: var(--cart-you); color: var(--bg); box-shadow: var(--glow-you); }
+.pt.t { background: var(--surface-3); color: var(--text); }
+.go .pt { animation: ptin 420ms var(--ease-grow) both; animation-delay: var(--d); }
+@keyframes ptin { 0% { opacity: 0; transform: translateY(14px) scale(.9); filter: blur(4px) } 60% { opacity: 1; transform: translateY(-3px) scale(1.06); filter: blur(0) } 100% { opacity: 1; transform: none } }
+
+/* strip of 18 holes */
+.strip { display: grid; grid-template-columns: repeat(18, 1fr); gap: 3px; }
+.strip i { height: 28px; border-radius: 6px; background: var(--surface-2); transition: background 300ms var(--ease-grow), box-shadow 300ms var(--ease-grow); }
+.strip i.on { background: var(--cart-you); box-shadow: var(--glow-you); }
+.strip i.past { background: var(--surface-3); }
+.stretch-lbls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; }
+.stretch-lbls span { text-align: center; color: var(--text-muted); transition: color 300ms var(--ease-grow); }
+.stretch-lbls span.on { color: var(--text); }
+.swapbox { display: grid; }
+.swapbox > * { grid-area: 1/1; }
+
+/* bars */
+.tug { position: relative; height: 18px; border-radius: 9px; background: var(--surface-2); overflow: visible; }
+.tug .y, .tug .t { position: absolute; top: 0; bottom: 0; border-radius: 9px; width: 0; transition: width 1400ms cubic-bezier(.3,.7,.2,1); transition-delay: var(--d, 0ms); }
+.tug .y { left: 0; background: var(--cart-you); box-shadow: var(--glow-you); }
+.tug .t { right: 0; background: var(--surface-3); }
+.tug .tick { position: absolute; top: -8px; bottom: -8px; width: 2px; background: var(--text); border-radius: 1px; }
+.tickl { position: relative; height: 16px; }
+.tickl span { position: absolute; transform: translateX(-50%); white-space: nowrap; transition: color 300ms var(--ease-grow); }
+.tickl span.lit { color: var(--cart-you-text); }
+.hbars { display: grid; gap: 10px; }
+.hb { display: grid; grid-template-columns: 74px minmax(0,1fr) 36px; align-items: center; gap: 10px; }
+.hb .nm { font-size: 15px; line-height: 20px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hb .trk { height: 14px; border-radius: 7px; background: var(--surface-2); position: relative; }
+.hb .fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; border-radius: 7px; background: var(--surface-3); transition: width 1200ms cubic-bezier(.3,.7,.2,1); transition-delay: var(--d, 0ms); }
+.hb.you .fill { background: var(--cart-you); box-shadow: var(--glow-you); }
+.hb.you .nm { color: var(--cart-you-text); font-weight: 600; }
+.hb .v { font: 700 15px/20px var(--font-mono); text-align: right; font-variant-numeric: tabular-nums; }
+.lockline { position: absolute; top: -6px; bottom: -6px; width: 0; border-left: 2px dashed var(--text); left: var(--x, 0%); transition: left 900ms var(--ease-grow); opacity: 0; }
+.go .lockline { opacity: 1; }
+.chipline { display: flex; justify-content: center; }
+.flagchip { font: 600 12px/16px var(--font-mono); letter-spacing: 1px; text-transform: uppercase; padding: 6px 12px; border-radius: 999px; background: var(--surface-2); color: var(--text-muted); transition: all 300ms var(--ease-grow); }
+.flagchip.lit { background: var(--tint-you); color: var(--cart-you-text); box-shadow: inset 0 0 0 1.5px var(--cart-you), var(--glow-you); }
+
+/* carts grid */
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.cart { transition: background 300ms var(--ease-grow), box-shadow 300ms var(--ease-grow), opacity 300ms var(--ease-grow); }
+.dots { display: grid; grid-template-columns: repeat(6, 34px); justify-content: center; gap: 10px; }
+.dots i { aspect-ratio: 1; border-radius: 50%; background: var(--surface-2); transition: background 240ms var(--ease-grow), box-shadow 240ms var(--ease-grow), transform 240ms var(--ease-grow); }
+.dots i.w { background: var(--cart-you); box-shadow: var(--glow-you); transform: scale(1.04); }
+.dots i.l { background: var(--surface-3); }
+.dots i.h { background: linear-gradient(90deg, var(--cart-you) 50%, var(--surface-3) 50%); }
+.lb { position: relative; }
+.ptile { background: var(--surface-1); border-radius: var(--radius-xl); padding: 10px 8px 10px 14px; }
+.flipcard .ptile, .dk .ptile { background: var(--surface-2); }
+.dkn { position: absolute; top: 14px; right: 16px; }
+.dstage { height: 100%; }
+.lbr { position: absolute; left: 0; right: 0; height: 46px; display: flex; align-items: center; gap: 12px; padding: 0 14px; border-radius: 14px; background: var(--surface-1);
+  transition: transform 500ms var(--ease-grow), background 300ms, box-shadow 300ms; }
+.lbr.you { background: var(--tint-you); box-shadow: inset 0 0 0 1.5px var(--cart-you); }
+.lbr .pos { font: 700 15px/20px var(--font-mono); width: 22px; color: var(--text-muted); }
+.lbr .nm { flex: 1; font-size: 17px; line-height: 22px; font-weight: 600; }
+.lbr .v { font: 700 17px/22px var(--font-mono); font-variant-numeric: tabular-nums; }
+.card9 { display: grid; grid-template-columns: repeat(9, 1fr); gap: 2px; background: var(--surface-1); border-radius: var(--radius-xl); padding: 10px 6px; }
+.card9 .hc { display: grid; justify-items: center; gap: 4px; }
+.card9 .hn { font: 600 12px/16px var(--font-mono); color: var(--text-muted); }
+.card9 .sco { width: 32px; height: 32px; font-size: 15px; }
+
+/* ── direction B: one card that flips ── */
+.flipcard { height: 282px; border-radius: var(--radius-xl); background: var(--surface-1); padding: 0 16px; transform-style: preserve-3d; backface-visibility: hidden; }
+.flipcard .sc .col, .flipcard .sc .tile:not(.you):not(.a):not(.b):not(.c), .flipcard .card9, .flipcard .lbr:not(.you) { background: var(--surface-2); }
+.flipcard .strip i { background: var(--surface-3); }
+@keyframes flipout { from { transform: rotateY(0) } to { transform: rotateY(90deg); filter: blur(2px) } }
+@keyframes flipin  { from { transform: rotateY(-90deg); filter: blur(2px) } to { transform: rotateY(0) } }
+.flipcard.fo { animation: flipout 140ms cubic-bezier(.4,0,1,1) both; }
+.flipcard.fi { animation: flipin 260ms var(--ease-grow) both; }
+
+/* ── direction C: the deck ── */
+.deck { position: relative; height: 282px; transform-style: preserve-3d; }
+.dk { position: absolute; inset: 0; border-radius: var(--radius-xl); background: var(--surface-1); padding: 0 16px; box-shadow: 0 18px 40px rgba(0,0,0,.35);
+  transition: transform var(--motion-grow) var(--ease-grow), opacity var(--motion-grow) var(--ease-grow), filter 150ms linear; will-change: transform; }
+.dk .sc .col, .dk .sc .tile:not(.you):not(.a):not(.b):not(.c), .dk .card9, .dk .lbr:not(.you) { background: var(--surface-2); }
+.dk .strip i { background: var(--surface-3); }
+.deck.moving .dk { filter: blur(2px); }
+
+/* ── direction D: mood ── */
+.mood { position: absolute; inset: 0; z-index: -1; }
+.mood canvas { width: 100%; height: 100%; display: block; }
+.mood::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 62%; background: linear-gradient(to bottom, transparent, var(--bg) 46%); }
+.dstage { padding: 0 20px; display: grid; align-content: end; }
+.dname { font-size: 32px; line-height: 36px; font-weight: 800; letter-spacing: -1px; }
+.dlines { display: grid; gap: 10px; }
+.dline { display: flex; gap: 10px; align-items: baseline; }
+.dline .label { color: var(--text-muted); width: 18px; flex: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .e, .tug .y, .tug .t, .hb .fill, .lockline, .lbr, .dk, .pr, .strip i, .dots i { transition-duration: 1ms !important; transition-delay: 0ms !important; filter: none !important; }
+  .go .sco.pop, .go .sco svg path, .go .pt, .btn.bump { animation: none !important; opacity: 1; }
+  .go .sco svg path { stroke-dashoffset: 0; }
+  .go .pt { opacity: 1; transform: none; }
+  .out, .in, .flipcard.fo, .flipcard.fi { animation-name: none !important; }
+}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="lbl muted">Golf Live Board · 032 brainstorm</div>
+    <h1>Today's game, in motion</h1>
+    <p>Pick a game and a direction. Each one plays itself in under 15 seconds. Tap the scene to skip ahead; <b>Let's play</b> is always there.</p>
+  </header>
+
+  <div class="ctl">
+    <div class="lbl muted">Game</div>
+    <div class="chips" id="games"></div>
+    <div class="lbl muted">Direction</div>
+    <div class="chips" id="dirs"></div>
+  </div>
+
+  <div class="stagewrap">
+    <div class="fitbox" id="fitbox"><div class="fit" id="fit">
+      <div class="phone" id="phone">
+        <div class="mood" id="mood" hidden><canvas id="cv"></canvas></div>
+        <div class="top">
+          <div class="toprow"><span class="label">Today's game</span><button id="replay" type="button">Replay</button></div>
+          <div class="segs" id="segs"></div>
+        </div>
+        <div class="stage" id="stage"></div>
+        <div class="copy" id="copy"></div>
+        <div class="foot">
+          <div class="hint" id="hint"></div>
+          <button class="btn" id="play" type="button">Let's play</button>
+        </div>
+      </div>
+    </div></div>
+    <div class="notes" id="notes"></div>
+  </div>
+</div>
+
+<script>
+(() => {
+const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const $ = (id) => document.getElementById(id);
+let timers = [];
+const later = (ms, f) => { const t = setTimeout(f, RM ? Math.min(ms, 1) : ms); timers.push(t); return t; };
+const clearAll = () => { timers.forEach(clearTimeout); timers = []; };
+const half = (n) => { const w = Math.floor(n + 1e-9), h = n - w > 1e-9; return (w || !h ? String(w) : '') + (h ? '½' : ''); };
+
+// ── score mark (022 markPaths, gross) ──
+function mark(score, par, d, size = 40) {
+  const k = score - par, h = size / 2;
+  const circ = (r) => ({ d: `M ${h} ${h - r} a ${r} ${r} 0 1 1 0 ${2*r} a ${r} ${r} 0 1 1 0 ${-2*r}`, len: 2 * Math.PI * r });
+  const sq = (i) => { const a = i, b = size - i; return { d: `M ${a+4} ${a} H ${b-4} Q ${b} ${a} ${b} ${a+4} V ${b-4} Q ${b} ${b} ${b-4} ${b} H ${a+4} Q ${a} ${b} ${a} ${b-4} V ${a+4} Q ${a} ${a} ${a+4} ${a}`, len: 4 * (b - a) }; };
+  const paths = k <= -2 ? [circ(h-1), circ(h-5.5)] : k === -1 ? [circ(h-1)] : k === 1 ? [sq(1)] : k >= 2 ? [sq(1), sq(5.5)] : [];
+  const svg = paths.length ? `<svg viewBox="0 0 ${size} ${size}">${paths.map(p => `<path d="${p.d}" style="--len:${p.len.toFixed(1)}"/>`).join('')}</svg>` : '';
+  return `<span class="sco pop${k >= 2 ? ' dbl' : ''}" style="--d:${d}ms">${score}${svg}</span>`;
+}
+
+// ── scenes: (args) → { html, play(el) } ──
+const S = {
+  versus: ({ us, them, usLbl = 'Your side', themLbl = 'Them', sub }) => ({ html: `<div class="sc">
+      <div class="tile you e" style="--d:0ms"><span class="label youtxt">${usLbl}</span><span class="row">${us}</span></div>
+      <div class="vs label e" style="--d:220ms">vs</div>
+      <div class="tile e" style="--d:380ms"><span class="label muted">${themLbl}</span><span class="row">${them}</span></div>
+      ${sub ? `<div class="small muted e" style="--d:560ms;text-align:center">${sub}</div>` : ''}</div>` }),
+
+  hole: ({ hole = 4, par = 4, us, them, tie }) => {
+    const best = (a) => Math.min(...a.map(r => r[1]));
+    const bu = best(us), bt = best(them);
+    let d = 120;
+    const rows = (arr, side, b) => arr.map(([n, s], i) => {
+      const r = `<div class="pr${s === b && arr.findIndex(x => x[1] === b) === i ? ' best ' + side : ''}" style="--d2:1050ms"><span class="nm">${n}</span>${mark(s, par, d)}</div>`; d += 170; return r; }).join('');
+    const ru = rows(us, 'y', bu), rt = rows(them, 't', bt);
+    const pts = tie ? `<span class="pt t" style="--d:1500ms">½</span><span class="pt t" style="--d:1500ms">½</span>`
+      : `<span class="pt y" style="--d:1500ms">+1</span><span></span>`;
+    return { html: `<div class="sc">
+      <div class="label muted e" style="--d:0ms">Hole ${hole} · Par ${par}</div>
+      <div class="cols e" style="--d:40ms"><div class="col">${ru}</div><div class="col">${rt}</div></div>
+      <div class="ptline">${pts}</div></div>` };
+  },
+
+  switch: ({ partners }) => ({ html: `<div class="sc">
+      <div class="swapbox" id="pw"><div class="title-row"><span class="label muted">Holes 1–6 · partner</span><div class="h" style="margin-top:4px">${partners[0]}</div></div></div>
+      <div class="strip e" style="--d:0ms">${Array.from({ length: 18 }, () => '<i></i>').join('')}</div>
+      <div class="stretch-lbls label e" style="--d:100ms"><span>1–6</span><span>7–12</span><span>13–18</span></div></div>`,
+    play(el) {
+      const cells = [...el.querySelectorAll('.strip i')], lbls = [...el.querySelectorAll('.stretch-lbls span')], pw = el.querySelector('#pw');
+      const ranges = ['1–6', '7–12', '13–18'];
+      const step = (k) => {
+        cells.forEach((c, i) => { c.className = Math.floor(i / 6) === k ? 'on' : Math.floor(i / 6) < k ? 'past' : ''; });
+        lbls.forEach((l, i) => l.classList.toggle('on', i === k));
+        if (k) swapIn(pw, `<div><span class="label muted">Holes ${ranges[k]} · partner</span><div class="h" style="margin-top:4px">${partners[k]}</div></div>`);
+      };
+      later(300, () => step(0)); later(1300, () => step(1)); later(2300, () => step(2));
+    } }),
+
+  stretches: ({ res }) => ({ html: `<div class="sc">
+      <div class="grid3" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">${res.map(([r, w, p], i) =>
+        `<div class="tile ${w === 'W' ? 'you' : ''} e" style="--d:${i * 380}ms;text-align:center"><span class="label muted">${r}</span><span class="row ${w === 'W' ? 'youtxt' : ''}">${w === 'W' ? 'Won' : w === 'H' ? 'Halved' : 'Lost'}</span><span class="small muted">with ${p}</span></div>`).join('')}</div>
+      <div class="e" style="--d:1400ms;display:flex;align-items:baseline;gap:10px;justify-content:center"><span class="nxl youtxt">2</span><span class="row">stretches won</span></div></div>` }),
+
+  tug: ({ total, toWin, us, them, unit = 'points', lbl }) => ({ html: `<div class="sc" style="gap:16px">
+      <div class="e" style="--d:0ms;display:flex;justify-content:space-between;align-items:end">
+        <div><span class="label youtxt">You</span><div class="nxl youtxt" data-count="${us}">0</div></div>
+        <div style="text-align:right"><span class="label muted">Them</span><div class="ttl-mono muted" data-count="${them}">0</div></div></div>
+      <div class="tug e" style="--d:80ms"><span class="y" style="--d:300ms"></span><span class="t" style="--d:300ms"></span><span class="tick" style="left:calc(${toWin / total * 100}% - 1px)"></span></div>
+      <div class="tickl label muted e" style="--d:120ms"><span style="left:${toWin / total * 100}%" id="tl">${lbl}</span></div>
+      <div class="small muted e" style="--d:200ms;text-align:center">${total} ${unit} on the course</div></div>`,
+    play(el) {
+      later(40, () => { el.querySelector('.tug .y').style.width = `${us / total * 100}%`; el.querySelector('.tug .t').style.width = `${them / total * 100}%`; });
+      el.querySelectorAll('[data-count]').forEach(n => countUp(n, +n.dataset.count, 340, 1400));
+      later(1800, () => el.querySelector('#tl').classList.add('lit'));
+    } }),
+
+  carts: ({ mine, others }) => ({ html: `<div class="sc">
+      <div class="label muted" style="text-align:center"><span id="cr">Holes 1–6</span></div>
+      <div class="grid2">
+        <div class="tile you cart e" style="--d:0ms"><span class="label youtxt">Your cart</span><span class="row">${mine}</span></div>
+        ${others.map(([n, c], i) => `<div class="tile cart dim e" data-c="${c}" style="--d:${120 + i * 90}ms"><span class="label muted">Cart</span><span class="row">${n}</span></div>`).join('')}
+      </div>
+      <div class="small muted e" style="--d:500ms;text-align:center" id="cvs">&nbsp;</div></div>`,
+    play(el) {
+      const cs = [...el.querySelectorAll('.cart[data-c]')], cr = el.querySelector('#cr'), cvs = el.querySelector('#cvs');
+      const r = ['Holes 1–6', 'Holes 7–12', 'Holes 13–18'];
+      const step = (k) => { cs.forEach((c, i) => { c.classList.toggle(c.dataset.c, i === k); c.classList.toggle('dim', i !== k); });
+        cr.textContent = r[k]; cvs.textContent = `vs ${cs[k].querySelector('.row').textContent}${k === 1 ? ' · other tee time' : ''}`; };
+      later(600, () => step(0)); later(1600, () => step(1)); later(2600, () => step(2));
+    } }),
+
+  bars: ({ rows, max, note }) => ({ html: `<div class="sc">
+      <div class="hbars">${rows.map(([n, v, you], i) => `<div class="hb ${you ? 'you' : ''} e" style="--d:${i * 80}ms"><span class="nm">${n}</span><span class="trk"><span class="fill" data-w="${v / max * 100}" style="--d:${250 + i * 80}ms"></span></span><span class="v" data-count="${v}">0</span></div>`).join('')}</div>
+      ${note ? `<div class="small muted e" style="--d:600ms;text-align:center">${note}</div>` : ''}</div>`,
+    play(el) { later(40, () => el.querySelectorAll('.fill').forEach(f => f.style.width = f.dataset.w + '%'));
+      el.querySelectorAll('[data-count]').forEach((n, i) => countUp(n, +n.dataset.count, 250 + i * 80, 1200)); } }),
+
+  players: ({ names }) => ({ html: `<div class="sc"><div class="grid2">${names.map((n, i) =>
+      `<div class="tile ${i === 0 ? 'you' : ''} e" style="--d:${i * 140}ms"><span class="label ${i === 0 ? 'youtxt' : 'muted'}">${i === 0 ? 'You' : 'Player'}</span><span class="row">${n}</span></div>`).join('')}</div></div>` }),
+
+  aloneHole: ({ par = 4, scores, hole = 7 }) => {
+    const low = Math.min(...scores.map(s => s[1])), k = scores.filter(s => s[1] === low).length;
+    return { html: `<div class="sc">
+      <div class="label muted e" style="--d:0ms">Hole ${hole} · Par ${par}</div>
+      <div class="grid2">${scores.map(([n, s], i) => `<div class="pr ptile${s === low ? ' best y' : ''}" style="--d2:1100ms">
+        <span class="nm">${n}</span>${mark(s, par, 140 + i * 160)}</div>`).join('')}</div>
+      <div class="chipline"><span class="pt y" style="--d:1500ms">${k === 1 ? '+1 to the low score' : `${k === 2 ? '½' : '⅓'} each to the ${k} tied`}</span></div></div>` };
+  },
+
+  race: ({ rows, left }) => {
+    const max = 10, second = rows[1][1];
+    return { html: `<div class="sc" style="gap:14px">
+      <div class="label muted e" style="--d:0ms;display:flex;justify-content:space-between"><span>After 16</span><span>${left} holes left</span></div>
+      <div class="hbars" style="position:relative">${rows.map(([n, v, you], i) => `<div class="hb ${you ? 'you' : ''} e" style="--d:${i * 70}ms"><span class="nm">${n}</span><span class="trk"><span class="fill" data-w="${v / max * 100}" style="--d:${200 + i * 70}ms"></span>${i === 1 ? `<span class="lockline" style="--x:${second / max * 100}%"></span>` : ''}</span><span class="v" data-count="${v}">0</span></div>`).join('')}</div>
+      <div class="small muted e" style="--d:1300ms;text-align:center">Best Chris can do: ${second} + ${left} = ${second + left}</div>
+      <div class="chipline e" style="--d:1300ms"><span class="flagchip" id="lk">Still open</span></div></div>`,
+      play(el) { later(40, () => el.querySelectorAll('.fill').forEach(f => f.style.width = f.dataset.w + '%'));
+        el.querySelectorAll('[data-count]').forEach((n, i) => countUp(n, +n.dataset.count, 200 + i * 70, 1100, true));
+        later(1500, () => { const l = el.querySelector('.lockline'); l.style.left = ((second + left) / max * 100) + '%'; });
+        later(2600, () => { const k = el.querySelector('#lk'); k.textContent = `Locked · ${rows[0][1]} beats ${second + left}`; k.classList.add('lit'); }); } };
+  },
+
+  card9: ({ pars, scores }) => ({ html: `<div class="sc" style="gap:16px">
+      <div class="card9 e" style="--d:0ms">${pars.map((p, i) => `<div class="hc"><span class="hn">${i + 1}</span>${mark(scores[i], p, 200 + i * 150, 32)}</div>`).join('')}</div>
+      <div class="e" style="--d:100ms;display:flex;justify-content:space-between;align-items:end">
+        <div><span class="label muted">Front 9</span><div class="nxl" data-count="${scores.reduce((a, b) => a + b, 0)}">0</div></div>
+        <div style="text-align:right"><span class="label muted">To par</span><div class="ttl-mono" id="tp">E</div></div></div></div>`,
+    play(el) { const n = el.querySelector('[data-count]'); countUp(n, +n.dataset.count, 200, 1500);
+      const tp = el.querySelector('#tp'); let run = 0; pars.forEach((p, i) => later(200 + i * 150, () => { run += scores[i] - p; tp.textContent = run === 0 ? 'E' : (run > 0 ? '+' : '−') + Math.abs(run); })); } }),
+
+  board: ({ steps }) => ({ html: `<div class="sc"><div class="label muted e" style="--d:0ms">The Board · live</div><div class="lb e" style="--d:60ms;height:${4 * 52}px">${steps[0].map(([n, v, you]) =>
+      `<div class="lbr ${you ? 'you' : ''}" data-n="${n}"><span class="pos"></span><span class="nm">${n}</span><span class="v">${v}</span></div>`).join('')}</div></div>`,
+    play(el) {
+      const place = (st) => { st.forEach(([n, v], i) => { const r = el.querySelector(`[data-n="${n}"]`); r.style.transform = `translateY(${i * 52}px)`; r.querySelector('.v').textContent = v; r.querySelector('.pos').textContent = i + 1; }); };
+      place(steps[0]); steps.slice(1).forEach((st, k) => later(1100 + k * 1100, () => place(st)));
+    } }),
+
+  sides: () => ({ html: `<div class="sc"><div class="grid2">
+      <div class="tile you e" style="--d:0ms"><span class="label youtxt">Your side</span><div class="dots" style="grid-template-columns:repeat(4,22px);justify-content:start;gap:8px;margin-top:6px">${'<i class="w"></i>'.repeat(4)}</div><span class="small muted">4 carts · 8 players</span></div>
+      <div class="tile e" style="--d:200ms"><span class="label muted">Them</span><div class="dots" style="grid-template-columns:repeat(4,22px);justify-content:start;gap:8px;margin-top:6px">${'<i class="l"></i>'.repeat(4)}</div><span class="small muted">4 carts · 8 players</span></div>
+    </div><div class="small muted e" style="--d:450ms;text-align:center">Your cart is green on your phone.</div></div>` }),
+
+  ryderRot: ({ mine, opps }) => ({ html: `<div class="sc">
+      <div class="label muted" style="text-align:center" id="rr">Holes 1–6</div>
+      <div class="tile you e" style="--d:0ms"><span class="label youtxt">Your cart</span><span class="row">${mine}</span></div>
+      <div class="vs label e" style="--d:150ms">vs</div>
+      <div class="swapbox e" style="--d:250ms" id="ro"><div class="tile"><span class="label muted">Their cart</span><span class="row">${opps[0]}</span></div></div></div>`,
+    play(el) { const r = ['Holes 1–6', 'Holes 7–12', 'Holes 13–18'], ro = el.querySelector('#ro'), rr = el.querySelector('#rr');
+      [1, 2].forEach(k => later(k * 1100, () => { rr.textContent = r[k]; swapIn(ro, `<div class="tile"><span class="label muted">Their cart</span><span class="row">${opps[k]}</span></div>`); })); } }),
+
+  matches: ({ seq }) => ({ html: `<div class="sc" style="gap:16px">
+      <div class="dots e" style="--d:0ms">${seq.map(() => '<i></i>').join('')}</div>
+      <div class="e" style="--d:80ms;display:flex;justify-content:space-between;align-items:end">
+        <div><span class="label youtxt">Your side</span><div class="nxl youtxt" id="ms">0</div></div>
+        <div style="text-align:right"><span class="label muted">Them</span><div class="ttl-mono muted" id="mt">0</div></div></div>
+      <div class="small muted e" style="--d:120ms;text-align:center">12 matches · 1 point each · a tie is ½</div></div>`,
+    play(el) { const ds = [...el.querySelectorAll('.dots i')]; let us = 0, th = 0;
+      seq.forEach((r, i) => later(300 + i * 140, () => { ds[i].className = r; if (r === 'w') us += 1; else if (r === 'l') th += 1; else { us += .5; th += .5; }
+        el.querySelector('#ms').textContent = half(us) || '0'; el.querySelector('#mt').textContent = half(th) || '0'; })); } }),
+};
+
+function countUp(n, to, delay, dur, whole) {
+  if (RM) { n.textContent = half(to); return; }
+  later(delay, () => { const t0 = performance.now();
+    const tick = (t) => { const p = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - p, 3), v = to * e;
+      n.textContent = whole || Number.isInteger(to) ? String(Math.round(v)) : (p < 1 ? String(Math.floor(v)) : half(to));
+      if (p < 1 && n.isConnected) requestAnimationFrame(tick); };
+    requestAnimationFrame(tick); });
+}
+function swapIn(box, html) {
+  const old = box.firstElementChild; const nu = document.createElement('div'); nu.innerHTML = html; const el = nu.firstElementChild;
+  if (old && !RM) { old.classList.add('out'); later(120, () => old.remove()); } else if (old) old.remove();
+  if (!RM) el.classList.add('in'); box.appendChild(el);
+}
+
+// ── the games: current names + rules (031 §2.1 / §2.3, 13a step 3) ──
+const GAMES = {
+  partners: { name: '2v2', tag: 'partners switch', blurb: ['Partners switch every 6 holes, so everyone plays with everyone.', 'Best ball, a point a hole. A tie is ½ each.', 'Each stretch is its own match. Most stretches won takes the day.'], hero: 'switch', beats: [
+    { h: 'You and Mike vs Tyler and Sam.', s: 'For the first 6 holes. Best ball, a point a hole.', sc: ['versus', { us: 'You + Mike', them: 'Tyler + Sam', sub: 'Holes 1–6' }] },
+    { h: 'Best ball takes the hole.', s: 'Your 4 beats their 5. One point. A tie is ½ each.', sc: ['hole', { us: [['You', 4], ['Mike', 6]], them: [['Tyler', 5], ['Sam', 5]] }] },
+    { h: 'Partners switch at 7 and 13.', s: 'So you play with everyone once.', sc: ['switch', { partners: ['Mike', 'Tyler', 'Sam'] }] },
+    { h: 'Each stretch is its own match.', s: 'Most stretches won takes the day.', sc: ['stretches', { res: [['1–6', 'W', 'Mike'], ['7–12', 'L', 'Tyler'], ['13–18', 'W', 'Sam']] }] } ] },
+  oneMatch: { name: '2v2', tag: 'same partners', blurb: ['You and your partner against the other two, all 18.', 'Best ball, a point a hole. A tie is ½ each.', '9½ wins it.'], hero: 'tug', beats: [
+    { h: 'You and Mike vs Tyler and Sam.', s: 'Same partners all 18.', sc: ['versus', { us: 'You + Mike', them: 'Tyler + Sam' }] },
+    { h: 'Best ball takes the hole.', s: 'Your 4 beats their 5. One point.', sc: ['hole', { us: [['You', 4], ['Mike', 6]], them: [['Tyler', 5], ['Sam', 5]] }] },
+    { h: 'A tie splits it.', s: '4 against 4: ½ each.', sc: ['hole', { hole: 5, par: 3, us: [['You', 4], ['Mike', 3]], them: [['Tyler', 3], ['Sam', 4]], tie: true }] },
+    { h: 'First to 9½ wins.', s: '18 points out there. 9½ is more than half, so nobody can catch you.', sc: ['tug', { total: 18, toWin: 9.5, us: 9.5, them: 6.5, lbl: '9½ to win' }] } ] },
+  cart: { name: '2v2', tag: '8 players · 4 carts', blurb: ['Your cart plays a different cart every 6 holes.', 'Best ball, a point a hole. A tie is ½ each.', 'Most points takes the day.'], hero: 'carts', beats: [
+    { h: 'You and Mike are a cart.', s: 'Four carts of two today.', sc: ['carts', { mine: 'You + Mike', others: [['Tyler + Sam', 'a'], ['Chris + Jake', 'b'], ['Ben + Luke', 'c']] }], noplay: true },
+    { h: 'Best ball takes the hole.', s: "Your cart's best score against theirs. One point.", sc: ['hole', { us: [['You', 5], ['Mike', 4]], them: [['Tyler', 5], ['Sam', 6]] }] },
+    { h: 'A new cart every 6 holes.', s: 'Some matches are with the other tee time. Nobody moves; the app scores it.', sc: ['carts', { mine: 'You + Mike', others: [['Tyler + Sam', 'a'], ['Chris + Jake', 'b'], ['Ben + Luke', 'c']] }] },
+    { h: 'Most points takes the day.', s: 'Every hole adds to your cart.', sc: ['bars', { max: 16, rows: [['You + Mike', 12, true], ['Chris + Jake', 10.5], ['Tyler + Sam', 7.5], ['Ben + Luke', 6]], note: 'After 18' }] } ] },
+  alone: { name: 'Everyone alone', tag: '2–6 players', blurb: ['Everyone for themselves. No partners.', 'A point a hole to the low net score; a tie splits it.', 'Most points after 18 wins.'], hero: 'race', beats: [
+    { h: 'Everyone for themselves.', s: 'No partners today.', sc: ['players', { names: ['You', 'Chris', 'Sam', 'Jake'] }] },
+    { h: 'Low score takes the point.', s: 'One point a hole, on net scores.', sc: ['aloneHole', { scores: [['You', 3], ['Chris', 4], ['Sam', 5], ['Jake', 4]] }] },
+    { h: 'A tie splits it.', s: 'Two tied for low: ½ each.', sc: ['aloneHole', { hole: 8, scores: [['You', 4], ['Chris', 4], ['Sam', 5], ['Jake', 6]] }] },
+    { h: 'The race.', s: "Once your lead is more than they can make up, it's locked.", sc: ['race', { left: 2, rows: [['You', 7, true], ['Chris', 4], ['Sam', 3], ['Jake', 2]] }] } ] },
+  stroke: { name: 'Stroke play', tag: 'any number', blurb: ['Everyone plays their own ball.', 'Every stroke counts.', 'Lowest total wins.'], hero: 'board', beats: [
+    { h: 'Just your score.', s: 'Everyone plays their own ball.', sc: ['players', { names: ['You', 'Chris', 'Sam', 'Jake'] }] },
+    { h: 'Every stroke counts.', s: 'Your total builds hole by hole.', sc: ['card9', { pars: [4, 4, 3, 5, 4, 4, 3, 5, 4], scores: [4, 5, 3, 4, 4, 6, 3, 5, 4] }] },
+    { h: 'Lowest total wins.', s: 'The Board shows where you stand, live.', sc: ['board', { steps: [[['Sam', '+1'], ['Chris', '+2'], ['You', '+3', true], ['Jake', '+5']], [['Sam', '+1'], ['You', '+2', true], ['Chris', '+3'], ['Jake', '+5']], [['You', 'E', true], ['Sam', '+1'], ['Chris', '+3'], ['Jake', '+6']]] }] } ] },
+  ryder: { name: 'Team Ryder Cup', tag: '16 players', blurb: ['Two sides, cart against cart.', 'A new cart from their side every 6 holes.', 'Each match is a point to your side. 6½ wins.'], hero: 'matches', beats: [
+    { h: 'Two sides of 8.', s: 'Four carts each. Your side against theirs.', sc: ['sides', {}] },
+    { h: 'Cart vs cart, 6 holes at a time.', s: 'A different cart from their side each stretch.', sc: ['ryderRot', { mine: 'You + Mike', opps: ['Tyler + Sam', 'Chris + Jake', 'Ben + Luke'] }] },
+    { h: 'Win the match, win a point.', s: 'Most hole points over the 6 holes takes the match.', sc: ['hole', { us: [['You', 4], ['Mike', 5]], them: [['Tyler', 5], ['Sam', 5]] }] },
+    { h: '6½ wins the cup.', s: '12 matches. Your side needs more than half.', sc: ['matches', { seq: ['w', 'l', 'w', 'w', 'h', 'l', 'w', 'w', 'l', 'w', 'h', 'l'] }] } ] },
+};
+const DIRS = {
+  play: { name: 'A · Play it out', ref: 'Reference 1 (bank card)', notes: `<h2>A · Play it out</h2>
+    <p>Each beat plays the rule as a tiny live moment: scores land with the 022 marks, the best ball lights, the point flies in. The text under it changes with the 027 blur swap. The top shows story-style progress; tap the scene to jump ahead.</p>
+    <ul><li>Feels like the app itself, so it teaches the screens they'll use.</li><li>Fully in the design system, nothing new to approve except the progress bar.</li><li>Least "wow" of the four.</li></ul>
+    <div class="flag"><b>Flag:</b> the story progress bar (3px segments) isn't a component yet.</div>` },
+  flip: { name: 'B · One card', ref: 'Reference 1, the 3D flip', notes: `<h2>B · One card</h2>
+    <p>One card is the hero and never leaves. Between beats it flips edge-on and comes back with the next idea on its face, the way the bank card flips between Activate and Set PIN. Text below swaps on the same beat.</p>
+    <ul><li>The strongest "this is an object" feeling; people watch a flip.</li><li>The card reads like the Board and Matches cards, so it carries into the round.</li><li>A flip every 3 seconds can feel busy; it may want slower beats.</li></ul>
+    <div class="flag"><b>Flag:</b> 3D flip (rotateY, 140ms out + 260ms in, 2px blur at edge-on) is a new motion pattern beyond 027.</div>` },
+  deck: { name: 'C · The deck', ref: 'Reference 2 (book fan)', notes: `<h2>C · The deck</h2>
+    <p>All the beats sit in a fanned 3D stack. The front card holds while its scene plays, then snaps away and the next one comes forward. The next card always peeks at 0.6, so people can see there's more and how much.</p>
+    <ul><li>The peek shows how long it is, which makes people less likely to bail.</li><li>Swipeable later with no new idea needed.</li><li>Busiest of the four on a small phone.</li></ul>
+    <div class="flag"><b>Flag:</b> the fanned stack (rotateY + translateZ, cards behind at --peek) is a new pattern. Uses --motion-grow and 027's peek.</div>` },
+  mood: { name: 'D · Mood + 3 lines', ref: 'Reference 3 (chess loop)', notes: `<h2>D · Mood + 3 lines</h2>
+    <p>No steps at all. A slow ambient loop fills the top (the glowing ball, standing in for the Higgsfield video), the game name sits under it, and the three lines from <code>gameBlurb</code> arrive one at a time. One live element plays the key rule for this game.</p>
+    <ul><li>Calmest and quickest: one screen, about 4 seconds.</li><li>The same look works for Home and first-time onboarding.</li><li>Teaches the least; the rules are told rather than shown.</li></ul>
+    <div class="flag"><b>Flag:</b> video in the app is a new pattern: muted MP4 + a still for Low Power Mode and reduced motion, faded into --bg under the text. Here it's drawn in code because the artifact can't load the clip.</div>` },
+};
+
+// ── state + render ──
+let game = 'oneMatch', dir = 'play', cur = 0;
+try { const s = JSON.parse(localStorage.getItem('g032') || '{}'); if (GAMES[s.game]) game = s.game; if (DIRS[s.dir]) dir = s.dir; } catch (e) {}
+const save = () => { try { localStorage.setItem('g032', JSON.stringify({ game, dir })); } catch (e) {} };
+
+function chips() {
+  $('games').innerHTML = Object.entries(GAMES).map(([k, g]) => `<button class="chip" type="button" data-g="${k}" aria-pressed="${k === game}">${g.name} <small>${g.tag}</small></button>`).join('');
+  $('dirs').innerHTML = Object.entries(DIRS).map(([k, d]) => `<button class="chip" type="button" data-d="${k}" aria-pressed="${k === dir}">${d.name}</button>`).join('');
+}
+$('games').addEventListener('click', (e) => { const b = e.target.closest('[data-g]'); if (b) { game = b.dataset.g; save(); chips(); start(); } });
+$('dirs').addEventListener('click', (e) => { const b = e.target.closest('[data-d]'); if (b) { dir = b.dataset.d; save(); chips(); start(); } });
+
+const beats = () => GAMES[game].beats;
+const HOLD = 3600;
+function sceneOf(b) { const [k, a] = b.sc; return S[k](a); }
+function mountScene(host, b, playNow = true) {
+  const sc = sceneOf(b); host.innerHTML = sc.html; const el = host.firstElementChild;
+  if (playNow) runScene(el, sc, b); return { el, sc };
+}
+function runScene(el, sc, b) { requestAnimationFrame(() => requestAnimationFrame(() => { el.classList.add('go'); if (sc.play && !b.noplay) sc.play(el); })); }
+
+function segs(n) { $('segs').innerHTML = Array.from({ length: n }, () => '<i><b></b></i>').join(''); }
+function segTo(k) {
+  [...$('segs').children].forEach((s, i) => { const b = s.firstChild; b.style.transition = 'none';
+    b.style.transform = i < k ? 'scaleX(1)' : 'scaleX(0)'; if (i === k && !RM) { b.getBoundingClientRect(); b.style.transition = `transform ${HOLD}ms linear`; b.style.transform = 'scaleX(1)'; } });
+}
+function setCopy(b, first) {
+  const html = `<div><p class="h">${b.h}</p><p class="s" style="margin-top:8px">${b.s}</p></div>`;
+  const box = $('copy'); if (first || RM) { box.innerHTML = html; if (!RM && !first) box.firstElementChild.classList.add('in'); return; }
+  box.style.display = 'grid'; [...box.children].forEach(c => c.style.gridArea = '1/1'); swapIn(box, html); box.lastElementChild.style.gridArea = '1/1';
+}
+let deckCards = [];
+function deckPos() {
+  deckCards.forEach((c, i) => { const k = i - cur;
+    c.style.zIndex = 50 - Math.abs(k);
+    c.style.opacity = k < 0 ? 0 : k === 0 ? 1 : k === 1 ? 'var(--peek)' : k === 2 ? .3 : 0;
+    c.style.transform = k < 0 ? 'translateX(-115%) rotateY(28deg) translateZ(-40px)' : k === 0 ? 'none'
+      : `translateX(${k * 26}px) translateZ(${-k * 70}px) rotateY(${-k * 9}deg)`;
+    c.style.pointerEvents = k === 0 ? 'auto' : 'none'; });
+}
+function go(k, first) {
+  const bs = beats(); if (k >= bs.length) { $('hint').textContent = 'Tap Replay to watch it again'; const p = $('play'); p.classList.remove('bump'); void p.offsetWidth; p.classList.add('bump'); return; }
+  clearAll(); cur = k; const b = bs[k]; segTo(k); setCopy(b, first); $('hint').textContent = '';
+  const stage = $('stage');
+  if (dir === 'play') {
+    if (first || RM) mountScene(stage, b);
+    else { const old = stage.firstElementChild; if (old) old.classList.add('out'); later(120, () => mountScene(stage, b)); }
+  } else if (dir === 'flip') {
+    let card = stage.querySelector('.flipcard');
+    if (!card) { stage.innerHTML = '<div class="flipcard"></div>'; card = stage.firstElementChild; mountScene(card, b); }
+    else if (RM) mountScene(card, b);
+    else { card.className = 'flipcard fo'; later(140, () => { mountScene(card, b); card.className = 'flipcard fi'; }); }
+  } else if (dir === 'deck') {
+    const deck = stage.querySelector('.deck');
+    if (!first && !RM) { deck.classList.add('moving'); later(160, () => deck.classList.remove('moving')); }
+    deckPos(); const c = deckCards[k]; const el = c.querySelector('.dkb').firstElementChild; const sc = sceneOf(b); runScene(el, sc, b);
+  }
+  later(HOLD, () => go(k + 1));
+}
+function start() {
+  $('stage').style.padding = ''; clearAll(); cur = 0; const g = GAMES[game];
+  $('notes').innerHTML = DIRS[dir].notes; $('hint').textContent = '';
+  const stage = $('stage'); stage.innerHTML = ''; $('copy').innerHTML = '';
+  const mood = dir === 'mood'; $('mood').hidden = !mood; $('segs').classList.toggle('hide', mood); moodOn(mood);
+  $('phone').style.gridTemplateRows = mood ? 'auto 1fr auto auto' : 'auto 300px 1fr auto';
+  if (mood) return startMood(g);
+  segs(g.beats.length);
+  if (dir === 'deck') {
+    stage.innerHTML = `<div class="deck">${g.beats.map(() => '<div class="dk"></div>').join('')}</div>`;
+    deckCards = [...stage.querySelectorAll('.dk')];
+    deckCards.forEach((c, i) => { c.innerHTML = `<span class="dkn label muted">${i + 1} of ${g.beats.length}</span><div class="dkb"></div>`; mountScene(c.querySelector('.dkb'), g.beats[i], false); });
+  }
+  go(0, true);
+}
+function startMood(g) {
+  const stage = $('stage'); stage.style.padding = '0';
+  const heroBeat = [...g.beats].reverse().find(b => b.sc[0] === g.hero) || g.beats[g.beats.length - 1];
+  stage.innerHTML = `<div class="dstage"><div class="label muted e" style="--d:200ms">Today's game</div><div class="dname e" style="--d:300ms">${g.name}</div></div>`;
+  const el = stage.firstElementChild; requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('go')));
+  const copy = $('copy'); copy.innerHTML = `<div class="dlines">${g.blurb.map((l, i) => `<div class="dline e" style="--d:${700 + i * 700}ms"><span class="label">${i + 1}</span><span class="body">${l}</span></div>`).join('')}</div>`;
+  requestAnimationFrame(() => requestAnimationFrame(() => copy.firstElementChild.classList.add('go')));
+  const box = document.createElement('div'); box.style.cssText = 'margin-top:6px;height:186px;overflow:hidden';
+  const mini = document.createElement('div'); mini.style.cssText = 'width:151.5%;transform:scale(.66);transform-origin:top left';
+  box.appendChild(mini); copy.appendChild(box);
+  later(2600, () => { const { el: m, sc } = mountScene(mini, heroBeat, false); runScene(m, sc, heroBeat); });
+}
+$('stage').addEventListener('click', () => { if (dir !== 'mood') go(cur + 1); });
+$('replay').addEventListener('click', () => start());
+$('play').addEventListener('click', () => { $('hint').textContent = 'In the app this opens Enter on hole 1.'; });
+
+// ── mood canvas: the glowing ball and dark balls drifting past (stand-in for the Higgsfield loop) ──
+const cv = $('cv'), ctx = cv.getContext('2d'); let raf = 0, t0 = 0;
+const balls = Array.from({ length: 7 }, (_, i) => ({ a: i / 7 * Math.PI * 2, r: 70 + (i % 3) * 45, sp: .00012 + (i % 4) * .00004, s: 18 + (i % 3) * 12, y: (i % 2 ? -1 : 1) * (20 + i * 6), rim: i % 2 ? 'g' : 'a' }));
+function css(v) { return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+function drawMood(t) {
+  const W = cv.clientWidth, H = cv.clientHeight, dpr = Math.min(2, devicePixelRatio || 1);
+  if (cv.width !== W * dpr) { cv.width = W * dpr; cv.height = H * dpr; }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = css('--bg'); ctx.fillRect(0, 0, W, H);
+  const cx = W / 2, cy = H * .2, dark = css('--bg').toLowerCase() === '#0a0b0d';
+  const green = css('--cart-you'), amber = css('--cart-a');
+  const items = balls.map(b => { const ang = b.a + t * b.sp * 6; return { x: cx + Math.cos(ang) * b.r * 1.3, y: cy + b.y + Math.sin(ang * 1.3) * 26, z: Math.sin(ang), s: b.s, rim: b.rim }; });
+  const drawBall = (o) => { const s = o.s * (1 + o.z * .35); ctx.save(); ctx.globalAlpha = .55 + (o.z + 1) * .2;
+    const g = ctx.createRadialGradient(o.x - s * .3, o.y - s * .3, s * .1, o.x, o.y, s);
+    g.addColorStop(0, dark ? '#2a2e35' : '#d5d9df'); g.addColorStop(1, dark ? '#0a0b0d' : '#a7acb4'); ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(o.x, o.y, s, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = o.rim === 'g' ? green : amber; ctx.lineWidth = 1.5; ctx.globalAlpha *= .8;
+    ctx.beginPath(); ctx.arc(o.x, o.y, s - .75, o.rim === 'g' ? -2.4 : -.6, o.rim === 'g' ? -1.0 : .9); ctx.stroke(); ctx.restore(); };
+  items.filter(o => o.z < 0).forEach(drawBall);
+  const pulse = 1 + Math.sin(t / 900) * .04, R = 38;
+  const halo = ctx.createRadialGradient(cx, cy, R * .6, cx, cy, R * 3.2 * pulse); halo.addColorStop(0, dark ? 'rgba(244,245,247,.22)' : 'rgba(18,163,92,.16)'); halo.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = halo; ctx.beginPath(); ctx.arc(cx, cy, R * 3.2 * pulse, 0, Math.PI * 2); ctx.fill();
+  const core = ctx.createRadialGradient(cx - 10, cy - 12, 4, cx, cy, R); core.addColorStop(0, '#ffffff'); core.addColorStop(1, dark ? '#d9dce1' : '#e8eaee');
+  ctx.fillStyle = core; ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = 'rgba(11,13,16,.08)'; for (let i = 0; i < 26; i++) { const a = i * 2.4, rr = R * Math.sqrt((i + .5) / 26) * .9; ctx.beginPath(); ctx.arc(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, 2.2, 0, Math.PI * 2); ctx.fill(); }
+  items.filter(o => o.z >= 0).forEach(drawBall);
+}
+function loop(t) { drawMood(t); raf = requestAnimationFrame(loop); }
+function moodOn(on) { cancelAnimationFrame(raf); if (!on) return; if (RM) drawMood(2000); else raf = requestAnimationFrame(loop); }
+
+// ── fit the 393 × 659 phone to narrow screens ──
+function fit() { const w = $('fitbox').parentElement.clientWidth, s = Math.min(1, (w - 8) / 393);
+  $('fit').style.transform = `scale(${s})`; $('fitbox').style.width = 393 * s + 'px'; $('fitbox').style.height = 659 * s + 'px'; }
+addEventListener('resize', fit);
+chips(); fit(); start();
+})();
+</script>
