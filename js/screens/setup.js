@@ -1359,7 +1359,7 @@ function threeCartView(s) {
     <div class="lbl nr-lbl">Matchups</div>
     <div class="mu-card">${rows}<div class="mu-groups meta">1st tee time: A + B · 2nd: C, all 18. Nobody moves; the app scores it.</div></div>
     ${rulesBlock(s)}
-    ${bottom(s.saving ? 'Starting…' : `Start round · ${s.players.length} players`, 'setup-save', { busy: s.saving })}`;
+    ${bottom('Back to tee times', 'setup-go', { v: 'tee' })}`;
 }
 
 /** ④b Game & matchups (optional; defaults set). */
