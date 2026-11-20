@@ -2545,3 +2545,118 @@ html.light .gs-seg, [data-theme="light"] .gs-seg { background: var(--bg); }
   .tg-in { animation: fade-in-027 150ms linear both; }
   .tg-bmp { animation: none; }
 }
+/* 032 scenes (every class tg-*; only surface-1/2/3, bg, line, text, the cart colors and 027's motion tokens) */
+.tg-sc { position: relative; height: 100%; display: grid; align-content: center; gap: 12px; min-width: 0; }
+.tg-g14 { gap: 14px; }
+.tg-e { opacity: 0; filter: blur(var(--blur-swap)); transform: translateY(10px);
+  transition: opacity 240ms var(--ease-grow), filter 240ms var(--ease-grow), transform 300ms var(--ease-grow); transition-delay: var(--d, 0ms); }
+.go .tg-e { opacity: 1; filter: blur(0); transform: none; }
+.tg-muted { color: var(--text-muted); }
+.tg-youtxt { color: var(--cart-you-text) !important; }
+.tg-center { text-align: center; }
+.tg-row17 { font-size: 17px; line-height: 22px; font-weight: 600; }
+.tg-small { font-size: 13px; line-height: 18px; font-weight: 500; }
+.tg-nxl { font-family: var(--mono); font-size: 64px; line-height: 64px; font-weight: 700; letter-spacing: -2px; font-variant-numeric: tabular-nums; }
+.tg-ttl-mono { font-family: var(--mono); font-size: 32px; line-height: 36px; font-weight: 700; letter-spacing: -1px; font-variant-numeric: tabular-nums; }
+.tg-vs { text-align: center; color: var(--text-muted); }
+.tg-ends { display: flex; justify-content: space-between; align-items: end; }
+.tg-ends .r { text-align: right; }
+.tg-ends .lbl { color: var(--text-muted); }
+.tg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.tg-tile { background: var(--surface-1); border-radius: var(--radius-xl); padding: 14px 16px; display: grid; gap: 4px; min-width: 0;
+  transition: background 300ms var(--ease-grow), box-shadow 300ms var(--ease-grow), opacity 300ms var(--ease-grow); }
+.tg-tile .lbl { color: var(--text-muted); }
+.tg-tile .tg-row17 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tg-tile.mid { text-align: center; }
+.tg-tile.you { background: var(--tint-you); box-shadow: inset 0 0 0 1.5px var(--cart-you), var(--glow-you); }
+.tg-tile.a { background: var(--tint-a); box-shadow: inset 0 0 0 1.5px var(--cart-a); }
+.tg-tile.b { background: var(--tint-b); box-shadow: inset 0 0 0 1.5px var(--cart-b); }
+.tg-tile.c { background: var(--tint-c); box-shadow: inset 0 0 0 1.5px var(--cart-c); }
+.tg-tile.d { background: var(--tint-d); box-shadow: inset 0 0 0 1.5px var(--cart-d); }
+.tg-tile.dim { opacity: var(--peek); }
+.tg-won { display: flex; align-items: baseline; gap: 10px; justify-content: center; }
+.tg-swapbox { display: grid; }
+.tg-swapbox > * { grid-area: 1 / 1; }
+/* names sort (slide 1) */
+.tg-mt { position: relative; height: 250px; }
+.tg-mt-swap { height: 262px; }
+.tg-mc { position: absolute; left: 0; top: 0; height: 36px; padding: 0 10px 0 4px; border-radius: 999px; background: var(--surface-2); display: flex; align-items: center; gap: 8px;
+  font-size: 15px; line-height: 20px; font-weight: 600; white-space: nowrap; opacity: 0; z-index: 2;
+  transition: transform 620ms var(--ease-grow), background 300ms var(--ease-grow), opacity 200ms linear; }
+.tg-mc span { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.tg-mc i { width: 28px; height: 28px; flex: none; border-radius: 50%; background: var(--surface-3); display: grid; place-items: center; font-family: var(--mono); font-size: 12px; line-height: 16px; font-weight: 700; font-style: normal; }
+.tg-mc.y i { background: var(--cart-you); color: var(--bg); box-shadow: var(--glow-you); }
+.tg-mc.y { color: var(--cart-you-text); }
+.tg-mc.in { opacity: 1; }
+.tg-md { position: absolute; left: 0; top: 0; width: 22px; height: 22px; border-radius: 50%; background: var(--surface-3); opacity: 0; z-index: 2;
+  transition: transform 700ms var(--ease-grow), background 300ms var(--ease-grow), opacity 200ms linear; }
+.tg-md.y { background: var(--cart-you); }
+.tg-md.me { box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px var(--cart-you), var(--glow-you); }
+.tg-md.in { opacity: 1; }
+.tg-mcard { position: absolute; border-radius: var(--radius-xl); background: var(--surface-1); opacity: 0; transform: scale(.94); z-index: 1;
+  transition: opacity 300ms var(--ease-grow), transform 420ms var(--ease-grow), box-shadow 300ms var(--ease-grow); }
+.tg-mcard.you { background: var(--tint-you); box-shadow: inset 0 0 0 1.5px var(--cart-you), var(--glow-you); }
+.tg-mcard.on { opacity: 1; transform: none; }
+.tg-mcard .lbl { position: absolute; left: 14px; top: 12px; color: var(--text-muted); }
+.tg-mcard.you .lbl { color: var(--cart-you-text); }
+.tg-mcard.rl .lbl { left: auto; right: 14px; top: 50%; transform: translateY(-50%); }
+.tg-mcard .val { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); font-family: var(--mono); font-size: 17px; line-height: 22px; font-weight: 700; opacity: 0; transition: opacity 300ms var(--ease-grow); }
+.tg-mcard.on .val { opacity: 1; transition-delay: 500ms; }
+.tg-mvs, .tg-msub { position: absolute; left: 0; right: 0; text-align: center; opacity: 0; transition: opacity 300ms var(--ease-grow); }
+.tg-mvs { color: var(--text-muted); }
+.tg-msub { font-size: 13px; line-height: 18px; font-weight: 500; color: var(--text-muted); }
+.tg-mvs.on, .tg-msub.on { opacity: 1; }
+/* strip of 18 holes (partners switch) */
+.tg-strip { display: grid; grid-template-columns: repeat(18, 1fr); gap: 3px; }
+.tg-strip i { height: 28px; border-radius: 6px; background: var(--surface-2); transition: background 300ms var(--ease-grow), box-shadow 300ms var(--ease-grow); }
+.tg-strip i.on { background: var(--cart-you); box-shadow: var(--glow-you); }
+.tg-strip i.past { background: var(--surface-3); }
+.tg-strip-lbls { display: grid; gap: 3px; }
+.tg-strip-lbls span { text-align: center; color: var(--text-muted); transition: color 300ms var(--ease-grow); }
+.tg-strip-lbls span.on { color: var(--text); }
+/* the halfway bar */
+.tg-tug { position: relative; height: 18px; border-radius: 9px; background: var(--surface-2); }
+.tg-tug .y, .tg-tug .t { position: absolute; top: 0; bottom: 0; border-radius: 9px; width: 0; transition: width 1100ms cubic-bezier(.3, .7, .2, 1); }
+.tg-tug .y { left: 0; background: var(--cart-you); box-shadow: var(--glow-you); }
+.tg-tug .t { right: 0; background: var(--surface-3); }
+.tg-tug.slow .y { transition-duration: 500ms; }
+.tg-tug .tick { position: absolute; top: -8px; bottom: -8px; left: calc(50% - 1px); width: 2px; border-radius: 1px; background: var(--text); z-index: 1;
+  transition: background 300ms var(--ease-grow), box-shadow 300ms var(--ease-grow); }
+.tg-tug.past .tick { background: var(--cart-you); box-shadow: var(--glow-you); }
+.tg-tickl { position: relative; height: 16px; color: var(--text-muted); }
+.tg-tickl span { position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap; transition: color 300ms var(--ease-grow); }
+.tg-tickl span.lit { color: var(--cart-you-text); }
+.tg-chipline { display: flex; justify-content: center; }
+.tg-flag { font-family: var(--mono); font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; padding: 6px 12px; border-radius: 999px;
+  background: var(--surface-2); color: var(--text-muted); transition: background 300ms var(--ease-grow), color 300ms var(--ease-grow), box-shadow 300ms var(--ease-grow); }
+.tg-flag.lit { background: var(--tint-you); color: var(--cart-you-text); box-shadow: inset 0 0 0 1.5px var(--cart-you), var(--glow-you); }
+/* bars + the race */
+.tg-hbars { display: grid; gap: 10px; position: relative; }
+.tg-hb { display: grid; grid-template-columns: 96px minmax(0, 1fr) 36px; align-items: center; gap: 10px; }
+.tg-hb .nm { font-size: 15px; line-height: 20px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tg-hb .trk { height: 14px; border-radius: 7px; background: var(--surface-2); position: relative; }
+.tg-hb .fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; border-radius: 7px; background: var(--surface-3); transition: width 1200ms cubic-bezier(.3, .7, .2, 1); transition-delay: var(--d, 0ms); }
+.tg-hb.you .fill { background: var(--cart-you); box-shadow: var(--glow-you); }
+.tg-hb.you .nm { color: var(--cart-you-text); font-weight: 600; }
+.tg-hb .v { font-family: var(--mono); font-size: 15px; line-height: 20px; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
+.tg-lock { position: absolute; top: -6px; bottom: -6px; width: 0; border-left: 2px dashed var(--text); transition: left 900ms var(--ease-grow); opacity: 0; }
+.go .tg-lock { opacity: 1; }
+/* Team Ryder Cup match dots */
+.tg-dots { display: grid; grid-template-columns: repeat(6, 34px); justify-content: center; gap: 10px; }
+.tg-dots i { aspect-ratio: 1; border-radius: 50%; background: var(--surface-2); transition: background 240ms var(--ease-grow), box-shadow 240ms var(--ease-grow), transform 240ms var(--ease-grow); }
+.tg-dots i.w { background: var(--cart-you); box-shadow: var(--glow-you); transform: scale(1.04); }
+.tg-dots i.l { background: var(--surface-3); }
+.tg-dots i.h { background: linear-gradient(90deg, var(--cart-you) 50%, var(--surface-3) 50%); }
+/* the Board (stroke play) */
+.tg-lb { position: relative; }
+.tg-lbr { position: absolute; left: 0; right: 0; top: 0; height: 46px; display: flex; align-items: center; gap: 12px; padding: 0 14px; border-radius: 14px; background: var(--surface-1);
+  transition: transform 500ms var(--ease-grow), background 300ms, box-shadow 300ms; }
+.tg-lbr.you { background: var(--tint-you); box-shadow: inset 0 0 0 1.5px var(--cart-you); }
+.tg-lbr .pos { font-family: var(--mono); font-size: 15px; line-height: 20px; font-weight: 700; width: 22px; color: var(--text-muted); }
+.tg-lbr .nm { flex: 1; min-width: 0; font-size: 17px; line-height: 22px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tg-lbr .v { font-family: var(--mono); font-size: 17px; line-height: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+@media (prefers-reduced-motion: reduce) {
+  .tg-e, .tg-mc, .tg-md, .tg-mcard, .tg-mcard .val, .tg-mvs, .tg-msub, .tg-tile, .tg-strip i, .tg-tug .y, .tg-tug .t, .tg-hb .fill, .tg-lock, .tg-lbr, .tg-dots i, .tg-flag {
+    transition-duration: 150ms !important; transition-delay: 0ms !important; filter: none !important; }
+  .tg-e, .tg-mcard { transform: none; }
+}
