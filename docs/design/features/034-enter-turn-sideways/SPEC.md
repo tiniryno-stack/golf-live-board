@@ -34,7 +34,20 @@ left, the next hole's cards in from the right; ◀ = the other way. Everything e
 Screenshots: `70`–`77` at 0 / 90 / 150 / 300ms, Next 4 → 5 and ◀ 5 → 4, dark + light; strips `80` forward, `81` back
 (0 / 60 / 120 / 180 / 240 / 320 / 420ms); `82` into "Up next", `83` 2v2 new partner, `84` no yardage card.
 
-## Player rows, take 2: the name beside the pads (Nov 21) — current proposal
+## Player rows, take 3: centred names (Nov 21) — current proposal
+
+**Andrew on take 2:** no, it makes the pads smaller to hit. "What if you just centred the names?"
+
+- The name line stays exactly as today (24px, `row` 17/600), but the **name is centred over the pads** instead of
+  sitting at the left edge. The space either side reads as deliberate, like a heading over the row.
+- "1 stroke" and the reward word (033 Part 1) appear just to the **right** of the name, 8px after it, positioned off
+  the name so the name never shifts when the word comes and goes. A long name is capped at 60% of the row.
+- Pads, ⋯, card padding and the match line are all unchanged from today (022 / 031). Nothing new in the design system.
+- Prototype ⋯ → "Player rows": **Centered names** (default) · As today.
+
+---
+
+## Player rows, take 2: the name beside the pads (Nov 21) — rejected (pads too small to hit)
 
 **Andrew on take 1 (below):** no. Try other UI changes. So this time the layout changes instead of filling the gap:
 **the name line is gone.** Each player is one row: name on the left, pads on the right.

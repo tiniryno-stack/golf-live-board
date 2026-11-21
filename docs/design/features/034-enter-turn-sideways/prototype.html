@@ -108,6 +108,12 @@ svg.i { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-widt
 .ce-nm > b { font-size: 17px; font-weight: 600; min-width: 0; flex: 0 1 auto; }
 .ce-stk { font-size: 13px; font-weight: 500; color: var(--text-muted); }
 /* 034 rows: each player's round so far fills the right of the name line (small, muted; the number in mono, text) */
+/* 034 rows, take 3: the name line stays, the name is CENTRED over the pads. "1 stroke" and the reward word hang off
+   the name's right side (absolutely placed), so the name never moves when the word comes and goes. Pads unchanged. */
+.ce-nm.c { justify-content: center; }
+.ce-nmc { position: relative; display: inline-flex; min-width: 0; max-width: 60%; }
+.ce-nmc > b { font-size: 17px; font-weight: 600; }
+.ce-after { position: absolute; left: calc(100% + 8px); top: 0; height: 24px; display: flex; align-items: center; white-space: nowrap; }
 /* 034 rows, round 2: the name sits BESIDE the pads (no name line). Column 76px: name (row 17/600) on top, then
    "1 stroke" or the reward word under it. Pads stay 64px tall; ⋯ narrows to 32px so the 4 pads stay ≥ 48px wide. */
 .ce-card.side { padding: 4px 12px 4px 16px; }
@@ -293,7 +299,7 @@ const GAMES = {
 
 // ── state ──────────────────────────────────────────────────────────────────────────────────
 const S = {
-  game: 'carts', gps: 'regular', turn: 'cards', rows: 'side', motion: 'normal', theme: 'dark', final: false,
+  game: 'carts', gps: 'regular', turn: 'cards', rows: 'center', motion: 'normal', theme: 'dark', final: false,
   cur: 4, view: 4, scores: {}, unlocked: {}, seenSwitch: {},
   reward: null, pts: null, nudge: null, sheet: null, full: null,
 };
@@ -382,6 +388,9 @@ function padRow(id, h, editable) {
   const word = rw ? `<span class="ce-word anim ${rw.r.tone}" data-t0="${rw.t0}">${rw.r.word}</span>` : '';
   const nudge = g == null && S.nudge?.h === h ? ' nudge' : '';
   const tot = S.rows === 'new' ? `<span class="ce-tot">${roundLabel(id, h)}</span>` : '';
+  if (S.rows === 'center') {
+    return `<div class="ce-row${nudge}"${nudge ? ` data-t0="${S.nudge.t0}"` : ''}><div class="ce-nm c"><span class="ce-nmc"><b class="ellipsis">${P[id]}</b><span class="ce-after">${word || (k ? '<span class="ce-stk">1 stroke</span>' : '')}</span></span></div><div class="ce-pads">${pads}</div></div>`;
+  }
   if (S.rows === 'side' || S.rows === 'grid') {
     return `<div class="ce-row side${nudge}"${nudge ? ` data-t0="${S.nudge.t0}"` : ''}><div class="ce-who2"><b class="ellipsis">${P[id]}</b>${word || (k ? '<span class="ce-stk">1 stroke</span>' : '')}</div><div class="ce-pads">${pads}</div></div>`;
   }
@@ -477,7 +486,7 @@ function options() {
   return `<div class="opt">
     <h3>Turn to the next hole</h3>${seg('turn', [['cards', '(g) Just the cards'], ['hole', '(e) Whole hole'], ['wave', '(f) Wave']])}
     <p style="margin:6px 0">Earlier rounds:</p>${seg('turn', [['slide', '(c) Slide'], ['book', '(d) Book'], ['flip', '(a) Flip'], ['page', '(b) Page']])}
-    <h3>Player rows</h3>${seg('rows', [['side', 'Name beside'], ['grid', 'Name beside + labels'], ['old', 'As today']])}
+    <h3>Player rows</h3>${seg('rows', [['center', 'Centered names'], ['old', 'As today']])}
     <h3>Game</h3>${seg('game', [['carts', 'Team cart'], ['2v2', '2v2'], ['six', '6 · sitting out'], ['solo', 'Scorecard']], true)}
     <h3>Yardage card</h3>${seg('gps', [['regular', 'Regular 92'], ['compact', 'Compact 68'], ['off', 'None']])}
     <h3>Motion</h3>${seg('motion', [['normal', 'Normal'], ['slow', 'Slow ×4'], ['reduced', 'Reduced']])}
