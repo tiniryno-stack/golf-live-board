@@ -11,7 +11,9 @@
 <style>
 /* 035 prototype · Scorecard locker. A concept to feel, not a spec: reference only, nothing here is in the app.
    Decided with Andrew, Nov 21:
-   1. The grade compares a round with your own scores in the app. Your first 3 rounds are ungraded rookie cards.
+   1. The grade ranks a round against your own last 20 rounds in the app, by score against par. (Nov 21: this replaced
+      "strokes better than your average", because a bad streak must never make a prismatic easier.) Your first 3
+      rounds are ungraded rookie cards. The window size, 20, is still open.
    2. Every finished 18 earns a card. The grade picks the finish; no letter on a bad day.
    3. Solo rounds count too; group rounds carry a "with the crew" mark.
    4. Prototype first, no written brief yet.
@@ -356,16 +358,16 @@ html.light .seg button[aria-pressed="true"] { box-shadow: 0 1px 2px rgba(11,13,1
       <div class="sheet pad" role="dialog" aria-label="How cards work">
         <span class="grab"></span>
         <h2 class="ts-row">How cards work</h2>
-        <p class="ts-small muted">Every finished 18 earns a card. How you shot against your normal picks its finish.</p>
+        <p class="ts-small muted">Every finished 18 earns a card. How it ranks against your last 20 rounds picks its finish.</p>
         <ul class="how">
-          <li><span class="sw f-prismatic"></span><span class="row-t"><span class="ts-body">Prismatic</span><span class="ts-small muted">5 or more strokes better than your normal</span></span></li>
-          <li><span class="sw f-gold"></span><span class="row-t"><span class="ts-body">Gold</span><span class="ts-small muted">3 to 5 better</span></span></li>
-          <li><span class="sw f-silver"></span><span class="row-t"><span class="ts-body">Silver</span><span class="ts-small muted">Up to 3 better</span></span></li>
-          <li><span class="sw f-bronze"></span><span class="row-t"><span class="ts-body">Bronze</span><span class="ts-small muted">Up to 3 over</span></span></li>
-          <li><span class="sw f-standard"></span><span class="row-t"><span class="ts-body">Standard</span><span class="ts-small muted">More than 3 over</span></span></li>
-          <li><span class="sw f-rookie"></span><span class="row-t"><span class="ts-body">Rookie</span><span class="ts-small muted">Your first 3 rounds, while the app learns your normal</span></span></li>
+          <li><span class="sw f-prismatic"></span><span class="row-t"><span class="ts-body">Prismatic</span><span class="ts-small muted">Your best round in your last 20</span></span></li>
+          <li><span class="sw f-gold"></span><span class="row-t"><span class="ts-body">Gold</span><span class="ts-small muted">Better than three quarters of them</span></span></li>
+          <li><span class="sw f-silver"></span><span class="row-t"><span class="ts-body">Silver</span><span class="ts-small muted">Better than half of them</span></span></li>
+          <li><span class="sw f-bronze"></span><span class="row-t"><span class="ts-body">Bronze</span><span class="ts-small muted">Better than a quarter of them</span></span></li>
+          <li><span class="sw f-standard"></span><span class="row-t"><span class="ts-body">Standard</span><span class="ts-small muted">Any other finished round</span></span></li>
+          <li><span class="sw f-rookie"></span><span class="row-t"><span class="ts-body">Rookie</span><span class="ts-small muted">Your first 3 rounds, while the app learns your game</span></span></li>
         </ul>
-        <p class="ts-small muted">Your normal is the average of your finished rounds in the app.</p>
+        <p class="ts-small muted">A bad round never makes prismatic easier.</p>
         <button class="btn2" data-close>Done</button>
       </div>
     </div>
@@ -405,7 +407,7 @@ html.light .seg button[aria-pressed="true"] { box-shadow: 0 1px 2px rgba(11,13,1
     { d: '2026-11-07', c: 'fl', crew: true,  sc: [6,5,3,7,6,5,6,4,6, 6,4,5,10,8,3,5,5,6] },
     { d: '2026-11-09', c: 'fl', crew: true,  sample: true, sc: [6,5,4,6,5,6,5,4,8, 5,4,6,7,5,4,6,6,6] },
     { d: '2026-11-11', c: 'tc', crew: false, sample: true, sc: [6,5,4,5,5,6,4,6,6, 5,4,5,6,5,4,7,5,7] },
-    { d: '2026-11-14', c: 'bw', crew: true,  sample: true, won: true, sc: [5,6,4,5,5,6,5,4,6, 6,5,4,7,5,5,4,5,6] },
+    { d: '2026-11-14', c: 'bw', crew: true,  sample: true, won: true, sc: [5,6,4,5,5,6,5,4,6, 6,5,4,7,5,6,5,5,7] },
     { d: '2026-11-20', c: 'tc', crew: true,  sc: [6,3,4,4,4,7,4,6,6, 5,3,4,6,5,4,6,5,5] },
   ];
   const FIN = { prismatic: { name: 'Prismatic', grade: 'S' }, gold: { name: 'Gold', grade: 'A' }, silver: { name: 'Silver', grade: 'B' },
@@ -415,15 +417,19 @@ html.light .seg button[aria-pressed="true"] { box-shadow: 0 1px 2px rgba(11,13,1
   const shortDate = d => { const x = day(d); return `${MON[x.m - 1]} ${x.dd}`; };
   const longDate = d => { const x = day(d); return `${MON[x.m - 1]} ${x.dd}, ${x.y}`; };
 
-  // The prototype's grade rule: your normal = the average of your earlier rounds; fixed stroke cut-offs.
+  // The prototype's grade rule: rank the round against your earlier rounds, up to the last WINDOW, by score against par.
+  // A tie is not a beat. While you have fewer than 10 rounds, a prismatic must also beat your best by 3 or more.
+  const WINDOW = 20;
   function derive(rounds) {
     const out = [], broke = new Set(); let firstBirdie = false;
     rounds.forEach((r, i) => {
       const course = COURSES[r.c], par = course.par, gross = sum(r.sc), prev = out.map(c => c.gross);
       const c = { ...r, n: i + 1, course, par, gross, toPar: gross - sum(par), front: sum(r.sc.slice(0, 9)), back: sum(r.sc.slice(9)) };
-      c.normal = prev.length ? sum(prev) / prev.length : null;
-      c.delta = c.normal == null ? 0 : c.normal - gross;
-      c.fin = i < 3 ? 'rookie' : c.delta >= 5 ? 'prismatic' : c.delta >= 3 ? 'gold' : c.delta >= 0 ? 'silver' : c.delta >= -3 ? 'bronze' : 'standard';
+      const win = out.slice(-WINDOW);
+      c.of = win.length; c.beat = win.filter(o => o.toPar > c.toPar).length;
+      c.margin = win.length ? Math.min(...win.map(o => o.toPar)) - c.toPar : 0; // strokes better than your best in the window
+      const f = c.of ? c.beat / c.of : 0, top = c.of > 0 && c.beat === c.of && (out.length >= 9 || c.margin >= 3);
+      c.fin = i < 3 ? 'rookie' : top ? 'prismatic' : f >= .75 ? 'gold' : f >= .5 ? 'silver' : f >= .25 ? 'bronze' : 'standard';
       const diffs = r.sc.map((s, h) => s - par[h]);
       c.count = { eagle: diffs.filter(d => d <= -2).length, birdie: diffs.filter(d => d === -1).length, par: diffs.filter(d => d === 0).length,
         bogey: diffs.filter(d => d === 1).length, dbl: diffs.filter(d => d >= 2).length };
@@ -446,10 +452,10 @@ html.light .seg button[aria-pressed="true"] { box-shadow: 0 1px 2px rgba(11,13,1
   const cards = () => (state.added ? ALL : ALL.slice(0, -1)).slice().reverse(); // newest first
 
   function why(c) {
-    if (c.fin === 'rookie') return `Rookie card ${c.n} of 3. The app is still learning your normal.`;
-    const r = Math.round(Math.abs(c.delta)), N = Math.round(c.normal);
-    if (r === 0) return `Right on your normal of ${N}`;
-    return c.delta > 0 ? `${r} better than your normal of ${N}` : `${r} over your normal of ${N}`;
+    if (c.fin === 'rookie') return `Rookie card ${c.n} of 3. The app is still learning your game.`;
+    if (c.fin === 'standard') return ''; // nothing rubbed in on a bad day
+    if (c.fin === 'prismatic') return c.of >= WINDOW ? `Your best of your last ${WINDOW} rounds` : `Your best round yet, by ${c.margin} stroke${c.margin === 1 ? '' : 's'}`;
+    return `Better than ${c.beat} of your last ${c.of} rounds`;
   }
   const toPar = n => (n > 0 ? '+' + n : n === 0 ? 'E' : String(n));
   const finLabel = c => (c.fin === 'rookie' ? `Rookie ${c.n}/3` : c.fin === 'standard' ? '' : FIN[c.fin].name);
@@ -482,7 +488,7 @@ html.light .seg button[aria-pressed="true"] { box-shadow: 0 1px 2px rgba(11,13,1
     return `<div class="mat"><div class="bk">
       <div class="bh"><div><div class="bh-c">${c.course.name}</div><div class="bh-d">${longDate(c.d)} · ${c.crew ? 'with the crew' : 'solo'}</div></div><div class="bh-t">${c.gross}<span>${toPar(c.toPar)}</span></div></div>
       ${nine(c, 0)}${nine(c, 9)}
-      <div class="bw">${g ? `<span class="bg">${g}</span>` : ''}<span>${why(c)}</span></div>
+      ${why(c) ? `<div class="bw">${g ? `<span class="bg">${g}</span>` : ''}<span>${why(c)}</span></div>` : ''}
       <div class="bn">${parts.join(' · ')}</div>
       <div class="bs">${c.stamps.map(s => `<span class="st">${s}</span>`).join('')}</div>
     </div></div>`;
@@ -541,7 +547,7 @@ html.light .seg button[aria-pressed="true"] { box-shadow: 0 1px 2px rgba(11,13,1
     slots.forEach((s, k) => { if (k !== i) $('.flip', s).classList.remove('on'); });
     const g = FIN[c.fin].grade;
     $('#cap').innerHTML = `<div class="cap-fin ts-row">${c.fin === 'rookie' ? `Rookie card ${c.n} of 3` : FIN[c.fin].name}${g ? `<span class="gr">${g}</span>` : ''}</div>
-      <div class="ts-small muted">${c.fin === 'rookie' ? 'The app is still learning your normal' : why(c)}</div>
+      <div class="ts-small muted">${c.fin === 'rookie' ? 'The app is still learning your game' : why(c)}</div>
       ${c.sample ? '<div class="ts-small muted">Made-up round, to show the finish</div>' : ''}`;
     $('#pos').textContent = `${i + 1} of ${list.length}`;
   }
