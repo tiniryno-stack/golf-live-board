@@ -149,6 +149,12 @@ html.light .ce-tab.on { background: var(--surface-1); box-shadow: 0 1px 2px rgba
 .pcard-l { display: flex; align-items: center; gap: 8px; height: 20px; margin-bottom: 4px; font: 600 12px/16px var(--font-mono); letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); }
 .pcard-l .ce-word { font-family: var(--font-sans); text-transform: none; letter-spacing: 0; }
 .pcard .ce-row { padding: 0; border-top: 0; }
+/* 6 · name outside: the name is a small label ABOVE each player's card (like a grouped-list section header);
+   the card holds only the pads, with the same 8px above and below them */
+.pgrp + .pgrp { margin-top: 12px; }
+.pgrp-l { height: 20px; display: flex; align-items: center; gap: 8px; padding-left: 16px; margin-bottom: 4px; font: 600 12px/16px var(--font-mono); letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); white-space: nowrap; }
+.pgrp-l .ce-word { font-family: var(--font-sans); text-transform: none; letter-spacing: 0; }
+.pcard.even { padding: 8px 16px; }
 /* 034 rows, take 3: the name line stays, the name is CENTRED over the pads. "1 stroke" and the reward word hang off
    the name's right side (absolutely placed), so the name never moves when the word comes and goes. Pads unchanged. */
 .ce-nm.c { justify-content: center; }
@@ -340,7 +346,7 @@ const GAMES = {
 
 // ── state ──────────────────────────────────────────────────────────────────────────────────
 const S = {
-  game: 'carts', gps: 'regular', turn: 'cards', rows: 'avatar', tabPid: null, motion: 'normal', theme: 'dark', final: false,
+  game: 'carts', gps: 'regular', turn: 'cards', rows: 'outside', tabPid: null, motion: 'normal', theme: 'dark', final: false,
   cur: 4, view: 4, scores: {}, unlocked: {}, seenSwitch: {},
   reward: null, pts: null, nudge: null, sheet: null, full: null,
 };
@@ -450,6 +456,9 @@ function padRow(id, h, editable) {
     return `<div class="ce-row step${nudge}"${nAttr}><div class="ce-stl"><b class="ellipsis">${P[id]}</b>${sub}</div>
       <div class="ce-stp"><button class="ce-sb" data-act="step" data-id="${id}" data-d="-1" aria-label="${P[id]} one less"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 12h12"/></svg></button>${box}<button class="ce-sb" data-act="step" data-id="${id}" data-d="1" aria-label="${P[id]} one more"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 12h12M12 6v12"/></svg></button></div></div>`;
   }
+  if (S.rows === 'outside') {
+    return `<div class="pgrp"><div class="pgrp-l">${P[id]}${k && !rw ? ' · 1 stroke' : ''}${word}</div><div class="pcard even${G().mine(h).includes('A') ? ' rail' : ''}"><div class="ce-row${nudge}"${nAttr}><div class="ce-pads">${pads}</div></div></div></div>`;
+  }
   if (S.rows === 'cards') {
     return `<div class="pcard${id === 'A' || G().mine(h).includes('A') ? ' rail' : ''}"><div class="pcard-l">${P[id]}${k && !rw ? ' · 1 stroke' : ''}${word}</div><div class="ce-row${nudge}"${nAttr}><div class="ce-pads">${pads}</div></div></div>`;
   }
@@ -520,7 +529,7 @@ function render() {
         return `<button class="ce-tab${x === act ? ' on' : ''}" data-act="tab" data-id="${x}"><span class="ellipsis">${P[x]}</span>${r ? `<span class="ce-word anim ${r.r.tone}" data-t0="${r.t0}">${r.r.word}</span>` : smallMark(score(x, h), par, 24)}</button>`; };
       inner = (ids.length > 1 ? `<div class="ce-tabs" role="tablist">${ids.map(tab).join('')}</div>` : `<div class="pcard-l" style="margin-top:10px">${P[ids[0]]}</div>`) + padRow(act, h, true);
     }
-    const plain = S.rows === 'cards';
+    const plain = S.rows === 'cards' || S.rows === 'outside';
     rows = `<div class="ce-card t-panel${side ? ' side' : ''}${plain ? ' plain' : ''}${g.mine(h).includes('A') ? ' rail' : ''}">${cols}${inner}</div>`
       + g.quiet(h).map((ids, i) => quietRow(ids, h, m, i + 1)).join('');
   } else rows = readRows(h);
@@ -560,7 +569,7 @@ function options() {
   return `<div class="opt">
     <h3>Turn to the next hole</h3>${seg('turn', [['cards', '(g) Just the cards'], ['hole', '(e) Whole hole'], ['wave', '(f) Wave']])}
     <p style="margin:6px 0">Earlier rounds:</p>${seg('turn', [['slide', '(c) Slide'], ['book', '(d) Book'], ['flip', '(a) Flip'], ['page', '(b) Page']])}
-    <h3>Player rows</h3>${seg('rows', [['avatar', '1 · Avatar'], ['chip', '2 · Name chip'], ['tabs', '3 · One at a time'], ['stepper', '4 · Stepper'], ['cards', '5 · Card each'], ['old', 'As today']], true)}
+    <h3>Player rows</h3>${seg('rows', [['avatar', '1 · Avatar'], ['chip', '2 · Name chip'], ['tabs', '3 · One at a time'], ['stepper', '4 · Stepper'], ['cards', '5 · Card each'], ['outside', '6 · Name outside'], ['old', 'As today']], true)}
     <h3>Game</h3>${seg('game', [['carts', 'Team cart'], ['2v2', '2v2'], ['six', '6 · sitting out'], ['solo', 'Scorecard']], true)}
     <h3>Yardage card</h3>${seg('gps', [['regular', 'Regular 92'], ['compact', 'Compact 68'], ['off', 'None']])}
     <h3>Motion</h3>${seg('motion', [['normal', 'Normal'], ['slow', 'Slow ×4'], ['reduced', 'Reduced']])}

@@ -34,7 +34,26 @@ left, the next hole's cards in from the right; ◀ = the other way. Everything e
 Screenshots: `70`–`77` at 0 / 90 / 150 / 300ms, Next 4 → 5 and ◀ 5 → 4, dark + light; strips `80` forward, `81` back
 (0 / 60 / 120 / 180 / 240 / 320 / 420ms); `82` into "Up next", `83` 2v2 new partner, `84` no yardage card.
 
-## Player rows, take 4: five patterns to compare (Nov 21) — current proposal
+## Player rows, take 5: the name outside the card (Nov 21) — current proposal
+
+**Andrew, building on take 4's pattern 5 (a card each):** "move the names outside the card to make the card even, and
+then you have no weird header."
+
+**6 · Name outside** (prototype default; ⋯ → Player rows):
+- Each player in your cart gets their own card holding **only the pads**: 8px above and below them, 16px at the sides,
+  `surface-1`, `radius-xl`, the green rail inside on the left (your cart only). Nothing else is in the card, so it's
+  even top to bottom.
+- The name sits **above** its card as a small group label, like a grouped-list section header: `label` (12 mono 600,
+  uppercase, letter-spacing 1px), `text-muted`, 20px tall, lined up with the pads' left edge (16px in), 4px above the
+  card. "· 1 STROKE" follows the name on a stroke hole; the reward word (033 Part 1) appears after the name in its
+  own style (sans, 15 / 17).
+- 12px between one player's card and the next player's label. Total height for two players ≈ today's card (≈ 212px).
+- Pads, ⋯, marks, reward motion, the match line and the quiet row are unchanged. No new tokens or type styles.
+- The turn (g) slides both cards together as the score card.
+
+---
+
+## Player rows, take 4: five patterns to compare (Nov 21)
 
 **Andrew on take 3:** no. He'll look on Mobbin for references; first, one prototype of each pattern Claude suggested
 (UDisc, Hevy / Strong, Apple Weather / Health, Airbnb's guest picker, Daylio were the references named).
