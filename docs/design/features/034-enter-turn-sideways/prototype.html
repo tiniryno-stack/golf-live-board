@@ -509,7 +509,7 @@ function quietRow(ids, h, m, i) {
 function foldedRow(ids, h) {
   const par = PARS[h - 1];
   const who = ids.map((id) => `<span class="ce-who-p"><span data-k="n-${id}">${P[id]}</span>${smallMark(score(id, h), par)}</span>`).join('');
-  return `<button class="ce-line mine-f t-panel" data-act="close" data-k="q-${ids.join('')}" aria-label="Back to your cart"><span class="ce-who">${who}</span><span class="ce-go">${icon('left')}Back</span></button>`;
+  return `<button class="ce-line mine-f t-panel" data-act="fold-back" data-k="q-${ids.join('')}" aria-label="Back to your cart"><span class="ce-who">${who}</span><span class="ce-go">${icon('left')}Back</span></button>`;
 }
 function readRows(h) {
   const par = PARS[h - 1], mine = G().mine(h), rest = G().tee.filter((id) => !mine.includes(id));
@@ -945,7 +945,7 @@ document.addEventListener('click', (e) => {
   if (a === 'back-cur') return go(S.cur);
   if (a === 'unlock') { S.unlocked[S.view] = true; return render(); }
   if (a === 'open') return setOpen(S.view);
-  if (a === 'close') return setOpen(null);
+  if (a === 'fold-back') return setOpen(null);   // (not "close": that name closes sheets, above)
   if (a === 'fill') { if (turning) return finishMotion(); return fill(Number(el.dataset.i)); }
   if (a === 'fillall') { G().tee.forEach((x) => { if (score(x, S.view) == null) S.scores[key(S.view, x)] = sim(x, S.view); }); S.sheet = null; S.reward = null; return render(); }
   if (a === 'demo') return demo(el.dataset.v);
