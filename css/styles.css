@@ -2046,7 +2046,6 @@ html.light .ce, [data-theme="light"] .ce { --ce-line: rgba(11,13,16,.06); --ce-d
 .ce-mine { position: relative; }
 .ce-mine.rail::before { content: ''; position: absolute; left: -10px; top: 12px; bottom: 8px; width: 3px; border-radius: 2px; background: var(--cart-you); pointer-events: none; } /* 022 §1: in the gutter beside flat rows, not a card edge */
 .ce-row.nudge .ce-pad { animation: nudge .45s ease-in-out 2; }
-@media (prefers-reduced-motion: reduce) { .ce-row.nudge .ce-pad { animation: none; } }
 /* the other cart: one quiet row; read-only small marks */
 .ce-line { height: 60px; flex: none; width: 100%; border-top: 1px solid var(--ce-line); display: flex; align-items: center; gap: 14px; text-align: left; padding: 0; background: transparent; color: var(--text); }
 .ce-who { flex: 1; min-width: 0; display: flex; gap: 18px; align-items: center; font-size: 17px; font-weight: 600; }
@@ -2107,65 +2106,185 @@ html.light .ce-mine.ce-card, [data-theme="light"] .ce-mine.ce-card { box-shadow:
 /* short phones: pads give a little so Next stays clear of the tab bar */
 @media (max-height: 640px) { .ce-pad { height: 56px; } .ce-line { height: 52px; } }
 
-/* ── 022 motion.css, as approved (class names mapped: .pad → .ce-pad, .ln → .ce-ln, .word → .ce-word,
-   .match .up/.roll/.swap/.vs/.won → .ce-up/.ce-roll/.ce-swap/.ce-vs/.ce-won, .next → .ce-next, .ripple → .ce-ripple).
-   `.anim` is only ever on the render right after a tap; ui.syncMotion keeps it running across redraws. */
+/* ── 033 Part 1 + 034 "Score picks v2" + "the result word stays" (values copied from
+   docs/design/features/033-enter-motion/motion.css and 034-enter-turn-sideways/motion.css). Class names are the app's.
+   `.anim` is only on the render right after a tap; ui.syncMotion keeps it running across redraws. What drives what:
+   the mark = GROSS (scorecard rule); everything else (pop, rings, sparks, pulse, flash, wince, stamp, the word) = NET.
+   Colour: on your cart's cards (.pcard.rail) rings / sparks / pulse are cart-you and the flash is tint-you; elsewhere text
+   and surface-3. Green = your cart only. No new tokens. */
 .ce-pad .ce-ln { fill: none; stroke: var(--text-muted); stroke-width: 1.5; }
 .ce-pad.sel .ce-ln { stroke: var(--bg); stroke-width: 1.75; }
 .ce-pad.sel.dbl .ce-ln { stroke: var(--ce-dbl-pill); stroke-width: 2; }
 .ce-pad.sel.dbl .ce-n { color: var(--ce-dbl-pill); }
 .ce-pad .ce-ln.draw { opacity: 0; }
 .ce-pad.sel .ce-ln.draw { opacity: 1; }
-.ce-ripple { position: absolute; inset: 0; margin: auto; width: 56px; height: 56px; border-radius: 50%; box-shadow: 0 0 0 2px var(--text); opacity: 0; pointer-events: none; }
+.pcard.rail { --fx: var(--cart-you); }
+.ce-ripple { position: absolute; inset: 0; margin: auto; width: 56px; height: 56px; border-radius: 50%; box-shadow: 0 0 0 2px var(--fx, var(--text)); opacity: 0; pointer-events: none; }
+.ce-pulse { position: absolute; inset: 0; border-radius: inherit; box-shadow: 0 0 0 2px var(--fx, var(--text)); opacity: 0; pointer-events: none; }
+.ce-burst { position: absolute; left: 50%; top: 50%; width: 0; height: 0; pointer-events: none; }
+.ce-burst i { position: absolute; left: -1px; top: -4px; width: 2px; height: 8px; border-radius: 1px; background: var(--fx, var(--text)); opacity: 0; transform: rotate(var(--a)) translateY(-36px); }
+.ce-flash { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0; background: var(--surface-3); }
+.pcard.rail .ce-flash { background: var(--tint-you); box-shadow: inset 0 0 0 1.5px var(--cart-you), var(--glow-you); }
+/* the word: on screen for as long as the score stands (034). par / birdie / eagle 17, bogey / double 15 */
 .ce-word { font-size: 15px; font-weight: 700; opacity: 0; color: var(--text); flex: none; }
+.ce-word.stay { opacity: 1; }
 .ce-word.quiet { color: var(--text-muted); }
 .ce-word.dbl { color: var(--double); }
-.ce-word.big { font-size: 17px; }
+.ce-word.k-par, .ce-word.k-birdie, .ce-word.k-eagle { font-size: 17px; color: var(--text); }
+.ce-word.you { color: var(--cart-you-text); }
 .ce-up { display: inline-flex; overflow: hidden; height: 20px; font-family: var(--font-mono); font-weight: 700; color: var(--cart-you-text); }
 .ce-up.muted { color: var(--text-muted); }
 .ce-roll { display: flex; flex-direction: column; line-height: 20px; }
-.ce-swap { display: grid; }
-.ce-swap > * { grid-area: 1 / 1; text-align: left; white-space: nowrap; }
+.ce-swap { display: grid; min-width: 0; }
+.ce-swap > * { grid-area: 1 / 1; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ce-won { font-size: 15px; font-weight: 600; opacity: 0; color: var(--text); }
 .ce-won.muted { color: var(--text-muted); }
 
 @keyframes ce-bump   { 0% { transform: scale(.92) } 55% { transform: scale(1.06) } 100% { transform: scale(1) } }
 @keyframes ce-draw   { from { stroke-dashoffset: var(--len) } to { stroke-dashoffset: 0 } }
-@keyframes ce-word   { 0% { opacity: 0; transform: translateY(6px) } 15% { opacity: 1; transform: none } 75% { opacity: 1 } 100% { opacity: 0 } }
 @keyframes ce-tilt   { 0% { transform: rotate(-4deg) translateY(4px) } 100% { transform: none } }
-@keyframes ce-ripple { 0% { opacity: .55; transform: scale(.7) } 100% { opacity: 0; transform: scale(1.35) } }
 @keyframes ce-stamp  { 0% { transform: scale(1.45) rotate(-4deg); opacity: .35 } 60% { transform: scale(.95) rotate(1deg); opacity: 1 } 100% { transform: none; opacity: 1 } }
 @keyframes ce-thud   { 0%, 100% { transform: none } 40% { transform: translateY(2px) scale(.98) } }
 @keyframes ce-roll   { from { transform: translateY(0) } to { transform: translateY(-20px) } }
 @keyframes ce-wonin  { 0% { opacity: 0; transform: translateX(8px) } 20% { opacity: 1; transform: none } 80% { opacity: 1 } 100% { opacity: 0 } }
 @keyframes ce-vsout  { 0% { opacity: 1 } 12% { opacity: 0 } 85% { opacity: 0 } 100% { opacity: 1 } }
-@keyframes ce-fadeonly { 0% { opacity: 0 } 15% { opacity: 1 } 75% { opacity: 1 } 100% { opacity: 0 } }
+@keyframes ce-wince  { 0% { translate: 0; rotate: 0deg } 15% { translate: -6px; rotate: -1.5deg } 35% { translate: 5px; rotate: 1.2deg }
+                       55% { translate: -3px; rotate: -.6deg } 75% { translate: 2px; rotate: .3deg } 100% { translate: 0; rotate: 0deg } }
+@keyframes ce-wince2 { 0% { translate: 0; rotate: 0deg } 12% { translate: -9px; rotate: -2.5deg } 30% { translate: 8px; rotate: 2deg }
+                       48% { translate: -6px; rotate: -1.2deg } 66% { translate: 4px; rotate: .6deg } 84% { translate: -2px; rotate: 0deg }
+                       100% { translate: 0; rotate: 0deg } }
+@keyframes ce-pop2   { 0% { transform: scale(.88) } 45% { transform: scale(1.16) } 70% { transform: scale(.97) } 100% { transform: scale(1) } }
+@keyframes ce-pop3   { 0% { transform: scale(.85) } 40% { transform: scale(1.22) } 65% { transform: scale(.95) } 85% { transform: scale(1.03) } 100% { transform: scale(1) } }
+@keyframes ce-ripple2 { 0% { opacity: 0; transform: scale(.8) } 10% { opacity: .7 } 100% { opacity: 0; transform: scale(1.6) } }
+@keyframes ce-pulse2 { 0% { opacity: 0; transform: scale(1) } 10% { opacity: .6 } 100% { opacity: 0; transform: scale(1.28) } }
+@keyframes ce-spark2 { 0% { opacity: 0; transform: rotate(var(--a)) translateY(-34px) scaleY(.4) } 20% { opacity: 1 }
+                       100% { opacity: 0; transform: rotate(var(--a)) translateY(-64px) scaleY(1) } }
+@keyframes ce-spark3 { 0% { opacity: 0; transform: rotate(var(--a)) translateY(-34px) scaleY(.4) } 20% { opacity: 1 }
+                       100% { opacity: 0; transform: rotate(var(--a)) translateY(-76px) scaleY(1.2) } }
+@keyframes ce-flash1 { 0% { opacity: 0 } 25% { opacity: .55 } 100% { opacity: 0 } }
+@keyframes ce-flash2 { 0% { opacity: 0 } 20% { opacity: 1 } 100% { opacity: 0 } }
+@keyframes ce-flash3 { 0% { opacity: 0 } 12% { opacity: 1 } 40% { opacity: .35 } 55% { opacity: 1 } 100% { opacity: 0 } }
+@keyframes ce-lift-in { 0% { opacity: 0; transform: translateY(12px) scale(.8) } 55% { opacity: 1; transform: translateY(-3px) scale(1.12) } 100% { opacity: 1; transform: none } }
+@keyframes ce-word-in { 0% { opacity: 0; transform: translateY(6px) } 100% { opacity: 1; transform: none } }
+@keyframes ce-fade-in  { from { opacity: 0 } to { opacity: 1 } }
+@keyframes ce-fade-out { from { opacity: 1 } to { opacity: 0 } }
 
-.ce-pad.sel.anim { animation: ce-bump .22s cubic-bezier(.2,.8,.2,1); }
+/* every pick: the mark draws over its faint copy (022) */
 .ce-pad.sel.anim .ce-ln.base { opacity: .3; animation: none; stroke-dasharray: none; }
 .ce-pad.sel.anim .ce-ln.draw { stroke-dasharray: var(--len); animation: ce-draw .32s .06s cubic-bezier(.3,.7,.2,1) both; }
-.ce-ripple.anim { animation: ce-ripple .45s .1s ease-out both; }
-.ce-ripple.anim.r2 { animation-delay: .25s; }
+/* eagle or better: bigger pop · 3 rings · 12 sparks to 76px (ace / albatross: a second burst) · the card flashes twice */
+.ce-pad.sel.anim.k-eagle  { animation: ce-pop3 .46s cubic-bezier(.2,.8,.2,1); }
+/* birdie: pop · 2 rings · 8 sparks to 64px · full flash */
+.ce-pad.sel.anim.k-birdie { animation: ce-pop2 .36s cubic-bezier(.2,.8,.2,1); }
+/* par: pop · a stronger pulse in the pill's own shape · a soft flash */
+.ce-pad.sel.anim.k-par    { animation: ce-pop2 .34s cubic-bezier(.2,.8,.2,1); }
+.ce-ripple.anim    { animation: ce-ripple2 .6s .08s ease-out both; }
+.ce-ripple.anim.r2 { animation-delay: .22s; }
+.ce-ripple.anim.r3 { animation-delay: .36s; }
+.ce-pulse.anim { animation: ce-pulse2 .6s .1s ease-out both; }
+.ce-burst.anim i     { animation: ce-spark2 .55s .12s cubic-bezier(.2,.8,.2,1) both; }
+.ce-burst.anim.big i { animation: ce-spark3 .65s .12s cubic-bezier(.2,.8,.2,1) both; }
+.ce-burst.anim.b2 i  { animation-delay: .42s; }
+.ce-flash.anim.k-par    { animation: ce-flash1 .5s .04s ease-out both; }
+.ce-flash.anim.k-birdie { animation: ce-flash2 .8s .04s ease-out both; }
+.ce-flash.anim.k-eagle  { animation: ce-flash3 1.2s .04s ease-out both; }
+/* bogey: bump, then the wince on that one pad (033, unchanged) */
+.ce-pad.sel.anim.k-bogey  { animation: ce-bump .22s cubic-bezier(.2,.8,.2,1), ce-wince .36s .16s ease-out; }
+/* double or worse: the mark stamps in, the pad thuds, then the hard wince (033, unchanged). A gross double that is
+   only a net bogey keeps .dbl, draws its red mark and gets the bogey wince. */
 .ce-pad.sel.anim.dbl:not(.stamp) .ce-ln.draw { stroke-dasharray: var(--len); animation: ce-draw .32s .06s cubic-bezier(.3,.7,.2,1) both; }
-.ce-pad.sel.anim.dbl.stamp { animation: ce-thud .22s .14s ease-out; }
-.ce-pad.sel.anim.dbl.stamp svg.ce-m { animation: ce-stamp .16s cubic-bezier(.2,.8,.2,1) both; }
-.ce-pad.sel.anim.dbl.stamp .ce-ln.draw { animation: none; stroke-dasharray: none; }
-.ce-word.anim { animation: ce-word 1.6s ease-out both; }
-.ce-word.big.anim { animation-duration: 3s; }
-.ce-word.dbl.anim { animation: ce-word 1.6s ease-out both, ce-tilt .3s .05s cubic-bezier(.2,.8,.2,1) both; }
+.ce-pad.sel.anim.stamp { animation: ce-thud .22s .14s ease-out, ce-wince2 .42s .3s ease-out; }
+.ce-pad.sel.anim.stamp svg.ce-m { animation: ce-stamp .16s cubic-bezier(.2,.8,.2,1) both; }
+.ce-pad.sel.anim.stamp .ce-ln.draw { animation: none; stroke-dasharray: none; }
+/* the word arrives and stays: par / birdie lift in with the bounce (450ms, eagle 600ms), bogey slides up, double tilts */
+.ce-word.anim.stay.k-par, .ce-word.anim.stay.k-birdie { animation: ce-lift-in .45s cubic-bezier(.2,.8,.2,1) both; }
+.ce-word.anim.stay.k-eagle  { animation: ce-lift-in .6s cubic-bezier(.2,.8,.2,1) both; }
+.ce-word.anim.stay.k-bogey  { animation: ce-word-in .3s ease-out both; }
+.ce-word.anim.stay.k-double { animation: ce-word-in .3s ease-out both, ce-tilt .3s .05s cubic-bezier(.2,.8,.2,1) both; }
+/* the hole's points (022, unchanged) */
 .ce-next.go.anim { animation: ce-bump .22s .05s cubic-bezier(.2,.8,.2,1); }
 .ce-up.anim .ce-roll { animation: ce-roll .3s .2s cubic-bezier(.3,.7,.2,1) both; }
 .ce-up.anim .ce-roll.dn { animation-direction: reverse; } /* 021 §7.5: rolls down when it goes down */
 .ce-vs.anim { animation: ce-vsout 2.6s .45s ease-out both; }
 .ce-won.anim { animation: ce-wonin 2.4s .5s ease-out both; }
-@media (prefers-reduced-motion: reduce) {
-  .ce-pad.sel.anim, .ce-pad.sel.anim *, .ce-ripple.anim, .ce-next.go.anim, .ce-up.anim .ce-roll, .ce-vs.anim, .ce-won.anim { animation: none !important; }
-  .ce-word.anim { animation: ce-fadeonly 1.6s linear both !important; }
-  .ce-won.anim { opacity: 1; }
-  .ce-vs.anim { opacity: 0; }
-  .ce-up.anim .ce-roll { transform: translateY(-20px); }
-  .ce-up.anim .ce-roll.dn { transform: none; }
-}
+
+/* ── 034 · the turn: (g) just the cards. The yardage card and the score cards (or the read-only rows) slide one
+   screen-width together, 420ms on a gentle ease-in-out; forward = out to the left (play order). The title, the match
+   line (only when it says something new) and the quiet rows stay and crossfade: old out 0–160ms, new in 120–340ms.
+   ◀ ▶ ⋯, Next hole and the tab bar never move. Old faces = copies on .ce-turn-layer (enter.js decorate). */
+.ce > .ce-turn-layer { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
+.ce > .ce-turn-layer > * { position: absolute; margin: 0; }
+@keyframes t-hole-out-fwd  { from { transform: translateX(0) } to { transform: translateX(calc(-1 * var(--t-w, 100vw))) } }
+@keyframes t-hole-in-fwd   { from { transform: translateX(var(--t-w, 100vw)) } to { transform: translateX(0) } }
+@keyframes t-hole-out-back { from { transform: translateX(0) } to { transform: translateX(var(--t-w, 100vw)) } }
+@keyframes t-hole-in-back  { from { transform: translateX(calc(-1 * var(--t-w, 100vw))) } to { transform: translateX(0) } }
+.ce[data-turn="cards"][data-dir="fwd"]  .t-page.t-out { animation: t-hole-out-fwd  420ms cubic-bezier(.4,0,.2,1) both; }
+.ce[data-turn="cards"][data-dir="fwd"]  .t-page.t-in  { animation: t-hole-in-fwd   420ms cubic-bezier(.4,0,.2,1) both; }
+.ce[data-turn="cards"][data-dir="back"] .t-page.t-out { animation: t-hole-out-back 420ms cubic-bezier(.4,0,.2,1) both; }
+.ce[data-turn="cards"][data-dir="back"] .t-page.t-in  { animation: t-hole-in-back  420ms cubic-bezier(.4,0,.2,1) both; }
+.ce[data-turn="cards"] .t-fade.t-out { animation: ce-fade-out 160ms cubic-bezier(.4,0,1,1) both; }
+.ce[data-turn="cards"] .t-fade.t-in  { animation: ce-fade-in 220ms 120ms cubic-bezier(.2,.8,.2,1) both; }
+/* reduced motion (033 §4): a 150ms crossfade, nothing moves */
+.ce[data-turn="fade"] .t-out { animation: ce-fade-out 150ms linear both; }
+.ce[data-turn="fade"] .t-in  { animation: ce-fade-in 150ms linear both; }
+
+/* ── 034 · entering for the rest of your tee time: the names travel (FLIP + crossfade, 380ms), your cards squash into
+   the line they become (220ms, ease-in, 30ms apart), their cards grow up out of their row (300ms from 140ms, 40ms
+   apart), then their pads land (033's landing: 300ms + 48ms per card + 24ms per pad). Values from 034's prototype. */
+.ce [data-k^="n-"] { display: inline-block; }
+.ce .m-name-in, .ce-turn-layer > .m-name-out { transform-origin: 0 0; }
+@keyframes m-name-in  { 0% { transform: translate(var(--m-dx), var(--m-dy)) scale(var(--m-s)); opacity: 0 } 35% { opacity: .2 } 100% { transform: none; opacity: 1 } }
+@keyframes m-name-out { 0% { transform: none; opacity: 1 } 55% { opacity: 0 } 100% { transform: translate(var(--m-dx), var(--m-dy)) scale(var(--m-s)); opacity: 0 } }
+@keyframes m-grow   { from { transform: translateY(var(--m-dy)) scaleY(.35); opacity: 0 } to { transform: none; opacity: 1 } }
+@keyframes m-shrink { from { transform: none; opacity: 1 } to { transform: translateY(var(--m-dy)) scaleY(.35); opacity: 0 } }
+@keyframes m-land   { 0% { opacity: 0; scale: .82 } 65% { opacity: 1; scale: 1.04 } 100% { opacity: 1; scale: 1 } }
+.ce[data-morph="on"] .m-name-in { animation: m-name-in 380ms cubic-bezier(.4,0,.2,1) both; }
+.ce[data-morph="on"] .m-name-out { animation: m-name-out 380ms cubic-bezier(.4,0,.2,1) both; }
+.ce[data-morph="on"] .m-grow { transform-origin: 50% 0; animation: m-grow 300ms cubic-bezier(.2,.8,.2,1) calc(140ms + var(--m-i, 0) * 40ms) both; }
+.ce[data-morph="on"] .m-grow .ce-pad { animation: m-land 200ms cubic-bezier(.2,.8,.2,1) calc(300ms + var(--m-i, 0) * 48ms + var(--m-j, 0) * 24ms) both; }
+.ce[data-morph="on"] .m-shrink { transform-origin: 50% 0; animation: m-shrink 220ms cubic-bezier(.4,0,1,1) calc(var(--m-i, 0) * 30ms) both; }
+.ce[data-morph="on"] .m-fade-in { animation: ce-fade-in 260ms cubic-bezier(.2,.8,.2,1) 120ms both; }
+.ce[data-morph="on"] .m-fade-out { animation: ce-fade-out 150ms cubic-bezier(.4,0,1,1) both; }
+.ce[data-morph="fade"] .m-fade-in { animation: ce-fade-in 150ms linear both; }
+.ce[data-morph="fade"] .m-fade-out { animation: ce-fade-out 150ms linear both; }
+
+/* ── reduced motion (033 §4, 034): html.rm while the phone asks for it (app.js). Picks: no pop, pulse, rings, sparks,
+   flash, wince, stamp or draw; the pill and its mark are there at once and the word fades in (it stays). */
+html.rm .ce-pad.sel.anim, html.rm .ce-pad.sel.anim *, html.rm .ce-ripple.anim, html.rm .ce-burst.anim i, html.rm .ce-pulse.anim, html.rm .ce-flash.anim,
+html.rm .ce-next.go.anim, html.rm .ce-up.anim .ce-roll, html.rm .ce-vs.anim, html.rm .ce-won.anim, html.rm .ce-row.nudge .ce-pad { animation: none !important; }
+html.rm .ce-word.anim.stay { animation: ce-fade-in .15s linear both !important; }
+html.rm .ce-won.anim { opacity: 1; }
+html.rm .ce-vs.anim { opacity: 0; }
+html.rm .ce-up.anim .ce-roll { transform: translateY(-20px); }
+html.rm .ce-up.anim .ce-roll.dn { transform: none; }
+
+/* ── 034 layout: the match line under the title; one card per player, the name outside it (SPEC "Spacing": 6px from a
+   name to its card, 24px between everything else, measured from the text). */
+.ce { position: relative; }
+.ce-sub .ce-match { height: 24px; margin-top: -2px; justify-content: flex-start; }
+.ce-sub .ce-edit { height: 44px; margin: -10px 0 -10px auto; }
+.ce-sub + .green-card { margin-top: 10px; }
+.ce-cards { margin-top: 20px; }
+.ce-cards.read, .ce-cards.open { margin-top: 2px; }
+.pgrp + .pgrp { margin-top: 20px; }
+.pgrp-l { height: 20px; display: flex; align-items: flex-end; gap: 8px; padding-left: 16px; margin-bottom: 6px; min-width: 0; white-space: nowrap;
+  font: 600 12px/16px var(--font-mono); letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); }
+.pgrp-l > * { line-height: 16px; }
+.pgrp-n { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.pgrp-l .ce-word { font-family: var(--font-sans); text-transform: none; letter-spacing: 0; }
+.pcard { position: relative; background: var(--surface-1); border-radius: var(--radius-xl); padding: 8px 16px; }
+html.light .pcard, [data-theme="light"] .pcard { box-shadow: var(--shadow-card); }
+.pcard.rail::before { content: ''; position: absolute; left: 6px; top: 12px; bottom: 12px; width: 3px; border-radius: 2px; background: var(--cart-you); pointer-events: none; }
+.pcard .ce-row { padding: 0; border-top: 0; }
+.pcard > .ce-own { height: 64px; border-top: 0; }
+.pcard.ce-others { padding-top: 0; padding-bottom: 0; }
+.pcard.ce-others > .ce-own { height: 52px; }
+.pcard.ce-others > .ce-own + .ce-own { border-top: 1px solid var(--ce-line); }
+.ce-cards + .ce-line { border-top: 0; margin-top: 5px; }
+/* your cart folded while you enter for the rest of your tee time: rail, names + marks, ‹ Back (the whole row taps) */
+.ce-line.ce-fold { position: relative; height: 52px; padding-left: 16px; margin-top: 8px; border-top: 0; }
+.ce-line.ce-fold::before { content: ''; position: absolute; left: 6px; top: 14px; bottom: 14px; width: 3px; border-radius: 2px; background: var(--cart-you); pointer-events: none; }
+.ce-cards.open > .ce-fold + .pgrp { margin-top: 8px; }
 
 /* ───────────────────────────────────────────── 025 · Team Ryder Cup lobby (layout only: existing tokens, type sizes
    and components: .card + .row, .lbl, .nr-head / .nr-foot, .btn, .home-row). Green = your cart only; amber = the
@@ -2476,13 +2595,7 @@ html.light .gs-seg, [data-theme="light"] .gs-seg { background: var(--bg); }
 .gs-face .radio { border: 0; margin: 0; }
 
 /* 028 §2 · the same calm Enter for every game: grow slots for your card and the rest of your tee time (027). */
-.ce-slot[data-grow="ce-mine"] + .ce-slot > .g-row > .ce-line { border-top: 0; margin-top: 4px; }
-.ce-slot[data-grow="ce-mine"]:not(.open) + .ce-slot > .g-card > .ce-their { margin-top: 4px; }
-.ce-fold { position: relative; }
-.ce-fold::before { content: ''; position: absolute; left: -10px; top: 12px; bottom: 12px; width: 3px; border-radius: 2px; background: var(--cart-you); pointer-events: none; } /* 022 §1 rail, in the gutter */
 .ce-plus { font-family: var(--font-mono); font-size: 15px; font-weight: 700; color: var(--text-muted); }
-.ce-their .ce-own { height: 52px; }
-.ce-their .ce-own:first-child, .ce-their .ce-row:first-child { border-top: 0; }
 .ce-cmp { width: 100%; text-align: left; background: none; color: var(--text); padding: 0; }
 
 /* 029 · a lobby for every game (js/screens/lobby.js plan / follow / gamedayPlan, hostlobby.js planHostView). */

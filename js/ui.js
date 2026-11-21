@@ -1,7 +1,7 @@
 // ui.js — small shared helpers for screens: escaping, icons, controls, formatting.
 import { markKind, markPaths } from './reward.js';
 
-export { reward, markKind, markPaths, pointsLine, standing } from './reward.js';
+export { reward, markKind, markPaths, pointsLine, standing, turnPlan } from './reward.js';
 
 export const esc = (s) =>
   String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);

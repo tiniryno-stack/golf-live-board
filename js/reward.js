@@ -1,6 +1,6 @@
-// reward.js — PURE (handoffs 021 + 022): the rules behind the approved Enter prototype, copied from
-// docs/design/features/022-enter-team-rail-and-exact-motion/reward.js. Only change: `standing` writes
-// halves as ½ ("1½ UP"), like everywhere else in the app. Tested in tests/enter021.test.mjs.
+// reward.js — PURE (handoffs 021 + 022, pick rules from 033 Part 1 + 034 "Score picks v2"): the rules behind the
+// approved Enter prototypes. `standing` writes halves as ½ ("1½ UP"), like everywhere else in the app.
+// Tested in tests/enter021.test.mjs.
 // No DOM, no app state: give them numbers, get back what to draw.
 
 /** What a pick earns: the word (judged on NET), its style, and whether the mark stamps in.
@@ -13,13 +13,29 @@ export function reward(strokes, par, strokesHere = 0) {
     : d === -1 ? 'Birdie' : d === 0 ? 'Par' : d === 1 ? 'Bogey'
     : d === 2 ? 'Double' : d === 3 ? 'Triple' : d === 4 ? 'Quad' : `+${d}`;
   const isNet = strokesHere > 0 && net !== strokes;
+  // 033 §1.3 + 034 "Score picks v2": rarer = bigger. Bogey and double keep 033's quiet motion.
+  const kind = d <= -2 ? 'eagle' : d === -1 ? 'birdie' : d === 0 ? 'par' : d === 1 ? 'bogey' : 'double';
   return {
     word: isNet ? `Net ${w.toLowerCase()}` : w,
-    tone: d >= 2 ? 'dbl' : d <= -2 ? 'big' : d >= 0 ? 'quiet' : '',   // CSS: .word.dbl / .big / .quiet
-    stamp: d >= 2,                                                     // only a NET double or worse stamps
-    ripples: d <= -2 ? 2 : 0,                                          // eagle or better
-    holdMs: d <= -2 ? 3000 : 1600,
+    kind,                                            // CSS: .k-<kind> on the picked pad, the word and the card flash
+    tone: { eagle: 'big', birdie: 'lift', par: 'par', bogey: 'quiet', double: 'dbl' }[kind],   // .ce-word.<tone>
+    stamp: d >= 2,                                   // only a NET double or worse stamps
+    ripples: d <= -2 ? 3 : d === -1 ? 2 : 0,         // rings off the pad
+    burst: d <= -1,                                  // sparks: birdie and better
+    sparks: d <= -2 ? 12 : 8,
+    burst2: d <= -3 || strokes === 1,                // albatross or an ace: a second burst
+    pulse: d === 0,                                  // par: one ring in the pill's own shape
+    flash: d <= 0,                                   // the player's card flashes: par and better
+    holdMs: d <= -2 ? 3500 : d === -1 ? 2600 : d === 0 ? 2000 : 1600,   // how long the pick's motion owns the row (the word itself stays)
   };
+}
+
+/** 034: which way the cards slide when Enter goes from one hole to another. Play order decides, so a round that
+ *  starts on 10 turns forward from 18 to 1. fwd = the old cards leave to the left. */
+export function turnPlan(fromHole, toHole, startHole = 1) {
+  const start = Number(startHole) === 10 ? 10 : 1;
+  const pos = (h) => ((h - start + 18) % 18) + 1;
+  return { dir: pos(toHole) >= pos(fromHole) ? 'fwd' : 'back' };
 }
 
 /** The mark is GROSS (scorecard rule): 'cc' eagle+, 'c' birdie, '' par, 's' bogey, 'd' double+. */
