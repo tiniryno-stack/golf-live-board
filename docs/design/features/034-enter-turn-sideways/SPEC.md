@@ -64,6 +64,20 @@ same line.
 - The hole's points (022 §3) swap in where `vs …` is. Sitting out and Scorecard only keep their own line (below).
 - Prototype ⋯ → "Match line": **One line** (default).
 
+**Spacing (Andrew: each name should sit closer to its own card than to the card above it).** Measured from the text
+(ink) to the card edges, on a 393 screen, with and without the yardage card:
+
+| Between | Gap |
+|---|---|
+| Yardage card (or the hole title when there's none) → first name line | 24px |
+| Name line → its own card | **6px** |
+| One player's card → the next player's name line | 24px |
+| Last card → the rest of your tee time (quiet row text) | 24px |
+
+CSS that gives it: name row 20px tall with its text on the row's foot (`align-items: flex-end`, line-height 16px),
+6px under it; 20px between groups; 20px above the first group; the quiet row 5px under the last card. Cards: 8px above
+and below the 64px pads, 16px at the sides.
+
 ### Your partner in brackets on your name (Nov 21)
 
 **Andrew on A / B below:** no to those conventions; keep the names outside the cards. "Whoever you're paired with
