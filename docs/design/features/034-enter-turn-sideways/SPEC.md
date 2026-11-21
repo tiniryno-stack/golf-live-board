@@ -51,7 +51,47 @@ then you have no weird header."
 - Pads, ⋯, marks, reward motion, the match line and the quiet row are unchanged. No new tokens or type styles.
 - The turn (g) slides both cards together as the score card.
 
-### One line: your name + partner on the left, the match on the right (Nov 21) — current proposal
+### The match line moves above the yardage card (Nov 21) — current proposal
+
+**Andrew:** `ANDREW (WITH SEAN)` + the match on one row would get crowded by the Par / Birdie words. Move the match
+scoring line above the yardage.
+
+- **Under the title, above the yardage card:** `4 UP  vs Sam + Jake` (standing mono 700, green when you're up;
+  `vs …` 15/500 `text-muted`), left-aligned with "Hole 5", a 24px line 2px under the title row, the yardage card 10px
+  under it. With no yardage card, the first name label follows it (24px from the text).
+- **Your label keeps only** `ANDREW (WITH SEAN)`; the reward word has the rest of that row to itself.
+- It stays put on the hole turn (g) and crossfades when the match changes; it stays visible while you enter for the
+  rest of your tee time (below). The hole's points (022 §3) swap in where `vs …` is.
+- Prototype ⋯ → "Match line": **Above the yardage** (default). Screens `90-layout-rest`, `91-layout-birdie-word`.
+
+## Entering for the rest of your tee time (Nov 21) — current proposal
+
+**Andrew:** what does going in to enter Sam and Jake look like, and can we improve it?
+
+**Today (027, `95-open-today-strip`):** tap the quiet row and it grows in place into their card while yours folds
+into a quiet row, the content changing with a blur swap (300ms). In the new layout it reads as a flicker: everything
+blurs at once and you can't follow who went where.
+
+**Improved: the names travel** (`93-open-improved-strip`, `94-close-improved-strip`; prototype default, ⋯ →
+"Entering for the rest of your tee time"):
+
+| ms | Opening (tap `Sam 4  Jake –  Enter ›`) |
+|---|---|
+| 0–380 | **Each name flies** from where it was to where it's going, sliding + scaling while its old style crossfades into the new one: `Sam` / `Jake` from the quiet row up to their card labels (`SAM`, `JAKE`); `ANDREW` / `SEAN` from your labels down into the one-line row. 380ms, `cubic-bezier(.4,0,.2,1)`. |
+| 0–220 | **Your two cards fold away** into the line they become: each slides to that row and squashes (scaleY .35) while fading, ease-in, the second 30ms behind. |
+| 120–380 | **Your line appears** at the top: green rail, `Andrew 4  Sean 5`, `Done` on the right (tap = back). The labels around the travelling names fade in. |
+| 140–440 | **Their cards grow up out of the quiet row:** from its position, scaleY .35 → 1 and opacity 0 → 1, ease-out, the second 40ms behind. No rail: they're not your cart. |
+| 300–564 | **Their pads land** (033's landing: fade + .82 → 1.04 → 1, 24ms apart, 48ms per card). |
+
+- **Closing** (`Done`, a tap on your line, or by itself 1.2s after their last score, 021's timer): the exact reverse.
+  Changing hole closes it without a morph.
+- The match line above the yardage card and Next hole never move. Reward motion plays in their cards as in yours.
+- Only transform and opacity. Build: every part that means the same thing in both states carries a key (a name, a
+  player's card, a label row, a one-line row); the morph measures each key before and after and animates between
+  (FLIP), with the outgoing copies on 033's turn layer. A travelling name's outgoing copy keeps its computed font.
+- **Reduced motion:** a 150ms crossfade, nothing moves.
+
+### One line: your name + partner on the left, the match on the right (Nov 21) — replaced by "above the yardage"
 
 **Andrew (comment on the prototype):** the match line and `ANDREW (WITH SEAN)` are on separate lines; put them on the
 same line.

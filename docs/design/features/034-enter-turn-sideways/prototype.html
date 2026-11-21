@@ -149,6 +149,17 @@ html.light .ce-tab.on { background: var(--surface-1); box-shadow: 0 1px 2px rgba
 .pcard-l { display: flex; align-items: center; gap: 8px; height: 20px; margin-bottom: 4px; font: 600 12px/16px var(--font-mono); letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); }
 .pcard-l .ce-word { font-family: var(--font-sans); text-transform: none; letter-spacing: 0; }
 .pcard .ce-row { padding: 0; border-top: 0; }
+/* match line above the yardage card: a slim subtitle under "Hole 5  Par 4" (standing first, then who you play) */
+.ce-sub { flex: none; position: relative; z-index: 3; }
+.ce-sub .ce-match { height: 24px; margin-top: -2px; }
+.ce-sub + .green-card { margin-top: 10px; }
+.ce-sub + .ce-body .ce-card.plain { margin-top: 20px; }
+/* the rest of your tee time open (034 "outside" layout): your cart folds into one line at the top (rail, names,
+   marks, Done); their players get the same name-outside cards, without the rail */
+.ce-line.mine-f { position: relative; padding-left: 16px; margin-top: 8px; height: 52px; }
+.ce-line.mine-f::before { content: ''; position: absolute; left: 6px; top: 14px; bottom: 14px; width: 3px; border-radius: 2px; background: var(--cart-you); }
+.ce-line.mine-f + .ce-card.plain { margin-top: 8px; }
+.ce-line.mine-f .ce-go { font-weight: 600; }
 /* match line, take 2 (with "name outside"): your names are on the card labels, so the line drops them.
    A · score first: "4 UP  vs Sam + Jake", left-aligned. B · no line: the same, right-aligned on the first card's label row. */
 .ce-match.m1 { justify-content: flex-start; }
@@ -359,7 +370,7 @@ const GAMES = {
 
 // ── state ──────────────────────────────────────────────────────────────────────────────────
 const S = {
-  game: 'carts', gps: 'regular', turn: 'cards', rows: 'outside', mline: 'merged', tabPid: null, motion: 'normal', theme: 'dark', final: false,
+  game: 'carts', gps: 'regular', turn: 'cards', rows: 'outside', mline: 'top', open: null, openAnim: 'morph', tabPid: null, motion: 'normal', theme: 'dark', final: false,
   cur: 4, view: 4, scores: {}, unlocked: {}, seenSwitch: {},
   reward: null, pts: null, nudge: null, sheet: null, full: null,
 };
@@ -472,8 +483,9 @@ function padRow(id, h, editable) {
   if (S.rows === 'outside') {
     const gm = G(), mm = gm.match(h), first = gm.mine(h)[0] === id;
     const mate = mm && mm.us.find((x) => x !== 'A');
-    const partner = id === 'A' && mate && (S.mline === 'right' || S.mline === 'merged') ? ` <span class="pgrp-w">(with ${P[mate]})</span>` : '';
-    return `<div class="pgrp"><div class="pgrp-l"><span class="pgrp-n">${P[id]}${partner}${k && !rw ? ' · 1 stroke' : ''}</span>${word}${first && (S.mline === 'labels' || S.mline === 'merged') ? S._labelEnd || '' : ''}</div><div class="pcard even${G().mine(h).includes('A') ? ' rail' : ''}"><div class="ce-row${nudge}"${nAttr}><div class="ce-pads">${pads}</div></div></div></div>`;
+    const partner = id === 'A' && mate && (S.mline === 'right' || S.mline === 'merged' || S.mline === 'top') ? ` <span class="pgrp-w">(with ${P[mate]})</span>` : '';
+    const yours = gm.mine(h).includes(id);
+    return `<div class="pgrp"><div class="pgrp-l" data-k="l-${id}"><span class="pgrp-n"><span data-k="n-${id}">${P[id]}</span>${partner}${k && !rw ? ' · 1 stroke' : ''}</span>${word}${first && (S.mline === 'labels' || S.mline === 'merged') ? S._labelEnd || '' : ''}</div><div class="pcard even${yours ? ' rail' : ''}" data-k="c-${id}"><div class="ce-row${nudge}"${nAttr}><div class="ce-pads">${pads}</div></div></div></div>`;
   }
   if (S.rows === 'cards') {
     return `<div class="pcard${id === 'A' || G().mine(h).includes('A') ? ' rail' : ''}"><div class="pcard-l">${P[id]}${k && !rw ? ' · 1 stroke' : ''}${word}</div><div class="ce-row${nudge}"${nAttr}><div class="ce-pads">${pads}</div></div></div>`;
@@ -489,8 +501,15 @@ function padRow(id, h, editable) {
 function quietRow(ids, h, m, i) {
   const par = PARS[h - 1], allIn = ids.every((id) => score(id, h) != null);
   const grp = m && !G().pairs && !ids.every((id) => m.them.includes(id)) ? '<span class="ce-grp">Your group</span>' : '';
-  const who = ids.map((id) => `<span class="ce-who-p"><span>${P[id]}</span>${smallMark(score(id, h), par)}</span>`).join('');
-  return `<button class="ce-line t-panel" data-act="fill" data-i="${i}" aria-label="Enter scores for ${names(ids)}"><span class="ce-who">${grp}${who}</span><span class="ce-go">${allIn ? 'Edit' : 'Enter'}${icon('right')}</span></button>`;
+  const out = S.rows === 'outside';
+  const who = ids.map((id) => `<span class="ce-who-p"><span${out ? ` data-k="n-${id}"` : ''}>${P[id]}</span>${smallMark(score(id, h), par)}</span>`).join('');
+  return `<button class="ce-line t-panel" data-act="${out ? 'open' : 'fill'}" data-i="${i}"${out ? ` data-k="q-${ids.join('')}"` : ''} aria-label="Enter scores for ${names(ids)}"><span class="ce-who">${grp}${who}</span><span class="ce-go">${allIn ? 'Edit' : 'Enter'}${icon('right')}</span></button>`;
+}
+// your cart folded into one line while you enter for the rest of your tee time
+function foldedRow(ids, h) {
+  const par = PARS[h - 1];
+  const who = ids.map((id) => `<span class="ce-who-p"><span data-k="n-${id}">${P[id]}</span>${smallMark(score(id, h), par)}</span>`).join('');
+  return `<button class="ce-line mine-f t-panel" data-act="close" data-k="q-${ids.join('')}" aria-label="Back to your scores"><span class="ce-who">${who}</span><span class="ce-go">Done</span></button>`;
 }
 function readRows(h) {
   const par = PARS[h - 1], mine = G().mine(h), rest = G().tee.filter((id) => !mine.includes(id));
@@ -528,6 +547,7 @@ function matchLine(h) {
       const end = `<span class="ce-end">${up}<span class="ce-swap"><span class="ce-vs${pt ? ' anim' : ''}"${pt ? ` data-t0="${pt.t0}"` : ''}>vs ${names(m.them)}</span>${won}</span></span>`;
       if (S.mline === 'labels' || S.mline === 'merged') { S._labelEnd = end; return '<div class="ce-match gone" aria-hidden="true"></div>'; }
       if (S.mline === 'right') return `<div class="ce-match"><span></span>${end}</div>`;
+      if (S.mline === 'top') return `<div class="ce-match m1">${end}</div>`;
       return `<div class="ce-match m1">${end}</div>`;
     }
     if (S.rows === 'new') { // your names are in the card right below: say who you play, and (2v2) who's your partner now
@@ -557,6 +577,10 @@ function render() {
     const plain = S.rows === 'cards' || S.rows === 'outside';
     rows = `<div class="ce-card t-panel${side ? ' side' : ''}${plain ? ' plain' : ''}${g.mine(h).includes('A') ? ' rail' : ''}">${cols}${inner}</div>`
       + g.quiet(h).map((ids, i) => quietRow(ids, h, m, i + 1)).join('');
+    if (S.rows === 'outside' && S.open === h && g.quiet(h).length) {
+      const theirs = g.quiet(h)[0];
+      rows = foldedRow(g.mine(h), h) + `<div class="ce-card t-panel plain">${theirs.map((id) => padRow(id, h, true)).join('')}</div>`;
+    }
   } else rows = readRows(h);
   const blanks = blanksOn(h), mine = g.mine(h), theirs = blanks.filter((id) => !mine.includes(id));
   let status = '', next;
@@ -569,7 +593,8 @@ function render() {
     const bump = go && S.pts && S.pts.h === h;
     next = `<button class="ce-next${go ? ' go' : ''}${bump ? ' anim' : ''}"${bump ? ` data-t0="${S.pts.t0}"` : ''} data-act="next">${label}</button>`;
   }
-  $('#scr').innerHTML = `${head}${greenCard(h)}<div class="ce-body">${ml}${rows}</div><div class="ce-flex"></div><div class="ce-foot">${status}${next}</div>
+  const topLine = S.rows === 'outside' && S.mline === 'top';
+  $('#scr').innerHTML = `${head}${topLine ? `<div class="ce-sub">${ml}</div>` : ''}${greenCard(h)}<div class="ce-body">${topLine ? '' : ml}${rows}</div><div class="ce-flex"></div><div class="ce-foot">${status}${next}</div>
     <nav class="tabbar" aria-hidden="true">${['flag', 'rings', 'bars', 'grid'].map((n, k) => `<span class="${k === 0 ? 'on' : ''}">${icon(n)}</span>`).join('')}</nav>`;
   renderOverlay();
   sync();
@@ -595,7 +620,8 @@ function options() {
     <h3>Turn to the next hole</h3>${seg('turn', [['cards', '(g) Just the cards'], ['hole', '(e) Whole hole'], ['wave', '(f) Wave']])}
     <p style="margin:6px 0">Earlier rounds:</p>${seg('turn', [['slide', '(c) Slide'], ['book', '(d) Book'], ['flip', '(a) Flip'], ['page', '(b) Page']])}
     <h3>Player rows</h3>${seg('rows', [['avatar', '1 · Avatar'], ['chip', '2 · Name chip'], ['tabs', '3 · One at a time'], ['stepper', '4 · Stepper'], ['cards', '5 · Card each'], ['outside', '6 · Name outside'], ['old', 'As today']], true)}
-    <h3>Match line (with 6 · Name outside)</h3>${seg('mline', [['merged', 'One line'], ['right', '(with …) on your name'], ['first', 'A · Score first'], ['labels', 'B · In the label'], ['today', 'As today']], true)}
+    <h3>Match line (with 6 · Name outside)</h3>${seg('mline', [['top', 'Above the yardage'], ['merged', 'One line'], ['right', '(with …) on your name'], ['first', 'A · Score first'], ['labels', 'B · In the label'], ['today', 'As today']], true)}
+    <h3>Entering for the rest of your tee time</h3>${seg('openAnim', [['morph', 'Improved: names travel'], ['today', 'As today (027 blur swap)']])}
     <h3>Game</h3>${seg('game', [['carts', 'Team cart'], ['2v2', '2v2'], ['six', '6 · sitting out'], ['solo', 'Scorecard']], true)}
     <h3>Yardage card</h3>${seg('gps', [['regular', 'Regular 92'], ['compact', 'Compact 68'], ['off', 'None']])}
     <h3>Motion</h3>${seg('motion', [['normal', 'Normal'], ['slow', 'Slow ×4'], ['reduced', 'Reduced']])}
@@ -742,6 +768,80 @@ function cardsTurn(old, scr, layer) {
   Promise.all(anims.map((a) => a.finished)).then(() => { if (turning === t) endTurn(); }).catch(() => {});
 }
 function endTurn() { turning = null; render(); }
+
+// ── entering for the rest of your tee time ──────────────────────────────────────────────────
+// Every part that means the same thing in both states carries data-k: n-X a name, c-X a player's card, l-X a label row,
+// q-XY a one-line row. The morph moves each name from where it was to where it is (FLIP + crossfade), grows the cards
+// out of the row they came from, shrinks the cards going away into the row they become, and fades everything else.
+function captureK() {
+  return new Map($$('#scr [data-k]').map((el) => {
+    const c = el.cloneNode(true); $$('.anim', c).forEach((x) => x.classList.remove('anim')); c.removeAttribute('data-act');
+    if (el.dataset.k.startsWith('n-')) {
+      const cs = getComputedStyle(el);
+      Object.assign(c.style, { fontFamily: cs.fontFamily, fontSize: cs.fontSize, fontWeight: cs.fontWeight, letterSpacing: cs.letterSpacing, textTransform: cs.textTransform, color: cs.color, lineHeight: cs.lineHeight, whiteSpace: 'nowrap' });
+    }
+    return [el.dataset.k, { rect: rel(el), clone: c }];
+  }));
+}
+function setOpen(v) {
+  finishMotion();
+  const old = captureK();
+  S.open = v; S.reward = null; S.pts = null; S.nudge = null;
+  render();
+  playMorph(old);
+}
+function playMorph(old) {
+  const scr = $('#scr'), layer = document.createElement('div');
+  layer.className = 'ce-turn-layer';
+  const fresh = new Map($$('[data-k]', scr).map((el) => [el.dataset.k, { el, rect: rel(el) }]));
+  scr.appendChild(layer);
+  const mode = S.motion === 'reduced' ? 'fade' : S.openAnim;
+  const D = 380, E = 'cubic-bezier(.4,0,.2,1)', anims = [];
+  const A = (el, kf, o = {}) => { const a = el.animate(kf, { duration: D, easing: E, fill: 'both', ...o }); anims.push(a); return a; };
+  const place = (o) => { const c = o.clone; Object.assign(c.style, { position: 'absolute', margin: '0', top: `${o.rect.top}px`, left: `${o.rect.left}px`, width: `${o.rect.width}px`, height: `${o.rect.height}px` }); layer.appendChild(c); return c; };
+  const top = (k) => /^[qlc]-/.test(k);
+  const rowKey = (id, m) => [...m.keys()].find((k) => k.startsWith('q-') && k.slice(2).includes(id));
+  if (mode !== 'morph') { // As today (027): blur swap in place · reduced motion: a 150ms crossfade
+    const blur = mode === 'today';
+    old.forEach((o, k) => { if (top(k) && !fresh.has(k)) A(place(o), blur ? [{ opacity: 1, filter: 'blur(0)' }, { opacity: 0, filter: 'blur(8px)' }] : [{ opacity: 1 }, { opacity: 0 }], { duration: blur ? 120 : 150, easing: blur ? 'cubic-bezier(.4,0,1,1)' : 'linear' }); });
+    fresh.forEach((f, k) => { if (top(k) && !old.has(k)) A(f.el, blur ? [{ opacity: 0, filter: 'blur(8px)' }, { opacity: 1, filter: 'blur(0)' }] : [{ opacity: 0 }, { opacity: 1 }], blur ? { duration: 240, delay: 60, easing: 'cubic-bezier(.2,.8,.2,1)' } : { duration: 150, easing: 'linear' }); });
+  } else {
+    let ci = 0, co = 0;
+    fresh.forEach((f, k) => {
+      const o = old.get(k), r = f.rect;
+      if (k.startsWith('n-')) {                       // a name travels to its new place, crossfading old style → new style
+        if (!o) return A(f.el, [{ opacity: 0 }, { opacity: 1 }], { delay: 120 });
+        const dx = o.rect.left - r.left, dy = o.rect.top - r.top, sc = o.rect.height / r.height;
+        f.el.style.display = 'inline-block'; f.el.style.transformOrigin = '0 0';
+        A(f.el, [{ transform: `translate(${dx}px, ${dy}px) scale(${sc})`, opacity: 0 }, { opacity: .2, offset: .35 }, { transform: 'none', opacity: 1 }]);
+        const c = place(o); c.style.transformOrigin = '0 0';
+        A(c, [{ transform: 'none', opacity: 1 }, { opacity: 0, offset: .55 }, { transform: `translate(${-dx}px, ${-dy}px) scale(${1 / sc})`, opacity: 0 }]);
+      } else if (k.startsWith('c-')) {                // a card grows up out of the row it came from, then its pads land
+        if (o) return A(f.el, [{ transform: `translateY(${o.rect.top - r.top}px)` }, { transform: 'none' }]);
+        const q = old.get(rowKey(k.slice(2), old)), dy = q ? q.rect.top - r.top : 24, i = ci++;
+        f.el.style.transformOrigin = '50% 0';
+        A(f.el, [{ transform: `translateY(${dy}px) scaleY(.35)`, opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 300, delay: 140 + i * 40, easing: 'cubic-bezier(.2,.8,.2,1)' });
+        $$('.ce-pad', f.el).forEach((pd, j) => A(pd, [{ opacity: 0, transform: 'scale(.82)' }, { opacity: 1, transform: 'scale(1.04)', offset: .65 }, { opacity: 1, transform: 'none' }], { duration: 200, delay: 300 + i * 48 + j * 24, easing: 'cubic-bezier(.2,.8,.2,1)' }));
+      } else if (!o) {                                // a label row / one-line row arriving: fades in around its travelling names
+        A(f.el, [{ opacity: 0 }, { opacity: 1 }], { duration: 260, delay: 120 });
+      }
+    });
+    old.forEach((o, k) => {
+      if (fresh.has(k) || k.startsWith('n-')) return;
+      const c = place(o);
+      $$('[data-k^="n-"]', c).forEach((x) => { x.style.visibility = 'hidden'; });   // its names travel on their own
+      if (k.startsWith('c-')) {                       // a card leaving shrinks up/down into the row it becomes
+        const q = fresh.get(rowKey(k.slice(2), fresh)), dy = q ? q.rect.top - o.rect.top : -24, i = co++;
+        c.style.transformOrigin = '50% 0';
+        A(c, [{ transform: 'none', opacity: 1 }, { transform: `translateY(${dy}px) scaleY(.35)`, opacity: 0 }], { duration: 220, delay: i * 30, easing: 'cubic-bezier(.4,0,1,1)' });
+      } else A(c, [{ opacity: 1 }, { opacity: 0 }], { duration: 150 });
+    });
+  }
+  if (RATE() !== 1) anims.forEach((a) => { a.playbackRate = RATE(); });
+  const t = { anims };
+  turning = t;
+  Promise.all(anims.map((a) => a.finished)).then(() => { if (turning === t) endTurn(); }).catch(() => {});
+}
 function finishMotion() { if (turning) { turning.anims.forEach((a) => { try { a.finish(); } catch {} }); endTurn(); } }
 
 function go(to, { switchCard = null } = {}) {
@@ -749,7 +849,7 @@ function go(to, { switchCard = null } = {}) {
   if (to < 1 || to > 18 || to === S.view) return;
   const dir = to > S.view ? 'fwd' : 'back';
   const old = S.final ? null : capture(); // a finalized round never turns
-  S.view = to; S.reward = null; S.pts = null; S.nudge = null; S.sheet = null;
+  S.view = to; S.reward = null; S.pts = null; S.nudge = null; S.sheet = null; S.open = null;
   if (switchCard) { S.full = switchCard; S.pending = old && { old, dir }; render(); return; }
   render();
   if (old) playTurn(old, dir);
@@ -825,7 +925,12 @@ document.addEventListener('click', (e) => {
       if (nxt) setTimeout(() => { if (S.tabPid === id && S.rows === 'tabs') { S.tabPid = nxt; render(); } }, 650 / RATE());
       return;
     }
-    return pick(id, v);
+    pick(id, v);
+    if (S.open === S.view) {
+      const theirs = G().quiet(S.view)[0] || [], h0 = S.view;
+      if (theirs.every((x) => score(x, h0) != null)) setTimeout(() => { if (S.open === h0 && !turning) setOpen(null); }, 1200 / RATE());
+    }
+    return;
   }
   if (a === 'tab') { S.tabPid = id; return render(); }
   if (a === 'step') { // first tap on any of − score + = par; then − / + step (the old Enter's rule)
@@ -844,6 +949,8 @@ document.addEventListener('click', (e) => {
   if (a === 'next1') return go(S.view + 1);
   if (a === 'back-cur') return go(S.cur);
   if (a === 'unlock') { S.unlocked[S.view] = true; return render(); }
+  if (a === 'open') return setOpen(S.view);
+  if (a === 'close') return setOpen(null);
   if (a === 'fill') { if (turning) return finishMotion(); return fill(Number(el.dataset.i)); }
   if (a === 'fillall') { G().tee.forEach((x) => { if (score(x, S.view) == null) S.scores[key(S.view, x)] = sim(x, S.view); }); S.sheet = null; S.reward = null; return render(); }
   if (a === 'demo') return demo(el.dataset.v);
@@ -865,7 +972,7 @@ window.__033 = {
   S, render, go, pick, fill, demo, seed,
   set(o) {
     finishMotion();
-    Object.assign(S, { reward: null, pts: null, nudge: null, sheet: null, full: null }, o);
+    Object.assign(S, { reward: null, pts: null, nudge: null, sheet: null, full: null, open: null }, o);
     document.documentElement.classList.toggle('light', S.theme === 'light');
     document.documentElement.classList.toggle('rm', S.motion === 'reduced');
     if (o.seed !== false) seed();
@@ -875,6 +982,7 @@ window.__033 = {
   },
   freeze(t) { document.getAnimations().forEach((a) => { a.pause(); a.currentTime = t; }); },
   next() { $('#scr .ce-next').click(); },
+  open(v) { setOpen(v ? S.view : null); },
 };
 seed();
 render();

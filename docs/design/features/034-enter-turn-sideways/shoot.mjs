@@ -49,6 +49,8 @@ async function frame(theme, scene, action, t, clip = null) {
       jump: () => A.go(action.to),
       pick: () => A.pick(action.id, action.v),
       nudge: () => A.next(),
+      open: () => A.open(true),
+      close: () => A.open(false),
     }[action.do || 'none'];
     act();
     A.freeze(t);
@@ -171,6 +173,24 @@ for (const [name, scene, action, title] of R3) {
   if (!want(name)) continue;
   const frames = [];
   for (const tm of [0, 60, 120, 180, 240, 320, 420]) frames.push({ buf: await frame('dark', { ...scene, turn: 'cards' }, action, tm), label: `${tm} ms` });
+  await strip(name, 'dark', frames, { title });
+}
+// ── round 4: the latest layout (names outside, match line above the yardage) + entering for the rest of your tee time ──
+const L = { ...BASE, turn: 'cards', rows: 'outside', mline: 'top', openAnim: 'morph' };
+for (const th of ['dark', 'light']) {
+  if (want('90')) save(`90-layout-rest${th === 'light' ? '-light' : ''}`, await frame(th, { ...L, cur: 5, view: 5, scores: { '5:A': 4 } }, {}, 0));
+  if (want('91')) save(`91-layout-birdie-word${th === 'light' ? '-light' : ''}`, await frame(th, { ...L, cur: 5, view: 5, scores: {} }, { do: 'pick', id: 'S', v: 3 }, 400));
+  if (want('92')) save(`92-their-cards-open${th === 'light' ? '-light' : ''}`, await frame(th, { ...L, cur: 5, view: 5, open: 5, scores: { '5:A': 4, '5:S': 5, '5:M': 4 } }, {}, 0));
+}
+const OPEN = [
+  ['93-open-improved-strip', { ...L, cur: 5, view: 5, scores: { '5:A': 4, '5:S': 5, '5:M': 4 } }, { do: 'open' }, 'Improved · tap “Sam 4 Jake – Enter”: the names travel, their cards grow out of the row, yours fold into one line'],
+  ['94-close-improved-strip', { ...L, cur: 5, view: 5, open: 5, scores: { '5:A': 4, '5:S': 5, '5:M': 4, '5:J': 5 } }, { do: 'close' }, 'Improved · Done (or 1.2 s after their last score): the same, backwards'],
+  ['95-open-today-strip', { ...L, openAnim: 'today', cur: 5, view: 5, scores: { '5:A': 4, '5:S': 5, '5:M': 4 } }, { do: 'open' }, 'As today (027) · the blur swap in place'],
+];
+for (const [name, scene, action, title] of OPEN) {
+  if (!want(name)) continue;
+  const frames = [];
+  for (const tm of [0, 80, 160, 240, 320, 400, 600]) frames.push({ buf: await frame('dark', scene, action, tm), label: `${tm} ms` });
   await strip(name, 'dark', frames, { title });
 }
 await browser.close();
