@@ -283,7 +283,7 @@ html.light .seg button[aria-pressed="true"] { box-shadow: 0 1px 2px rgba(11,13,1
       <header class="top pad">
         <span class="h-brand"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="2.6" fill="currentColor" stroke="none"/></svg>Golf Live Board</span>
         <span class="grow"></span>
-        <button class="icb" data-theme aria-label="Switch between dark and light"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 0 0 16z" fill="currentColor" stroke="none"/></svg></button>
+        <button class="icb" data-flip-theme aria-label="Switch between dark and light"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 0 0 16z" fill="currentColor" stroke="none"/></svg></button>
       </header>
       <div class="h-body pad">
         <button class="box ready" id="ready">
@@ -377,7 +377,7 @@ html.light .seg button[aria-pressed="true"] { box-shadow: 0 1px 2px rgba(11,13,1
     <div class="ctl-b">
       <button data-go="home">Home</button><button data-go="locker">Locker</button>
       <button id="c-pack">Pack rip</button><button id="c-reset">Start over</button>
-      <button data-theme>Light / dark</button>
+      <button data-flip-theme>Light / dark</button>
     </div>
     <p class="ts-small muted">Five cards use Andrew's real rounds (Oct 16 to Nov 20). Three are made-up to show bronze, silver and gold, and say so under the card.</p>
   </aside>
@@ -616,7 +616,7 @@ html.light .seg button[aria-pressed="true"] { box-shadow: 0 1px 2px rgba(11,13,1
   document.addEventListener('click', e => {
     const t = e.target;
     const goBtn = t.closest('[data-go]'); if (goBtn) return go(goBtn.dataset.go);
-    if (t.closest('[data-theme]')) return void document.documentElement.classList.toggle('light');
+    if (t.closest('[data-flip-theme]')) return void document.documentElement.classList.toggle('light');
     if (t.closest('[data-close]')) return closeSheet();
     if (t.closest('#ready') || t.closest('#c-pack')) { if (state.added) resetAll(); return go('pack'); }
     if (t.closest('#open-locker')) return go('locker');
