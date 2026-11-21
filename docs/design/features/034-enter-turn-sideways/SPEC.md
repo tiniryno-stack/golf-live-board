@@ -1,6 +1,6 @@
 # 034 · The turn, sideways: holes move left to right
 
-Status: exploration, waiting for Andrew's pick. Not built.
+Status: exploration, round 2 (Nov 21), waiting for Andrew's pick. Not built.
 
 **Changes 033 §2.2–2.3** (how the card turns to the next hole). Everything else in 033 stands: Part 1 (score picks),
 what moves and what never moves (§2.1), the yardage card rules (§2.4), what starts a turn (§2.6), the build notes and
@@ -9,6 +9,46 @@ reduced motion.
 **Why.** Andrew, after trying 033 (Nov 20): the scoreboard flip is cool, but "every time you flip it's a new board
 behind it". It's a magic trick, not the journey. Moving to the next hole should feel like moving **along** the course:
 forward goes right, back goes left, like the ◀ ▶ arrows. 034 adds two sideways turns to compare with 033's.
+
+## Round 2 (Nov 21): the whole hole moves — current proposal
+
+**Andrew on round 1's (c) Slide:** "almost there. I like it sliding sideways, but the numbers changing sideways is
+weird too. If anything the whole yardage card can just move with it."
+
+So: **the whole hole is one page.** The title (Hole 5 · Par 4), the yardage card, the match line, the score card and
+the quiet rows all slide together. Next hole = the page slides off to the left and the next hole's page comes in from
+the right; ◀ = the other way. Nothing changes **inside** anything: no rolling hole number, no rolling or sliding
+yardages, no blur-swapped green. You see hole 4 leave and hole 5 arrive, like walking to the next tee.
+
+| | How it moves |
+|---|---|
+| **(e) Whole hole** *(recommended)* | One rigid page. Every part moves one screen-width in 320ms, `ease-grow`, all at once. |
+| **(f) Whole hole, wave** | The same, but top to bottom 24ms apart (title, yardage card, match line, card, quiet rows), so the page arrives like a short wave. Livelier; the parts briefly separate (`62`). |
+
+Exactly (`motion.css`, "ROUND 2"):
+- Old parts move from 0 to −(screen width); new parts from +(screen width) to 0. 320ms, `cubic-bezier(.2,.8,.2,1)`.
+  The gap between the two pages is the screen's own gutters (32px). The screen edge clips them.
+- **Pinned, never move:** ◀ ▶ ⋯ (the sliding title passes **under** them: the button group gets the screen's `bg`
+  with a 12px soft edge on its left), Next hole, the tab bar. Next hole's label changes at 0ms.
+- **Each hole keeps its own layout.** If the next page has no yardage card ("Up next", locked holes, no GPS), it simply
+  isn't on that page: no fading, no rows moving up (`64`). This also removes 033's FLIP.
+- The new pads arrive with their page (no landing stagger). Score-pick motion (033 Part 1) is unchanged.
+- **Reduced motion:** unchanged from 033 §4 (a 150ms crossfade, nothing moves).
+- **Build:** the same pattern as 033 §3 (outgoing parts drawn from data on `.ce-turn-layer` at their tap-time places,
+  `data-turn="hole"`, `data-t0`, `ui.syncMotion`), but simpler: no roll markup, no FLIP numbers, no per-digit plan. Set
+  `--t-w` to the screen width on `.ce` at tap time. `ui.turnPlan` (033 §3) shrinks to `{ dir }` and its test to the
+  play-order direction cases (18 → 1 on a round that starts on 10 = forward).
+
+Why (e) over (f): one rigid page reads most clearly as "the next hole", and it's the calmest. (f) is there if (e) feels
+too plain on the phone.
+
+Round 2 screenshots: `40`–`47` (e) and `48`–`55` (f) at 0 / 90 / 150 / 300ms, Next 4 → 5 and ◀ 5 → 4, dark + light;
+strips `60`–`63` (0 / 40 / 80 / 120 / 180 / 240 / 400ms); `64` (e) into "Up next", `65` (e) 2v2 new partner,
+`66` (e) no yardage card, `67` (f) into "Up next".
+
+---
+
+# Round 1 (Nov 20): (c) slide and (d) book page
 
 ## 0 · Flagged
 
@@ -65,7 +105,7 @@ except the FLIP when the yardage card comes or goes.
 
 | What | Where |
 |---|---|
-| Prototype: (c) Slide is the default; ⋯ switches to (d), (a), (b) and everything else from 033 | `prototype.html`. Loads `../033-enter-motion/motion.css` then this folder's `motion.css`. Also at https://claude.ai/artifact/XEedkFZGGfzYwXx2Ti33wy (same link as 033: now opens on (c)). |
+| Prototype: (e) Whole hole is the default; ⋯ switches to (f), and to round 1's (c), (d) and 033's (a), (b) | `prototype.html`. Loads `../033-enter-motion/motion.css` then this folder's `motion.css`. Also at https://claude.ai/artifact/XEedkFZGGfzYwXx2Ti33wy (same link as 033: now opens on (e)). |
 | Exact values for (c) and (d) | `motion.css` (adds to 033's; loads after it) |
 | Screenshots | `screenshots/`, 393 × 659 @2×. Re-render: `node docs/design/features/034-enter-turn-sideways/shoot.mjs` |
 

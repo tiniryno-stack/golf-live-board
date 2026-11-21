@@ -67,7 +67,7 @@ svg.i { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-widt
 .ce-hole { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 8px; }
 .ce-hn { font-size: 32px; font-weight: 700; letter-spacing: -.5px; line-height: 32px; --t-h: 32px; white-space: nowrap; }
 .ce-hp { font-size: 17px; font-weight: 500; color: var(--text-muted); line-height: 22px; --t-h: 22px; white-space: nowrap; }
-.ce-nav { flex: none; display: flex; align-items: center; margin-right: -8px; }
+.ce-nav { flex: none; display: flex; align-items: center; margin-right: -8px; position: relative; z-index: 4; background: var(--bg); box-shadow: -12px 0 12px var(--bg); } /* 034 (e/f): the sliding title passes under the arrows */
 .ce-ib { width: 44px; height: 44px; display: grid; place-items: center; color: var(--text-muted); }
 .ce-ib:disabled { opacity: .35; cursor: default; }
 .green-card { height: 92px; margin-top: 6px; flex: none; border-radius: var(--radius-2xl); background: var(--surface-1); box-shadow: var(--shadow-card);
@@ -274,7 +274,7 @@ const GAMES = {
 
 // ── state ──────────────────────────────────────────────────────────────────────────────────
 const S = {
-  game: 'carts', gps: 'regular', turn: 'slide', motion: 'normal', theme: 'dark', final: false,
+  game: 'carts', gps: 'regular', turn: 'hole', motion: 'normal', theme: 'dark', final: false,
   cur: 4, view: 4, scores: {}, unlocked: {}, seenSwitch: {},
   reward: null, pts: null, nudge: null, sheet: null, full: null,
 };
@@ -439,7 +439,8 @@ function seg(k, items, wrap = false) {
 }
 function options() {
   return `<div class="opt">
-    <h3>Turn to the next hole</h3>${seg('turn', [['slide', '(c) Slide'], ['book', '(d) Book page'], ['flip', '(a) Flip'], ['page', '(b) Page turn']])}
+    <h3>Turn to the next hole</h3>${seg('turn', [['hole', '(e) Whole hole'], ['wave', '(f) Whole hole, wave']])}
+    <p style="margin:6px 0">Earlier rounds:</p>${seg('turn', [['slide', '(c) Slide'], ['book', '(d) Book'], ['flip', '(a) Flip'], ['page', '(b) Page']])}
     <h3>Game</h3>${seg('game', [['carts', 'Team cart'], ['2v2', '2v2'], ['six', '6 · sitting out'], ['solo', 'Scorecard']], true)}
     <h3>Yardage card</h3>${seg('gps', [['regular', 'Regular 92'], ['compact', 'Compact 68'], ['off', 'None']])}
     <h3>Motion</h3>${seg('motion', [['normal', 'Normal'], ['slow', 'Slow ×4'], ['reduced', 'Reduced']])}
@@ -484,6 +485,7 @@ function capture() {
   const clean = (el) => { const c = el.cloneNode(true); $$('.anim', c).forEach((x) => x.classList.remove('anim')); c.removeAttribute('data-act'); return c; };
   return {
     hole: S.view, par: PARS[S.view - 1], hp: rel($('#scr .ce-hp')).left,
+    title: { rect: rel($('#scr .ce-hole')), clone: clean($('#scr .ce-hole')) },
     green: g ? { rect: rel(g), clone: clean(g), pic: $('.green-pic', g).innerHTML, nums: $$('.gn b', g).map((b) => b.textContent) } : null,
     match: { rect: rel(m), clone: clean(m), text: m.textContent },
     body: rel($('#scr .ce-body')).top,
@@ -511,6 +513,7 @@ function playTurn(old, dir) {
   scr.dataset.turn = S.motion === 'reduced' ? 'fade' : S.turn;
   scr.dataset.dir = dir;
   scr.appendChild(layer);
+  if (S.motion !== 'reduced' && (S.turn === 'hole' || S.turn === 'wave')) return pageTurn(old, scr, layer);
   const place = (clone, r, ...cls) => { Object.assign(clone.style, { position: 'absolute', margin: '0', top: `${r.top}px`, left: `${r.left}px`, width: `${r.width}px`, height: `${r.height}px` }); clone.classList.add(...cls); layer.appendChild(clone); return clone; };
   // hole number + par roll; "Par" follows the number's width
   const h = S.view, par = PARS[h - 1];
@@ -539,6 +542,25 @@ function playTurn(old, dir) {
     $$('.ce-row', el).forEach((row, r) => $$('.ce-pad', row).forEach((pad, k) => { pad.classList.add('t-land'); pad.style.setProperty('--t-r', r); pad.style.setProperty('--t-i', k); }));
   });
   const anims = scr.getAnimations({ subtree: true }).filter((a) => !a.effect?.target?.closest?.('[data-t0]'));
+  if (RATE() !== 1) anims.forEach((a) => { a.playbackRate = RATE(); });
+  const t = { anims };
+  turning = t;
+  Promise.all(anims.map((a) => a.finished)).then(() => { if (turning === t) endTurn(); }).catch(() => {});
+}
+// 034 (e) / (f): the whole hole is one page. The old page (title, yardage card, match line, card, quiet rows, each at
+// its old place) slides off one screen-width to the left while the new page comes in from the right. Each hole keeps
+// its own layout, so nothing inside a card changes and nothing moves up or down. (f) = the same, top to bottom 24ms apart.
+function pageTurn(old, scr, layer) {
+  scr.style.setProperty('--t-w', `${scr.clientWidth}px`);
+  // the new hole's parts first (before the old ones join the layer, so a query can't pick up an old copy)
+  const fresh = [$('.ce-hole', scr), $('.green-card', scr), $('.ce-match', scr), ...$$('.ce-body .t-panel', scr)].filter(Boolean);
+  const parts = [old.title, old.green, old.match, ...old.panels].filter(Boolean);
+  parts.forEach((p, i) => {
+    Object.assign(p.clone.style, { position: 'absolute', margin: '0', top: `${p.rect.top}px`, left: `${p.rect.left}px`, width: `${p.rect.width}px`, height: `${p.rect.height}px` });
+    p.clone.classList.add('t-page', 't-out'); p.clone.style.setProperty('--t-lag', i); layer.appendChild(p.clone);
+  });
+  fresh.forEach((el, i) => { el.classList.add('t-page', 't-in'); el.style.setProperty('--t-lag', i); });
+  const anims = scr.getAnimations({ subtree: true });
   if (RATE() !== 1) anims.forEach((a) => { a.playbackRate = RATE(); });
   const t = { anims };
   turning = t;

@@ -72,3 +72,25 @@
 :is(.ce[data-turn="slide"], .ce[data-turn="book"])[data-dir="back"] .t-swap-in  { animation: t-side-in-back  240ms cubic-bezier(.2,.8,.2,1) 60ms both; }
 /* the green picture slides inside its fixed frame: clip it to the picture's own box */
 :is(.ce[data-turn="slide"], .ce[data-turn="book"]) .green-pic { clip-path: inset(0); }
+
+/* ══════════ ROUND 2 (Nov 21) · (e) whole hole and (f) whole hole, wave ══════════
+   Andrew on (c): "the numbers changing sideways is weird; if anything the whole yardage card can just move with it".
+   So the whole hole is one page: the title (Hole 5 · Par 4), the yardage card, the match line, the score card and the
+   quiet rows. Next hole slides the old page off one screen-width to the left and the new page in from the right;
+   back is the mirror image. Nothing changes INSIDE a card (no rolls, no slides, no blur swaps), and each hole keeps
+   its own layout, so a yardage card that comes or goes simply isn't on the other page (no FLIP).
+   Pinned, never moves: the ◀ ▶ ⋯ buttons (the sliding title passes under them: .ce-nav gets the screen's bg),
+   Next hole, the tab bar.
+   Markup: .t-page.t-out on each outgoing part at its old place (on .ce-turn-layer), .t-page.t-in on each new part,
+   --t-lag = its index top to bottom (title 0, yardage card 1, match line 2, score card 3, quiet rows 4…),
+   --t-w = the screen's width in px (set on .ce at tap time). */
+.ce[data-turn="hole"] { --t-step: 0ms; }     /* (e) one rigid page */
+.ce[data-turn="wave"] { --t-step: 24ms; }    /* (f) top to bottom, 24ms apart: the page arrives like a short wave */
+@keyframes t-hole-out-fwd  { from { transform: translateX(0) } to { transform: translateX(calc(-1 * var(--t-w, 100vw))) } }
+@keyframes t-hole-in-fwd   { from { transform: translateX(var(--t-w, 100vw)) } to { transform: translateX(0) } }
+@keyframes t-hole-out-back { from { transform: translateX(0) } to { transform: translateX(var(--t-w, 100vw)) } }
+@keyframes t-hole-in-back  { from { transform: translateX(calc(-1 * var(--t-w, 100vw))) } to { transform: translateX(0) } }
+:is(.ce[data-turn="hole"], .ce[data-turn="wave"])[data-dir="fwd"]  .t-page.t-out { animation: t-hole-out-fwd  320ms cubic-bezier(.2,.8,.2,1) calc(var(--t-lag, 0) * var(--t-step)) both; }
+:is(.ce[data-turn="hole"], .ce[data-turn="wave"])[data-dir="fwd"]  .t-page.t-in  { animation: t-hole-in-fwd   320ms cubic-bezier(.2,.8,.2,1) calc(var(--t-lag, 0) * var(--t-step)) both; }
+:is(.ce[data-turn="hole"], .ce[data-turn="wave"])[data-dir="back"] .t-page.t-out { animation: t-hole-out-back 320ms cubic-bezier(.2,.8,.2,1) calc(var(--t-lag, 0) * var(--t-step)) both; }
+:is(.ce[data-turn="hole"], .ce[data-turn="wave"])[data-dir="back"] .t-page.t-in  { animation: t-hole-in-back  320ms cubic-bezier(.2,.8,.2,1) calc(var(--t-lag, 0) * var(--t-step)) both; }

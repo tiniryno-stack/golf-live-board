@@ -82,7 +82,7 @@ async function strip(name, theme, frames, { col = false, title = '' } = {}) {
 // ── scenes (033's) ──────────────────────────────────────────────────────────────────────────
 const sc = (h) => ({ [`${h}:A`]: 4, [`${h}:S`]: 5, [`${h}:M`]: 4 });
 const all = (h, ids = ['A', 'S', 'M', 'J']) => Object.fromEntries(ids.map((id, i) => [`${h}:${id}`, [4, 5, 4, 3][i]]));
-const BASE = { game: 'carts', gps: 'regular', turn: 'slide', motion: 'normal', final: false, cur: 4, view: 4 };
+const BASE = { game: 'carts', gps: 'regular', turn: 'hole', motion: 'normal', final: false, cur: 4, view: 4 };
 const FWD = { ...BASE, scores: all(4) };
 const BACK = { ...BASE, cur: 5, view: 5, scores: { ...all(4), '5:A': 4 } };
 const OPT = { slide: ['c-slide', '(c) Slide'], book: ['d-book', '(d) Book page'] };
@@ -123,5 +123,34 @@ for (const th of ['dark', 'light']) {
   const frames = [];
   for (const t of [0, 60, 120, 180, 240, 300, 420]) frames.push({ buf: await frame(th, { ...BASE, cur: 9, view: 9, scores: all(9) }, { do: 'next' }, t, '.ce-head...green-card'), label: `${t} ms` });
   await strip(`${name}${th === 'light' ? '-light' : ''}`, th, frames, { col: true, title: '(c) and (d): the yardage card, hole 9 → 10 · frame stays, picture and digits slide left' });
+}
+// ── round 2: (e) whole hole and (f) wave ───────────────────────────────────────────────────
+const R2 = { hole: ['e-whole-hole', '(e) Whole hole'], wave: ['f-wave', '(f) Whole hole, wave'] };
+n = 40;
+for (const opt of ['hole', 'wave']) for (const dir of ['fwd', 'back']) for (const t of [0, 90, 150, 300]) {
+  const name = `${n++}-${R2[opt][0]}-${dir === 'fwd' ? 'forward' : 'back'}-${String(t).padStart(3, '0')}`;
+  const scene = { ...(dir === 'fwd' ? FWD : BACK), turn: opt }, action = { do: dir === 'fwd' ? 'next' : 'prev' };
+  for (const th of ['dark', 'light']) if (want(name)) save(`${name}${th === 'light' ? '-light' : ''}`, await frame(th, scene, action, t));
+}
+n = 60;
+for (const opt of ['hole', 'wave']) for (const dir of ['fwd', 'back']) {
+  const name = `${n++}-${R2[opt][0]}-${dir === 'fwd' ? 'forward' : 'back'}-strip`;
+  if (!want(name)) continue;
+  const scene = { ...(dir === 'fwd' ? FWD : BACK), turn: opt }, action = { do: dir === 'fwd' ? 'next' : 'prev' };
+  const frames = [];
+  for (const t of [0, 40, 80, 120, 180, 240, 400]) frames.push({ buf: await frame('dark', scene, action, t), label: `${t} ms` });
+  await strip(name, 'dark', frames, { title: `${R2[opt][1]} · ${dir === 'fwd' ? 'Next hole 4 → 5' : '◀ 5 → 4'}` });
+}
+const MID2 = [
+  ['64-e-whole-hole-to-up-next', { ...BASE, scores: sc(4) }, { do: 'fwd' }, '(e) ▶ to “Up next”: that page has no yardage card, so it just isn’t there'],
+  ['65-e-whole-hole-2v2-new-partner', { ...BASE, game: '2v2', cur: 6, view: 6, scores: all(6), seenSwitch: { '2v27': true } }, { do: 'next' }, '(e) 2v2, 6 → 7: new partner'],
+  ['66-e-whole-hole-no-yardage', { ...BASE, gps: 'off', scores: all(4) }, { do: 'next' }, '(e) No yardage card'],
+  ['67-f-wave-to-up-next', { ...BASE, turn: 'wave', scores: sc(4) }, { do: 'fwd' }, '(f) ▶ to “Up next”'],
+];
+for (const [name, scene, action, title] of MID2) {
+  if (!want(name)) continue;
+  const frames = [];
+  for (const t of [0, 40, 80, 120, 180, 240, 400]) frames.push({ buf: await frame('dark', scene, action, t), label: `${t} ms` });
+  await strip(name, 'dark', frames, { title });
 }
 await browser.close();
