@@ -184,7 +184,7 @@ for (const th of ['dark', 'light']) {
 }
 const OPEN = [
   ['93-open-improved-strip', { ...L, cur: 5, view: 5, scores: { '5:A': 4, '5:S': 5, '5:M': 4 } }, { do: 'open' }, 'Improved · tap “Sam 4 Jake – Enter”: the names travel, their cards grow out of the row, yours fold into one line'],
-  ['94-close-improved-strip', { ...L, cur: 5, view: 5, open: 5, scores: { '5:A': 4, '5:S': 5, '5:M': 4, '5:J': 5 } }, { do: 'close' }, 'Improved · Done (or 1.2 s after their last score): the same, backwards'],
+  ['94-close-improved-strip', { ...L, cur: 5, view: 5, open: 5, scores: { '5:A': 4, '5:S': 5, '5:M': 4, '5:J': 5 } }, { do: 'close' }, 'Improved · tap “‹ Back”: the same, backwards (never by itself)'],
   ['95-open-today-strip', { ...L, openAnim: 'today', cur: 5, view: 5, scores: { '5:A': 4, '5:S': 5, '5:M': 4 } }, { do: 'open' }, 'As today (027) · the blur swap in place'],
 ];
 for (const [name, scene, action, title] of OPEN) {

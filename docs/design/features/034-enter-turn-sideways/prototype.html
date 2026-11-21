@@ -509,7 +509,7 @@ function quietRow(ids, h, m, i) {
 function foldedRow(ids, h) {
   const par = PARS[h - 1];
   const who = ids.map((id) => `<span class="ce-who-p"><span data-k="n-${id}">${P[id]}</span>${smallMark(score(id, h), par)}</span>`).join('');
-  return `<button class="ce-line mine-f t-panel" data-act="close" data-k="q-${ids.join('')}" aria-label="Back to your scores"><span class="ce-who">${who}</span><span class="ce-go">Done</span></button>`;
+  return `<button class="ce-line mine-f t-panel" data-act="close" data-k="q-${ids.join('')}" aria-label="Back to your cart"><span class="ce-who">${who}</span><span class="ce-go">${icon('left')}Back</span></button>`;
 }
 function readRows(h) {
   const par = PARS[h - 1], mine = G().mine(h), rest = G().tee.filter((id) => !mine.includes(id));
@@ -925,12 +925,7 @@ document.addEventListener('click', (e) => {
       if (nxt) setTimeout(() => { if (S.tabPid === id && S.rows === 'tabs') { S.tabPid = nxt; render(); } }, 650 / RATE());
       return;
     }
-    pick(id, v);
-    if (S.open === S.view) {
-      const theirs = G().quiet(S.view)[0] || [], h0 = S.view;
-      if (theirs.every((x) => score(x, h0) != null)) setTimeout(() => { if (S.open === h0 && !turning) setOpen(null); }, 1200 / RATE());
-    }
-    return;
+    return pick(id, v);   // (034: no auto-close. Their cards stay open until you tap back, or change hole.)
   }
   if (a === 'tab') { S.tabPid = id; return render(); }
   if (a === 'step') { // first tap on any of − score + = par; then − / + step (the old Enter's rule)

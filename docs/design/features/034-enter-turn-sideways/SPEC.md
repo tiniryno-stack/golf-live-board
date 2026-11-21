@@ -79,12 +79,15 @@ blurs at once and you can't follow who went where.
 |---|---|
 | 0–380 | **Each name flies** from where it was to where it's going, sliding + scaling while its old style crossfades into the new one: `Sam` / `Jake` from the quiet row up to their card labels (`SAM`, `JAKE`); `ANDREW` / `SEAN` from your labels down into the one-line row. 380ms, `cubic-bezier(.4,0,.2,1)`. |
 | 0–220 | **Your two cards fold away** into the line they become: each slides to that row and squashes (scaleY .35) while fading, ease-in, the second 30ms behind. |
-| 120–380 | **Your line appears** at the top: green rail, `Andrew 4  Sean 5`, `Done` on the right (tap = back). The labels around the travelling names fade in. |
+| 120–380 | **Your line appears** at the top: green rail, `Andrew 4  Sean 5`, `‹ Back` on the right. The labels around the travelling names fade in. |
 | 140–440 | **Their cards grow up out of the quiet row:** from its position, scaleY .35 → 1 and opacity 0 → 1, ease-out, the second 40ms behind. No rail: they're not your cart. |
 | 300–564 | **Their pads land** (033's landing: fade + .82 → 1.04 → 1, 24ms apart, 48ms per card). |
 
-- **Closing** (`Done`, a tap on your line, or by itself 1.2s after their last score, 021's timer): the exact reverse.
-  Changing hole closes it without a morph.
+- **Closing is always a tap** (Andrew, Nov 21: "it should be intentional switching of the cart, and intentional
+  switching back"): your folded line is a button, `Andrew 4  Sean 5 ……… ‹ Back` (the whole 52px row is
+  the target), so a mis-tap into their cart is one tap to undo. The morph plays in reverse. **No auto-close**: 021's
+  "folds by itself 1.2s after their last score" timer is removed. Changing hole (Next hole, ◀ ▶, the grid) returns to
+  your cart on the new hole, with the hole turn, no morph.
 - The match line above the yardage card and Next hole never move. Reward motion plays in their cards as in yours.
 - Only transform and opacity. Build: every part that means the same thing in both states carries a key (a name, a
   player's card, a label row, a one-line row); the morph measures each key before and after and animates between
