@@ -18,7 +18,7 @@ Andrew Nov 20 with `prototype.html` and 31 screenshots in that folder. Also: "se
 
 ## Building the Enter motion + layout (033 + 034)? Read `docs/design/features/034-enter-turn-sideways/SPEC.md` first
 
-Approved by Andrew Nov 21, **not built**. The top of 034's SPEC lists exactly what to build: the next-hole slide (only the
+Approved by Andrew Nov 21, **built and merged Nov 21 (20116a5)**; ARCHITECTURE.md 13a has what it does. The top of 034's SPEC lists exactly what to build: the next-hole slide (only the
 yardage + score cards move), one card per player with the name outside (`ANDREW (WITH SEAN)`), the match line above the
 yardage card, the spacing, and entering for the rest of your tee time (names travel, `‹ Back`, no auto-close), louder par → ace celebrations, and result words that stay on screen. Score-pick
 motion = 033 Part 1 (`docs/design/features/033-enter-motion/`); 033 Part 2 (the flip) is replaced by 034. Both folders have

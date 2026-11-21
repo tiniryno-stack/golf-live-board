@@ -1,6 +1,6 @@
 # 034 · The turn, sideways: holes move left to right
 
-Status: approved by Andrew, Nov 21 ("yeah this is great I like it"). Not built.
+Status: built in 20116a5 (approved by Andrew, Nov 21: "yeah this is great I like it").
 
 **What was approved (build exactly this; everything below is the record of how we got here):**
 1. **The hole turn: (g) Just the cards.** The yardage card and the score cards slide one screen-width together

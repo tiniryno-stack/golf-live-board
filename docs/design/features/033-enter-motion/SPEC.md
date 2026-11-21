@@ -1,6 +1,6 @@
 # 033 · Enter motion: louder score picks, and the card turns to the next hole
 
-Status: handed off (design), not built.
+Status: Part 1 (score picks) built in 20116a5, with 034's "Score picks v2". Part 2 (the flip) replaced by 034.
 
 **Changes 022** (Part 1 replaces 022 §4's per-result motion; everything else in 022 stays) and **adds to 027**
 (a new motion, the turn, next to grow / fold). Applies to the calm Enter that every game uses since 031 / 028.
