@@ -24,6 +24,14 @@ yardage card, the spacing, and entering for the rest of your tee time (names tra
 motion = 033 Part 1 (`docs/design/features/033-enter-motion/`); 033 Part 2 (the flip) is replaced by 034. Both folders have
 `prototype.html` (034's loads 033's `motion.css` + its own), `motion.css` and `shoot.mjs`. Touches score entry: smoke run.
 
+## Building the Scorecard locker (035)? Read `docs/design/features/035-scorecard-locker/SPEC.md` first
+
+Approved by Andrew Nov 21 for a first build, **not built**. Collectible scorecards: every finished 18 is a sealed pack
+you hold to rip, the card lands in your Locker (Home entry, `#/locker`), finish = launch ladder for rounds already
+played, "your normal" (last 20, worst fifth left out) after. One new table `card_opens` + RPC `open_card` (apply the
+migration before the code reaches `main`). `prototype.html` there = the look to port; the SPEC wins where they differ.
+All new styles go in a new `css/locker.css` (must be added to index.html's CSS array).
+
 ## Today's game (032, Nov 20, live on `main`)
 
 Animated rules slides per game: pure model `js/todaysgame.js` (`todaysGame(snap, meId)`, test `tests/todaysgame032.test.mjs`),
