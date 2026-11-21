@@ -34,7 +34,29 @@ left, the next hole's cards in from the right; ◀ = the other way. Everything e
 Screenshots: `70`–`77` at 0 / 90 / 150 / 300ms, Next 4 → 5 and ◀ 5 → 4, dark + light; strips `80` forward, `81` back
 (0 / 60 / 120 / 180 / 240 / 320 / 420ms); `82` into "Up next", `83` 2v2 new partner, `84` no yardage card.
 
-## Name line + match line (Andrew's comment on the prototype, Nov 21)
+## Player rows, take 2: the name beside the pads (Nov 21) — current proposal
+
+**Andrew on take 1 (below):** no. Try other UI changes. So this time the layout changes instead of filling the gap:
+**the name line is gone.** Each player is one row: name on the left, pads on the right.
+
+Prototype ⋯ → "Player rows": **Name beside** (default) · **Name beside + labels** · As today.
+
+- **Name beside:** a 76px name column (`row` 17/600) and the pads. Under the name, small: "1 stroke" on a stroke hole,
+  or the reward word for 1.6–3s after a pick ("Birdie", 033 Part 1 sizes and motion). Pads stay **64px tall**; ⋯
+  narrows from 56 to 32px so the four pads stay ≥ 48px wide (49px on a 393 screen). Card padding 4 / 12 / 4 / 16px
+  (the green rail keeps its place). The card gets ~50px shorter for two players.
+- **Name beside + labels:** the same, plus one row of column labels at the top of the card, `BIRDIE PAR BOGEY DOUBLE`
+  (`label` 12 mono, `text-muted`, letter-spacing .5px so DOUBLE fits the 49px column). The four pads are always
+  birdie…double, so the labels never change; they explain the marks once per card instead of a name line per player.
+- The match line stays as 022 approved it (`Andrew + Sean   4 UP   vs Sam + Jake`).
+- Flagged: ⋯ at 32px wide is narrower than the 48px tap minimum (it's 64px tall, and the whole column edge is hittable,
+  so the target is 32 × 64 + the 6px gap). If that's a problem, the name column can drop to 68px and ⋯ go back to 40.
+
+---
+
+## Player rows, take 1: round score in the name line (Nov 21) — rejected
+
+
 
 **The comment:** the line with each player's name above their pads leaves an awkward blank space on the right; and the
 match line says "Andrew + Sean" right above a card that says Andrew and Sean again. (In a 2v2 swap your partner

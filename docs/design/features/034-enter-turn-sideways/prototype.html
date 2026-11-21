@@ -108,6 +108,18 @@ svg.i { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-widt
 .ce-nm > b { font-size: 17px; font-weight: 600; min-width: 0; flex: 0 1 auto; }
 .ce-stk { font-size: 13px; font-weight: 500; color: var(--text-muted); }
 /* 034 rows: each player's round so far fills the right of the name line (small, muted; the number in mono, text) */
+/* 034 rows, round 2: the name sits BESIDE the pads (no name line). Column 76px: name (row 17/600) on top, then
+   "1 stroke" or the reward word under it. Pads stay 64px tall; ⋯ narrows to 32px so the 4 pads stay ≥ 48px wide. */
+.ce-card.side { padding: 4px 12px 4px 16px; }
+.ce-row.side { display: grid; grid-template-columns: 76px minmax(0, 1fr); column-gap: 8px; align-items: center; padding: 6px 0; }
+.ce-row.side .ce-pads { grid-template-columns: repeat(4, minmax(0, 1fr)) 32px; }
+.ce-who2 { display: flex; flex-direction: column; justify-content: center; gap: 2px; min-width: 0; height: 64px; }
+.ce-who2 > b { font-size: 17px; line-height: 22px; font-weight: 600; }
+.ce-who2 > .ce-stk, .ce-who2 > .ce-word { line-height: 20px; white-space: nowrap; }
+/* "+ labels": one row of column labels at the top of the card, instead of a name line per player */
+.ce-cols { display: grid; grid-template-columns: 76px minmax(0, 1fr); column-gap: 8px; padding: 8px 0 0; }
+.ce-cols > div { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) 32px; gap: 6px; }
+.ce-cols span { font: 600 12px/16px var(--font-mono); letter-spacing: .5px; color: var(--text-muted); text-align: center; }
 .ce-tot { margin-left: auto; flex: none; font-size: 13px; font-weight: 500; color: var(--text-muted); white-space: nowrap; }
 .ce-tot b { font-family: var(--font-mono); font-weight: 600; color: var(--text); margin-left: 4px; }
 /* 034 rows: the match line names only the other side ("vs Sam + Jake"), your names are in the card right under it */
@@ -281,7 +293,7 @@ const GAMES = {
 
 // ── state ──────────────────────────────────────────────────────────────────────────────────
 const S = {
-  game: 'carts', gps: 'regular', turn: 'cards', rows: 'new', motion: 'normal', theme: 'dark', final: false,
+  game: 'carts', gps: 'regular', turn: 'cards', rows: 'side', motion: 'normal', theme: 'dark', final: false,
   cur: 4, view: 4, scores: {}, unlocked: {}, seenSwitch: {},
   reward: null, pts: null, nudge: null, sheet: null, full: null,
 };
@@ -370,6 +382,9 @@ function padRow(id, h, editable) {
   const word = rw ? `<span class="ce-word anim ${rw.r.tone}" data-t0="${rw.t0}">${rw.r.word}</span>` : '';
   const nudge = g == null && S.nudge?.h === h ? ' nudge' : '';
   const tot = S.rows === 'new' ? `<span class="ce-tot">${roundLabel(id, h)}</span>` : '';
+  if (S.rows === 'side' || S.rows === 'grid') {
+    return `<div class="ce-row side${nudge}"${nudge ? ` data-t0="${S.nudge.t0}"` : ''}><div class="ce-who2"><b class="ellipsis">${P[id]}</b>${word || (k ? '<span class="ce-stk">1 stroke</span>' : '')}</div><div class="ce-pads">${pads}</div></div>`;
+  }
   return `<div class="ce-row${nudge}"${nudge ? ` data-t0="${S.nudge.t0}"` : ''}><div class="ce-nm"><b class="ellipsis">${P[id]}</b>${k && !rw ? `<span class="ce-stk">1 stroke</span>` : ''}${word}${tot}</div><div class="ce-pads">${pads}</div></div>`;
 }
 function quietRow(ids, h, m, i) {
@@ -421,7 +436,9 @@ function render() {
     <div class="ce-nav"><button class="ce-ib" data-act="prev" aria-label="Previous hole"${h <= 1 ? ' disabled' : ''}>${icon('left')}</button><button class="ce-ib" data-act="next1" aria-label="Next hole"${h >= 18 ? ' disabled' : ''}>${icon('right')}</button><button class="ce-ib" data-act="menu" aria-label="Prototype options">${icon('dots')}</button></div></div>`;
   let rows;
   if (lv) {
-    rows = `<div class="ce-card t-panel${g.mine(h).includes('A') ? ' rail' : ''}">${g.mine(h).map((id) => padRow(id, h, true)).join('')}</div>`
+    const side = S.rows === 'side' || S.rows === 'grid';
+    const cols = S.rows === 'grid' ? `<div class="ce-cols" aria-hidden="true"><span></span><div>${['BIRDIE', 'PAR', 'BOGEY', 'DOUBLE'].map((x) => `<span>${x}</span>`).join('')}<span></span></div></div>` : '';
+    rows = `<div class="ce-card t-panel${side ? ' side' : ''}${g.mine(h).includes('A') ? ' rail' : ''}">${cols}${g.mine(h).map((id) => padRow(id, h, true)).join('')}</div>`
       + g.quiet(h).map((ids, i) => quietRow(ids, h, m, i + 1)).join('');
   } else rows = readRows(h);
   const blanks = blanksOn(h), mine = g.mine(h), theirs = blanks.filter((id) => !mine.includes(id));
@@ -460,7 +477,7 @@ function options() {
   return `<div class="opt">
     <h3>Turn to the next hole</h3>${seg('turn', [['cards', '(g) Just the cards'], ['hole', '(e) Whole hole'], ['wave', '(f) Wave']])}
     <p style="margin:6px 0">Earlier rounds:</p>${seg('turn', [['slide', '(c) Slide'], ['book', '(d) Book'], ['flip', '(a) Flip'], ['page', '(b) Page']])}
-    <h3>Name line + match line</h3>${seg('rows', [['new', 'New: round score, no repeat'], ['old', 'As today']])}
+    <h3>Player rows</h3>${seg('rows', [['side', 'Name beside'], ['grid', 'Name beside + labels'], ['old', 'As today']])}
     <h3>Game</h3>${seg('game', [['carts', 'Team cart'], ['2v2', '2v2'], ['six', '6 · sitting out'], ['solo', 'Scorecard']], true)}
     <h3>Yardage card</h3>${seg('gps', [['regular', 'Regular 92'], ['compact', 'Compact 68'], ['off', 'None']])}
     <h3>Motion</h3>${seg('motion', [['normal', 'Normal'], ['slow', 'Slow ×4'], ['reduced', 'Reduced']])}
