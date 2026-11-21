@@ -153,4 +153,24 @@ for (const [name, scene, action, title] of MID2) {
   for (const t of [0, 40, 80, 120, 180, 240, 400]) frames.push({ buf: await frame('dark', scene, action, t), label: `${t} ms` });
   await strip(name, 'dark', frames, { title });
 }
+// ── round 3: (g) just the cards ───────────────────────────────────────────────────────────
+n = 70;
+for (const dir of ['fwd', 'back']) for (const tm of [0, 90, 150, 300]) {
+  const name = `${n++}-g-cards-${dir === 'fwd' ? 'forward' : 'back'}-${String(tm).padStart(3, '0')}`;
+  const scene = { ...(dir === 'fwd' ? FWD : BACK), turn: 'cards' }, action = { do: dir === 'fwd' ? 'next' : 'prev' };
+  for (const th of ['dark', 'light']) if (want(name)) save(`${name}${th === 'light' ? '-light' : ''}`, await frame(th, scene, action, tm));
+}
+const R3 = [
+  ['80-g-cards-forward-strip', FWD, { do: 'next' }, '(g) Just the cards · Next hole 4 → 5'],
+  ['81-g-cards-back-strip', BACK, { do: 'prev' }, '(g) Just the cards · ◀ 5 → 4'],
+  ['82-g-cards-to-up-next', { ...BASE, scores: sc(4) }, { do: 'fwd' }, '(g) ▶ to “Up next”: the yardage card leaves with the card; the rest crossfades into its new place'],
+  ['83-g-cards-2v2-new-partner', { ...BASE, game: '2v2', cur: 6, view: 6, scores: all(6), seenSwitch: { '2v27': true } }, { do: 'next' }, '(g) 2v2, 6 → 7: new partner, the match line crossfades'],
+  ['84-g-cards-no-yardage', { ...BASE, gps: 'off', scores: all(4) }, { do: 'next' }, '(g) No yardage card'],
+];
+for (const [name, scene, action, title] of R3) {
+  if (!want(name)) continue;
+  const frames = [];
+  for (const tm of [0, 60, 120, 180, 240, 320, 420]) frames.push({ buf: await frame('dark', { ...scene, turn: 'cards' }, action, tm), label: `${tm} ms` });
+  await strip(name, 'dark', frames, { title });
+}
 await browser.close();

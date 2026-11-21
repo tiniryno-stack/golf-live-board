@@ -274,7 +274,7 @@ const GAMES = {
 
 // ── state ──────────────────────────────────────────────────────────────────────────────────
 const S = {
-  game: 'carts', gps: 'regular', turn: 'hole', motion: 'normal', theme: 'dark', final: false,
+  game: 'carts', gps: 'regular', turn: 'cards', motion: 'normal', theme: 'dark', final: false,
   cur: 4, view: 4, scores: {}, unlocked: {}, seenSwitch: {},
   reward: null, pts: null, nudge: null, sheet: null, full: null,
 };
@@ -439,7 +439,7 @@ function seg(k, items, wrap = false) {
 }
 function options() {
   return `<div class="opt">
-    <h3>Turn to the next hole</h3>${seg('turn', [['hole', '(e) Whole hole'], ['wave', '(f) Whole hole, wave']])}
+    <h3>Turn to the next hole</h3>${seg('turn', [['cards', '(g) Just the cards'], ['hole', '(e) Whole hole'], ['wave', '(f) Wave']])}
     <p style="margin:6px 0">Earlier rounds:</p>${seg('turn', [['slide', '(c) Slide'], ['book', '(d) Book'], ['flip', '(a) Flip'], ['page', '(b) Page']])}
     <h3>Game</h3>${seg('game', [['carts', 'Team cart'], ['2v2', '2v2'], ['six', '6 · sitting out'], ['solo', 'Scorecard']], true)}
     <h3>Yardage card</h3>${seg('gps', [['regular', 'Regular 92'], ['compact', 'Compact 68'], ['off', 'None']])}
@@ -514,6 +514,7 @@ function playTurn(old, dir) {
   scr.dataset.dir = dir;
   scr.appendChild(layer);
   if (S.motion !== 'reduced' && (S.turn === 'hole' || S.turn === 'wave')) return pageTurn(old, scr, layer);
+  if (S.motion !== 'reduced' && S.turn === 'cards') return cardsTurn(old, scr, layer);
   const place = (clone, r, ...cls) => { Object.assign(clone.style, { position: 'absolute', margin: '0', top: `${r.top}px`, left: `${r.left}px`, width: `${r.width}px`, height: `${r.height}px` }); clone.classList.add(...cls); layer.appendChild(clone); return clone; };
   // hole number + par roll; "Par" follows the number's width
   const h = S.view, par = PARS[h - 1];
@@ -560,6 +561,25 @@ function pageTurn(old, scr, layer) {
     p.clone.classList.add('t-page', 't-out'); p.clone.style.setProperty('--t-lag', i); layer.appendChild(p.clone);
   });
   fresh.forEach((el, i) => { el.classList.add('t-page', 't-in'); el.style.setProperty('--t-lag', i); });
+  const anims = scr.getAnimations({ subtree: true });
+  if (RATE() !== 1) anims.forEach((a) => { a.playbackRate = RATE(); });
+  const t = { anims };
+  turning = t;
+  Promise.all(anims.map((a) => a.finished)).then(() => { if (turning === t) endTurn(); }).catch(() => {});
+}
+// 034 (g): only the two cards travel (the yardage card and the score card / read-only rows); the rest of the screen
+// stays where it is and swaps its words with a soft crossfade (title, quiet rows, the match line when it changes).
+function cardsTurn(old, scr, layer) {
+  scr.style.setProperty('--t-w', `${scr.clientWidth}px`);
+  const moves = (el) => el.classList.contains('ce-card') || el.classList.contains('ce-list') || el.classList.contains('green-card');
+  const m = $('.ce-match', scr), matchChanged = m.textContent !== old.match.text || Math.abs(rel(m).top - old.match.rect.top) > .5;
+  const fresh = [$('.green-card', scr), ...$$('.ce-body .t-panel', scr), $('.ce-hole', scr), matchChanged ? m : null].filter(Boolean);
+  const parts = [old.green, ...old.panels, old.title, matchChanged ? old.match : null].filter(Boolean);
+  parts.forEach((p) => {
+    Object.assign(p.clone.style, { position: 'absolute', margin: '0', top: `${p.rect.top}px`, left: `${p.rect.left}px`, width: `${p.rect.width}px`, height: `${p.rect.height}px` });
+    p.clone.classList.add(moves(p.clone) ? 't-page' : 't-fade', 't-out'); layer.appendChild(p.clone);
+  });
+  fresh.forEach((el) => el.classList.add(moves(el) ? 't-page' : 't-fade', 't-in'));
   const anims = scr.getAnimations({ subtree: true });
   if (RATE() !== 1) anims.forEach((a) => { a.playbackRate = RATE(); });
   const t = { anims };

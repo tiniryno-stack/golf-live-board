@@ -94,3 +94,21 @@
 :is(.ce[data-turn="hole"], .ce[data-turn="wave"])[data-dir="fwd"]  .t-page.t-in  { animation: t-hole-in-fwd   320ms cubic-bezier(.2,.8,.2,1) calc(var(--t-lag, 0) * var(--t-step)) both; }
 :is(.ce[data-turn="hole"], .ce[data-turn="wave"])[data-dir="back"] .t-page.t-out { animation: t-hole-out-back 320ms cubic-bezier(.2,.8,.2,1) calc(var(--t-lag, 0) * var(--t-step)) both; }
 :is(.ce[data-turn="hole"], .ce[data-turn="wave"])[data-dir="back"] .t-page.t-in  { animation: t-hole-in-back  320ms cubic-bezier(.2,.8,.2,1) calc(var(--t-lag, 0) * var(--t-step)) both; }
+
+/* ══════════ ROUND 3 (Nov 21) · (g) just the cards ══════════
+   Andrew: "one where just the yardage widget card moves and the scoring enter card moves and the rest of the UI stays,
+   with some easy easing". The yardage card and the score card (or, on a played / "Up next" hole, its read-only rows)
+   slide one screen-width, together, on a gentle ease-in-out. Everything else stays where it is: the title, the match
+   line and the quiet row (the rest of your tee time) change their words with a short crossfade in place, and the
+   match line only if it says something new. Pinned as always: ◀ ▶ ⋯, Next hole, the tab bar.
+   Markup: .t-page.t-out / .t-in on the two cards (033's layer for the old ones), .t-fade.t-out / .t-in on the parts
+   that stay. --t-w = the screen's width. */
+@keyframes t-fade-out { from { opacity: 1 } to { opacity: 0 } }
+@keyframes t-fade-in  { from { opacity: 0 } to { opacity: 1 } }
+.ce[data-turn="cards"][data-dir="fwd"]  .t-page.t-out { animation: t-hole-out-fwd  420ms cubic-bezier(.4,0,.2,1) both; }
+.ce[data-turn="cards"][data-dir="fwd"]  .t-page.t-in  { animation: t-hole-in-fwd   420ms cubic-bezier(.4,0,.2,1) both; }
+.ce[data-turn="cards"][data-dir="back"] .t-page.t-out { animation: t-hole-out-back 420ms cubic-bezier(.4,0,.2,1) both; }
+.ce[data-turn="cards"][data-dir="back"] .t-page.t-in  { animation: t-hole-in-back  420ms cubic-bezier(.4,0,.2,1) both; }
+/* the words that stay: old out 0–160ms, new in 120–340ms (they overlap a little, so it never blinks empty) */
+.ce[data-turn="cards"] .t-fade.t-out { animation: t-fade-out 160ms cubic-bezier(.4,0,1,1) both; }
+.ce[data-turn="cards"] .t-fade.t-in  { animation: t-fade-in 220ms 120ms cubic-bezier(.2,.8,.2,1) both; }

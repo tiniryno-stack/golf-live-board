@@ -1,6 +1,6 @@
 # 034 · The turn, sideways: holes move left to right
 
-Status: exploration, round 2 (Nov 21), waiting for Andrew's pick. Not built.
+Status: exploration, round 3 (Nov 21), waiting for Andrew's pick. Not built.
 
 **Changes 033 §2.2–2.3** (how the card turns to the next hole). Everything else in 033 stands: Part 1 (score picks),
 what moves and what never moves (§2.1), the yardage card rules (§2.4), what starts a turn (§2.6), the build notes and
@@ -10,7 +10,33 @@ reduced motion.
 behind it". It's a magic trick, not the journey. Moving to the next hole should feel like moving **along** the course:
 forward goes right, back goes left, like the ◀ ▶ arrows. 034 adds two sideways turns to compare with 033's.
 
-## Round 2 (Nov 21): the whole hole moves — current proposal
+## Round 3 (Nov 21): just the cards move — current proposal
+
+**Andrew on round 2:** "it's good, but can we try one where just the yardage widget card moves and the scoring enter
+card moves, and the rest of the UI stays, with some easy easing."
+
+**(g) Just the cards.** The yardage card and the score card slide one screen-width together: Next hole = out to the
+left, the next hole's cards in from the right; ◀ = the other way. Everything else stays where it is.
+
+| Part | What it does |
+|---|---|
+| Yardage card + score card (or the read-only rows on a played / "Up next" hole) | Slide together, **420ms, `cubic-bezier(.4,0,.2,1)`** (a gentle ease-in-out: starts softly, glides, settles softly; slower than the 320ms of (e)). Old ones from 0 to −(screen width), new ones from +(screen width) to 0. |
+| Title (Hole 4 → Hole 5 · Par), the quiet row (the rest of your tee time), the match line if it says something new | **Stay in place** and change their words with a short crossfade: old out over 0–160ms, new in over 120–340ms (a small overlap so it never blinks empty). |
+| ◀ ▶ ⋯, Next hole, the tab bar | Never move (Next's label changes at 0ms). |
+
+- Nothing changes inside a card: the next hole's yardage card arrives with its own green and numbers.
+- **A yardage card that comes or goes** ("Up next", no GPS): it leaves (or arrives) with the score card; the match
+  line and quiet row crossfade straight into their places on the new layout (`82`).
+- Exact values: `motion.css`, "ROUND 3". Build: as (e) below, with two lists (the parts that slide get `.t-page`,
+  the parts that stay get `.t-fade`).
+- Reduced motion: unchanged from 033 §4 (a 150ms crossfade, nothing moves).
+
+Screenshots: `70`–`77` at 0 / 90 / 150 / 300ms, Next 4 → 5 and ◀ 5 → 4, dark + light; strips `80` forward, `81` back
+(0 / 60 / 120 / 180 / 240 / 320 / 420ms); `82` into "Up next", `83` 2v2 new partner, `84` no yardage card.
+
+---
+
+# Round 2 (Nov 21): the whole hole moves
 
 **Andrew on round 1's (c) Slide:** "almost there. I like it sliding sideways, but the numbers changing sideways is
 weird too. If anything the whole yardage card can just move with it."
@@ -105,7 +131,7 @@ except the FLIP when the yardage card comes or goes.
 
 | What | Where |
 |---|---|
-| Prototype: (e) Whole hole is the default; ⋯ switches to (f), and to round 1's (c), (d) and 033's (a), (b) | `prototype.html`. Loads `../033-enter-motion/motion.css` then this folder's `motion.css`. Also at https://claude.ai/artifact/XEedkFZGGfzYwXx2Ti33wy (same link as 033: now opens on (e)). |
+| Prototype: (g) Just the cards is the default; ⋯ switches to (e), (f), round 1's (c), (d) and 033's (a), (b) | `prototype.html`. Loads `../033-enter-motion/motion.css` then this folder's `motion.css`. Also at https://claude.ai/artifact/XEedkFZGGfzYwXx2Ti33wy (same link as 033: now opens on (g)). |
 | Exact values for (c) and (d) | `motion.css` (adds to 033's; loads after it) |
 | Screenshots | `screenshots/`, 393 × 659 @2×. Re-render: `node docs/design/features/034-enter-turn-sideways/shoot.mjs` |
 
