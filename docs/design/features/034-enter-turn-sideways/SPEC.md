@@ -51,7 +51,20 @@ then you have no weird header."
 - Pads, ⋯, marks, reward motion, the match line and the quiet row are unchanged. No new tokens or type styles.
 - The turn (g) slides both cards together as the score card.
 
-### Your partner in brackets on your name (Nov 21) — current proposal
+### One line: your name + partner on the left, the match on the right (Nov 21) — current proposal
+
+**Andrew (comment on the prototype):** the match line and `ANDREW (WITH SEAN)` are on separate lines; put them on the
+same line.
+
+- There is **no separate match line.** Your card's label row carries both: `ANDREW (WITH SEAN)` on the left
+  (`label` style), `4 UP  vs Sam + Jake` right-aligned on the same 20px row (standing mono 700, green when you're up;
+  `vs …` 15/500 `text-muted`). Saves the 36px line.
+- A long name + partner shrinks first with an ellipsis; the score never wraps.
+- 2v2 holes 7–12: `ANDREW (WITH SAM) ……… AS  vs Sean + Jake`.
+- The hole's points (022 §3) swap in where `vs …` is. Sitting out and Scorecard only keep their own line (below).
+- Prototype ⋯ → "Match line": **One line** (default).
+
+### Your partner in brackets on your name (Nov 21)
 
 **Andrew on A / B below:** no to those conventions; keep the names outside the cards. "Whoever you're paired with
 could just be the additional info, in parentheses next to my name."

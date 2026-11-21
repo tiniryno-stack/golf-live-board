@@ -155,7 +155,8 @@ html.light .ce-tab.on { background: var(--surface-1); box-shadow: 0 1px 2px rgba
 .pgrp-l .ce-end { margin-left: auto; font-family: var(--font-sans); text-transform: none; letter-spacing: 0; font-size: 15px; font-weight: 500; }
 .pgrp-l .ce-end .ce-vs { color: var(--text-muted); }
 .ce-match.gone { height: 0; overflow: hidden; }
-.pgrp-l .pgrp-w { color: var(--text-muted); }   /* "(with Sam)": same label style as the name */
+.pgrp-l .pgrp-w { color: var(--text-muted); }
+.pgrp-n { min-width: 0; overflow: hidden; text-overflow: ellipsis; }   /* "(with Sam)": same label style as the name */
 /* 6 · name outside: the name is a small label ABOVE each player's card (like a grouped-list section header);
    the card holds only the pads, with the same 8px above and below them */
 .pgrp + .pgrp { margin-top: 12px; }
@@ -353,7 +354,7 @@ const GAMES = {
 
 // ── state ──────────────────────────────────────────────────────────────────────────────────
 const S = {
-  game: 'carts', gps: 'regular', turn: 'cards', rows: 'outside', mline: 'right', tabPid: null, motion: 'normal', theme: 'dark', final: false,
+  game: 'carts', gps: 'regular', turn: 'cards', rows: 'outside', mline: 'merged', tabPid: null, motion: 'normal', theme: 'dark', final: false,
   cur: 4, view: 4, scores: {}, unlocked: {}, seenSwitch: {},
   reward: null, pts: null, nudge: null, sheet: null, full: null,
 };
@@ -466,8 +467,8 @@ function padRow(id, h, editable) {
   if (S.rows === 'outside') {
     const gm = G(), mm = gm.match(h), first = gm.mine(h)[0] === id;
     const mate = mm && mm.us.find((x) => x !== 'A');
-    const partner = id === 'A' && mate && S.mline === 'right' ? ` <span class="pgrp-w">(with ${P[mate]})</span>` : '';
-    return `<div class="pgrp"><div class="pgrp-l">${P[id]}${partner}${k && !rw ? ' · 1 stroke' : ''}${word}${first && S.mline === 'labels' ? S._labelEnd || '' : ''}</div><div class="pcard even${G().mine(h).includes('A') ? ' rail' : ''}"><div class="ce-row${nudge}"${nAttr}><div class="ce-pads">${pads}</div></div></div></div>`;
+    const partner = id === 'A' && mate && (S.mline === 'right' || S.mline === 'merged') ? ` <span class="pgrp-w">(with ${P[mate]})</span>` : '';
+    return `<div class="pgrp"><div class="pgrp-l"><span class="pgrp-n">${P[id]}${partner}${k && !rw ? ' · 1 stroke' : ''}</span>${word}${first && (S.mline === 'labels' || S.mline === 'merged') ? S._labelEnd || '' : ''}</div><div class="pcard even${G().mine(h).includes('A') ? ' rail' : ''}"><div class="ce-row${nudge}"${nAttr}><div class="ce-pads">${pads}</div></div></div></div>`;
   }
   if (S.rows === 'cards') {
     return `<div class="pcard${id === 'A' || G().mine(h).includes('A') ? ' rail' : ''}"><div class="pcard-l">${P[id]}${k && !rw ? ' · 1 stroke' : ''}${word}</div><div class="ce-row${nudge}"${nAttr}><div class="ce-pads">${pads}</div></div></div>`;
@@ -520,7 +521,7 @@ function matchLine(h) {
     if (g.pairs && h === m.from && m.from > 1) left = `Holes ${m.from}–${m.to} · with ${P[m.us[1]]}`;
     if (S.rows === 'outside' && S.mline !== 'today') { // 034: your names are on the labels right below
       const end = `<span class="ce-end">${up}<span class="ce-swap"><span class="ce-vs${pt ? ' anim' : ''}"${pt ? ` data-t0="${pt.t0}"` : ''}>vs ${names(m.them)}</span>${won}</span></span>`;
-      if (S.mline === 'labels') { S._labelEnd = end; return '<div class="ce-match gone" aria-hidden="true"></div>'; }
+      if (S.mline === 'labels' || S.mline === 'merged') { S._labelEnd = end; return '<div class="ce-match gone" aria-hidden="true"></div>'; }
       if (S.mline === 'right') return `<div class="ce-match"><span></span>${end}</div>`;
       return `<div class="ce-match m1">${end}</div>`;
     }
@@ -589,7 +590,7 @@ function options() {
     <h3>Turn to the next hole</h3>${seg('turn', [['cards', '(g) Just the cards'], ['hole', '(e) Whole hole'], ['wave', '(f) Wave']])}
     <p style="margin:6px 0">Earlier rounds:</p>${seg('turn', [['slide', '(c) Slide'], ['book', '(d) Book'], ['flip', '(a) Flip'], ['page', '(b) Page']])}
     <h3>Player rows</h3>${seg('rows', [['avatar', '1 · Avatar'], ['chip', '2 · Name chip'], ['tabs', '3 · One at a time'], ['stepper', '4 · Stepper'], ['cards', '5 · Card each'], ['outside', '6 · Name outside'], ['old', 'As today']], true)}
-    <h3>Match line (with 6 · Name outside)</h3>${seg('mline', [['right', '(with …) on your name'], ['first', 'A · Score first'], ['labels', 'B · In the label'], ['today', 'As today']], true)}
+    <h3>Match line (with 6 · Name outside)</h3>${seg('mline', [['merged', 'One line'], ['right', '(with …) on your name'], ['first', 'A · Score first'], ['labels', 'B · In the label'], ['today', 'As today']], true)}
     <h3>Game</h3>${seg('game', [['carts', 'Team cart'], ['2v2', '2v2'], ['six', '6 · sitting out'], ['solo', 'Scorecard']], true)}
     <h3>Yardage card</h3>${seg('gps', [['regular', 'Regular 92'], ['compact', 'Compact 68'], ['off', 'None']])}
     <h3>Motion</h3>${seg('motion', [['normal', 'Normal'], ['slow', 'Slow ×4'], ['reduced', 'Reduced']])}
