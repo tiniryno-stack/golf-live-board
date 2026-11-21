@@ -149,6 +149,12 @@ html.light .ce-tab.on { background: var(--surface-1); box-shadow: 0 1px 2px rgba
 .pcard-l { display: flex; align-items: center; gap: 8px; height: 20px; margin-bottom: 4px; font: 600 12px/16px var(--font-mono); letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); }
 .pcard-l .ce-word { font-family: var(--font-sans); text-transform: none; letter-spacing: 0; }
 .pcard .ce-row { padding: 0; border-top: 0; }
+/* match line, take 2 (with "name outside"): your names are on the card labels, so the line drops them.
+   A · score first: "4 UP  vs Sam + Jake", left-aligned. B · no line: the same, right-aligned on the first card's label row. */
+.ce-match.m1 { justify-content: flex-start; }
+.pgrp-l .ce-end { margin-left: auto; font-family: var(--font-sans); text-transform: none; letter-spacing: 0; font-size: 15px; font-weight: 500; }
+.pgrp-l .ce-end .ce-vs { color: var(--text-muted); }
+.ce-match.gone { height: 0; overflow: hidden; }
 /* 6 · name outside: the name is a small label ABOVE each player's card (like a grouped-list section header);
    the card holds only the pads, with the same 8px above and below them */
 .pgrp + .pgrp { margin-top: 12px; }
@@ -346,7 +352,7 @@ const GAMES = {
 
 // ── state ──────────────────────────────────────────────────────────────────────────────────
 const S = {
-  game: 'carts', gps: 'regular', turn: 'cards', rows: 'outside', tabPid: null, motion: 'normal', theme: 'dark', final: false,
+  game: 'carts', gps: 'regular', turn: 'cards', rows: 'outside', mline: 'first', tabPid: null, motion: 'normal', theme: 'dark', final: false,
   cur: 4, view: 4, scores: {}, unlocked: {}, seenSwitch: {},
   reward: null, pts: null, nudge: null, sheet: null, full: null,
 };
@@ -457,7 +463,9 @@ function padRow(id, h, editable) {
       <div class="ce-stp"><button class="ce-sb" data-act="step" data-id="${id}" data-d="-1" aria-label="${P[id]} one less"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 12h12"/></svg></button>${box}<button class="ce-sb" data-act="step" data-id="${id}" data-d="1" aria-label="${P[id]} one more"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 12h12M12 6v12"/></svg></button></div></div>`;
   }
   if (S.rows === 'outside') {
-    return `<div class="pgrp"><div class="pgrp-l">${P[id]}${k && !rw ? ' · 1 stroke' : ''}${word}</div><div class="pcard even${G().mine(h).includes('A') ? ' rail' : ''}"><div class="ce-row${nudge}"${nAttr}><div class="ce-pads">${pads}</div></div></div></div>`;
+    const gm = G(), mm = gm.match(h), first = gm.mine(h)[0] === id;
+    const partner = gm.pairs && mm && id !== 'A' && S.mline !== 'today' ? (h === mm.from ? ' · new partner' : ' · partner') : '';
+    return `<div class="pgrp"><div class="pgrp-l">${P[id]}${partner}${k && !rw ? ' · 1 stroke' : ''}${word}${first && S.mline === 'labels' ? S._labelEnd || '' : ''}</div><div class="pcard even${G().mine(h).includes('A') ? ' rail' : ''}"><div class="ce-row${nudge}"${nAttr}><div class="ce-pads">${pads}</div></div></div></div>`;
   }
   if (S.rows === 'cards') {
     return `<div class="pcard${id === 'A' || G().mine(h).includes('A') ? ' rail' : ''}"><div class="pcard-l">${P[id]}${k && !rw ? ' · 1 stroke' : ''}${word}</div><div class="ce-row${nudge}"${nAttr}><div class="ce-pads">${pads}</div></div></div>`;
@@ -481,6 +489,7 @@ function readRows(h) {
   return `<div class="ce-list t-panel">${[...mine, ...rest].map((id) => `<div class="ce-ro${mine.includes(id) ? '' : ' them'}"><span class="ce-ro-n"><b>${P[id]}</b>${strokesOn(id, h) ? '<span class="ce-stk">1 stroke</span>' : ''}</span>${smallMark(score(id, h), par, 40)}</div>`).join('')}</div>`;
 }
 function matchLine(h) {
+  S._labelEnd = '';
   const g = G(), m = g.match(h);
   if (S.final) { const s = m ? standingText(standing(m, h)) : ''; return `<div class="ce-match"><span class="ellipsis">Final · locked${s ? ` · <b class="ce-st">${s}</b> after ${h}` : ''}</span></div>`; }
   if (ahead()) return '<div class="ce-match"><span>Up next</span></div>';
@@ -494,10 +503,11 @@ function matchLine(h) {
     const ids = g.tee.map((id) => ({ id, t: toPar(id) })).sort((a, b) => a.t - b.t);
     const place = ids.findIndex((x) => x.id === 'A') + 1, lead = ids.find((x) => x.id !== 'A');
     right = `<span class="ce-end"><span class="ce-up${place === 1 ? '' : ' muted'}"><span class="ce-roll"><span>${fmtPar(toPar('A'))} · ${['1ST', '2ND', '3RD', '4TH'][place - 1]}</span></span></span><span class="ce-swap"><span class="ce-vs">${P[lead.id]} ${fmtPar(lead.t)}</span></span></span>`;
+    if (S.rows === 'outside' && S.mline !== 'today') return `<div class="ce-match m1"><span class="ce-end"><span class="ce-up${place === 1 ? '' : ' muted'}"><span class="ce-roll"><span>${fmtPar(toPar('A'))} · ${['1ST', '2ND', '3RD', '4TH'][place - 1]}</span></span></span><span class="ce-swap"><span class="ce-vs">${place === 1 ? 'Next' : 'Leader'} ${P[lead.id]} ${fmtPar(lead.t)}</span></span></span></div>`;
     if (S.rows === 'new') return `<div class="ce-match v2"><span class="ce-us ellipsis">${place === 1 ? 'Next best' : 'Leader'} · ${P[lead.id]} ${fmtPar(lead.t)}</span><span class="ce-end"><span class="ce-up${place === 1 ? '' : ' muted'}"><span class="ce-roll"><span>${['1ST', '2ND', '3RD', '4TH'][place - 1]}</span></span></span></span></div>`;
   } else if (!m) {
     right = `<span class="ce-end"><span class="ce-swap"><span class="ce-vs">${g.sitOut(h)}</span></span></span>`;
-    if (S.rows === 'new') return `<div class="ce-match v2"><span class="ce-us ellipsis">${g.sitOut(h)}</span></div>`;
+    if (S.rows === 'new' || (S.rows === 'outside' && S.mline !== 'today')) return `<div class="ce-match v2"><span class="ce-us ellipsis">${g.sitOut(h)}</span></div>`;
   } else {
     const pt = S.pts && S.pts.h === h ? S.pts : null;
     const d = standing(m, h), you = d > 0;
@@ -506,6 +516,11 @@ function matchLine(h) {
     const won = pt ? `<span class="ce-won anim${pt.line.tone === 'text' ? '' : ' muted'}" data-t0="${pt.t0}">${pt.line.text}</span>` : '';
     right = `<span class="ce-end">${up}<span class="ce-swap"><span class="ce-vs${pt ? ' anim' : ''}"${pt ? ` data-t0="${pt.t0}"` : ''}>vs ${names(m.them)}</span>${won}</span></span>`;
     if (g.pairs && h === m.from && m.from > 1) left = `Holes ${m.from}–${m.to} · with ${P[m.us[1]]}`;
+    if (S.rows === 'outside' && S.mline !== 'today') { // 034: your names are on the labels right below
+      const end = `<span class="ce-end">${up}<span class="ce-swap"><span class="ce-vs${pt ? ' anim' : ''}"${pt ? ` data-t0="${pt.t0}"` : ''}>vs ${names(m.them)}</span>${won}</span></span>`;
+      if (S.mline === 'labels') { S._labelEnd = end; return '<div class="ce-match gone" aria-hidden="true"></div>'; }
+      return `<div class="ce-match m1">${end}</div>`;
+    }
     if (S.rows === 'new') { // your names are in the card right below: say who you play, and (2v2) who's your partner now
       const vs = `${g.pairs ? `With ${P[m.us[1]]} · ` : ''}vs ${names(m.them)}`;
       return `<div class="ce-match v2"><span class="ce-us"><span class="ce-vs${pt ? ' anim' : ''}"${pt ? ` data-t0="${pt.t0}"` : ''}>${vs}</span>${won}</span><span class="ce-end">${up}</span></div>`;
@@ -517,6 +532,7 @@ function render() {
   const h = S.view, par = PARS[h - 1], g = G(), m = g.match(h), lv = live();
   const head = `<div class="ce-head"><button class="ce-hole" data-act="grid" aria-label="Hole ${h}: all holes"><span class="ce-hn">Hole <span class="t-v">${h}</span></span><span class="ce-hp">Par <span class="t-v">${par}</span></span></button>
     <div class="ce-nav"><button class="ce-ib" data-act="prev" aria-label="Previous hole"${h <= 1 ? ' disabled' : ''}>${icon('left')}</button><button class="ce-ib" data-act="next1" aria-label="Next hole"${h >= 18 ? ' disabled' : ''}>${icon('right')}</button><button class="ce-ib" data-act="menu" aria-label="Prototype options">${icon('dots')}</button></div></div>`;
+  const ml = matchLine(h); // first: in layout B it hands the match to the first card's label
   let rows;
   if (lv) {
     const side = S.rows === 'side' || S.rows === 'grid';
@@ -544,7 +560,7 @@ function render() {
     const bump = go && S.pts && S.pts.h === h;
     next = `<button class="ce-next${go ? ' go' : ''}${bump ? ' anim' : ''}"${bump ? ` data-t0="${S.pts.t0}"` : ''} data-act="next">${label}</button>`;
   }
-  $('#scr').innerHTML = `${head}${greenCard(h)}<div class="ce-body">${matchLine(h)}${rows}</div><div class="ce-flex"></div><div class="ce-foot">${status}${next}</div>
+  $('#scr').innerHTML = `${head}${greenCard(h)}<div class="ce-body">${ml}${rows}</div><div class="ce-flex"></div><div class="ce-foot">${status}${next}</div>
     <nav class="tabbar" aria-hidden="true">${['flag', 'rings', 'bars', 'grid'].map((n, k) => `<span class="${k === 0 ? 'on' : ''}">${icon(n)}</span>`).join('')}</nav>`;
   renderOverlay();
   sync();
@@ -570,6 +586,7 @@ function options() {
     <h3>Turn to the next hole</h3>${seg('turn', [['cards', '(g) Just the cards'], ['hole', '(e) Whole hole'], ['wave', '(f) Wave']])}
     <p style="margin:6px 0">Earlier rounds:</p>${seg('turn', [['slide', '(c) Slide'], ['book', '(d) Book'], ['flip', '(a) Flip'], ['page', '(b) Page']])}
     <h3>Player rows</h3>${seg('rows', [['avatar', '1 · Avatar'], ['chip', '2 · Name chip'], ['tabs', '3 · One at a time'], ['stepper', '4 · Stepper'], ['cards', '5 · Card each'], ['outside', '6 · Name outside'], ['old', 'As today']], true)}
+    <h3>Match line (with 6 · Name outside)</h3>${seg('mline', [['first', 'A · Score first'], ['labels', 'B · In the label'], ['today', 'As today']])}
     <h3>Game</h3>${seg('game', [['carts', 'Team cart'], ['2v2', '2v2'], ['six', '6 · sitting out'], ['solo', 'Scorecard']], true)}
     <h3>Yardage card</h3>${seg('gps', [['regular', 'Regular 92'], ['compact', 'Compact 68'], ['off', 'None']])}
     <h3>Motion</h3>${seg('motion', [['normal', 'Normal'], ['slow', 'Slow ×4'], ['reduced', 'Reduced']])}

@@ -51,6 +51,24 @@ then you have no weird header."
 - Pads, ⋯, marks, reward motion, the match line and the quiet row are unchanged. No new tokens or type styles.
 - The turn (g) slides both cards together as the score card.
 
+### The match line with "name outside" (Nov 21)
+
+**Andrew:** best one yet, but "Andrew + Sean" right above "ANDREW" repeats. The partner has to be clear after a swap.
+
+Your cart's names are now on the card labels, so the match line drops them and says only the score and who you play.
+The partner fact moves onto the partner's label. Prototype ⋯ → "Match line": **A · Score first** (default) ·
+**B · In the label** · As today.
+
+- **A · Score first:** `4 UP   vs Sam + Jake`, left-aligned (standing in mono 700, green when you're up; then
+  `vs …` in `text-muted`). Same 36px line as today.
+- **B · In the label:** no match line at all. The same `4 UP  vs Sam + Jake` sits right-aligned on the first card's
+  label row (`ANDREW ……… 4 UP vs Sam + Jake`). Saves the 36px line.
+- **2v2:** the partner's label says it: `SAM · NEW PARTNER` on the first hole of a set, `SAM · PARTNER` after that.
+  The match line reads `AS  vs Sean + Jake`. (Replaces today's "Holes 7–12 · with Sam".)
+- **6 players sitting out:** `Sitting out · back on 7 vs Mike + Justin` on its own. **Scorecard only:**
+  `+2 · 3RD   Leader Sean −1`.
+- The hole's points (022 §3) still swap in where `vs Sam + Jake` is, in both A and B.
+
 ---
 
 ## Player rows, take 4: five patterns to compare (Nov 21)
