@@ -371,7 +371,7 @@ const GAMES = {
 
 // ── state ──────────────────────────────────────────────────────────────────────────────────
 const S = {
-  game: 'carts', gps: 'regular', turn: 'cards', rows: 'outside', mline: 'top', open: null, openAnim: 'morph', tabPid: null, motion: 'normal', theme: 'dark', final: false,
+  game: 'carts', gps: 'regular', turn: 'cards', rows: 'outside', mline: 'top', open: null, openAnim: 'morph', words: 'stay', tabPid: null, motion: 'normal', theme: 'dark', final: false,
   cur: 4, view: 4, scores: {}, unlocked: {}, seenSwitch: {},
   reward: null, pts: null, nudge: null, sheet: null, full: null,
 };
@@ -463,8 +463,12 @@ function padRow(id, h, editable) {
   const pads = win.map((v) => pad(v)).join('') + (out ? pad(g, true)
     : `<button class="ce-pad ce-dots" data-act="more" data-id="${id}" aria-label="Other scores for ${P[id]}">${icon('dots')}</button>`);
   const k = strokesOn(id, h);
-  const youW = G().mine(h).includes(id) && (rw?.r.kind === 'birdie' || rw?.r.kind === 'eagle') ? ' you' : '';
-  const word = rw ? `<span class="ce-word anim ${rw.r.tone} k-${rw.r.kind}${youW}" data-t0="${rw.t0}">${rw.r.word}</span>` : '';
+  const stayW = S.words === 'stay';
+  const res = rw ? rw.r : stayW && g != null ? reward(g, par, strokesOn(id, h)) : null;
+  const youW = res && G().mine(h).includes(id) && (res.kind === 'birdie' || res.kind === 'eagle') ? ' you' : '';
+  const word = !res ? '' : rw
+    ? `<span class="ce-word anim ${res.tone} k-${res.kind}${youW}${stayW ? ' stay' : ''}" data-t0="${rw.t0}">${res.word}</span>`
+    : `<span class="ce-word stay ${res.tone} k-${res.kind}${youW}">${res.word}</span>`;
   const nudge = g == null && S.nudge?.h === h ? ' nudge' : '';
   const tot = S.rows === 'new' ? `<span class="ce-tot">${roundLabel(id, h)}</span>` : '';
   const nAttr = nudge ? ` data-t0="${S.nudge.t0}"` : '';
@@ -488,7 +492,7 @@ function padRow(id, h, editable) {
     const mate = mm && mm.us.find((x) => x !== 'A');
     const partner = id === 'A' && mate && (S.mline === 'right' || S.mline === 'merged' || S.mline === 'top') ? ` <span class="pgrp-w">(with ${P[mate]})</span>` : '';
     const yours = gm.mine(h).includes(id);
-    return `<div class="pgrp"><div class="pgrp-l" data-k="l-${id}"><span class="pgrp-n"><span data-k="n-${id}">${P[id]}</span>${partner}${k && !rw ? ' · 1 stroke' : ''}</span>${word}${first && (S.mline === 'labels' || S.mline === 'merged') ? S._labelEnd || '' : ''}</div><div class="pcard even${yours ? ' rail' : ''}" data-k="c-${id}">${rw && rw.r.flash ? `<span class="ce-flash anim k-${rw.r.kind}" data-t0="${rw.t0}" aria-hidden="true"></span>` : ''}<div class="ce-row${nudge}"${nAttr}><div class="ce-pads">${pads}</div></div></div></div>`;
+    return `<div class="pgrp"><div class="pgrp-l" data-k="l-${id}"><span class="pgrp-n"><span data-k="n-${id}">${P[id]}</span>${partner}${k && (!rw || stayW) ? ' · 1 stroke' : ''}</span>${word}${first && (S.mline === 'labels' || S.mline === 'merged') ? S._labelEnd || '' : ''}</div><div class="pcard even${yours ? ' rail' : ''}" data-k="c-${id}">${rw && rw.r.flash ? `<span class="ce-flash anim k-${rw.r.kind}" data-t0="${rw.t0}" aria-hidden="true"></span>` : ''}<div class="ce-row${nudge}"${nAttr}><div class="ce-pads">${pads}</div></div></div></div>`;
   }
   if (S.rows === 'cards') {
     return `<div class="pcard${id === 'A' || G().mine(h).includes('A') ? ' rail' : ''}"><div class="pcard-l">${P[id]}${k && !rw ? ' · 1 stroke' : ''}${word}</div><div class="ce-row${nudge}"${nAttr}><div class="ce-pads">${pads}</div></div></div>`;
@@ -624,6 +628,7 @@ function options() {
     <p style="margin:6px 0">Earlier rounds:</p>${seg('turn', [['slide', '(c) Slide'], ['book', '(d) Book'], ['flip', '(a) Flip'], ['page', '(b) Page']])}
     <h3>Player rows</h3>${seg('rows', [['avatar', '1 · Avatar'], ['chip', '2 · Name chip'], ['tabs', '3 · One at a time'], ['stepper', '4 · Stepper'], ['cards', '5 · Card each'], ['outside', '6 · Name outside'], ['old', 'As today']], true)}
     <h3>Match line (with 6 · Name outside)</h3>${seg('mline', [['top', 'Above the yardage'], ['merged', 'One line'], ['right', '(with …) on your name'], ['first', 'A · Score first'], ['labels', 'B · In the label'], ['today', 'As today']], true)}
+    <h3>Result words (Birdie, Par, Bogey…)</h3>${seg('words', [['stay', 'Stay on screen'], ['fade', 'Fade out (before)']])}
     <h3>Entering for the rest of your tee time</h3>${seg('openAnim', [['morph', 'Improved: names travel'], ['today', 'As today (027 blur swap)']])}
     <h3>Game</h3>${seg('game', [['carts', 'Team cart'], ['2v2', '2v2'], ['six', '6 · sitting out'], ['solo', 'Scorecard']], true)}
     <h3>Yardage card</h3>${seg('gps', [['regular', 'Regular 92'], ['compact', 'Compact 68'], ['off', 'None']])}

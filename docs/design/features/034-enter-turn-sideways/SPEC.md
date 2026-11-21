@@ -12,7 +12,8 @@ Status: approved by Andrew, Nov 21 ("yeah this is great I like it"). Not built.
 5. **Entering for the rest of your tee time: names travel** (the morph), opened and closed only by a tap
    (`‹ Back` on your folded line); no auto-close; changing hole returns to your cart.
 6. **Score picks: 033 Part 1, with louder celebrations for par → ace** (§ "Score picks v2" below; Andrew, Nov 21).
-   Bogey and double keep 033's motion exactly. 033 Part 2 (the flip) is replaced by 1 above.
+   Bogey and double keep 033's motion exactly. **The result word stays on screen** (below). 033 Part 2 (the flip) is
+   replaced by 1 above.
 
 **Changes 033 §2.2–2.3** (how the card turns to the next hole). Everything else in 033 stands: Part 1 (score picks),
 what moves and what never moves (§2.1), the yardage card rules (§2.4), what starts a turn (§2.6), the build notes and
@@ -83,7 +84,17 @@ par / birdie / eagle values). Strips: `96`–`99` (dark + light), 0–1100ms.
 - **Rules (`js/reward.js`):** `ripples` par 0 · birdie 2 · eagle+ 3; `burst` birdie and better; `sparks` 8 / 12;
   `burst2` albatross or an ace; `pulse` par; `flash` par and better; `holdMs` 2000 / 2600 / 3500 (bogey and double
   1600). Still judged on net; the mark stays gross. Update `tests/enter021.test.mjs` to match.
-- **Reduced motion:** no flash, bounce, rings, sparks or pulse; the word fades for the same hold.
+- **Reduced motion:** no flash, bounce, rings, sparks or pulse; the word fades in (it stays, below).
+
+**The result word stays (Andrew, Nov 21: "just leave them on screen").** Every player with a score on the hole shows its
+word after their name (`ANDREW (WITH SEAN)  Birdie`, `SEAN · 1 STROKE  Net bogey`, on their cart too: `SAM  Par`), for as
+long as that score stands. Right after a tap it arrives with the same motion as above but **doesn't fade out**: par /
+birdie lift in with the bounce in 450ms (eagle 600ms), bogey slides up 6px (300ms), double slides up and tilts (300ms).
+Every later render draws it still. Colours unchanged (par `text`, birdie / eagle `cart-you-text` on your cart and
+`text` on theirs, bogey `text-muted`, double `double`); sizes 17px (par, birdie, eagle) and 15px (bogey, double).
+`1 STROKE` stays next to the name. The pad's own motion, rings, sparks, flash and stamp still play once.
+`holdMs` no longer applies to the word. Prototype ⋯ → "Result words": Stay on screen (default) · Fade out.
+Screens `100-words-stay`, `101-words-stay-their-cart`.
 
 ### The match line moves above the yardage card (Nov 21) — current proposal
 

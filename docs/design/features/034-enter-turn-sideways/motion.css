@@ -180,3 +180,20 @@
 .rm .ce-word.anim.k-par { animation: ce-fadeonly 2s linear both !important; }
 .rm .ce-word.anim.k-birdie { animation: ce-fadeonly 2.6s linear both !important; }
 .rm .ce-word.anim.k-eagle { animation: ce-fadeonly 3.5s linear both !important; }
+
+/* ── the result word stays (Andrew, Nov 21: "just leave them on screen") ──────────────────────────────────────
+   Every player with a score on this hole shows its result word after their name ("Birdie", "Par", "Net bogey",
+   "Double"…), for as long as that score stands. Right after a tap it arrives with the same motion as before but
+   doesn't fade out: par / birdie / eagle lift in with the bounce (450ms; eagle 600ms), bogey slides up 6px (300ms),
+   double slides up and tilts (300ms). Every later render draws it still (.ce-word.stay without .anim). Colours as
+   before: par text, birdie / eagle cart-you-text on your cart (text on theirs), bogey text-muted, double `double`.
+   The pad's own motion, rings, sparks, flash and stamp are unchanged and still play once. */
+@keyframes ce-lift-in { 0% { opacity: 0; transform: translateY(12px) scale(.8) } 55% { opacity: 1; transform: translateY(-3px) scale(1.12) } 100% { opacity: 1; transform: none } }
+@keyframes ce-word-in { 0% { opacity: 0; transform: translateY(6px) } 100% { opacity: 1; transform: none } }
+.ce-word.stay { opacity: 1; }
+.ce-word.anim.stay.k-par, .ce-word.anim.stay.k-birdie { animation: ce-lift-in .45s cubic-bezier(.2,.8,.2,1) both; }
+.ce-word.anim.stay.k-eagle  { animation: ce-lift-in .6s cubic-bezier(.2,.8,.2,1) both; }
+.ce-word.anim.stay.k-bogey  { animation: ce-word-in .3s ease-out both; }
+.ce-word.anim.stay.k-double { animation: ce-word-in .3s ease-out both, ce-tilt .3s .05s cubic-bezier(.2,.8,.2,1) both; }
+.ce-word.k-bogey { font-size: 15px; }
+.rm .ce-word.anim.stay { animation: ce-fade-in .15s linear both !important; }
