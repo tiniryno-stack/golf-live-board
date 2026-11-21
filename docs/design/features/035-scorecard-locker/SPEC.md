@@ -1,6 +1,6 @@
 # 035 · Scorecard locker
 
-Status: approved by Andrew Nov 21 for a first build ("plan this and then try to one-shot it"). Not built.
+Status: built in f9b6809 (approved by Andrew Nov 21 for a first build, "plan this and then try to one-shot it").
 
 Players keep a collectible scorecard for every finished round. Cards arrive as sealed packs; you hold a pack to
 rip it, the card's finish (standard, bronze, silver, gold, prismatic) is revealed, and it lands in your Locker.

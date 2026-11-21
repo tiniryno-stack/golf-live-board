@@ -24,7 +24,7 @@ yardage card, the spacing, and entering for the rest of your tee time (names tra
 motion = 033 Part 1 (`docs/design/features/033-enter-motion/`); 033 Part 2 (the flip) is replaced by 034. Both folders have
 `prototype.html` (034's loads 033's `motion.css` + its own), `motion.css` and `shoot.mjs`. Touches score entry: smoke run.
 
-## Scorecard locker (035, Nov 21, live on `main`). Brief: `docs/design/features/035-scorecard-locker/SPEC.md`
+## Scorecard locker (035, Nov 21, live on `main`, f9b6809). Brief: `docs/design/features/035-scorecard-locker/SPEC.md`
 
 Collectible scorecards: every finished 18 is a sealed pack you press and hold to rip; the card lands in your Locker (Home
 packs card + Locker row, `#/locker`). Pure rules `js/locker.js` (`buildLocker`, launch ladder for rounds on or before
