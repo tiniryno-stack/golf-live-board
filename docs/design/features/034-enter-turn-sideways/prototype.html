@@ -323,8 +323,9 @@ function reward(strokes, par, here = 0) {
   return {
     word: here > 0 && net !== strokes ? `Net ${w.toLowerCase()}` : w, kind,
     tone: { eagle: 'big', birdie: 'lift', par: 'par', bogey: 'quiet', double: 'dbl' }[kind],
-    stamp: d >= 2, ripples: d <= -2 ? 2 : d === -1 ? 1 : 0, burst: d <= -2, pulse: d === 0,
-    holdMs: d <= -2 ? 3000 : d === -1 ? 2200 : 1600,
+    stamp: d >= 2, ripples: d <= -2 ? 3 : d === -1 ? 2 : 0, burst: d <= -1, sparks: d <= -2 ? 12 : 8,
+    burst2: d <= -3 || strokes === 1, pulse: d === 0, flash: d <= 0,
+    holdMs: d <= -2 ? 3500 : d === -1 ? 2600 : d === 0 ? 2000 : 1600,
   };
 }
 const markKind = (s, par) => { const d = s - par; return d <= -2 ? 'cc' : d === -1 ? 'c' : d === 0 ? '' : d === 1 ? 's' : 'd'; };
@@ -453,15 +454,17 @@ function padRow(id, h, editable) {
   const pad = (v, more = false) => {
     const sel = g === v, r = sel && rw ? rw.r : null;
     const cls = `ce-pad${sel ? ' sel' : ''}${r ? ` anim k-${r.kind}` : ''}${v - par >= 2 ? ' dbl' : ''}${r?.stamp ? ' stamp' : ''}`;
-    const fx = r ? (r.ripples ? `<span class="ce-ripple anim"></span>${r.ripples > 1 ? '<span class="ce-ripple anim r2"></span>' : ''}` : '')
-      + (r.burst ? `<span class="ce-burst anim">${[0, 45, 90, 135, 180, 225, 270, 315].map((a) => `<i style="--a:${a}deg"></i>`).join('')}</span>` : '')
+    const burst = (n, cls) => `<span class="ce-burst anim${cls}">${Array.from({ length: n }, (_, i) => `<i style="--a:${(360 / n) * i}deg"></i>`).join('')}</span>`;
+    const fx = r ? Array.from({ length: r.ripples || 0 }, (_, i) => `<span class="ce-ripple anim${i ? ` r${i + 1}` : ''}"></span>`).join('')
+      + (r.burst ? burst(r.sparks, r.sparks > 8 ? ' big' : '') + (r.burst2 ? burst(8, ' b2') : '') : '')
       + (r.pulse ? '<span class="ce-pulse anim"></span>' : '') : '';
     return `<button class="${cls}" data-act="${more ? 'more' : 'pick'}" data-id="${id}" data-v="${v}"${editable ? '' : ' disabled'}${r ? ` data-t0="${rw.t0}"` : ''} aria-label="${P[id]} ${v}">${markSvg(v, par, 40)}<span class="ce-n">${v}</span>${fx}</button>`;
   };
   const pads = win.map((v) => pad(v)).join('') + (out ? pad(g, true)
     : `<button class="ce-pad ce-dots" data-act="more" data-id="${id}" aria-label="Other scores for ${P[id]}">${icon('dots')}</button>`);
   const k = strokesOn(id, h);
-  const word = rw ? `<span class="ce-word anim ${rw.r.tone}" data-t0="${rw.t0}">${rw.r.word}</span>` : '';
+  const youW = G().mine(h).includes(id) && (rw?.r.kind === 'birdie' || rw?.r.kind === 'eagle') ? ' you' : '';
+  const word = rw ? `<span class="ce-word anim ${rw.r.tone} k-${rw.r.kind}${youW}" data-t0="${rw.t0}">${rw.r.word}</span>` : '';
   const nudge = g == null && S.nudge?.h === h ? ' nudge' : '';
   const tot = S.rows === 'new' ? `<span class="ce-tot">${roundLabel(id, h)}</span>` : '';
   const nAttr = nudge ? ` data-t0="${S.nudge.t0}"` : '';
@@ -485,7 +488,7 @@ function padRow(id, h, editable) {
     const mate = mm && mm.us.find((x) => x !== 'A');
     const partner = id === 'A' && mate && (S.mline === 'right' || S.mline === 'merged' || S.mline === 'top') ? ` <span class="pgrp-w">(with ${P[mate]})</span>` : '';
     const yours = gm.mine(h).includes(id);
-    return `<div class="pgrp"><div class="pgrp-l" data-k="l-${id}"><span class="pgrp-n"><span data-k="n-${id}">${P[id]}</span>${partner}${k && !rw ? ' · 1 stroke' : ''}</span>${word}${first && (S.mline === 'labels' || S.mline === 'merged') ? S._labelEnd || '' : ''}</div><div class="pcard even${yours ? ' rail' : ''}" data-k="c-${id}"><div class="ce-row${nudge}"${nAttr}><div class="ce-pads">${pads}</div></div></div></div>`;
+    return `<div class="pgrp"><div class="pgrp-l" data-k="l-${id}"><span class="pgrp-n"><span data-k="n-${id}">${P[id]}</span>${partner}${k && !rw ? ' · 1 stroke' : ''}</span>${word}${first && (S.mline === 'labels' || S.mline === 'merged') ? S._labelEnd || '' : ''}</div><div class="pcard even${yours ? ' rail' : ''}" data-k="c-${id}">${rw && rw.r.flash ? `<span class="ce-flash anim k-${rw.r.kind}" data-t0="${rw.t0}" aria-hidden="true"></span>` : ''}<div class="ce-row${nudge}"${nAttr}><div class="ce-pads">${pads}</div></div></div></div>`;
   }
   if (S.rows === 'cards') {
     return `<div class="pcard${id === 'A' || G().mine(h).includes('A') ? ' rail' : ''}"><div class="pcard-l">${P[id]}${k && !rw ? ' · 1 stroke' : ''}${word}</div><div class="ce-row${nudge}"${nAttr}><div class="ce-pads">${pads}</div></div></div>`;

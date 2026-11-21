@@ -11,7 +11,8 @@ Status: approved by Andrew, Nov 21 ("yeah this is great I like it"). Not built.
 4. **Spacing:** 6px from a name to its card, 24px between everything else (measured from the text).
 5. **Entering for the rest of your tee time: names travel** (the morph), opened and closed only by a tap
    (`‹ Back` on your folded line); no auto-close; changing hole returns to your cart.
-6. **033 Part 1** (score-pick motion) stands as handed off; 033 Part 2 (the flip) is replaced by 1 above.
+6. **Score picks: 033 Part 1, with louder celebrations for par → ace** (§ "Score picks v2" below; Andrew, Nov 21).
+   Bogey and double keep 033's motion exactly. 033 Part 2 (the flip) is replaced by 1 above.
 
 **Changes 033 §2.2–2.3** (how the card turns to the next hole). Everything else in 033 stands: Part 1 (score picks),
 what moves and what never moves (§2.1), the yardage card rules (§2.4), what starts a turn (§2.6), the build notes and
@@ -61,6 +62,28 @@ then you have no weird header."
 - 12px between one player's card and the next player's label. Total height for two players ≈ today's card (≈ 212px).
 - Pads, ⋯, marks, reward motion, the match line and the quiet row are unchanged. No new tokens or type styles.
 - The turn (g) slides both cards together as the score card.
+
+### Score picks v2: louder celebrations, par → ace (Nov 21) — approved
+
+**Andrew:** "birdies need to be celebrated more, and that goes for par. Pars are a good thing, and birdies happen at
+least once a round for most people. The subtle, less celebratory bogey and double are good." So each good result steps
+up; bogey and double are unchanged. Exact values: `motion.css`, "SCORE PICKS v2" (loads after 033's and overrides its
+par / birdie / eagle values). Strips: `96`–`99` (dark + light), 0–1100ms.
+
+| Result (net) | Pad | Around it | The card | Word |
+|---|---|---|---|---|
+| **Par** | pop .88 → 1.16 → .97 → 1, 340ms | stronger pulse: a 2px ring in the pill's shape, .6 → 0, to 1.28×, 600ms | soft flash (peak .55), 500ms | **17px**, `text`, lifts in with a small bounce, holds **2s** |
+| **Birdie** | same pop, 360ms | **2 rings** (to 1.6×, 600ms, 140ms apart) + **8 sparks** reaching 64px | full flash, 800ms | 17px, **green on your cart** (`cart-you-text`), holds **2.6s** |
+| **Eagle / albatross / ace** | bigger pop .85 → 1.22 → .95 → 1.03 → 1, 460ms | **3 rings** + **12 sparks** reaching 76px; ace / albatross: **a second burst** 300ms later | flashes **twice**, 1.2s | 17px, green on your cart, holds **3.5s** |
+| Bogey / double | 033, unchanged | | | |
+
+- **Colour:** on your cart's cards the rings, sparks and pulse are `cart-you` and the card flash is `tint-you` with a
+  `cart-you` ring (+ `glow-you` in dark). On anyone else's card (entering for Sam and Jake) they're `text` and the flash
+  is `surface-3`. Green stays "your cart only". No new tokens or type sizes (17 is the row size).
+- **Rules (`js/reward.js`):** `ripples` par 0 · birdie 2 · eagle+ 3; `burst` birdie and better; `sparks` 8 / 12;
+  `burst2` albatross or an ace; `pulse` par; `flash` par and better; `holdMs` 2000 / 2600 / 3500 (bogey and double
+  1600). Still judged on net; the mark stays gross. Update `tests/enter021.test.mjs` to match.
+- **Reduced motion:** no flash, bounce, rings, sparks or pulse; the word fades for the same hold.
 
 ### The match line moves above the yardage card (Nov 21) — current proposal
 

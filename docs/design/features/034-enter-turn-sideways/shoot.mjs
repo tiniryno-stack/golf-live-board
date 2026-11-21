@@ -193,4 +193,18 @@ for (const [name, scene, action, title] of OPEN) {
   for (const tm of [0, 80, 160, 240, 320, 400, 600]) frames.push({ buf: await frame('dark', scene, action, tm), label: `${tm} ms` });
   await strip(name, 'dark', frames, { title });
 }
+// ── score picks v2: louder par → ace (your cart's card, the approved layout) ──
+const PK = { ...BASE, turn: 'cards', rows: 'outside', mline: 'top', cur: 5, view: 5, scores: { '5:S': 5 } };
+const PICKS2 = [
+  ['96-pick-v2-par', PK, 4, 'Par v2: bouncier pop, stronger pulse, a soft card flash, “Par” 17px lifts in, holds 2s'],
+  ['97-pick-v2-birdie', PK, 3, 'Birdie v2: bigger bounce, 2 rings, 8 sparks, the card flashes, “Birdie” in green, holds 2.6s'],
+  ['98-pick-v2-eagle', PK, 2, 'Eagle v2: biggest bounce, 3 rings, 12 sparks reaching further, the card flashes twice, holds 3.5s'],
+  ['99-pick-v2-ace', { ...PK, cur: 3, view: 3, scores: { '3:S': 3 } }, 1, 'Ace (par 3): the eagle tier plus a second burst'],
+];
+for (const [name, scene, v, title] of PICKS2) for (const th of ['dark', 'light']) {
+  if (!want(name)) continue;
+  const frames = [];
+  for (const tm of [0, 100, 200, 320, 480, 700, 1100]) frames.push({ buf: await frame(th, scene, { do: 'pick', id: 'A', v }, tm, '.ce-body .pgrp'), label: `${tm} ms` });
+  await strip(`${name}${th === 'light' ? '-light' : ''}`, th, frames, { col: true, title });
+}
 await browser.close();

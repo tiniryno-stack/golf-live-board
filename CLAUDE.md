@@ -20,7 +20,7 @@ Andrew Nov 20 with `prototype.html` and 31 screenshots in that folder. Also: "se
 
 Approved by Andrew Nov 21, **not built**. The top of 034's SPEC lists exactly what to build: the next-hole slide (only the
 yardage + score cards move), one card per player with the name outside (`ANDREW (WITH SEAN)`), the match line above the
-yardage card, the spacing, and entering for the rest of your tee time (names travel, `‹ Back`, no auto-close). Score-pick
+yardage card, the spacing, and entering for the rest of your tee time (names travel, `‹ Back`, no auto-close), and louder par → ace celebrations. Score-pick
 motion = 033 Part 1 (`docs/design/features/033-enter-motion/`); 033 Part 2 (the flip) is replaced by 034. Both folders have
 `prototype.html` (034's loads 033's `motion.css` + its own), `motion.css` and `shoot.mjs`. Touches score entry: smoke run.
 
