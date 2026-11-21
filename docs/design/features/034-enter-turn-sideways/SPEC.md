@@ -51,7 +51,25 @@ then you have no weird header."
 - Pads, ⋯, marks, reward motion, the match line and the quiet row are unchanged. No new tokens or type styles.
 - The turn (g) slides both cards together as the score card.
 
-### The match line with "name outside" (Nov 21)
+### Your partner in brackets on your name (Nov 21) — current proposal
+
+**Andrew on A / B below:** no to those conventions; keep the names outside the cards. "Whoever you're paired with
+could just be the additional info, in parentheses next to my name."
+
+- **Your label says who you're playing with:** `ANDREW (WITH SEAN)`. Same `label` style as the name, `text-muted`.
+  Shown in every game with a match (Partner "Rider" Cup, 2v2, 6 players while you're in a match); not in Scorecard only
+  or while your cart sits out.
+- **It matters most in 2v2:** your cart (you + your cart mate) stays in the card all round, but your partner changes
+  every 6 holes. Holes 7–12: `ANDREW (WITH SAM)` over your card, `SEAN` (your cart mate, an opponent this set) under
+  it, and Sam in the quiet row. The prototype's 2v2 now models it this way.
+- **The match line keeps only its right side**, where it is today: `4 UP   vs Sam + Jake` (standing green when
+  you're up, `vs …` muted), right-aligned on the same 36px line. "Andrew + Sean" is gone from it. The hole's points
+  still swap in where `vs …` is (022 §3).
+- Prototype ⋯ → "Match line": **(with …) on your name** (default) · A · B · As today.
+- Open question: in the cart game your partner is always the card right under yours, so `(WITH SEAN)` repeats it.
+  It could show only when your partner isn't in your card (2v2 swaps).
+
+### The match line with "name outside", A / B (Nov 21) — rejected
 
 **Andrew:** best one yet, but "Andrew + Sean" right above "ANDREW" repeats. The partner has to be clear after a swap.
 
