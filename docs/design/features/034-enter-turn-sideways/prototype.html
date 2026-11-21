@@ -108,6 +108,47 @@ svg.i { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-widt
 .ce-nm > b { font-size: 17px; font-weight: 600; min-width: 0; flex: 0 1 auto; }
 .ce-stk { font-size: 13px; font-weight: 500; color: var(--text-muted); }
 /* 034 rows: each player's round so far fills the right of the name line (small, muted; the number in mono, text) */
+/* ── 034 rows, take 4: five patterns (all existing tokens / type sizes) ─────────────────────────────── */
+/* 1 · avatar: a 24px initial circle starts the name line, like a contact row */
+.ce-av { width: 24px; height: 24px; border-radius: 50%; background: var(--surface-3); color: var(--text); display: grid; place-items: center; font: 600 13px/1 var(--font-sans); flex: none; }
+html.light .ce-av { background: var(--surface-2); }
+/* 2 · name chip: the name is the first tile of the strip, and it's also the "more scores" button (⋯ is gone) */
+.ce-row.chip { padding: 6px 0; }
+.ce-row.chip .ce-pads { grid-template-columns: 76px repeat(4, minmax(0, 1fr)); }
+.ce-chip { height: 64px; border-radius: var(--radius-lg); background: var(--surface-2); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-width: 0; padding: 0 6px; }
+.ce-chip > b { font-size: 15px; line-height: 20px; font-weight: 600; max-width: 100%; }
+.ce-chip > span { font-size: 13px; line-height: 18px; color: var(--text-muted); display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+.ce-chip > span svg { width: 16px; height: 16px; }
+.ce-chip .ce-word { font-size: 13px; }
+/* 3 · one at a time: a segmented control of your cart's players, one row of full-size pads */
+.ce-tabs { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; background: var(--surface-2); border-radius: var(--radius-md); padding: 4px; margin: 10px 0 8px; }
+.ce-tab { min-height: 44px; border-radius: 9px; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 15px; font-weight: 600; color: var(--text-muted); min-width: 0; }
+.ce-tab.on { background: var(--surface-3); color: var(--text); }
+html.light .ce-tab.on { background: var(--surface-1); box-shadow: 0 1px 2px rgba(11,13,16,.12); }
+.ce-tab .ce-sm { --sm: 24px; font-size: 13px; }
+.ce-tab .ce-word { font-size: 13px; }
+.ce-row.bare { padding: 0 0 6px; border-top: 0; }
+/* 4 · stepper: name + running total on the left, − score + on the right (score box is a pad: same marks + motion) */
+.ce-row.step { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; }
+.ce-stl { display: flex; flex-direction: column; min-width: 0; }
+.ce-stl > b { font-size: 17px; line-height: 22px; font-weight: 600; }
+.ce-stl > span { font-size: 13px; line-height: 18px; color: var(--text-muted); white-space: nowrap; }
+.ce-stl .ce-word { font-size: 13px; }
+.ce-stp { display: flex; align-items: center; gap: 8px; flex: none; }
+.ce-sb { width: 56px; height: 56px; border-radius: 50%; background: var(--surface-2); color: var(--text); display: grid; place-items: center; }
+.ce-sb svg { width: 24px; height: 24px; }
+.ce-stp .ce-pad { width: 72px; }
+.ce-pad.ghost { box-shadow: inset 0 0 0 1.5px var(--line); }
+.ce-pad.ghost .ce-n { color: var(--text-muted); }
+/* 5 · a card each: one card per player with a small label in its corner (like Apple Weather's modules) */
+.ce-card.plain { background: none; box-shadow: none; padding: 0; }
+.ce-card.plain::before { display: none; }
+.pcard { background: var(--surface-1); border-radius: var(--radius-xl); padding: 10px 16px 8px; position: relative; box-shadow: var(--shadow-card); }
+.pcard + .pcard { margin-top: 8px; }
+.pcard.rail::before { content: ''; position: absolute; left: 6px; top: 12px; bottom: 12px; width: 3px; border-radius: 2px; background: var(--cart-you); }
+.pcard-l { display: flex; align-items: center; gap: 8px; height: 20px; margin-bottom: 4px; font: 600 12px/16px var(--font-mono); letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); }
+.pcard-l .ce-word { font-family: var(--font-sans); text-transform: none; letter-spacing: 0; }
+.pcard .ce-row { padding: 0; border-top: 0; }
 /* 034 rows, take 3: the name line stays, the name is CENTRED over the pads. "1 stroke" and the reward word hang off
    the name's right side (absolutely placed), so the name never moves when the word comes and goes. Pads unchanged. */
 .ce-nm.c { justify-content: center; }
@@ -299,7 +340,7 @@ const GAMES = {
 
 // ── state ──────────────────────────────────────────────────────────────────────────────────
 const S = {
-  game: 'carts', gps: 'regular', turn: 'cards', rows: 'center', motion: 'normal', theme: 'dark', final: false,
+  game: 'carts', gps: 'regular', turn: 'cards', rows: 'avatar', tabPid: null, motion: 'normal', theme: 'dark', final: false,
   cur: 4, view: 4, scores: {}, unlocked: {}, seenSwitch: {},
   reward: null, pts: null, nudge: null, sheet: null, full: null,
 };
@@ -329,6 +370,11 @@ function standing(m, upto) {
 }
 const toPar = (id) => { let t = 0; for (let h = 1; h <= 18; h++) { const s = score(id, h); if (s != null) t += s - PARS[h - 1]; } return t; };
 const fmtPar = (t) => (t === 0 ? 'E' : t > 0 ? `+${t}` : `−${-t}`);
+function roundLabel2(id) {
+  let t = 0, n = 0;
+  for (let x = 1; x <= 18; x++) { const v = score(id, x); if (v != null) { t += v - PARS[x - 1]; n++; } }
+  return n ? `${fmtPar(t)} through ${n}` : 'No scores yet';
+}
 function roundLabel(id, h) {
   let t = 0, n = 0;
   for (let x = 1; x <= 18; x++) { const v = score(id, x); if (v != null) { t += v - strokesOn(id, x) - PARS[x - 1]; n++; } }
@@ -388,6 +434,25 @@ function padRow(id, h, editable) {
   const word = rw ? `<span class="ce-word anim ${rw.r.tone}" data-t0="${rw.t0}">${rw.r.word}</span>` : '';
   const nudge = g == null && S.nudge?.h === h ? ' nudge' : '';
   const tot = S.rows === 'new' ? `<span class="ce-tot">${roundLabel(id, h)}</span>` : '';
+  const nAttr = nudge ? ` data-t0="${S.nudge.t0}"` : '';
+  const stk = k ? '<span class="ce-stk">1 stroke</span>' : '';
+  if (S.rows === 'avatar') {
+    return `<div class="ce-row${nudge}"${nAttr}><div class="ce-nm"><span class="ce-av" aria-hidden="true">${P[id][0]}</span><b class="ellipsis">${P[id]}</b>${k && !rw ? stk : ''}${word}</div><div class="ce-pads">${pads}</div></div>`;
+  }
+  if (S.rows === 'chip') {
+    const sub = word || (out ? `Picked ${g}` : k ? '1 stroke' : `More ${icon('dots')}`);
+    return `<div class="ce-row chip${nudge}"${nAttr}><div class="ce-pads"><button class="ce-chip" data-act="more" data-id="${id}" aria-label="${P[id]}: other scores"><b class="ellipsis">${P[id]}</b><span>${sub}</span></button>${win.map((v) => pad(v)).join('')}</div></div>`;
+  }
+  if (S.rows === 'tabs') return `<div class="ce-row bare${nudge}"${nAttr}><div class="ce-pads">${pads}</div></div>`;
+  if (S.rows === 'stepper') {
+    const box = g == null ? `<button class="ce-pad ghost" data-act="step" data-id="${id}" data-d="0" aria-label="${P[id]}: par"><span class="ce-n">${par}</span></button>` : pad(g).replace('data-act="pick"', 'data-act="more"');
+    const sub = word || stk || `<span>${roundLabel2(id)}</span>`;
+    return `<div class="ce-row step${nudge}"${nAttr}><div class="ce-stl"><b class="ellipsis">${P[id]}</b>${sub}</div>
+      <div class="ce-stp"><button class="ce-sb" data-act="step" data-id="${id}" data-d="-1" aria-label="${P[id]} one less"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 12h12"/></svg></button>${box}<button class="ce-sb" data-act="step" data-id="${id}" data-d="1" aria-label="${P[id]} one more"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 12h12M12 6v12"/></svg></button></div></div>`;
+  }
+  if (S.rows === 'cards') {
+    return `<div class="pcard${id === 'A' || G().mine(h).includes('A') ? ' rail' : ''}"><div class="pcard-l">${P[id]}${k && !rw ? ' · 1 stroke' : ''}${word}</div><div class="ce-row${nudge}"${nAttr}><div class="ce-pads">${pads}</div></div></div>`;
+  }
   if (S.rows === 'center') {
     return `<div class="ce-row${nudge}"${nudge ? ` data-t0="${S.nudge.t0}"` : ''}><div class="ce-nm c"><span class="ce-nmc"><b class="ellipsis">${P[id]}</b><span class="ce-after">${word || (k ? '<span class="ce-stk">1 stroke</span>' : '')}</span></span></div><div class="ce-pads">${pads}</div></div>`;
   }
@@ -447,7 +512,16 @@ function render() {
   if (lv) {
     const side = S.rows === 'side' || S.rows === 'grid';
     const cols = S.rows === 'grid' ? `<div class="ce-cols" aria-hidden="true"><span></span><div>${['BIRDIE', 'PAR', 'BOGEY', 'DOUBLE'].map((x) => `<span>${x}</span>`).join('')}<span></span></div></div>` : '';
-    rows = `<div class="ce-card t-panel${side ? ' side' : ''}${g.mine(h).includes('A') ? ' rail' : ''}">${cols}${g.mine(h).map((id) => padRow(id, h, true)).join('')}</div>`
+    let inner = g.mine(h).map((id) => padRow(id, h, true)).join('');
+    if (S.rows === 'tabs') {
+      const ids = g.mine(h), par = PARS[h - 1];
+      const act = ids.includes(S.tabPid) ? S.tabPid : ids.find((x) => score(x, h) == null) || ids[0];
+      const tab = (x) => { const r = S.reward && S.reward.id === x && S.reward.h === h ? S.reward : null;
+        return `<button class="ce-tab${x === act ? ' on' : ''}" data-act="tab" data-id="${x}"><span class="ellipsis">${P[x]}</span>${r ? `<span class="ce-word anim ${r.r.tone}" data-t0="${r.t0}">${r.r.word}</span>` : smallMark(score(x, h), par, 24)}</button>`; };
+      inner = (ids.length > 1 ? `<div class="ce-tabs" role="tablist">${ids.map(tab).join('')}</div>` : `<div class="pcard-l" style="margin-top:10px">${P[ids[0]]}</div>`) + padRow(act, h, true);
+    }
+    const plain = S.rows === 'cards';
+    rows = `<div class="ce-card t-panel${side ? ' side' : ''}${plain ? ' plain' : ''}${g.mine(h).includes('A') ? ' rail' : ''}">${cols}${inner}</div>`
       + g.quiet(h).map((ids, i) => quietRow(ids, h, m, i + 1)).join('');
   } else rows = readRows(h);
   const blanks = blanksOn(h), mine = g.mine(h), theirs = blanks.filter((id) => !mine.includes(id));
@@ -486,7 +560,7 @@ function options() {
   return `<div class="opt">
     <h3>Turn to the next hole</h3>${seg('turn', [['cards', '(g) Just the cards'], ['hole', '(e) Whole hole'], ['wave', '(f) Wave']])}
     <p style="margin:6px 0">Earlier rounds:</p>${seg('turn', [['slide', '(c) Slide'], ['book', '(d) Book'], ['flip', '(a) Flip'], ['page', '(b) Page']])}
-    <h3>Player rows</h3>${seg('rows', [['center', 'Centered names'], ['old', 'As today']])}
+    <h3>Player rows</h3>${seg('rows', [['avatar', '1 · Avatar'], ['chip', '2 · Name chip'], ['tabs', '3 · One at a time'], ['stepper', '4 · Stepper'], ['cards', '5 · Card each'], ['old', 'As today']], true)}
     <h3>Game</h3>${seg('game', [['carts', 'Team cart'], ['2v2', '2v2'], ['six', '6 · sitting out'], ['solo', 'Scorecard']], true)}
     <h3>Yardage card</h3>${seg('gps', [['regular', 'Regular 92'], ['compact', 'Compact 68'], ['off', 'None']])}
     <h3>Motion</h3>${seg('motion', [['normal', 'Normal'], ['slow', 'Slow ×4'], ['reduced', 'Reduced']])}
@@ -708,7 +782,22 @@ document.addEventListener('click', (e) => {
   const el = e.target.closest('[data-act]');
   if (!el) return;
   const a = el.dataset.act, v = Number(el.dataset.v), id = el.dataset.id;
-  if (a === 'pick') { if (turning) return finishMotion(); return pick(id, v); }
+  if (a === 'pick') {
+    if (turning) return finishMotion();
+    if (S.rows === 'tabs') { // one at a time: after a pick, move to the next player in your cart still missing a score
+      const ids = G().mine(S.view), nxt = ids.find((x) => x !== id && score(x, S.view) == null);
+      S.tabPid = id; pick(id, v);
+      if (nxt) setTimeout(() => { if (S.tabPid === id && S.rows === 'tabs') { S.tabPid = nxt; render(); } }, 650 / RATE());
+      return;
+    }
+    return pick(id, v);
+  }
+  if (a === 'tab') { S.tabPid = id; return render(); }
+  if (a === 'step') { // first tap on any of − score + = par; then − / + step (the old Enter's rule)
+    if (turning) return finishMotion();
+    const g = score(id, S.view), par = PARS[S.view - 1], d = Number(el.dataset.d);
+    return pick(id, g == null ? par : Math.min(12, Math.max(1, g + d)));
+  }
   if (a === 'more') { finishMotion(); S.sheet = { kind: 'more', id }; return renderOverlay(); }
   if (a === 'more-pick') { S.sheet = null; return pick(id, v); }
   if (a === 'clear') { delete S.scores[key(S.view, id)]; S.sheet = null; S.reward = null; return render(); }

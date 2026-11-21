@@ -34,7 +34,24 @@ left, the next hole's cards in from the right; ◀ = the other way. Everything e
 Screenshots: `70`–`77` at 0 / 90 / 150 / 300ms, Next 4 → 5 and ◀ 5 → 4, dark + light; strips `80` forward, `81` back
 (0 / 60 / 120 / 180 / 240 / 320 / 420ms); `82` into "Up next", `83` 2v2 new partner, `84` no yardage card.
 
-## Player rows, take 3: centred names (Nov 21) — current proposal
+## Player rows, take 4: five patterns to compare (Nov 21) — current proposal
+
+**Andrew on take 3:** no. He'll look on Mobbin for references; first, one prototype of each pattern Claude suggested
+(UDisc, Hevy / Strong, Apple Weather / Health, Airbnb's guest picker, Daylio were the references named).
+Prototype ⋯ → "Player rows": **1 · Avatar** (default) · 2 · Name chip · 3 · One at a time · 4 · Stepper ·
+5 · Card each · As today. All use existing tokens and the six type sizes; reward motion (033 Part 1) plays in each.
+
+| # | Pattern | What it looks like | Tradeoff |
+|---|---|---|---|
+| 1 | **Avatar** | The name line starts with a 24px initial circle (`surface-3`, 13/600), like a contact row. Pads unchanged. | Smallest change; the line reads as a header with an identity, but the space on the right stays. |
+| 2 | **Name chip** | No name line. The first tile of each strip is a 76px `surface-2` chip with the name and "More ⋯" under it; it **is** the more-scores button, so ⋯ goes away. Picked score outside the four shows as "Picked 8". | Pads ~58px wide (today ~62): close to full size. Card ~50px shorter. |
+| 3 | **One at a time** | A segmented control of your cart's players at the top of the card (name + their mark, or the reward word), one row of full-size pads. After a pick it moves to the next player still missing a score (650ms). | Shortest card. One extra tap to fix your partner's score after it moved on. |
+| 4 | **Stepper** | Like UDisc / Airbnb: name + "+2 through 5" on the left, − score + on the right (56px round buttons, a 72 × 64 score box). The first tap on any of the three = par, then − / + step (the old Enter's rule). The score box gets the marks and reward motion. Tap the box for every other score. | One row per player, biggest targets; usually 1–3 taps instead of 1. A return to the stepper the calm Enter (021) replaced. |
+| 5 | **Card each** | One card per player with a small label in its corner (`label` 12 mono, uppercase), like Apple Weather's modules; the green rail on each of your cart's cards. Reward word sits after the label. | Same height as today; the name is quieter, so the blank space is a label row, not an empty name line. |
+
+---
+
+## Player rows, take 3: centred names (Nov 21) — rejected
 
 **Andrew on take 2:** no, it makes the pads smaller to hit. "What if you just centred the names?"
 
