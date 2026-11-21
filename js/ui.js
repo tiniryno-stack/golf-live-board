@@ -40,6 +40,10 @@ const P = {
   flag: '<path d="M5 21V4"/><path d="M5 4h11l-2 4 2 4H5"/>',
   clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   grid: '<rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/>',
+  // 035 Scorecard locker: one card (with its neighbours peeking), a sealed pack, everyone (admin list)
+  cardone: '<rect x="7.5" y="4" width="9" height="16" rx="2"/><path d="M3.5 8v8M20.5 8v8"/>',
+  pack: '<path d="M6 4h12v16H6z"/><path d="M6 7h12M6 17h12"/>',
+  people: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14a6.5 6.5 0 0 1 3.5 6"/>',
 };
 
 export function icon(name, size = 20) {

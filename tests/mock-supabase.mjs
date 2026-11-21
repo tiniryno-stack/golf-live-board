@@ -29,6 +29,7 @@ export function createBackend() {
     crews: new Map(), people: new Map(), members: new Map(), // crews + people (mirrors _sync_crew)
     crewClaims: [], seasons: [], // features 006 / 008
     course_geo: [], // GPS yardages stage 3: the course-geo function route fills it (tests may push fixture rows)
+    card_opens: [], // 035: { event_id, person_id, player_id, opened_at } (written by open_card only)
   };
   let auditId = 1;
   // backend.clock (ms, or null = the real clock) drives every timestamp and the 025 lobby gate.
@@ -424,8 +425,53 @@ export function createBackend() {
       t.claims = t.claims.filter((x) => x.event_id !== e.id);
       t.joins = t.joins.filter((x) => x.event_id !== e.id);
       t.audit = t.audit.filter((x) => x.event_id !== e.id);
+      t.card_opens = t.card_opens.filter((x) => x.event_id !== e.id); // 035: on delete cascade
       t.secrets.delete(e.id);
       return { ok: true };
+    },
+
+    // ── 035 scorecard locker, mirrors supabase/migrations/2026-11-21-card-opens.sql
+    open_card({ p_code, p_person_id, p_device_id }) {
+      const e = ev(p_code);
+      if (!e) return no('not_found');
+      if (String(e.settings?.practice ?? 'false') === 'true') return no('practice');
+      const p = (e.roster?.players || []).find((x) => x.personId === p_person_id);
+      if (!p) return no('not_on_roster');
+      const n = t.scores.filter((s) => s.event_id === e.id && s.player_id === p.id && s.strokes != null).length;
+      if (n < 18) return no('not_finished', { holes: n });
+      const viaRound = t.claims.some((c) => c.device_id === p_device_id
+        && player(t.events.find((x) => x.id === c.event_id) || { roster: {} }, c.player_id)?.personId === p_person_id);
+      const viaCrew = t.crewClaims.some((c) => c.device_id === p_device_id && String(c.person_id) === p_person_id);
+      if (!viaRound && !viaCrew) return no('not_you');
+      const had = t.card_opens.find((x) => x.event_id === e.id && x.person_id === p_person_id);
+      if (had) return { ok: true, opened_at: had.opened_at, unchanged: true };
+      const row = { event_id: e.id, person_id: p_person_id, player_id: p.id, opened_at: now() };
+      t.card_opens.push(row);
+      return { ok: true, opened_at: row.opened_at };
+    },
+    locker_admin() {
+      const today = now().slice(0, 10);
+      const per = new Map();
+      const evs = [...t.events].sort((a, b) => String(a.played_on).localeCompare(String(b.played_on)) || String(a.created_at).localeCompare(String(b.created_at)));
+      for (const e of evs) {
+        if (String(e.settings?.practice ?? 'false') === 'true') continue;
+        if (!(e.finalized_at || String(e.played_on) < today)) continue;
+        const seen = new Set();
+        for (const p of e.roster?.players || []) {
+          if (!p.personId || seen.has(p.personId)) continue;
+          seen.add(p.personId);
+          const n = t.scores.filter((s) => s.event_id === e.id && s.player_id === p.id && s.strokes != null).length;
+          if (n < 18) continue;
+          const name = [p.firstName ?? p.name, p.lastName].filter(Boolean).join(' ').trim() || p.personId;
+          const r = per.get(p.personId) || { person_id: p.personId, name, rounds: 0, opened: 0, last_opened: null };
+          r.name = name;
+          r.rounds += 1;
+          const o = t.card_opens.find((x) => x.event_id === e.id && x.person_id === p.personId);
+          if (o) { r.opened += 1; if (!r.last_opened || o.opened_at > r.last_opened) r.last_opened = o.opened_at; }
+          per.set(p.personId, r);
+        }
+      }
+      return { ok: true, people: [...per.values()].sort((a, b) => b.rounds - a.rounds || a.name.localeCompare(b.name)) };
     },
     crew_people({ p_crew_id }) {
       const people = [...t.members.values()].filter((m) => m.crew_id === p_crew_id && !m.removed)
@@ -526,7 +572,7 @@ export function createBackend() {
 
   // PostgREST-style reads: ?col=eq.x, in.(a,b), gte.x, order=col
   function select(table, params) {
-    const rows = { events: t.events, scores: t.scores, join_requests: t.joins, course_geo: t.course_geo }[table];
+    const rows = { events: t.events, scores: t.scores, join_requests: t.joins, course_geo: t.course_geo, card_opens: t.card_opens }[table];
     if (!rows) return { status: 404, body: { message: 'no table' } };
     let out = rows.slice();
     for (const [k, v] of params) {

@@ -1024,6 +1024,31 @@ Still open: nothing blocking. Design direction (section 9) is final.
   the word's fade, the turn and the morph become 150 ms crossfades. Only transform / opacity animate; pad heights and the
   Regular / Compact measuring are unchanged (393 × 659 picks Compact with a live yardage card, 402 × 681 Regular).
   Tests: `enter021.test.mjs` (new reward rules + the turn direction), smoke031 updated for the new markup (44/44).
+- **035 · Scorecard locker (Nov 21, brief `docs/design/features/035-scorecard-locker/SPEC.md`).** Every finished 18 is
+  a sealed pack; you press and hold it to rip it, its finish is revealed, and it lands in your **Locker** (`#/locker`).
+  *Rules* (pure `js/locker.js`, test `tests/locker035.test.mjs`): a round counts for a person when it isn't practice,
+  they're on the roster (`personId`) with 18 scores, and it's over (finalized, or played before today); round order =
+  `played_on`, then `created_at`. **Launch cards** (played on or before `LAUNCH_DATE` 2026-11-21): ranked by gross, a tie
+  to the earlier round; 1 → silver, 2 → gold silver, 3 → gold silver bronze, 4 → prismatic gold silver bronze, 5+ → that
+  then standard. **After launch:** rounds 1–3 ever are rookie cards; from the 4th, **your normal** = last 20 rounds before
+  it, worst `floor(n/5)` left out, averaged, `Math.round`; `normal − gross` ≥5 prismatic, 3–4 gold, 0–2 silver, −1…−3
+  bronze, else standard. Stamps (Broke 100/90/80, Lowest round yet, Eagle, First birdie, Best at <course>) and back stats
+  (counts, par 3s/4s/5s against par, best run) are derived too. *Data:* cards are never stored; table `card_opens`
+  (`event_id`, `person_id` text, `player_id`, `opened_at`; anon select only) + RPC `open_card(code, person, device)`
+  (`not_found` / `practice` / `not_on_roster` / `not_finished` / `not_you` = this device has no round or crew claim as that
+  person; a second open = `unchanged`) + `locker_admin()` (one row per person with a finished round, counts only).
+  Migration `supabase/migrations/2026-11-21-card-opens.sql` (rollback beside it), **applied to the live DB Nov 21** and
+  checked with a rolled-back `anon` test. `db.fetchPersonRounds` (events by `roster cs`, then that player's scores per
+  round with two `.eq()`), `db.fetchCardOpens`, `db.lockerPending` (`glb.lockerPending`: packs ripped offline, sent on the
+  next load), `api.openCard`, `api.lockerAdmin`. *Screens:* `js/screens/locker.js` (`loadLocker` → `app.lockers[personId]`,
+  `app.locker` = the owner's; card markup in `cqw`; one at a time = scroll-snap carousel with tilt, kept stable across
+  redraws via `app.ui.lk` + `keepContent`; all = grid; packs view; How cards work sheet `lockerHow`; admin list
+  `#/locker/admin` and read-only `#/locker/p/<personId>` for `LOCKER_ADMINS`, an app-only gate), `js/screens/pack.js` (the
+  overlay + player, shown by `toasts.showPack` in `#overlay`, stopped by `closeOverlay`), every style in `css/locker.css`
+  (in index.html's CSS list). Home: a packs card above the crew card and a Locker row, only when this phone has an owner
+  with a card or pack; any failure leaves Home as it was. Opening sends `open_card` at the tear; the reveal never waits.
+  Rip again (Locker) replays the overlay and sends nothing. Phone tilt: Android at once; iPhone from **Turn on tilt**
+  (`glb.lockerTilt` once granted).
 
 ## 13. V2 backlog (running list)
 

@@ -94,7 +94,7 @@
         map.type = 'importmap';
         map.textContent = JSON.stringify({ imports: imports });
         document.head.appendChild(map);
-        ['css/tokens.css', 'css/styles.css'].forEach(function (f) {
+        ['css/tokens.css', 'css/styles.css', 'css/locker.css'].forEach(function (f) {
           var l = document.createElement('link'); l.rel = 'stylesheet'; l.href = f + q; document.head.appendChild(l);
         });
         var start = function () { var s = document.createElement('script'); s.type = 'module'; s.src = 'js/app.js' + q; document.head.appendChild(s); };

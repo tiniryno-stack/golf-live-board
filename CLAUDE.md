@@ -24,13 +24,15 @@ yardage card, the spacing, and entering for the rest of your tee time (names tra
 motion = 033 Part 1 (`docs/design/features/033-enter-motion/`); 033 Part 2 (the flip) is replaced by 034. Both folders have
 `prototype.html` (034's loads 033's `motion.css` + its own), `motion.css` and `shoot.mjs`. Touches score entry: smoke run.
 
-## Building the Scorecard locker (035)? Read `docs/design/features/035-scorecard-locker/SPEC.md` first
+## Scorecard locker (035, Nov 21, live on `main`). Brief: `docs/design/features/035-scorecard-locker/SPEC.md`
 
-Approved by Andrew Nov 21 for a first build, **not built**. Collectible scorecards: every finished 18 is a sealed pack
-you hold to rip, the card lands in your Locker (Home entry, `#/locker`), finish = launch ladder for rounds already
-played, "your normal" (last 20, worst fifth left out) after. One new table `card_opens` + RPC `open_card` (apply the
-migration before the code reaches `main`). `prototype.html` there = the look to port; the SPEC wins where they differ.
-All new styles go in a new `css/locker.css` (must be added to index.html's CSS array).
+Collectible scorecards: every finished 18 is a sealed pack you press and hold to rip; the card lands in your Locker (Home
+packs card + Locker row, `#/locker`). Pure rules `js/locker.js` (`buildLocker`, launch ladder for rounds on or before
+`LAUNCH_DATE` 2026-11-21, "your normal" after = last 20, worst fifth out; `LOCKER_ADMINS`), test `tests/locker035.test.mjs`
+(checks §2's live table). Screen `js/screens/locker.js` (`loadLocker`, `homeLocker`, admin `#/locker/admin`, view-as
+`#/locker/p/<personId>`), overlay `js/screens/pack.js` via `toasts.showPack` / `closePack`; **every style in
+`css/locker.css`** (index.html's CSS list). Cards are derived, never stored: only `card_opens` + RPCs `open_card` /
+`locker_admin` (live since Nov 21). Actions are `lk-*`. Home must stay exactly as it was if the locker can't load.
 
 ## Today's game (032, Nov 20, live on `main`)
 
@@ -141,6 +143,7 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
 | `supabase/functions/course-search/index.ts` | Edge Function (deployed, `verify_jwt` off): GET-only backup route to OpenGolfAPI search + one course, our origins only. Redeploy with `deploy_edge_function` after edits |
 | `supabase/functions/course-geo/index.ts` | Edge Function (deployed, `verify_jwt` off): builds a course's green outlines into `course_geo` (OSM → Mapbox + Claude), our origins only; secrets `MAPBOX_TOKEN`, `ANTHROPIC_API_KEY` |
 | `js/geo.js`, `js/geobuild.js`, `js/geoload.js`, `js/geodata.js`, `js/gps.js`, `js/screens/greencard.js` | GPS yardages: math + loaded-geo map, pure build helpers (shared with the function), loading/caching, built-in Twin Creeks, the watcher, the card |
+| `js/locker.js`, `js/screens/locker.js`, `js/screens/pack.js`, `css/locker.css` | 035 Scorecard locker: pure card rules; Locker / packs / admin screens + Home entries; the pack overlay; all its styles |
 | `tests/` | unit tests (`*.test.mjs`), `fit-the-screen.mjs`, `smoke.mjs`, `mock-supabase.mjs` (in-memory stand-in mirroring every RPC, plus OpenGolfAPI + the backup route from `fixtures/opengolf.json`: Twin Creeks' real record and fictional test courses; `be.oga.blocked` / `be.oga.down`), `helpers.mjs` |
 
 ## Database (Supabase project `yxreupqzwgjzhfosnjbj`, via the Supabase connector)
@@ -153,7 +156,8 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
 - RPCs: `create_event, verify_admin, claimed_players, whoami, claim_player, leave_round,
   request_join, approve_join, deny_join, upsert_score, admin_upsert_score, fill_score,
   update_event, release_player, get_audit_log, reset_round, finalize_round, delete_round, pick_team_name,
-  crew_people, person_name_check`, (025) `mark_in_app, lobby_status, lobby_counts, set_round_date`.
+  crew_people, person_name_check`, (025) `mark_in_app, lobby_status, lobby_counts, set_round_date`, (035)
+  `open_card, locker_admin` (table `card_opens`: anon select; written only by `open_card`).
   Helpers `_same_foursome`, `_play_pos`, `_hole_at`, `_join_approver`, `_write_score`, … are not
   executable by anon.
 - **Finalize:** `events.finalized_at` (set/cleared by `finalize_round` with the organizer PIN). While
@@ -315,7 +319,8 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
   separate. localStorage keys: `glb.device`, `glb.me.CODE`, `glb.admin.CODE`, `glb.recent`,
   `glb.queue.CODE`, `glb.seen.CODE`, `glb.alert.CODE.H`, `glb.switch.CODE.H`, `glb.brief.CODE`,
   `glb.who.CODE`, `glb.cardOpen.CODE`, `glb.coach.{tile5,oppcart3,prov2,pad1}` (031: `pad3`, `quiet1`, `matches1`, `board1`), `glb.setupDraft`,
-  `glb.theme`, `glb.people`, `glb.crews`, `glb.crew`, (024) `glb.owner` (`{ personId, name }` = the one person this
+  `glb.theme`, `glb.people`, `glb.crews`, `glb.crew`, (035) `glb.lockerPending` (packs ripped offline), `glb.lockerTilt`
+  (iPhone granted phone tilt; neither moves with Add to Home Screen), (024) `glb.owner` (`{ personId, name }` = the one person this
   device belongs to; `{ personId: null }` = cleared by "I'm not X"), `glb.hasApp` (Add to Home Screen was tapped).
   (025) `glb.seen.CODE.open` (Scoring is open shown once), `glb.seen.CODE.hcp` (= the player id the handicap reveal was shown to; `.welcome` is no longer read), `glb.seen.CODE.here` (chose to stay in Safari: Can't add it / Join in Safari for now), `glb.inapp.CODE` (= the player id
   `mark_in_app` was sent for; not moved), `glb.lobbyhost.CODE` (`{ teamsShared, told }`, the organizer's one-time

@@ -19,6 +19,7 @@ import board from './screens/board.js';
 import card from './screens/card.js';
 import host from './screens/host.js';
 import crew from './screens/crew.js';
+import locker from './screens/locker.js';
 import { gps } from './gps.js';
 import { loadGeo } from './geoload.js';
 import { FLAGS } from './flags.js';
@@ -27,7 +28,7 @@ import { joinPlan } from './identity.js';
 import { lobbyState, lobbyView as pickLobbyView, spotGiven, clock12, wallClock, parseTime, hasHandicaps, revealCtx } from './lobby.js';
 import lobbyScreen from './screens/lobby.js';
 
-const SCREENS = { home, setup, season, enter, matches, board, card, host, crew };
+const SCREENS = { home, setup, season, enter, matches, board, card, host, crew, locker };
 const TABS = [
   ['enter', 'Enter', 'enter'],
   ['matches', 'Matches', 'matches'],
@@ -1235,6 +1236,12 @@ function parseHash() {
   if (!parts.length) return { name: 'home' };
   if (parts[0] === 'setup') return { name: 'setup', from: parts[1] ? db.normCode(parts[1]) : null };
   if (parts[0] === 'season') return { name: 'season', crew: parts[1] || null, view: parts[2] || null };
+  // 035 Scorecard locker: #/locker · #/locker/admin · #/locker/p/<personId> (admin's read-only view)
+  if (parts[0] === 'locker') {
+    if (parts[1] === 'admin') return { name: 'locker', mode: 'admin' };
+    if (parts[1] === 'p' && parts[2]) { let person = parts[2]; try { person = decodeURIComponent(person); } catch { /* as is */ } return { name: 'locker', mode: 'view', person }; }
+    return { name: 'locker', mode: 'mine' };
+  }
   // Crews (feature 006): #/crew/start · #/crew/rename/<id> · #/crew/which/<id> · #/crew/<INVITE>
   if (parts[0] === 'crew') {
     if (parts[1] === 'start') return { name: 'crew', mode: 'start' };

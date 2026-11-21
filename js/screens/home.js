@@ -9,6 +9,7 @@ import { esc, icon, prettyDate, initials, empty } from '../ui.js';
 import { recent, normCode, STANDALONE, moveLink, syncMyRounds, pruneGoneRounds, local, refreshLobbies, owner, clock } from '../db.js';
 import { lobbyState, homeCard } from '../lobby.js';
 import { homeCrew } from './crew.js';
+import { homeLocker, loadLocker } from './locker.js';
 import { fmtPts, fmtToPar, playerLeaderboard } from '../scoring.js';
 
 /** iPhone or iPad in Safari (iPadOS says it's a Mac, but has touch). Tests set `__GLB_IOS`. */
@@ -156,6 +157,7 @@ function codeField() {
 // The Home header: the mark (feature 020, L2 lockup: ring centered on the capitals, 10px gap).
 const TITLE = `<h1 class="ts-title home-title"><span class="home-mark" aria-hidden="true"><img class="mk-dark" src="img/mark-dark.svg" alt="" width="30" height="30"><img class="mk-light" src="img/mark-light.svg" alt="" width="30" height="30"></span>Golf Live Board</h1>`;
 let synced = false;
+let lockerFor = null; // 035: the owner whose locker this page load has started loading
 
 export default {
   topLeft: () => header(recent.all()),
@@ -168,6 +170,12 @@ export default {
       pruneGoneRounds().then((n) => { if (n) app.render(); }).catch(() => { /* offline: next open */ }); // deleted rounds leave Recent
       refreshLobbies(clock.now()).then((n) => { if (n) app.render(); }).catch(() => { /* offline: next open */ }); // 025
     }
+    // 035: this phone's owner's locker, once per page load (and again if the owner changes). Any failure = no entries.
+    try {
+      const o = owner.get();
+      if (o && lockerFor !== o.personId) { lockerFor = o.personId; loadLocker(app, o.personId).catch(() => {}); }
+    } catch { /* Home as it was */ }
+    const lk = homeLocker(app);
     const rounds = recent.all();
     const now = Date.now();
     const yesterday = new Date(now - 86400000).toISOString().slice(0, 10);
@@ -175,7 +183,7 @@ export default {
     const live = rounds.find((r) => !r.lobby && r.live && !r.done && now - (r.seen || r.at || 0) < LIVE_FOR) || null;
     const rest = rounds.filter((r) => r !== live && !coming.includes(r));
     const season = homeCrew(app); // crew card / switcher / Start a crew (feature 006)
-    const extras = `${!STANDALONE && isIOS() ? `<button class="home-row" data-act="home-add">
+    const extras = `${lk.row}${!STANDALONE && isIOS() ? `<button class="home-row" data-act="home-add">
           <span class="hr-ico">${icon('phone', 22)}</span>
           <span class="hr-main"><span class="hr-name">Add to Home Screen</span><span class="hr-sub">Opens like an app, no Safari bars. Your rounds come with it.</span></span>
           <span class="hr-chev">${icon('fwd', 20)}</span></button>` : ''}
@@ -185,7 +193,7 @@ export default {
         ${TITLE}
         ${empty({ icon: 'flag', headline: 'No rounds yet', help: 'Start one and text the code to your group, or join a round a friend started.' })}
         <div class="home-join">${codeField()}</div>
-        ${season}<div class="home-list">${extras}</div>
+        ${lk.packs}${season}<div class="home-list">${extras}</div>
         <div class="nr-foot home-foot"><button class="btn primary big block" data-act="go" data-v="#/setup">${icon('plus', 20)} New round</button></div>
       </div>`;
     }
@@ -193,7 +201,7 @@ export default {
       ${TITLE}
       ${live ? liveCard(live) : ''}
       ${coming.length ? `<div class="ts-label home-k">Coming up</div>${coming.map(comingCard).join('')}` : ''}
-      ${season}
+      ${lk.packs}${season}
       ${extras.trim() ? `<div class="home-list">${extras}</div>` : ''}
       ${rest.length ? `<div class="ts-label home-k">Recent rounds</div><div class="home-list">${rest.map(roundRow).join('')}</div>` : ''}
       <div class="nr-foot home-foot"><div class="home-two">

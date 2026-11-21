@@ -18,6 +18,7 @@ import { owner as phoneOwner } from '../db.js';
 import { fullName } from '../names.js';
 import { whoGroups } from '../identity.js';
 import { lobbySheets } from './hostlobby.js';
+import { lockerSheets } from './locker.js';
 
 let lastHtml = '';
 let closeTimer = null;
@@ -269,6 +270,7 @@ const BODIES = {
   crewRemove: (app, props) => crewSheets.crewRemove(app, props, head),
   crewNew: (app, props) => crewSheets.crewNew(app, props, head),
   seasonNew: (app, props) => seasonSheets.seasonNew(app, props, head),
+  lockerHow: (app, props) => lockerSheets.lockerHow(app, props, head), // 035
   teamName: (app, props) => teamNameSheet(app, props, head),
 
   /** Home → Join with code. */
