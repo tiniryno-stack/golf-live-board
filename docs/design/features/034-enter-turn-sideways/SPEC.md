@@ -1,6 +1,17 @@
 # 034 · The turn, sideways: holes move left to right
 
-Status: exploration, round 3 (Nov 21), waiting for Andrew's pick. Not built.
+Status: approved by Andrew, Nov 21 ("yeah this is great I like it"). Not built.
+
+**What was approved (build exactly this; everything below is the record of how we got here):**
+1. **The hole turn: (g) Just the cards.** The yardage card and the score cards slide one screen-width together
+   (420ms, `cubic-bezier(.4,0,.2,1)`, forward = left); the title, match line and quiet row stay and crossfade.
+2. **Player rows: the name outside each card** (take 5): one card per player holding only the pads; the name as a
+   small label above it. Your label: `ANDREW (WITH SEAN)` (your partner on this hole, which in 2v2 changes every set).
+3. **The match line above the yardage card:** `4 UP  vs Sam + Jake` under the hole title; no "Andrew + Sean".
+4. **Spacing:** 6px from a name to its card, 24px between everything else (measured from the text).
+5. **Entering for the rest of your tee time: names travel** (the morph), opened and closed only by a tap
+   (`‹ Back` on your folded line); no auto-close; changing hole returns to your cart.
+6. **033 Part 1** (score-pick motion) stands as handed off; 033 Part 2 (the flip) is replaced by 1 above.
 
 **Changes 033 §2.2–2.3** (how the card turns to the next hole). Everything else in 033 stands: Part 1 (score picks),
 what moves and what never moves (§2.1), the yardage card rules (§2.4), what starts a turn (§2.6), the build notes and
