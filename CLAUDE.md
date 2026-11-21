@@ -16,6 +16,14 @@ The animated "Today's game" slides (one small scene + one headline per slide, a 
 Andrew Nov 20 with `prototype.html` and 31 screenshots in that folder. Also: "set" replaces "stretch" in UI copy.
 **Built and merged to `main` Nov 20 (417f6e0)**, with the 6-player one-cart-at-a-time game.
 
+## Building the Enter motion + layout (033 + 034)? Read `docs/design/features/034-enter-turn-sideways/SPEC.md` first
+
+Approved by Andrew Nov 21, **not built**. The top of 034's SPEC lists exactly what to build: the next-hole slide (only the
+yardage + score cards move), one card per player with the name outside (`ANDREW (WITH SEAN)`), the match line above the
+yardage card, the spacing, and entering for the rest of your tee time (names travel, `‹ Back`, no auto-close). Score-pick
+motion = 033 Part 1 (`docs/design/features/033-enter-motion/`); 033 Part 2 (the flip) is replaced by 034. Both folders have
+`prototype.html` (034's loads 033's `motion.css` + its own), `motion.css` and `shoot.mjs`. Touches score entry: smoke run.
+
 ## Today's game (032, Nov 20, live on `main`)
 
 Animated rules slides per game: pure model `js/todaysgame.js` (`todaysGame(snap, meId)`, test `tests/todaysgame032.test.mjs`),
