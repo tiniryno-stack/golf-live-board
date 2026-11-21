@@ -1521,6 +1521,14 @@ Object.assign(actions, {
 });
 for (const s of [...Object.values(SCREENS), sheets, fx, lobbyScreen]) Object.assign(actions, s.actions || {});
 
+// 033 §3: html.rm while the phone asks for reduced motion, so the reduced Enter motion is written once (styles.css).
+{
+  const rmq = window.matchMedia?.('(prefers-reduced-motion: reduce)');
+  const setRm = () => document.documentElement.classList.toggle('rm', !!rmq?.matches);
+  setRm();
+  rmq?.addEventListener?.('change', setRm);
+}
+
 let suppressClick = false;
 let userAction = false;
 function runAction(fn, el, ev) {

@@ -8,7 +8,7 @@
 // Holes two or more back open locked. Holes follow play order (start on 1 or 10).
 // Must fit an iPhone SE with no scrolling (rows and buttons shrink to the space).
 
-import { esc, icon, mark, scoreName, foldIn, padWindow, markSvg, smallMark, syncMotion, reward, markKind, pointsLine, standing } from '../ui.js';
+import { esc, icon, mark, scoreName, foldIn, padWindow, markSvg, smallMark, syncMotion, reward, markKind, pointsLine, standing, turnPlan, reducedMotion } from '../ui.js';
 import {
   maxHoleScore, maxLabel, rotationFor, rotationIndexFor, foursomeFor, matchFor, matchesFor, componentNames,
   fmtPts, fmtSigned, ryderState, teeTimeName, playOrder, posOf, holeAt, HOLES, sideOn,
@@ -423,32 +423,53 @@ function checkPts(app, h, m) {
   markPtsSeen(app, e.hole);
 }
 
-/** The reward on a player's row right now (the last pick, until its word has faded). */
+/** The reward on a player's row right now (the last pick, while its motion plays). */
 function rewardFor(app, p, h) {
   const r = app.ui.ceReward;
   if (!r || r.pid !== p.id || r.hole !== h || p.gross[h - 1] !== r.v || Date.now() > r.end) return null;
   return { ...reward(r.v, app.snapshot.holes[h - 1].par, p.dots[h - 1] || 0), at: r.at };
 }
 
-/** One bare score pad (64px, no fill): the mark's outline + number; picked = white pill. */
+/** One bare score pad (64px, no fill): the mark's outline + number; picked = white pill. Right after a pick it
+ *  carries the result's motion (033 Part 1 + 034 Score picks v2): .k-<kind>, rings, sparks, par's pulse. */
 function cePad(p, v, par, { on, rw, editable, act = 'ce-pick' }) {
   const dbl = markKind(v, par) === 'd';
-  const cls = `ce-pad${on ? ' sel' : ''}${rw ? ' anim' : ''}${dbl ? ' dbl' : ''}${rw?.stamp ? ' stamp' : ''}`;
+  const cls = `ce-pad${on ? ' sel' : ''}${rw ? ` anim k-${rw.kind}` : ''}${dbl ? ' dbl' : ''}${rw?.stamp ? ' stamp' : ''}`;
   const tap = editable ? ` data-act="${act}" data-pid="${esc(p.id)}" data-v="${v}"` : ' aria-disabled="true"';
-  const ripples = rw?.ripples ? '<span class="ce-ripple anim"></span><span class="ce-ripple anim r2"></span>' : '';
-  return `<button class="${cls}"${tap}${rw ? ` data-t0="${rw.at}"` : ''} aria-label="${esc(p.name)} ${v}" aria-pressed="${on}">${markSvg(v, par, 40)}<span class="ce-n">${v}</span>${ripples}</button>`;
+  const burst = (n, x) => `<span class="ce-burst anim${x}">${Array.from({ length: n }, (_, i) => `<i style="--a:${(360 / n) * i}deg"></i>`).join('')}</span>`;
+  const fx = !rw ? '' : Array.from({ length: rw.ripples }, (_, i) => `<span class="ce-ripple anim${i ? ` r${i + 1}` : ''}"></span>`).join('')
+    + (rw.burst ? burst(rw.sparks, rw.sparks > 8 ? ' big' : '') + (rw.burst2 ? burst(8, ' b2') : '') : '')
+    + (rw.pulse ? '<span class="ce-pulse anim"></span>' : '');
+  return `<button class="${cls}"${tap}${rw ? ` data-t0="${rw.at}"` : ''} aria-label="${esc(p.name)} ${v}" aria-pressed="${on}">${markSvg(v, par, 40)}<span class="ce-n">${v}</span>${fx}</button>`;
 }
 
-/** "1 stroke" / "2 strokes" + " · net 3" once a score is in (the net part hides while a word shows). */
-function ceStrokes(p, h, { net = true, hideNet = false } = {}) {
+/** "1 stroke" / "2 strokes" + " · net 3" once a score is in (read-only rows). */
+function ceStrokes(p, h, { net = true } = {}) {
   const k = p.dots[h - 1] || 0;
   if (!k) return '';
   const g = p.gross[h - 1];
-  return `<span class="ce-stk">${k} stroke${k > 1 ? 's' : ''}${net && g != null && !hideNet ? ` · net ${g - k}` : ''}</span>`;
+  return `<span class="ce-stk">${k} stroke${k > 1 ? 's' : ''}${net && g != null ? ` · net ${g - k}` : ''}</span>`;
 }
 
-/** A player you can score: name line (+ strokes, + the reward word), then 4 pads + ⋯. */
-function ceRow(app, p, h, editable) {
+/** 034: the result word after a name, on screen for as long as the score stands ("Birdie", "Net bogey"). Right
+ *  after the pick it arrives with motion (.anim + data-t0); every later render draws it still. */
+function ceWord(app, p, h, rw, yours) {
+  const g = p.gross[h - 1];
+  if (g == null) return '';
+  const r = rw || reward(g, app.snapshot.holes[h - 1].par, p.dots[h - 1] || 0);
+  const you = yours && (r.kind === 'birdie' || r.kind === 'eagle') ? ' you' : '';
+  return `<span class="ce-word stay ${r.tone} k-${r.kind}${you}${rw ? ' anim' : ''}"${rw ? ` data-t0="${rw.at}"` : ''}>${esc(r.word)}</span>`;
+}
+
+/** 034: a player's label above their card: NAME (WITH PARTNER) · 1 STROKE, then the word. */
+function ceLabel(app, p, h, { partner = '', rw = null, yours = false } = {}) {
+  const k = p.dots[h - 1] || 0;
+  return `<div class="pgrp-l" data-k="l-${esc(p.id)}"><span class="pgrp-n"><span class="pgrp-who" data-k="n-${esc(p.id)}">${esc(p.name)}</span>${partner ? ` <span class="pgrp-w">(with ${esc(partner)})</span>` : ''}${k ? ` · ${k} stroke${k > 1 ? 's' : ''}` : ''}</span>${ceWord(app, p, h, rw, yours)}</div>`;
+}
+
+/** 034 "name outside": one card per player holding only the pads (4 + ⋯), the name as a label above it.
+ *  Your cart's cards carry the green rail. */
+function ceGroup(app, p, h, { editable, yours, partner = '' }) {
   const snap = app.snapshot;
   const par = snap.holes[h - 1].par;
   const g = p.gross[h - 1];
@@ -459,10 +480,9 @@ function ceRow(app, p, h, editable) {
   const pads = w.map((v) => cePad(p, v, par, { on: g === v, rw: g === v ? rw : null, editable })).join('')
     + (out ? cePad(p, g, par, { on: true, rw, editable, act: 'ce-more' })
       : `<button class="ce-pad ce-dots"${editable ? ` data-act="ce-more" data-pid="${esc(p.id)}"` : ' aria-disabled="true"'} aria-label="Other scores for ${esc(p.name)}">${DOTS}</button>`);
-  const word = rw ? `<span class="ce-word anim${rw.tone ? ` ${rw.tone}` : ''}" data-t0="${rw.at}">${esc(rw.word)}</span>` : '';
   const nudge = g == null && app.ui.nudge?.hole === h && Date.now() < app.ui.nudge.until ? ' nudge' : '';
-  return `<div class="ce-row${nudge}"><div class="ce-nm"><b class="ellipsis">${esc(p.name)}</b>${ceStrokes(p, h, { hideNet: !!rw })}${word}</div>
-    <div class="ce-pads">${pads}</div></div>`;
+  const flash = rw?.flash ? `<span class="ce-flash anim k-${rw.kind}" data-t0="${rw.at}" aria-hidden="true"></span>` : '';
+  return `<div class="pgrp">${ceLabel(app, p, h, { partner, rw, yours })}<div class="pcard${yours ? ' rail' : ''}" data-k="c-${esc(p.id)}">${flash}<div class="ce-row${nudge}"><div class="ce-pads">${pads}</div></div></div></div>`;
 }
 
 /** Preview / locked holes: a read-only row (name, strokes, the score's mark at the right). */
@@ -482,9 +502,12 @@ const names = (ps) => ps.map((p) => p.name).join(' + ');
 const listNames = (ps) => (ps.length <= 1 ? names(ps) : `${ps.slice(0, -1).map((p) => p.name).join(', ')} + ${ps[ps.length - 1].name}`);
 
 /** 028 §2: who's on the calm Enter, in order: you, your partner if you have one, then the rest of your tee time.
- *  Games without carts (Everyone alone, Stroke play): you alone in your card, everyone else one quiet row. */
+ *  Games without carts (Everyone alone, Stroke play): you alone in your card, everyone else one quiet row.
+ *  034: in 2v2 your card is your cart (the pair you ride with, i.e. your first set's pair) all round; your partner on
+ *  the hole shows in your label instead. */
 function ceCarts(app, h) {
-  const carts = cartsFor(app, h).map((c) => ({ ...c, players: [...c.players] }));
+  const snap = app.snapshot;
+  let carts = cartsFor(app, h).map((c) => ({ ...c, players: [...c.players] }));
   if (!carts.length) return carts;
   if (individual(app)) {
     const all = carts.flatMap((c) => c.players);
@@ -492,12 +515,26 @@ function ceCarts(app, h) {
     const rest = all.filter((p) => p.id !== app.me);
     return me ? [{ teamId: null, players: [me] }, ...(rest.length ? [{ teamId: 'rest', players: rest }] : [])] : carts;
   }
+  if (snap.settings.pairs) {
+    const h1 = holeAt(snap.settings, 1);
+    const ride = (id) => sideOn(snap, id, h1) || '';
+    const all = carts.flatMap((c) => c.players);
+    const mine = ride(app.me);
+    const out = [];
+    for (const p of [...all.filter((x) => ride(x.id) === mine), ...all.filter((x) => ride(x.id) !== mine)]) {
+      let c = out.find((x) => x.teamId === ride(p.id));
+      if (!c) out.push((c = { teamId: ride(p.id), players: [] }));
+      c.players.push(p);
+    }
+    carts = out;
+  }
   carts[0].players.sort((a, b) => (b.id === app.me) - (a.id === app.me));
   return carts;
 }
 
 /** A quiet row (021 §4, 028 §2.3): names with their marks, Enter › while any is missing, Edit › once all are in.
- *  Four or more: missing players first, two names, then +N. `fold` = your own card folded (green rail, no action word). */
+ *  Four or more: missing players first, two names, then +N. `fold` = your own cart folded while you enter for the rest
+ *  of your tee time (034): green rail, the whole row is the button back, ‹ Back on the right. */
 function ceQuiet(app, c, h, { m = null, fold = false } = {}) {
   const par = app.snapshot.holes[h - 1].par;
   const allIn = c.players.every((p) => p.gross[h - 1] != null);
@@ -506,15 +543,16 @@ function ceQuiet(app, c, h, { m = null, fold = false } = {}) {
   if (c.players.length >= 4) {
     const order = [...c.players.filter((p) => p.gross[h - 1] == null), ...c.players.filter((p) => p.gross[h - 1] != null)];
     who = `<span class="ce-who-p"><span class="ellipsis">${esc(order.slice(0, 2).map((p) => p.name).join(', '))}</span><span class="ce-plus">+${order.length - 2}</span></span>`;
-  } else who = c.players.map((p) => `<span class="ce-who-p"><span class="ellipsis">${esc(p.name)}</span>${smallMark(p.gross[h - 1], par, 30)}</span>`).join('');
-  const act = fold ? 'ce-close' : 'ce-theirs';
-  return `<button class="ce-line${fold ? ' ce-fold' : ''}" data-act="${act}" data-t="${esc(c.teamId || '')}" aria-label="${fold ? 'Back to your scores' : `Enter scores for ${esc(c.players.map((p) => p.name).join(' and '))}`}">
-      <span class="ce-who">${grp}${who}</span>${fold ? '' : `<span class="ce-go">${allIn ? 'Edit' : 'Enter'}${icon('fwd', 18)}</span>`}</button>`;
+  } else who = c.players.map((p) => `<span class="ce-who-p"><span class="ellipsis" data-k="n-${esc(p.id)}">${esc(p.name)}</span>${smallMark(p.gross[h - 1], par, 30)}</span>`).join('');
+  const key = fold ? 'q-mine' : `q-${esc(c.teamId || 'rest')}`;
+  const pids = esc(c.players.map((p) => p.id).join(' '));
+  return `<button class="ce-line ${fold ? 'ce-fold' : 'ce-q'}" data-act="${fold ? 'ce-close' : 'ce-theirs'}" data-t="${esc(c.teamId || '')}" data-k="${key}" data-pids="${pids}" aria-label="${fold ? 'Back to your scores' : `Enter scores for ${esc(c.players.map((p) => p.name).join(' and '))}`}">
+      <span class="ce-who">${grp}${who}</span>${fold ? `<span class="ce-go">${icon('back', 18)}Back</span>` : `<span class="ce-go">${allIn ? 'Edit' : 'Enter'}${icon('fwd', 18)}</span>`}</button>`;
 }
 
-/** Their card, grown open (028 §2.4): up to two players each get pads; three or more get one pad row (the
- *  first still missing, or the one you tapped) and compact rows. A score from their own phone is read-only. */
-function ceTheirCard(app, c, h) {
+/** Their cards, open (034): up to two players each get a card of pads; three or more get one card of pads (the first
+ *  still missing, or the one you tapped) and one card of compact rows. A score from their own phone is read-only. */
+function ceTheirCards(app, c, h) {
   const par = app.snapshot.holes[h - 1].par;
   const nudged = app.ui.nudge?.hole === h && Date.now() < app.ui.nudge.until;
   const src = (p) => {
@@ -523,15 +561,17 @@ function ceTheirCard(app, c, h) {
     if (p.gross[h - 1] == null) return nudged ? 'missing · tap a score' : 'tap to enter';
     return by === app.myName() ? 'entered by you' : by ? `entered by ${by}` : '';
   };
-  const ro = (p) => `<div class="ce-own"><b class="ellipsis">${esc(p.name)}</b>${smallMark(p.gross[h - 1], par, 30)}<span class="ce-own-src">${esc(src(p))}</span></div>`;
+  const own = (p) => `<div class="pgrp">${ceLabel(app, p, h)}<div class="pcard" data-k="c-${esc(p.id)}"><div class="ce-own">${smallMark(p.gross[h - 1], par, 30)}<span class="ce-own-src">From their phone</span></div></div></div>`;
   const ps = c.players;
-  if (ps.length <= 2) return `<div class="ce-mine ce-card ce-their">${ps.map((p) => (ownEntry(p, h) ? ro(p) : ceRow(app, p, h, app.canEdit(p.id, h)))).join('')}</div>`;
+  if (ps.length <= 2) return ps.map((p) => (ownEntry(p, h) ? own(p) : ceGroup(app, p, h, { editable: app.canEdit(p.id, h), yours: false }))).join('');
   const editable = ps.filter((p) => !ownEntry(p, h) && app.canEdit(p.id, h));
   const want = app.ui.cePad?.hole === h ? editable.find((p) => p.id === app.ui.cePad.pid) : null;
   const sel = want || editable.find((p) => p.gross[h - 1] == null) || null;
-  return `<div class="ce-mine ce-card ce-their">${ps.map((p) => (p === sel ? ceRow(app, p, h, true)
-    : ownEntry(p, h) || !app.canEdit(p.id, h) ? ro(p)
-      : `<button class="ce-own ce-cmp" data-act="ce-padto" data-pid="${esc(p.id)}"><b class="ellipsis">${esc(p.name)}</b>${smallMark(p.gross[h - 1], par, 30)}<span class="ce-own-src">${esc(src(p))}</span></button>`)).join('')}</div>`;
+  const row = (p) => {
+    const inner = `<b class="ellipsis"><span data-k="n-${esc(p.id)}">${esc(p.name)}</span></b>${smallMark(p.gross[h - 1], par, 30)}<span class="ce-own-src">${esc(src(p))}</span>`;
+    return ownEntry(p, h) || !app.canEdit(p.id, h) ? `<div class="ce-own">${inner}</div>` : `<button class="ce-own ce-cmp" data-act="ce-padto" data-pid="${esc(p.id)}">${inner}</button>`;
+  };
+  return `${sel ? ceGroup(app, sel, h, { editable: true, yours: false }) : ''}<div class="pgrp"><div class="pcard ce-others" data-k="c-list">${ps.filter((p) => p !== sel).map(row).join('')}</div></div>`;
 }
 
 function ryderEnterView(app, h, { gcard, carts, locked, ahead, pos, limitPos, lastHole, done, cur }) {
@@ -543,7 +583,7 @@ function ryderEnterView(app, h, { gcard, carts, locked, ahead, pos, limitPos, la
   const others = carts.slice(1);
 
   // 023 §3: left-aligned header "Hole 11  Par 3", then ◀ ▶ ⋯ (round menu; organizer's first menu item
-  // is Fix hole N). The team header drops Hcp and the course name; strokes show per row.
+  // is Fix hole N). The team header drops Hcp and the course name; strokes show per player.
   const head = `<div class="ce-head">
       <button class="ce-hole" data-act="hole-grid" aria-label="Hole ${h}: all holes"><span class="ce-hn">Hole ${h}</span><span class="ce-hp">Par ${par}</span></button>
       <div class="ce-nav">
@@ -558,18 +598,18 @@ function ryderEnterView(app, h, { gcard, carts, locked, ahead, pos, limitPos, la
   if (live) checkPts(app, h, m);
   const pt = app.ui.cePts && m && app.ui.cePts.matchId === m.id ? app.ui.cePts : null;
 
-  // 027 / 028 §2.4: the rest of your tee time grows open in place (no sheet). app.ui.ceOpen = { hole, t }.
+  // 027 / 028 §2.4 / 034: the rest of your tee time opens in place (no sheet), only on a tap. app.ui.ceOpen = { hole, t }.
   const open = live && app.ui.ceOpen?.hole === h ? others.find((c) => (c.teamId || '') === (app.ui.ceOpen.t || '')) || null : null;
-  // The match line (022 §2) · preview "Up next" · locked "Played · locked · 1 UP after 6   Edit".
+  // 034: the match line sits under the hole title, above the yardage card: "4 UP  vs Sam + Jake" (your names are on
+  // the labels below). Preview "Up next" · locked "Played · locked · 1 UP after 6   Edit". It stays while you enter for
+  // the rest of your tee time.
   let matchLine;
-  if (open) {
-    matchLine = `<div class="ce-match"><span class="ce-us ellipsis">Entering for ${esc(open.players.length >= 4 ? `${open.players.length} players` : listNames(open.players))}</span><button class="ce-done" data-act="ce-close">Done</button></div>`;
-  } else if (ahead) matchLine = '<div class="ce-match"><span>Up next</span></div>';
+  if (ahead) matchLine = '<div class="ce-match"><span>Up next</span></div>';
   else if (locked) {
     const s = m ? ceStanding(m, pos) : null;
     matchLine = `<div class="ce-match"><span class="ellipsis">Played · locked${s ? ` · <b class="ce-st${s.you ? ' you' : ''}">${esc(s.text)}</b> after ${h}` : ''}</span><button class="ce-edit" data-act="hole-unlock">Edit</button></div>`;
   } else {
-    let right = '';
+    let line = '';
     if (m) {
       const s = ceStanding(m);
       const roll = pt?.dir ? `<span class="ce-roll${pt.dir === 'dn' ? ' dn' : ''}">${pt.dir === 'dn' ? `<span>${esc(pt.to)}</span><span>${esc(pt.from)}</span>` : `<span>${esc(pt.from)}</span><span>${esc(pt.to)}</span>`}</span>`
@@ -577,33 +617,28 @@ function ryderEnterView(app, h, { gcard, carts, locked, ahead, pos, limitPos, la
       const up = `<span class="ce-up${s.you ? '' : ' muted'}${pt?.dir ? ' anim' : ''}"${pt?.dir ? ` data-t0="${pt.at}"` : ''}>${roll}</span>`;
       const them = m.them.playerIds.map((id) => snap.playerById.get(id)?.name || '').filter(Boolean).join(' + ');
       const won = pt ? `<span class="ce-won anim${pt.line.tone === 'text' ? '' : ' muted'}" data-t0="${pt.at}">${esc(pt.line.text)}${pt.named ? ` on ${pt.hole}` : ''}</span>` : '';
-      right = `<span class="ce-end">${up}<span class="ce-swap"><span class="ce-vs${pt ? ' anim' : ''}"${pt ? ` data-t0="${pt.at}"` : ''}>vs ${esc(them)}</span>${won}</span></span>`;
-    }
-    const us = m ? m.us.playerIds.map((id) => snap.playerById.get(id)).filter(Boolean) : mine.players; // your real partner
-    let left = names(us);
-    // 028 §2.1: 2v2, the first hole with a new partner: "Holes 10–18 · with Sean".
-    if (m && snap.settings.pairs && pos === m.from && m.from > 1) left = `${m.label} · with ${names(us.filter((p) => p.id !== app.me))}`;
-    if (!m && !individual(app)) { // 6 players (Nov 20): your cart sits out a set
-      const out = sitOut(app, h);
-      if (out) right = `<span class="ce-end"><span class="ce-swap"><span class="ce-vs">${esc(out)}</span></span></span>`;
-    }
-    if (!m && individual(app)) {
+      line = `<span class="ce-end">${up}<span class="ce-swap"><span class="ce-vs${pt ? ' anim' : ''}"${pt ? ` data-t0="${pt.at}"` : ''}>vs ${esc(them)}</span>${won}</span></span>`;
+    } else if (individual(app)) {
       const l = enterLine(snap, app.me); // Everyone alone / Stroke play: "3½ PTS · 2ND  Chris +1"
-      if (l) right = `<span class="ce-end"><span class="ce-up${l.you ? '' : ' muted'}"><span class="ce-roll"><span>${esc(l.standing)}</span></span></span><span class="ce-swap"><span class="ce-vs">${esc(l.context)}</span></span></span>`;
-      left = app.myPlayer()?.name || left;
+      if (l) line = `<span class="ce-end"><span class="ce-up${l.you ? '' : ' muted'}"><span class="ce-roll"><span>${esc(l.standing)}</span></span></span><span class="ce-swap"><span class="ce-vs">${esc(l.context)}</span></span></span>`;
+    } else { // 6 players (Nov 20): your cart sits out a set
+      const out = sitOut(app, h);
+      if (out) line = `<span class="ce-us ellipsis">${esc(out)}</span>`;
     }
-    matchLine = `<div class="ce-match"><span class="ce-us ellipsis">${esc(left)}</span>${right}</div>`;
+    matchLine = `<div class="ce-match">${line}</div>`;
   }
 
-  // Rows: yours with pads in one card (023 §3, the green rail is gone — the card says "your team"),
-  // theirs as one quiet row ("Your group" when that cart isn't your opponent); read-only on preview / locked.
-  // Rows (027 rule 1): your card and each quiet row are grow slots. Opening theirs folds yours into a row with the
-  // green rail in the same motion (ui.growPlay); read-only on preview / locked.
-  const rows = live
-    ? `<div class="grow ce-slot${open ? '' : ' open'}" data-grow="ce-mine"><div class="g-row">${ceQuiet(app, mine, h, { fold: true })}</div>
-        <div class="g-card"><div class="ce-mine ce-card">${mine.players.map((p) => ceRow(app, p, h, app.canEdit(p.id, h))).join('')}</div></div></div>${others.map((c) => `<div class="grow ce-slot${c === open ? ' open' : ''}" data-grow="ce-t-${esc(c.teamId || '')}">
-        <div class="g-row">${ceQuiet(app, c, h, { m })}</div><div class="g-card">${c === open ? ceTheirCard(app, c, h) : ''}</div></div>`).join('')}`
-    : `<div class="ce-mine">${carts.map((c, i) => c.players.map((p) => ceReadRow(app, p, h, i === 0, ahead)).join('')).join('')}</div>`;
+  // Rows (034): your cart = one card per player, the name above it; the rest of your tee time = one quiet row each.
+  // Open: your cart folds into one line at the top (‹ Back) and theirs get the same cards (no rail). Read-only on
+  // preview / locked holes. .ce-cards is what slides on the turn; the quiet rows stay and crossfade.
+  const partner = m ? names(m.us.playerIds.filter((id) => id !== app.me).map((id) => snap.playerById.get(id)).filter(Boolean)) : '';
+  let rows;
+  if (!live) rows = `<div class="ce-cards read"><div class="ce-mine">${carts.map((c, i) => c.players.map((p) => ceReadRow(app, p, h, i === 0, ahead)).join('')).join('')}</div></div>`;
+  else if (open) {
+    rows = `<div class="ce-cards open">${ceQuiet(app, mine, h, { fold: true })}${ceTheirCards(app, open, h)}</div>${others.filter((c) => c !== open).map((c) => ceQuiet(app, c, h, { m })).join('')}`;
+  } else {
+    rows = `<div class="ce-cards mine">${mine.players.map((p) => ceGroup(app, p, h, { editable: app.canEdit(p.id, h), yours: true, partner: p.id === app.me ? partner : '' })).join('')}</div>${others.map((c) => ceQuiet(app, c, h, { m })).join('')}`;
+  }
 
   // Status (only when something's wrong) + Next (021 §6, 022 §6).
   const blanks = blankPlayers(app, h);
@@ -631,19 +666,22 @@ function ryderEnterView(app, h, { gcard, carts, locked, ahead, pos, limitPos, la
 
   const card = live && !(open && open.players.length >= 4) ? gcard : ''; // 028 §2.4: a 5–6 tee time folds the yardage card while open. 021 §1: your hole only (current, or the one you just finished): never on preview / locked holes
   return `<div class="enter nr ry-enter ce${card ? ` gps-card ${app.ui.gpsSize || 'regular'}` : ''}">
-      <div class="hero">${head}${card}</div>
-      ${matchLine}${rows}
+      <div class="hero">${head}<div class="ce-sub">${matchLine}</div>${card}</div>
+      ${rows}
       <div class="ce-flex"></div>
       <div class="ce-foot">${status}${next}</div>
     </div>`;
 }
 
-/** A pick on the calm Enter (row, More, or the other cart's sheet). The reward is set before the write so the
- *  render the write triggers already shows it; `delay` holds the motion until a closing sheet is gone. */
+/** A pick on the calm Enter (a card, More, or their cards). The reward is set before the write so the render the
+ *  write triggers already shows it; `delay` holds the motion until a closing sheet is gone. A tap during a turn or
+ *  the morph jumps it to its end first. */
 function cePick(app, pid, h, v, delay = 0, inOpen = false) {
   const snap = app.snapshot;
   const p = snap.playerById.get(pid);
   if (!p) return;
+  app.ui.ceTurn = null;
+  app.ui.ceMorph = null;
   const at = Date.now() + delay;
   const rw = reward(v, snap.holes[h - 1].par, p.dots[h - 1] || 0);
   app.ui.ceReward = { pid, hole: h, v, at, end: at + rw.holdMs + 100 };
@@ -651,32 +689,177 @@ function cePick(app, pid, h, v, delay = 0, inOpen = false) {
   app.ui.cePts = null; // a tap during the points moment jumps it to its end
   if (p.gross[h - 1] === v) app.render(); // same score again: no write, just the motion
   else if (!app.setScore(pid, h, v)) { app.ui.ceReward = null; app.render(); return; }
-  if (inOpen) {
-    app.ui.cePad = null; // the pad row moves to the next player still missing (ceTheirCard)
-    armTheirsClose(app, h);
+  if (inOpen) app.ui.cePad = null; // the pad card moves to the next player still missing (ceTheirCards)
+  // 034: no auto-close. Their cards stay open until you tap ‹ Back, or change hole.
+}
+
+// ───────────────────────────────────────────── 034: the turn (holes move sideways) and the names-travel morph
+// Both follow the reward pattern: state in app.ui with a start time, drawn again after every redraw (mount →
+// decorate), so the constant redraws can't cut them. What leaves is a copy captured at tap time (its HTML and its
+// place, measured with offsets so a running transform can't skew it) on .ce-turn-layer; what arrives gets a class +
+// data-t0, and ui.syncMotion puts every animation back where it was. Only transform and opacity animate.
+const TURN_MS = 460; // the cards slide 420ms; the words that stay finish fading in at 340ms
+const MORPH_MS = 600; // the names travel 380ms; their pads land by 564ms
+const FADE_MS = 200; // reduced motion: a 150ms crossfade
+const rmOn = () => (typeof document !== 'undefined' && document.documentElement.classList.contains('rm')) || !!reducedMotion();
+
+/** An element's box relative to the .ce root, from offsets (transforms don't count). */
+function relBox(el, root) {
+  let top = 0, left = 0, n = el;
+  while (n && n !== root) { top += n.offsetTop; left += n.offsetLeft; n = n.offsetParent; }
+  return { top, left, width: el.offsetWidth, height: el.offsetHeight };
+}
+const inLayer = (el) => !!el.closest('.ce-turn-layer');
+const one = (ce, sel) => [...ce.querySelectorAll(sel)].find((el) => !inLayer(el)) || null;
+const all = (ce, sel) => [...ce.querySelectorAll(sel)].filter((el) => !inLayer(el));
+const MOTION_CLS = ['anim', 't-in', 't-out', 't-page', 't-fade', 'm-name-in', 'm-name-out', 'm-grow', 'm-shrink', 'm-fade-in', 'm-fade-out'];
+/** A still, inert copy of what's on screen now (no actions, no running motion). */
+function copyOf(el) {
+  const c = el.cloneNode(true);
+  for (const x of [c, ...c.querySelectorAll('*')]) {
+    x.removeAttribute('data-act'); x.removeAttribute('data-t0'); x.removeAttribute('id');
+    if (x.classList) x.classList.remove(...MOTION_CLS);
+    for (const v of ['--m-dx', '--m-dy', '--m-s', '--m-i', '--m-j']) x.style?.removeProperty(v);
+  }
+  return c.outerHTML;
+}
+
+/**
+ * Change the hole on Enter. Next hole / ◀ ▶ / Back to hole N / the grid / Undo all come through here: it sets the
+ * hole, returns to your cart (034: changing hole closes the rest of your tee time) and, on the calm Enter, starts the
+ * turn: the yardage card and the score cards slide one screen-width (forward = left, in play order), the title,
+ * match line and quiet rows crossfade in place. No turn on a finalized round. The caller renders.
+ */
+export function beginTurn(app, to) {
+  const from = app.ui.hole;
+  app.ui.hole = to;
+  app.ui.ceOpen = null;
+  app.ui.cePad = null;
+  app.ui.ceReward = null;
+  app.ui.ceMorph = null;
+  app.ui.ceTurn = null;
+  const ce = typeof document !== 'undefined' ? document.querySelector('#content .ce') : null;
+  if (!ce || from == null || from === to || !app.snapshot || app.isFinal()) return;
+  const parts = [];
+  const add = (el, kind) => { if (el) parts.push({ kind, box: relBox(el, ce), html: copyOf(el) }); };
+  add(one(ce, '.hero > .green-card'), 'page');
+  add(one(ce, '.ce-cards'), 'page');
+  add(one(ce, '.ce-hole'), 'fade');
+  for (const q of all(ce, '.ce-line.ce-q')) add(q, 'fade');
+  const sub = one(ce, '.ce-sub');
+  app.ui.ceTurn = {
+    at: Date.now(), dir: turnPlan(from, to, app.snapshot.settings.startHole).dir, fade: rmOn(),
+    w: Math.max(ce.offsetWidth, ce.parentElement?.clientWidth || 0), parts,
+    sub: sub ? { kind: 'fade', box: relBox(sub, ce), html: copyOf(sub), text: sub.textContent.replace(/\s+/g, ' ').trim() } : null,
+  };
+}
+
+/** Before opening / closing the rest of your tee time: remember every keyed part (names, labels, cards, rows). */
+function beginMorph(app) {
+  app.ui.ceMorph = null;
+  app.ui.ceTurn = null;
+  const ce = typeof document !== 'undefined' ? document.querySelector('#content .ce') : null;
+  if (!ce) return;
+  const old = {};
+  for (const el of all(ce, '[data-k]')) {
+    const o = { box: relBox(el, ce), html: copyOf(el), pids: el.dataset.pids || '' };
+    if (el.dataset.k.startsWith('n-')) { // a travelling name's outgoing copy keeps its computed font
+      const cs = getComputedStyle(el);
+      o.font = { fontFamily: cs.fontFamily, fontSize: cs.fontSize, fontWeight: cs.fontWeight, letterSpacing: cs.letterSpacing, textTransform: cs.textTransform, color: cs.color, lineHeight: cs.lineHeight, whiteSpace: 'nowrap' };
+    }
+    old[el.dataset.k] = o;
+  }
+  app.ui.ceMorph = { at: Date.now(), fade: rmOn(), old, fresh: null };
+}
+
+function layerOf(ce) {
+  let l = ce.querySelector(':scope > .ce-turn-layer');
+  if (!l) {
+    l = document.createElement('div');
+    l.className = 'ce-turn-layer';
+    l.setAttribute('aria-hidden', 'true');
+    l.inert = true;
+    ce.appendChild(l);
+  }
+  return l;
+}
+function place(layer, part, cls, at, vars = {}) {
+  const tpl = document.createElement('template');
+  tpl.innerHTML = part.html.trim();
+  const el = tpl.content.firstElementChild;
+  if (!el) return null;
+  Object.assign(el.style, { top: `${part.box.top}px`, left: `${part.box.left}px`, width: `${part.box.width}px`, height: `${part.box.height}px` }, part.font || {});
+  for (const [k, v] of Object.entries(vars)) el.style.setProperty(k, v);
+  el.classList.add(...cls);
+  el.dataset.t0 = at;
+  layer.appendChild(el);
+  return el;
+}
+
+function playTurn(ce, t) {
+  ce.dataset.turn = t.fade ? 'fade' : 'cards';
+  ce.dataset.dir = t.dir;
+  ce.style.setProperty('--t-w', `${t.w}px`);
+  const tag = (el, kind) => { if (el) { el.classList.add(`t-${kind}`, 't-in'); el.dataset.t0 = t.at; } };
+  const sub = one(ce, '.ce-sub');
+  const subChanged = !!(t.sub && sub && sub.textContent.replace(/\s+/g, ' ').trim() !== t.sub.text);
+  tag(one(ce, '.hero > .green-card'), 'page');
+  tag(one(ce, '.ce-cards'), 'page');
+  tag(one(ce, '.ce-hole'), 'fade');
+  for (const q of all(ce, '.ce-line.ce-q')) tag(q, 'fade');
+  if (subChanged) tag(sub, 'fade'); // the match line moves only when it says something new
+  const layer = layerOf(ce);
+  for (const p of [...t.parts, ...(subChanged ? [t.sub] : [])]) place(layer, p, [`t-${p.kind}`, 't-out'], t.at);
+}
+
+function playMorph(ce, mo) {
+  const els = all(ce, '[data-k]');
+  if (!mo.fresh) mo.fresh = Object.fromEntries(els.map((el) => [el.dataset.k, { box: relBox(el, ce), pids: el.dataset.pids || '' }]));
+  const { old, fresh, at } = mo;
+  ce.dataset.morph = mo.fade ? 'fade' : 'on';
+  const layer = layerOf(ce);
+  const top = (k) => /^[qlc]-/.test(k);
+  const rowOf = (set, pid) => Object.entries(set).find(([k, v]) => k.startsWith('q-') && v.pids.split(' ').includes(pid))?.[1] || null;
+  const mark = (el, cls, vars = {}) => { el.classList.add(cls); for (const [k, v] of Object.entries(vars)) el.style.setProperty(k, v); el.dataset.t0 = at; };
+  const hideNames = (el) => el?.querySelectorAll('[data-k^="n-"]').forEach((x) => { x.style.visibility = 'hidden'; });
+  if (mo.fade) { // reduced motion: a 150ms crossfade, nothing moves
+    for (const el of els) if (top(el.dataset.k) && !old[el.dataset.k]) mark(el, 'm-fade-in');
+    for (const [k, o] of Object.entries(old)) if (top(k) && !fresh[k]) place(layer, o, ['m-fade-out'], at);
+    return;
+  }
+  let ci = 0, co = 0;
+  for (const el of els) {
+    const k = el.dataset.k, f = fresh[k], o = old[k];
+    if (!f) continue;
+    if (k.startsWith('n-')) { // a name flies from where it was to where it's going, its old style crossfading into the new
+      if (!o) { mark(el, 'm-fade-in'); continue; }
+      const dx = o.box.left - f.box.left, dy = o.box.top - f.box.top, s = f.box.height ? o.box.height / f.box.height : 1;
+      mark(el, 'm-name-in', { '--m-dx': `${dx}px`, '--m-dy': `${dy}px`, '--m-s': String(s) });
+      place(layer, o, ['m-name-out'], at, { '--m-dx': `${-dx}px`, '--m-dy': `${-dy}px`, '--m-s': String(s ? 1 / s : 1) });
+    } else if (k.startsWith('c-')) { // a card grows up out of the row it came from, then its pads land
+      if (o) continue;
+      const q = rowOf(old, k.slice(2)) || Object.entries(old).find(([x]) => x.startsWith('q-') && x !== 'q-mine')?.[1];
+      mark(el, 'm-grow', { '--m-dy': `${q ? q.box.top - f.box.top : 24}px`, '--m-i': String(ci++) });
+      el.querySelectorAll('.ce-pad').forEach((pd, j) => pd.style.setProperty('--m-j', String(j)));
+    } else if (!o) mark(el, 'm-fade-in'); // a label / one-line row arriving: fades in around its travelling names
+  }
+  for (const [k, o] of Object.entries(old)) {
+    if (fresh[k] || k.startsWith('n-')) continue;
+    if (k.startsWith('c-')) { // a card leaving squashes into the row it becomes
+      const q = rowOf(fresh, k.slice(2)) || fresh['q-mine'];
+      hideNames(place(layer, o, ['m-shrink'], at, { '--m-dy': `${q ? q.box.top - o.box.top : -24}px`, '--m-i': String(co++) }));
+    } else hideNames(place(layer, o, ['m-fade-out'], at));
   }
 }
 
-// The other cart's sheet closes itself 1.2 s after both their scores are in, after 1.2 s with no taps.
-let theirsTimer = null;
-let ceApp = null; // set in mount, for the sheet's touch listener
-function armTheirsClose(app, h) {
-  clearTimeout(theirsTimer);
-  theirsTimer = null;
-  const o = app.ui.ceOpen;
-  if (!o || o.hole !== h) return;
-  const c = ceCarts(app, h).find((x, i) => i > 0 && (x.teamId || '') === (o.t || ''));
-  if (!c || c.players.some((p) => p.gross[h - 1] == null)) return;
-  theirsTimer = setTimeout(() => {
-    theirsTimer = null;
-    if (app.ui.ceOpen === o) { app.ui.ceOpen = null; app.render({ grow: true }); }
-  }, 1200);
-}
-if (typeof document !== 'undefined') {
-  document.addEventListener('pointerdown', (ev) => {
-    if (!theirsTimer || !ev.target?.closest?.('.ce-their')) return;
-    if (ceApp) armTheirsClose(ceApp, ceApp.ui.ceOpen?.hole);
-  }, true);
+/** mount: put the turn / the morph back on this redraw while they run (expired ones are dropped). */
+function decorate(ce, app) {
+  const now = Date.now();
+  const t = app.ui.ceTurn, mo = app.ui.ceMorph;
+  if (t && now > t.at + (t.fade ? FADE_MS : TURN_MS)) app.ui.ceTurn = null;
+  if (mo && now > mo.at + (mo.fade ? FADE_MS : MORPH_MS)) app.ui.ceMorph = null;
+  if (app.ui.ceTurn) playTurn(ce, app.ui.ceTurn);
+  else if (app.ui.ceMorph) playMorph(ce, app.ui.ceMorph);
 }
 
 function theirsCart(app, hole, teamId) {
@@ -709,7 +892,7 @@ export const enterSheets = {
     const par = app.snapshot.holes[hole - 1].par;
     const rows = c.players.map((p) => (ownEntry(p, hole)
       ? `<div class="ce-own"><b class="ellipsis">${esc(p.name)}</b>${smallMark(p.gross[hole - 1], par, 30)}<span class="ce-own-src">From their phone</span></div>`
-      : ceRow(app, p, hole, app.canEdit(p.id, hole)))).join('');
+      : ceGroup(app, p, hole, { editable: app.canEdit(p.id, hole), yours: false }))).join('');
     return `<div class="ce-sheet">${sheetHead(`${names(c.players)} · Hole ${hole}`, true)}${rows}</div>`;
   },
 };
@@ -719,7 +902,9 @@ let ceRedraw = null;
 function armRedraw(app) {
   clearTimeout(ceRedraw);
   const now = Date.now();
-  const ends = [app.ui.ceReward?.end, app.ui.cePts ? app.ui.cePts.at + PTS_MS : null].filter((t) => t && t > now);
+  const ends = [app.ui.ceReward?.end, app.ui.cePts ? app.ui.cePts.at + PTS_MS : null,
+    app.ui.ceTurn ? app.ui.ceTurn.at + (app.ui.ceTurn.fade ? FADE_MS : TURN_MS) : null,
+    app.ui.ceMorph ? app.ui.ceMorph.at + (app.ui.ceMorph.fade ? FADE_MS : MORPH_MS) : null].filter((t) => t && t > now);
   if (ends.length) ceRedraw = setTimeout(() => app.render(), Math.min(...ends) - now + 30);
 }
 
@@ -872,12 +1057,13 @@ export default {
     }
     const ce = root.querySelector('.ce');
     if (ce) {
-      // 021/022: put any reward motion back where it was before this redraw, and redraw when it ends.
-      ceApp = app;
+      // 021/022/034: put the turn, the morph and any reward motion back where they were before this redraw, and redraw
+      // when they end.
+      decorate(ce, app);
       syncMotion(ce);
       armRedraw(app);
       if (document.querySelector('.coach')) return; // one tip at a time
-      const mineRows = ce.querySelector('[data-grow="ce-mine"].open .ce-mine'), theirs = ce.querySelector('.ce-slot:not([data-grow="ce-mine"]):not(.open) .ce-line');
+      const mineRows = ce.querySelector('.ce-cards.mine'), theirs = ce.querySelector('.ce-line.ce-q');
       if (mineRows && !mineRows.querySelector('.ce-pad.sel') && mineRows.querySelector('.ce-pads')) {
         app.coach('pad3', mineRows.querySelector('.ce-pads'), 'Tap the score you made. ⋯ has every other score.'); // 031 §2.5
       } else if (mineRows && theirs && !theirs.querySelector('.ce-sm') && mineRows.querySelectorAll('.ce-pad.sel').length >= 2) {
@@ -930,7 +1116,7 @@ export default {
       const st = app.snapshot.settings;
       const pos = posOf(st, app.ui.hole);
       if (pos > 1) {
-        app.ui.hole = holeAt(st, pos - 1);
+        beginTurn(app, holeAt(st, pos - 1));
         app.render();
       }
     },
@@ -940,7 +1126,7 @@ export default {
       app.render();
     },
     'hole-current': (el, ev, app) => {
-      app.ui.hole = app.nextHole();
+      beginTurn(app, app.nextHole());
       app.render();
     },
     'hole-next': (el, ev, app) => {
@@ -948,7 +1134,7 @@ export default {
       const st = app.snapshot.settings;
       const pos = posOf(st, app.ui.hole);
       if (pos < HOLES) {
-        app.ui.hole = holeAt(st, pos + 1);
+        beginTurn(app, holeAt(st, pos + 1));
         app.render();
       }
     },
@@ -967,8 +1153,8 @@ export default {
       app.ui.ceReward = null;
       app.setScore(el.dataset.pid, hole, null);
     },
-    'ce-theirs': (el, ev, app) => { app.ui.ceOpen = { hole: app.ui.hole, t: el.dataset.t || '' }; app.ui.cePad = null; app.render(); },
-    'ce-close': (el, ev, app) => { clearTimeout(theirsTimer); theirsTimer = null; app.ui.ceOpen = null; app.render(); },
+    'ce-theirs': (el, ev, app) => { beginMorph(app); app.ui.ceOpen = { hole: app.ui.hole, t: el.dataset.t || '' }; app.ui.cePad = null; app.ui.ceReward = null; app.render(); },
+    'ce-close': (el, ev, app) => { beginMorph(app); app.ui.ceOpen = null; app.ui.ceReward = null; app.render(); },
     'ce-padto': (el, ev, app) => { app.ui.cePad = { pid: el.dataset.pid, hole: app.ui.hole }; app.render(); },
     'cart-focus': (el, ev, app) => {
       // Remembered for this hole only: any other hole opens on your cart (70/30).
@@ -1029,6 +1215,7 @@ function nudgeBlanks(app, h, blanks) {
   // All the missing scores are in the other cart: open it so they can be entered.
   if (!openHasBlank && carts.length > 1) {
     if (calm) {
+      beginMorph(app); // the tap on Next opens their cards: the same morph as tapping their row
       const cc = ceCarts(app, h);
       const c = cc.find((x, i) => i > 0 && x.players.some((p) => blankIds.has(p.id))) || cc[1];
       app.ui.ceOpen = { hole: h, t: c?.teamId || '' };
@@ -1052,12 +1239,12 @@ function nudgeBlanks(app, h, blanks) {
 }
 
 function goHole(app, to, from) {
-  app.ui.hole = to;
+  beginTurn(app, to); // 034: after Switch it up, this runs when the card closes, so the turn plays then
   app.render();
   app.toast({
     title: `Hole ${from} saved`, action: 'Undo',
     onAction: () => {
-      app.ui.hole = from;
+      beginTurn(app, from);
       app.render();
     },
   });

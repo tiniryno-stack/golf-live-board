@@ -13,7 +13,7 @@ import { geoFor } from '../geo.js';
 import { GEO_ATTRIBUTION } from '../geoload.js';
 import { ryderMatchSheet } from './ryder.js';
 import { startTimeName } from '../lobby.js';
-import { enterSheets } from './enter.js';
+import { enterSheets, beginTurn } from './enter.js';
 import { owner as phoneOwner } from '../db.js';
 import { fullName } from '../names.js';
 import { whoGroups } from '../identity.js';
@@ -669,7 +669,8 @@ export const actions = {
     app.go('#/');
   },
   'hole-go': (el, ev, app) => {
-    app.ui.hole = Number(el.dataset.v);
+    if (app.route.tab === 'enter') beginTurn(app, Number(el.dataset.v)); // 034: a jump from the grid is one turn
+    else app.ui.hole = Number(el.dataset.v);
     app.ui.unlocked = null;
     app.closeSheet();
     if (app.route.tab !== 'enter') app.go(app.tabHash('enter'));

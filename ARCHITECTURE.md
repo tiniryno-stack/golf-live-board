@@ -1001,6 +1001,30 @@ Still open: nothing blocking. Design direction (section 9) is final.
   only under `.standalone`) fills the status bar strip in the page color. A community workaround, not an Apple-documented
   one: **confirm on a phone**. No engine, sync or DB change.
 
+- **The Enter motion + layout (033 Part 1 + 034, Nov 21, branch `claude/wizardly-shannon-6sq41k`, commit 20116a5).**
+  The calm Enter (`ryderEnterView`, every game). *Layout:* the match line moved under the hole title, above the yardage
+  card (`.ce-sub`: "4 UP  vs Sam + Jake", no "Andrew + Sean"; sitting out / Scorecard only keep their own text). One card
+  per player holding only the pads (`.pcard`, rail on your cart), the name as a small label above it (`.pgrp-l`, `label`
+  style): `ANDREW (WITH SEAN)` = your partner on this hole; `· 1 STROKE`; the result word after it. In 2v2 `ceCarts`
+  keeps your cart (your first set's pair) in your card all round, so only the bracket changes each set; the "Holes 7–12 ·
+  with Sam" line is gone. Spacing per 034 (6px name → card, 24px between groups). *Score picks:* `reward()` gains `kind`,
+  `ripples` 0/2/3, `burst` + `sparks` 8/12, `burst2` (albatross / ace), `pulse` (par), `flash` (par and better), holds
+  2000/2600/3500 (bogey / double 1600, 033's motion unchanged); rings, sparks and the card flash are `cart-you` only on
+  your cart's cards. **The result word stays** on screen for as long as the score stands (`ceWord`). *The turn* (034 g):
+  `beginTurn(app, to)` (all hole changes: ◀ ▶, Back to hole N, the grid's `hole-go`, `goHole` + Undo) captures the
+  yardage card, `.ce-cards`, the title, the quiet rows and the match line (HTML + offset box), sets `app.ui.ceTurn`, and
+  `mount → decorate` redraws it on every render: copies on `.ce-turn-layer` slide / fade out, the new parts get `t-page` /
+  `t-fade` + `data-t0`, `ui.syncMotion` keeps time. Direction = pure `turnPlan(from, to, startHole)` in reward.js (play
+  order: 18 → 1 on a round starting on 10 = forward). No turn on a finalized round or Round done; after Switch it up it
+  plays when the card closes (the hole changes in `onContinue`). *Entering for the rest of your tee time:* the morph
+  (`beginMorph` + `playMorph`): every part carries `data-k` (`n-` name, `l-` label, `c-` card, `q-` one-line row); names
+  FLIP between places, your cards squash into the folded line (`.ce-fold`, `‹ Back`), theirs grow out of their row and
+  their pads land. Open / close only on a tap (or Next with only theirs missing); 021's 1.2 s auto-close is gone; changing
+  hole returns to your cart. *Reduced motion:* `html.rm` from a `matchMedia` listener in app.js; picks lose all motion but
+  the word's fade, the turn and the morph become 150 ms crossfades. Only transform / opacity animate; pad heights and the
+  Regular / Compact measuring are unchanged (393 × 659 picks Compact with a live yardage card, 402 × 681 Regular).
+  Tests: `enter021.test.mjs` (new reward rules + the turn direction), smoke031 updated for the new markup (44/44).
+
 ## 13. V2 backlog (running list)
 
 - **Carryovers (skins-style):** a tied point rolls onto the next hole instead of halving, so the next hole can be worth 3–4 points. Open design question: does an unresolved carry die at the end of a 6-hole rotation, or roll into the next opponent?

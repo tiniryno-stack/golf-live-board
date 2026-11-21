@@ -65,21 +65,21 @@ const continueCard = async (ph) => {
 /** The calm Enter: pick par for `pids` (your card's players, or inside the grown card), the score shown on screen. */
 async function pick(ph, pid, d = 0) {
   const v = await g(ph, ([pid, d]) => { const a = window.__glb; return a.snapshot.holes[a.ui.hole - 1].par + d; }, [pid, d]);
-  const sel = `.grow.open .g-card .ce-pad[data-act="ce-pick"][data-pid="${pid}"][data-v="${v}"]`;
+  const sel = `.ce-cards .ce-pad[data-act="ce-pick"][data-pid="${pid}"][data-v="${v}"]`;
   if (!(await ph.page.$(sel))) {
-    const row = `.ce-their [data-act="ce-padto"][data-pid="${pid}"]`; // 3+ others: move the pad row to them first
+    const row = `.ce-cards.open [data-act="ce-padto"][data-pid="${pid}"]`; // 3+ others: move the pad row to them first
     if (await ph.page.$(row)) { await ph.page.click(row); await ph.page.waitForTimeout(80); }
   }
   await ph.page.click(sel);
   await ph.page.waitForTimeout(120);
   return v;
 }
-const mine = (ph) => g(ph, () => [...document.querySelectorAll('[data-grow="ce-mine"].open .g-card .ce-row .ce-pads')].map((el) => el.querySelector('[data-pid]')?.dataset.pid).filter(Boolean));
+const mine = (ph) => g(ph, () => [...document.querySelectorAll('.ce-cards.mine .ce-row .ce-pads')].map((el) => el.querySelector('[data-pid]')?.dataset.pid).filter(Boolean));
 async function openTheirs(ph) {
-  const sel = '.ce-slot:not([data-grow="ce-mine"]):not(.open) .ce-line';
+  const sel = '.ce-line.ce-q';
   if (!(await ph.page.$(sel))) return false;
   await ph.page.click(sel);
-  await ph.page.waitForTimeout(450);
+  await ph.page.waitForTimeout(650); // 034: the names travel, their cards grow, their pads land
   return true;
 }
 /** Wait (refetching) until every score in your group is in and Next hole is white. */
@@ -158,7 +158,7 @@ async function next(ph) {
   pages.push(A, S);
   await open(A, `#/e/${R.code}/enter`); await open(S, `#/e/${R.code}/enter`);
   const line = await text(A);
-  ok(/Andrew \+ Sean/i.test(line) && /vs Sam \+ Jake/i.test(line), `the line on top: your pair vs theirs (${line.slice(0, 80)}…)`);
+  ok(/Andrew \(with Sean\)/i.test(line) && /vs Sam \+ Jake/i.test(line) && !/Andrew \+ Sean/.test(line), `034: your label names your partner, the line on top who you play (${line.slice(0, 80)}…)`);
   ok(JSON.stringify(await mine(A)) === '["p1","p2"]', 'your card: you, then your partner');
   let cards = [];
   for (let h = 1; h <= 6; h++) {
@@ -199,14 +199,17 @@ async function next(ph) {
   pages.push(A);
   await open(A, `#/e/${R.code}/enter`);
   ok(JSON.stringify(await mine(A)) === '["p1"]', 'no carts: your card is just you');
-  const quiet = await A.page.textContent('.ce-slot:not([data-grow="ce-mine"]) .ce-line');
+  const quiet = await A.page.textContent('.ce-line.ce-q');
   ok(/\+\d/.test(quiet) && /Enter/.test(quiet), `the rest of your tee time is one quiet row (${quiet.replace(/\s+/g, ' ').trim()})`);
   await pick(A, 'p1', -1);
   ok(await openTheirs(A), 'tap the quiet row');
-  ok(/Entering for 4 players/.test(await text(A)) && !!(await A.page.$('[data-grow="ce-mine"]:not(.open)')), 'it grows open in place; your card folds into a row');
+  ok(!!(await A.page.$('.ce-cards.open .ce-fold')) && /Back/.test(await A.page.textContent('.ce-fold')), 'it opens in place; your card folds into a line with ‹ Back');
   for (const pid of ['p2', 'p3', 'p4', 'p5']) await pick(A, pid);
   await A.page.waitForTimeout(1800);
-  ok(!(await A.page.$('.ce-slot.open:not([data-grow="ce-mine"])')), 'it folds by itself after the last score');
+  ok(!!(await A.page.$('.ce-cards.open')), '034: it stays open after the last score (no auto-close)');
+  await A.page.click('.ce-fold');
+  await A.page.waitForTimeout(650);
+  ok(!!(await A.page.$('.ce-cards.mine')) && !(await A.page.$('.ce-cards.open')), '‹ Back returns to your card');
   ok(['p1', 'p2', 'p3', 'p4', 'p5'].every((p) => scoreOn(R, p, 1) != null), 'all five scores on the server');
   ok(/PTS · 1ST/.test(await text(A)), 'the line on top: points and place');
   await next(A);
@@ -269,7 +272,8 @@ async function next(ph) {
   await pick(A, 'p1');
   await openTheirs(A);
   await pick(A, 'p2', 1); await pick(A, 'p3', -1);
-  await A.page.waitForTimeout(1800); // their card folds by itself; the line on top comes back
+  await A.page.click('.ce-fold'); // 034: closing is always a tap
+  await A.page.waitForTimeout(650);
   ok(/T?\d(ST|ND|RD|TH)/.test(await text(A)), 'the line on top: to par and place');
   await next(A);
   await open(A, `#/e/${R.code}/matches`);
