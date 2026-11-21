@@ -107,6 +107,13 @@ svg.i { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-widt
 .ce-nm { height: 24px; display: flex; align-items: center; gap: 8px; margin-bottom: 2px; min-width: 0; white-space: nowrap; }
 .ce-nm > b { font-size: 17px; font-weight: 600; min-width: 0; flex: 0 1 auto; }
 .ce-stk { font-size: 13px; font-weight: 500; color: var(--text-muted); }
+/* 034 rows: each player's round so far fills the right of the name line (small, muted; the number in mono, text) */
+.ce-tot { margin-left: auto; flex: none; font-size: 13px; font-weight: 500; color: var(--text-muted); white-space: nowrap; }
+.ce-tot b { font-family: var(--font-mono); font-weight: 600; color: var(--text); margin-left: 4px; }
+/* 034 rows: the match line names only the other side ("vs Sam + Jake"), your names are in the card right under it */
+.ce-match.v2 .ce-us .ce-vs { color: var(--text); }
+.ce-match.v2 .ce-us { display: grid; }
+.ce-match.v2 .ce-us > * { grid-area: 1 / 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ce-pads { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) 56px; gap: 6px; }
 .ce-pad { height: 64px; border-radius: var(--radius-lg); display: grid; place-items: center; position: relative; color: var(--text); }
 .ce-pad.sel { background: var(--text); color: var(--bg); }
@@ -274,7 +281,7 @@ const GAMES = {
 
 // ── state ──────────────────────────────────────────────────────────────────────────────────
 const S = {
-  game: 'carts', gps: 'regular', turn: 'cards', motion: 'normal', theme: 'dark', final: false,
+  game: 'carts', gps: 'regular', turn: 'cards', rows: 'new', motion: 'normal', theme: 'dark', final: false,
   cur: 4, view: 4, scores: {}, unlocked: {}, seenSwitch: {},
   reward: null, pts: null, nudge: null, sheet: null, full: null,
 };
@@ -304,6 +311,11 @@ function standing(m, upto) {
 }
 const toPar = (id) => { let t = 0; for (let h = 1; h <= 18; h++) { const s = score(id, h); if (s != null) t += s - PARS[h - 1]; } return t; };
 const fmtPar = (t) => (t === 0 ? 'E' : t > 0 ? `+${t}` : `−${-t}`);
+function roundLabel(id, h) {
+  let t = 0, n = 0;
+  for (let x = 1; x <= 18; x++) { const v = score(id, x); if (v != null) { t += v - strokesOn(id, x) - PARS[x - 1]; n++; } }
+  return n ? `${STROKE[id] ? 'Net' : 'Round'}<b>${fmtPar(t)}</b>` : '';
+}
 const live = () => !S.final && S.view >= S.cur - 1 && S.view <= S.cur || (S.unlocked[S.view] && S.view < S.cur);
 const ahead = () => S.view > S.cur;
 const blanksOn = (h) => G().tee.filter((id) => score(id, h) == null);
@@ -357,7 +369,8 @@ function padRow(id, h, editable) {
   const k = strokesOn(id, h);
   const word = rw ? `<span class="ce-word anim ${rw.r.tone}" data-t0="${rw.t0}">${rw.r.word}</span>` : '';
   const nudge = g == null && S.nudge?.h === h ? ' nudge' : '';
-  return `<div class="ce-row${nudge}"${nudge ? ` data-t0="${S.nudge.t0}"` : ''}><div class="ce-nm"><b class="ellipsis">${P[id]}</b>${k && !rw ? `<span class="ce-stk">1 stroke</span>` : ''}${word}</div><div class="ce-pads">${pads}</div></div>`;
+  const tot = S.rows === 'new' ? `<span class="ce-tot">${roundLabel(id, h)}</span>` : '';
+  return `<div class="ce-row${nudge}"${nudge ? ` data-t0="${S.nudge.t0}"` : ''}><div class="ce-nm"><b class="ellipsis">${P[id]}</b>${k && !rw ? `<span class="ce-stk">1 stroke</span>` : ''}${word}${tot}</div><div class="ce-pads">${pads}</div></div>`;
 }
 function quietRow(ids, h, m, i) {
   const par = PARS[h - 1], allIn = ids.every((id) => score(id, h) != null);
@@ -383,8 +396,10 @@ function matchLine(h) {
     const ids = g.tee.map((id) => ({ id, t: toPar(id) })).sort((a, b) => a.t - b.t);
     const place = ids.findIndex((x) => x.id === 'A') + 1, lead = ids.find((x) => x.id !== 'A');
     right = `<span class="ce-end"><span class="ce-up${place === 1 ? '' : ' muted'}"><span class="ce-roll"><span>${fmtPar(toPar('A'))} · ${['1ST', '2ND', '3RD', '4TH'][place - 1]}</span></span></span><span class="ce-swap"><span class="ce-vs">${P[lead.id]} ${fmtPar(lead.t)}</span></span></span>`;
+    if (S.rows === 'new') return `<div class="ce-match v2"><span class="ce-us ellipsis">${place === 1 ? 'Next best' : 'Leader'} · ${P[lead.id]} ${fmtPar(lead.t)}</span><span class="ce-end"><span class="ce-up${place === 1 ? '' : ' muted'}"><span class="ce-roll"><span>${['1ST', '2ND', '3RD', '4TH'][place - 1]}</span></span></span></span></div>`;
   } else if (!m) {
     right = `<span class="ce-end"><span class="ce-swap"><span class="ce-vs">${g.sitOut(h)}</span></span></span>`;
+    if (S.rows === 'new') return `<div class="ce-match v2"><span class="ce-us ellipsis">${g.sitOut(h)}</span></div>`;
   } else {
     const pt = S.pts && S.pts.h === h ? S.pts : null;
     const d = standing(m, h), you = d > 0;
@@ -393,6 +408,10 @@ function matchLine(h) {
     const won = pt ? `<span class="ce-won anim${pt.line.tone === 'text' ? '' : ' muted'}" data-t0="${pt.t0}">${pt.line.text}</span>` : '';
     right = `<span class="ce-end">${up}<span class="ce-swap"><span class="ce-vs${pt ? ' anim' : ''}"${pt ? ` data-t0="${pt.t0}"` : ''}>vs ${names(m.them)}</span>${won}</span></span>`;
     if (g.pairs && h === m.from && m.from > 1) left = `Holes ${m.from}–${m.to} · with ${P[m.us[1]]}`;
+    if (S.rows === 'new') { // your names are in the card right below: say who you play, and (2v2) who's your partner now
+      const vs = `${g.pairs ? `With ${P[m.us[1]]} · ` : ''}vs ${names(m.them)}`;
+      return `<div class="ce-match v2"><span class="ce-us"><span class="ce-vs${pt ? ' anim' : ''}"${pt ? ` data-t0="${pt.t0}"` : ''}>${vs}</span>${won}</span><span class="ce-end">${up}</span></div>`;
+    }
   }
   return `<div class="ce-match"><span class="ce-us ellipsis">${left}</span>${right}</div>`;
 }
@@ -441,6 +460,7 @@ function options() {
   return `<div class="opt">
     <h3>Turn to the next hole</h3>${seg('turn', [['cards', '(g) Just the cards'], ['hole', '(e) Whole hole'], ['wave', '(f) Wave']])}
     <p style="margin:6px 0">Earlier rounds:</p>${seg('turn', [['slide', '(c) Slide'], ['book', '(d) Book'], ['flip', '(a) Flip'], ['page', '(b) Page']])}
+    <h3>Name line + match line</h3>${seg('rows', [['new', 'New: round score, no repeat'], ['old', 'As today']])}
     <h3>Game</h3>${seg('game', [['carts', 'Team cart'], ['2v2', '2v2'], ['six', '6 · sitting out'], ['solo', 'Scorecard']], true)}
     <h3>Yardage card</h3>${seg('gps', [['regular', 'Regular 92'], ['compact', 'Compact 68'], ['off', 'None']])}
     <h3>Motion</h3>${seg('motion', [['normal', 'Normal'], ['slow', 'Slow ×4'], ['reduced', 'Reduced']])}

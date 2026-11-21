@@ -34,6 +34,26 @@ left, the next hole's cards in from the right; ◀ = the other way. Everything e
 Screenshots: `70`–`77` at 0 / 90 / 150 / 300ms, Next 4 → 5 and ◀ 5 → 4, dark + light; strips `80` forward, `81` back
 (0 / 60 / 120 / 180 / 240 / 320 / 420ms); `82` into "Up next", `83` 2v2 new partner, `84` no yardage card.
 
+## Name line + match line (Andrew's comment on the prototype, Nov 21)
+
+**The comment:** the line with each player's name above their pads leaves an awkward blank space on the right; and the
+match line says "Andrew + Sean" right above a card that says Andrew and Sean again. (In a 2v2 swap your partner
+changes, so the match line has to say who you're with, but not twice.)
+
+**The pass** (prototype ⋯ → "Name line + match line": New / As today; New is the default):
+- **Each name line shows that player's round so far on the right:** `Round +2` (`small` 13/500, `text-muted`; the
+  number in mono 600, `text`). Players who get strokes read `Net −1` (net to par). It sits right-aligned; the reward
+  word ("Birdie") still appears straight after the name, and "1 stroke" still shows on a stroke hole. It's real
+  information each golfer checks anyway, in the space that was empty.
+- **The match line names only the other side:** `vs Sam + Jake` on the left (`row` weight, `text`), the standing
+  (`4 UP`, green when you're up) on the right. Your own names are in the card right under it.
+  - 2v2: `With Sam · vs Sean + Jake` (your partner on this set, because it isn't always your cart partner).
+  - 6 players sitting out: `Sitting out · back on 7 vs Mike + Justin` on its own.
+  - Scorecard only: `Leader · Sean −1` on the left, your place (`3RD`) on the right; your own score is now on your
+    name line.
+  - The hole's points (022 §3) swap in where `vs Sam + Jake` is, as before.
+- No new colors, sizes or type styles. Changes 022 §2 (the match line) if approved.
+
 ---
 
 # Round 2 (Nov 21): the whole hole moves
