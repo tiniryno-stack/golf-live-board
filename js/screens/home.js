@@ -9,7 +9,7 @@ import { esc, icon, prettyDate, initials, empty } from '../ui.js';
 import { recent, normCode, STANDALONE, moveLink, syncMyRounds, pruneGoneRounds, local, refreshLobbies, owner, clock } from '../db.js';
 import { lobbyState, homeCard } from '../lobby.js';
 import { homeCrew } from './crew.js';
-import { homeLocker, loadLocker } from './locker.js';
+import { homeLocker, startHomeLocker } from './locker.js';
 import { fmtPts, fmtToPar, playerLeaderboard } from '../scoring.js';
 
 /** iPhone or iPad in Safari (iPadOS says it's a Mac, but has touch). Tests set `__GLB_IOS`. */
@@ -157,7 +157,6 @@ function codeField() {
 // The Home header: the mark (feature 020, L2 lockup: ring centered on the capitals, 10px gap).
 const TITLE = `<h1 class="ts-title home-title"><span class="home-mark" aria-hidden="true"><img class="mk-dark" src="img/mark-dark.svg" alt="" width="30" height="30"><img class="mk-light" src="img/mark-light.svg" alt="" width="30" height="30"></span>Golf Live Board</h1>`;
 let synced = false;
-let lockerFor = null; // 035: the owner whose locker this page load has started loading
 
 export default {
   topLeft: () => header(recent.all()),
@@ -170,11 +169,7 @@ export default {
       pruneGoneRounds().then((n) => { if (n) app.render(); }).catch(() => { /* offline: next open */ }); // deleted rounds leave Recent
       refreshLobbies(clock.now()).then((n) => { if (n) app.render(); }).catch(() => { /* offline: next open */ }); // 025
     }
-    // 035: this phone's owner's locker, once per page load (and again if the owner changes). Any failure = no entries.
-    try {
-      const o = owner.get();
-      if (o && lockerFor !== o.personId) { lockerFor = o.personId; loadLocker(app, o.personId).catch(() => {}); }
-    } catch { /* Home as it was */ }
+    startHomeLocker(app); // 035: this phone's locker, once per page load. Any failure = no entries.
     const lk = homeLocker(app);
     const rounds = recent.all();
     const now = Date.now();

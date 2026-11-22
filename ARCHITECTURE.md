@@ -1049,6 +1049,13 @@ Still open: nothing blocking. Design direction (section 9) is final.
   with a card or pack; any failure leaves Home as it was. Opening sends `open_card` at the tear; the reveal never waits.
   Rip again (Locker) replays the overlay and sends nothing. Phone tilt: Android at once; iPhone from **Turn on tilt**
   (`glb.lockerTilt` once granted).
+- **Nov 22 · updates reach a resumed home screen app.** Friends' home screen apps kept the pre-035 code: iPhone resumes
+  the page left in the background, and only a fresh load reads `version.json`. Now the loader records the version it
+  loaded (`window.__glbVersion`) and app.js `checkVersion()` runs whenever the page becomes visible again: a newer
+  `version.json` reloads the page unless something would be lost (unsent scores, a sheet or full-screen card open,
+  typing) and, in a round or Setup, only after 5 minutes away. A phone still running an older page needs one full close
+  of the app first. The locker also finds its person without an owner: `lockerPerson()` = owner → latest `glb.people`
+  → the person this phone's claims in Recent rounds belong to (`db.fetchRosters`, once per page load).
 
 ## 13. V2 backlog (running list)
 

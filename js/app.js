@@ -1210,6 +1210,7 @@ async function maybeAskWho() {
 
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') {
+    hiddenAt = Date.now();
     if (app.code) {
       const s = db.local.get(seenKey());
       if (s) db.local.set(seenKey(), { ...s, last: Date.now() });
@@ -1221,7 +1222,31 @@ document.addEventListener('visibilitychange', () => {
 window.addEventListener('pageshow', (e) => {
   if (e.persisted) onReturn();
 });
+
+// Nov 22: a home screen app usually resumes the page it left in the background, so it kept running old code after an
+// update until iPhone happened to close it. Coming back: if version.json has moved on, reload once it's safe (nothing
+// unsent, no sheet / full-screen card, not typing; in a round or Setup only after 5 minutes away).
+let hiddenAt = 0, versionCheck = 0;
+async function checkVersion() {
+  const mine = window.__glbVersion;
+  if (!mine || !hiddenAt || Date.now() - versionCheck < 30000) return;
+  versionCheck = Date.now();
+  let info = null;
+  try {
+    const r = await fetch('version.json', { cache: 'no-store' });
+    if (r.ok) info = await r.json();
+  } catch { return; } // offline: next time
+  if (!info?.v || info.v === mine || document.visibilityState !== 'visible') return;
+  const away = Date.now() - hiddenAt;
+  const a = document.activeElement;
+  const typing = a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName);
+  const busy = typing || app.sheet || $('overlay')?.classList.contains('open') || (app.code && db.queue.count(app.code) > 0)
+    || ((app.route.round || app.route.name === 'setup') && away < 5 * 60 * 1000);
+  if (!busy) location.reload();
+}
+
 async function onReturn() {
+  checkVersion();
   if (!app.event) return;
   db.flush();
   if (channel && !channel.isLive()) channel.reconnect();

@@ -482,6 +482,13 @@ export async function fetchPersonRounds(personId) {
   }));
 }
 
+/** 035: rosters of some rounds by code (to find who this phone played as when it has no owner). */
+export async function fetchRosters(codes) {
+  const list = [...new Set((codes || []).filter((c) => /^[A-Z0-9]{4,8}$/.test(String(c || ''))))];
+  if (!list.length) return [];
+  return (await select(sb().from('events').select('code,roster,settings').in('code', list))) || [];
+}
+
 /** 035: which of a person's packs were opened (card_opens rows). */
 export async function fetchCardOpens(personId) {
   if (!personId) return [];

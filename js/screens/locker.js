@@ -28,7 +28,7 @@ export async function loadLocker(app, personId, { force = false } = {}) {
   if (!personId) return null;
   app.lockers ||= {};
   const L = (app.lockers[personId] ||= { personId, cards: null, loading: false, error: null, at: 0, local: new Set() });
-  const mine = personId === db.owner.get()?.personId;
+  const mine = personId === lockerPerson();
   if (mine) app.locker = L;
   if (L.loading) return L;
   if (L.cards && !force && Date.now() - L.at < STALE) return L;
@@ -72,7 +72,43 @@ function openNow(L, card) {
     .catch(() => db.lockerPending.add(card.code, L.personId));
 }
 
-const ownerId = () => db.owner.get()?.personId || null;
+/**
+ * Whose locker this phone shows: its owner (024); with no owner, the latest person it played as (glb.people, as
+ * syncMyRounds does); else the person its own claims in Recent rounds belong to (found once, see startHomeLocker).
+ */
+let resolved = null, resolving = false;
+export function lockerPerson() {
+  const o = db.owner.get()?.personId;
+  if (o) return o;
+  const ppl = db.people.all();
+  return ppl.length ? ppl[ppl.length - 1] : resolved;
+}
+async function resolveFromClaims() {
+  const mine = db.recent.all().map((r) => ({ code: r.code, pid: db.me.get(r.code) })).filter((x) => x.pid);
+  if (!mine.length) return null;
+  const rows = await db.fetchRosters(mine.map((x) => x.code));
+  const n = new Map();
+  for (const ev of rows) {
+    if (String(ev.settings?.practice) === 'true') continue;
+    const pid = mine.find((x) => x.code === ev.code)?.pid;
+    const person = (ev.roster?.players || []).find((p) => p?.id === pid)?.personId;
+    if (person) n.set(person, (n.get(person) || 0) + 1);
+  }
+  return [...n.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+}
+/** Home, every render: start this phone's locker once per person per page load. Never throws. */
+let homeFor = null;
+export function startHomeLocker(app) {
+  try {
+    const pid = lockerPerson();
+    if (pid && homeFor !== pid) { homeFor = pid; loadLocker(app, pid).catch(() => {}); }
+    if (!pid && !resolving) {
+      resolving = true;
+      resolveFromClaims().then((id) => { if (id) { resolved = id; app.render(); } }).catch(() => {});
+    }
+  } catch { /* Home as it was */ }
+}
+const ownerId = () => lockerPerson();
 /** The locker this screen shows: yours, or (admin) the person in the route. */
 const shownId = (app) => (app.route.mode === 'view' ? app.route.person : ownerId());
 const lockerOf = (app, id) => (id ? app.lockers?.[id] : null) || null;
@@ -407,11 +443,11 @@ async function loadAdmin(app) {
 
 // ───────────────────────────────────────────── Home (§7.1): the packs card + the Locker row
 
-/** { packs, row } HTML for Home; both '' unless this phone's owner has a card or pack. Never throws. */
+/** { packs, row } HTML for Home; both '' unless this phone's person has a card or pack. Never throws. */
 export function homeLocker(app) {
   try {
-    const o = db.owner.get();
-    const L = o ? app.lockers?.[o.personId] : null;
+    const pid = lockerPerson();
+    const L = pid ? app.lockers?.[pid] : null;
     if (!L?.cards?.length) return { packs: '', row: '' };
     const packs = packsOf(L.cards), opened = openedOf(L.cards);
     const newest = packs[packs.length - 1];
@@ -473,6 +509,7 @@ export default {
     if (lk.person !== id) { lk.person = id; lk.key = null; lk.flip = null; if (app.route.mode === 'view') lk.view = 'one'; }
     if (app.route.mode === 'admin') loadAdmin(app);
     else if (id) loadLocker(app, id);
+    else startHomeLocker(app); // no owner yet: find who this phone played as, then load
     const content = document.getElementById('content');
     if (content) content.scrollTop = 0;
   },

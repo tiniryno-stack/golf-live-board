@@ -87,6 +87,7 @@
       var base = document.baseURI;
       function go(info) {
         var v = info && info.v;
+        window.__glbVersion = v || null; // app.js compares it with version.json when a home screen app comes back
         var q = v ? '?v=' + v : '';
         var imports = {};
         (info && info.files || []).forEach(function (f) { if (/\.js$/.test(f) && v) imports[new URL(f, base).href] = new URL(f + q, base).href; });

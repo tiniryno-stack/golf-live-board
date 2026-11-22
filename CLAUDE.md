@@ -33,6 +33,7 @@ packs card + Locker row, `#/locker`). Pure rules `js/locker.js` (`buildLocker`, 
 `#/locker/p/<personId>`), overlay `js/screens/pack.js` via `toasts.showPack` / `closePack`; **every style in
 `css/locker.css`** (index.html's CSS list). Cards are derived, never stored: only `card_opens` + RPCs `open_card` /
 `locker_admin` (live since Nov 21). Actions are `lk-*`. Home must stay exactly as it was if the locker can't load.
+Whose locker: `lockerPerson()` = the owner, else the latest `glb.people`, else this phone's claims in Recent rounds.
 
 ## Today's game (032, Nov 20, live on `main`)
 
@@ -110,6 +111,10 @@ keep `brief.js`. Opens on its own once per phone on the first Enter of an open r
 - `db.STANDALONE` → `html.standalone` → the tab bar / setup footers / sheets sit inside the home
   line's safe area instead of leaving it blank. Tests force it with `window.__GLB_STANDALONE` /
   `window.__GLB_IOS`. Icon: `icon-180.png` (apple-touch-icon, the ring + ball mark since 020), name "Golf Board".
+- **Updates reach a resumed app (Nov 22):** iPhone usually resumes a home screen app's old page instead of loading it,
+  so it kept old code after an update. index.html's loader sets `window.__glbVersion`; app.js `checkVersion()` (on
+  `visibilitychange` → visible / `pageshow`) fetches `version.json` and reloads when it moved on and nothing is at risk:
+  no unsent scores, no sheet / full-screen card, not typing; in a round or Setup only after 5 minutes away.
 - **Startup images (020):** `img/startup/*.png`, seven `apple-touch-startup-image` links in index.html (portrait,
   per device size). Standalone only reads these — one more reason the Add-to-Home-Screen move link must keep working
   and there must be **no manifest**. They draw the mark 300pt from the top, exactly where `#loader` draws it.
