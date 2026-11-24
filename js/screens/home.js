@@ -9,7 +9,7 @@ import { esc, icon, prettyDate, initials, empty } from '../ui.js';
 import { recent, normCode, STANDALONE, moveLink, syncMyRounds, pruneGoneRounds, local, refreshLobbies, owner, clock } from '../db.js';
 import { lobbyState, homeCard } from '../lobby.js';
 import { homeCrew } from './crew.js';
-import { homeLocker, startHomeLocker } from './locker.js';
+import { homeLocker, startHomeLocker, lockerName } from './locker.js';
 import { fmtPts, fmtToPar, playerLeaderboard } from '../scoring.js';
 
 /** iPhone or iPad in Safari (iPadOS says it's a Mac, but has touch). Tests set `__GLB_IOS`. */
@@ -105,7 +105,7 @@ export function roundSummary(app) {
 
 /** Home's top bar, left side: your name from the newest round you joined (nothing on a new phone). */
 function header(rounds) {
-  const name = rounds.find((r) => r.myName)?.myName;
+  const name = rounds.find((r) => r.myName)?.myName || lockerName();
   if (!name) return '<div class="spacer"></div>';
   // 036 §4.3: your avatar opens your passport.
   return `<button class="home-me" data-act="go" data-v="#/passport" aria-label="${esc(`${name}, your passport`)}"><span class="avatar">${esc(initials(name))}</span><span class="hm-name">${esc(name)}</span></button>`;

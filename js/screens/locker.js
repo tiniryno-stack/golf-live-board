@@ -18,6 +18,8 @@ import {
 } from '../locker.js';
 
 const STALE = 2 * 60 * 1000;
+/** Preview copy only (…/preview/): test as a person in Safari (glb.previewAs) + practice packs. Never on the live site. */
+const PREVIEW = typeof location !== 'undefined' && /\/preview\//.test(location.pathname);
 const today = () => new Date().toLocaleDateString('en-CA');
 /** The real mark (img/mark-dark.svg, 036 §2.1): the ring in the ink, the ball green. */
 export const MARK = '<svg class="glb-mark" viewBox="0 0 100 100" aria-hidden="true"><circle cx="42" cy="58" r="30" fill="none" stroke="currentColor" stroke-width="13"/><circle cx="82" cy="20" r="11" fill="#3DDC84"/></svg>';
@@ -82,8 +84,6 @@ function openNow(L, card) {
  * syncMyRounds does); else the person its own claims in Recent rounds belong to (found once, see startHomeLocker).
  */
 let resolved = null, resolving = false;
-/** Preview copy only (…/preview/): practice packs, so a finished locker can be ripped again without saving anything. */
-const PREVIEW = typeof location !== 'undefined' && /\/preview\//.test(location.pathname);
 function practiceRow(app, L) {
   if (!PREVIEW || !L?.cards?.length) return '';
   return L.practice
@@ -94,7 +94,8 @@ export function lockerPerson() {
   const o = db.owner.get()?.personId;
   if (o) return o;
   const ppl = db.people.all();
-  return ppl.length ? ppl[ppl.length - 1] : resolved;
+  if (ppl.length) return ppl[ppl.length - 1];
+  return (PREVIEW && db.local.get('glb.previewAs')) || resolved;
 }
 async function resolveFromClaims() {
   const mine = db.recent.all().map((r) => ({ code: r.code, pid: db.me.get(r.code) })).filter((x) => x.pid);
@@ -112,6 +113,7 @@ async function resolveFromClaims() {
 /** Home, every render: start this phone's locker once per person per page load. Never throws. */
 let homeFor = null;
 export function startHomeLocker(app) {
+  A = app;
   try {
     const pid = lockerPerson();
     if (pid && homeFor !== pid) { homeFor = pid; loadLocker(app, pid).catch(() => {}); }
@@ -495,6 +497,14 @@ async function loadAdmin(app) {
 
 // ───────────────────────────────────────────── Home (§7.1): the packs card + the Locker row
 
+/** Home's avatar name when this browser has no rounds of its own but knows its locker person (the preview in Safari). */
+export function lockerName() {
+  try {
+    const cards = A?.lockers?.[lockerPerson()]?.cards;
+    return cards?.length ? cards[cards.length - 1].fullName || cards[cards.length - 1].name : '';
+  } catch { return ''; }
+}
+
 /** 036 §4.1: "5 scorecards · 3 courses · 4 milestones". */
 function homeSub(opened) {
   const pp = passportOf([...opened].reverse());
@@ -506,6 +516,11 @@ function homeSub(opened) {
 export function homeLocker(app) {
   try {
     const pid = lockerPerson();
+    if (PREVIEW && !pid) {
+      return { packs: `<button class="lk-ready" data-act="lk-testas"><span class="lk-rtext"><span class="ts-label lk-soft">Preview only</span>
+        <span class="ts-row">Test the locker as Andrew Duong</span><span class="ts-small lk-soft">This browser doesn’t know who you are yet. Tap once; it’s remembered here.</span></span>
+        <span class="hr-chev">${icon('fwd', 20)}</span></button>`, row: '' };
+    }
     const L = pid ? app.lockers?.[pid] : null;
     if (!L?.cards?.length) return { packs: '', row: '' };
     const packs = packsOf(L.cards), opened = openedOf(L.cards);
@@ -619,7 +634,12 @@ export default {
       else { L.real = L.cards; L.cards = L.cards.map((c) => ({ ...c, opened: false, openedAt: null })); L.practice = true; Object.assign(app.ui.lk, { tab: 'cards', view: 'packs' }); }
       app.render();
     },
-    'lk-testas': (el, ev, app) => { if (!PREVIEW) return; resolved = LOCKER_ADMINS[0]; loadLocker(app, resolved); app.render(); },
+    'lk-testas': (el, ev, app) => {
+      if (!PREVIEW) return;
+      db.local.set('glb.previewAs', LOCKER_ADMINS[0]); // remembered in this browser; only the preview reads it
+      startHomeLocker(app);
+      app.render();
+    },
     'lk-back': (el, ev, app) => { if (history.length > 1) history.back(); else app.go('#/'); },
     'lk-view': (el, ev, app) => {
       app.ui.lk.tab = 'cards';
