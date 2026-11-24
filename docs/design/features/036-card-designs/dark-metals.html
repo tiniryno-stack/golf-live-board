@@ -368,15 +368,15 @@ canvas.x-px { image-rendering: pixelated; object-fit: cover; }
 /* round 8 */
 .x-land .lk-tilt { touch-action: pan-y; }
 .x-prism { position: absolute; inset: -30% -90%; pointer-events: none; mix-blend-mode: screen; opacity: var(--mv, 0); transform: translate(calc(var(--sx, 0) * 50%), 0);
-  background: linear-gradient(100deg, transparent 37%, hsl(350 95% 68% / .85) 41%, hsl(35 100% 62% / .85) 45%, hsl(80 85% 58% / .85) 49%, hsl(155 80% 56% / .85) 53%, hsl(195 95% 62% / .85) 57%, hsl(262 95% 74% / .85) 61%, transparent 65%); }
+  background: linear-gradient(100deg, transparent 38%, hsl(350 95% 68% / .06) 41%, hsl(20 100% 64% / .16) 44%, hsl(55 95% 60% / .28) 47%, hsl(150 80% 58% / .36) 50%, hsl(195 95% 62% / .28) 53%, hsl(240 95% 72% / .16) 56%, hsl(280 95% 76% / .06) 59%, transparent 62%); }
 </style>
 
 <div class="x-page" id="page">
   <header class="x-intro">
     <div class="x-k">036 · round 8 · nothing here is in the app</div>
-    <h1>Dark metals, and a Prismatic that moves</h1>
-    <p>Five takes on the dark metal card, some lighter. Prismatic no longer has a rainbow painted on it: the color comes from the angle of the card.</p>
-    <p><b style="color:var(--text)">Drag your finger side to side across any card to tilt it.</b> This page cannot read your phone's tilt, so left alone the cards sway slowly by themselves.</p>
+    <h1>Dark metal to Smoked, in four steps</h1>
+    <p>Dark metal on one end, Smoked on the other, and two steps in between. The flash on Prismatic is now a thin, soft streak that fades out at its edges.</p>
+    <p><b style="color:var(--text)">Drag your finger side to side across any card to tilt it.</b> Left alone, the cards sway slowly by themselves.</p>
   </header>
   <div class="x-bar" style="display:flex;flex-direction:column;gap:8px"><div class="x-row" id="fams"><span>Metal</span></div><div class="x-row" id="prs"><span>Prism</span></div></div>
   <main id="out" style="display:flex;flex-direction:column;gap:52px"></main>
@@ -393,23 +393,25 @@ const C = { course: 'Twin Creeks', day: 'Nov 20, 2026', n: 5, name: 'Andrew', pa
 C.gross = sum(C.strokes); C.toPar = '+' + (C.gross - sum(C.par));
 /* ── the card ── */
 const TIERS = ['standard', 'bronze', 'silver', 'gold', 'prismatic'];
-state.fam = 'dark'; state.pr = 'both';
+state.fam = 's1'; state.pr = 'both';
 const INK = { standard: '#b4b9c1', bronze: '#f0b98c', silver: '#f3f7fc', gold: '#f6d98a', prismatic: '#f1eaff' };
 const DARK = { standard: ['#0e0f11', '#1b1d21'], bronze: ['#22120a', '#4a2a15'], silver: ['#182130', '#3b4a60'], gold: ['#1c1606', '#4a3a12'], prismatic: ['#101117', '#262733'] };
 const SMOKE = { standard: ['#2a2d33', '#40444d'], bronze: ['#4c2b16', '#7d4c27'], silver: ['#445062', '#73849a'], gold: ['#4d3c10', '#8d6f22'], prismatic: ['#2c2d3a', '#4b4c5f'] };
 const lin = ([a, b]) => `linear-gradient(135deg, ${a} 0%, ${b} 50%, ${a} 100%)`;
 const con = ([a, b]) => `conic-gradient(from 0deg at 20% 42%, ${[a, b, a, b, a, b, a, b, a, b, a, b, a].join(', ')})`;
+const hex3 = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+const mixc = (a, b, k) => '#' + hex3(a).map((v, i) => Math.round(v + (hex3(b)[i] - v) * k).toString(16).padStart(2, '0')).join('');
+const step = (k) => (f) => { const p = [mixc(DARK[f][0], SMOKE[f][0], k), mixc(DARK[f][1], SMOKE[f][1], k)]; return [lin(p), p[0]]; };
 const FAMS = {
-  dark: ['Dark metal', 'The one you liked, with two fixes: Standard is now flat black with grey ink, and Silver is a cold blue steel with white ink, so they no longer look alike.', (f) => [lin(DARK[f]), DARK[f][0]]],
-  smoke: ['Smoked', 'The same idea a step lighter. You can see the metal in the body of the card, not only in the ink.', (f) => [lin(SMOKE[f]), SMOKE[f][0]]],
-  glow: ['Lit from the corner', 'A black card with the metal glowing in from behind the big number and fading out to black.', (f) => [`radial-gradient(120% 150% at 10% 30%, color-mix(in srgb, ${INK[f]} ${f === 'standard' ? 14 : 40}%, transparent) 0%, transparent 58%), ${lin(DARK.standard)}`, DARK.standard[0]]],
-  spun: ['Dark spun', 'Dark metal brushed in a circle around the number, like the back of a watch.', (f) => [con(DARK[f]), DARK[f][0]]],
-  black: ['Black, ink only', 'Every card is the same black. Only the ink changes. The quietest version.', (f) => [lin(DARK.standard), DARK.standard[0]]],
+  s1: ['A touch lighter', 'One third of the way from Dark metal to Smoked.', step(.34)],
+  s2: ['Halfway', 'Two thirds of the way to Smoked.', step(.67)],
+  dark: ['Dark metal', 'Where we started.', step(0)],
+  smoke: ['Smoked', 'The lightest end.', step(1)],
 };
 const PRS = {
   both: ['Shift + flash', 'Both together.'],
   shift: ['Color shift', 'The ink changes color with the angle, like chameleon paint: blue one way, pink the other.'],
-  flash: ['Flash', 'The card is plain until it moves. Then a rainbow streak runs across it and fades when it stops.'],
+  flash: ['Flash', 'The card is plain until it moves. Then a thin, soft streak of color runs across it and fades when it stops.'],
 };
 const HUE = 'calc(230 + var(--sx, 0) * 150)';
 function style(fin) {
@@ -427,7 +429,7 @@ function nine(from) {
 }
 function card(fin) {
   const flash = fin === 'prismatic' && state.pr !== 'shift';
-  return `<div class="lk-slot lkf-${fin} x-land xm${state.fam === 'spun' ? ' xm-spun' : ''}" style="${style(fin)}"><div class="lk-tilt"><div class="lk-flip"><div class="lk-face lk-front">
+  return `<div class="lk-slot lkf-${fin} x-land xm" style="${style(fin)}"><div class="lk-tilt"><div class="lk-flip"><div class="lk-face lk-front">
     <div class="lk-mat"><i class="lk-sheen"></i>${flash ? '<i class="x-prism"></i>' : ''}<div class="x-l1">
       <div class="x-top"><span class="lk-brand">${MARK}Golf Live Board</span><span class="x-fin">${fin === 'standard' ? '' : FIN[fin]}</span></div>
       <div class="x-hero"><div class="x-gross">${C.gross}</div><div class="x-meta"><div class="x-course">${C.course}</div><div class="x-sub">${C.toPar} · ${C.day}</div><div class="x-stamps">${stamps(2)}</div></div></div>
