@@ -1,10 +1,14 @@
 // locker.js — 035 Scorecard locker: the pure rules (SPEC §3). No DOM, no network: tests/locker035.test.mjs.
+// 036: each card also carries courseObj (the round's course, for its stamp) and group (who finished 18 that day,
+// ranked, for the card back); backRows() fits that list into the back's column (tests/stamps036.test.mjs).
 // Cards are derived from events + scores; only "this pack was opened" is stored (card_opens).
 //
 //   buildLocker(rows, personId, { today, opens, pending }) → cards, in round order (oldest first)
 //   rows   = [{ event, scores }]  (scores may be the whole round's or just this player's rows)
 //   opens  = card_opens rows for this person ({ event_id, opened_at })
 //   pending = round codes opened on this phone while offline (glb.lockerPending), counted as opened
+
+import { sameFoursome } from './scoring.js';
 
 export const LAUNCH_DATE = '2026-11-21';
 /** Who sees the admin list (§8). The check is in the app only: nothing here is secret. */
@@ -83,13 +87,46 @@ export function personRounds(rows, personId, today) {
       if (s.player_id === p.id && s.hole >= 1 && s.hole <= 18 && s.strokes != null) strokes[s.hole - 1] = Number(s.strokes);
     }
     if (strokes.some((x) => !(x >= 1))) continue;
-    out.push({ event: e, player: p, strokes, par, day });
+    out.push({ event: e, player: p, strokes, par, day, scores: r.scores || [] });
   }
   return out.sort((a, b) => String(a.day).localeCompare(String(b.day)) || String(a.event.created_at || '').localeCompare(String(b.event.created_at || '')));
 }
 
 const courseKey = (e) => e.course?.id || e.course?.shortName || e.course?.name || '';
 export const courseLabel = (e) => e.course?.shortName || e.course?.name || 'Golf';
+
+/** 036 §6.1: every roster player with 18 strokes in this round, by gross; ties share a rank. */
+export function groupOf(event, scores, meId) {
+  const st = new Map();
+  for (const s of scores || []) {
+    if (s.strokes == null || !(s.hole >= 1 && s.hole <= 18)) continue;
+    const a = st.get(s.player_id) || Array(18).fill(null);
+    a[s.hole - 1] = Number(s.strokes);
+    st.set(s.player_id, a);
+  }
+  const out = [];
+  for (const p of event.roster?.players || []) {
+    const a = p && st.get(p.id);
+    if (!a || a.some((x) => !(x >= 1))) continue;
+    let same = false;
+    try { same = p.id !== meId && sameFoursome(event.roster, event.settings, meId, p.id, 1); } catch { /* old shapes */ }
+    out.push({ playerId: p.id, personId: p.personId || null, name: p.firstName || String(p.name || '').split(' ')[0] || '', gross: sum(a), me: p.id === meId, sameTeeTime: same });
+  }
+  out.sort((a, b) => a.gross - b.gross || (b.me ? 1 : 0) - (a.me ? 1 : 0));
+  out.forEach((x) => { x.rank = out.findIndex((y) => y.gross === x.gross) + 1; });
+  return out;
+}
+
+/** 036 §2.3: the big-group list on the card back. Rank ≤ cap: the first `cap` rows. Lower: the first cap − 4 rows,
+ *  a gap, the player above you, you, the player below. → { rows: [player | { gap: true }], more, tee } */
+export function backRows(group, cap = 11) {
+  const g = group || [];
+  const idx = g.findIndex((x) => x.me);
+  const tee = g.some((x) => x.sameTeeTime);
+  if (idx < cap) return { rows: g.slice(0, cap), more: Math.max(0, g.length - cap), tee };
+  const a = Math.max(cap - 4, 0), lo = Math.max(idx - 1, a), hi = Math.min(idx + 1, g.length - 1);
+  return { rows: [...g.slice(0, a), { gap: true }, ...g.slice(lo, hi + 1)], more: g.length - 1 - hi, tee };
+}
 
 /** Every card for a person (§3), oldest first. */
 export function buildLocker(rows, personId, { today = null, opens = [], pending = [] } = {}) {
@@ -111,7 +148,8 @@ export function buildLocker(rows, personId, { today = null, opens = [], pending 
     const stats = cardStats(r.strokes, r.par);
     const c = {
       key: e.id, eventId: e.id, code: e.code, playerId: r.player.id, personId, n: i + 1,
-      day: r.day, course: courseLabel(e), courseKey: courseKey(e), par: r.par, strokes: r.strokes,
+      day: r.day, course: courseLabel(e), courseKey: courseKey(e), courseObj: e.course || null, par: r.par, strokes: r.strokes,
+      group: groupOf(e, r.scores, r.player.id),
       gross, toPar: gross - sum(r.par), stats,
       name: r.player.firstName || String(r.player.name || '').split(' ')[0] || '',
       crew: (e.roster?.players || []).length > 1,

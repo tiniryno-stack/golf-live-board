@@ -475,9 +475,11 @@ export async function fetchPersonRounds(personId) {
   const events = (await select(sb().from('events').select('id,code,name,played_on,created_at,finalized_at,course,roster,settings')
     .contains('roster', { players: [{ personId }] }))) || [];
   const keep = events.filter((e) => String(e.settings?.practice) !== 'true');
+  // 036 §6.1: the card back lists everyone who finished, so fetch each round's whole score set (≤ 16 × 18 rows),
+  // one query per round, in parallel. Never one query across all rounds (the 1,000-row limit, 035 §4.2).
   return Promise.all(keep.map(async (event) => {
     const p = (event.roster?.players || []).find((x) => x?.personId === personId);
-    const scores = p ? (await select(sb().from('scores').select('player_id,hole,strokes').eq('event_id', event.id).eq('player_id', p.id))) || [] : [];
+    const scores = p ? (await select(sb().from('scores').select('player_id,hole,strokes').eq('event_id', event.id))) || [] : [];
     return { event, scores };
   }));
 }
