@@ -14,6 +14,7 @@ import { matchState, holeLines } from '../riderview.js';
 import { raceState, raceCard, dec } from '../race.js';
 import { placeLine, stretchesWon } from '../playfor.js';
 import { flag } from './ryder.js';
+import { ppName, personOf } from './passport.js';
 
 const first = (p) => p?.firstName || String(p?.name || '').split(' ')[0];
 const pair = (c) => c.names.join(' + ');
@@ -31,7 +32,7 @@ function placeHead(kicker, right, pl) {
 function table(cols, rows, { cls = '', cut = -1, cutLabel = 'Out of reach' } = {}) {
   const head = `<div class="p31-tr p31-th ts-label"><span></span><span>Player</span>${cols.map((c) => `<span>${esc(c)}</span>`).join('')}</div>`;
   const body = rows.map((r, i) => `${i === cut ? `<div class="p31-cut ts-label">${esc(cutLabel)}</div>` : ''}<button class="p31-tr${r.me ? ' me' : ''}${r.lit ? ' lit' : ''}${r.out ? ' out' : ''}"${r.pid ? ` data-act="board-player" data-v="${esc(r.pid)}"` : ' tabindex="-1"'}>
-      <span class="p31-pos mono">${esc(r.pos)}</span><b class="ellipsis">${esc(r.name)}</b>${r.cells.join('')}</button>`).join('');
+      <span class="p31-pos mono">${esc(r.pos)}</span><b class="ellipsis">${ppName(r.person, esc(r.name))}</b>${r.cells.join('')}</button>`).join('');
   return `<div class="p31-tab ${cls}" style="--cols:${cols.length}">${head}${body}</div>`;
 }
 const cell = (v, strong = false) => `<span class="mono${strong ? ' v' : ''}">${v}</span>`;
@@ -42,7 +43,7 @@ function playersTable(app) {
   const ranked = playerLeaderboard(snap, 'net');
   const ranks = rankLabels(ranked, (p) => p.netToPar);
   return table(['Thru', 'Gross', 'Proj', 'Net'], ranked.map((p) => ({
-    pos: ranks.get(p.id), name: p.name, me: p.id === app.me, pid: p.id,
+    pos: ranks.get(p.id), name: p.name, me: p.id === app.me, pid: p.id, person: personOf(app, p.id),
     cells: [cell(p.thru || '–'), cell(p.thru ? fmtToPar(p.grossToPar) : '–', true), cell(p.thru ? projectedGross(snap, p) ?? '–' : '–'), cell(p.thru ? fmtToPar(p.netToPar) : '–', true)],
   })), { cls: 'p31-four' });
 }

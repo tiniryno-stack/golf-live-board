@@ -340,6 +340,7 @@ const BODIES = {
     return `${head(p.name)}
       <p class="meta you-as">${as}<button class="you-not" data-act="not-me">Not you?</button></p>
       <div class="stack">
+        ${person ? `<button class="btn block" data-act="go" data-v="#/passport">Your passport</button>` : ''}
         <button class="btn block" data-act="menu-home">${icon('home', 18)} Go to Home</button>
         <button class="btn block" data-act="not-me">I’m not ${esc(p.name)}</button>
         <button class="btn danger block" data-act="menu-leave">Switch to watching</button>
@@ -363,6 +364,9 @@ const BODIES = {
     const snap = app.snapshot;
     const p = snap?.playerById.get(pid);
     if (!p) return head('Player');
+    // 036 §4.3: this player's passport (and their cards), read-only; old rounds without a personId have none.
+    const person = (app.event?.roster?.players || []).find((x) => x?.id === pid)?.personId;
+    const ppBtn = person ? `<button class="btn block" data-act="go" data-v="#/passport/${encodeURIComponent(person)}" style="margin-top:12px">${app.me === pid ? 'Your passport' : `${esc(p.name)}’s passport`}</button>` : '';
     const cur = app.me === pid ? app.nextHole() : null;
     const nine = (from) => {
       const hs = snap.holes.slice(from - 1, from + 8);
@@ -408,7 +412,7 @@ const BODIES = {
       </div>
       ${nine(1)}${nine(10)}
       <div class="pc-stats">${stats.map(([n, l, c]) => `<div class="pc-stat"><b class="mono">${n}</b><span>${l}</span><i style="background:${c};width:${Math.max(18, n * 25)}%"></i></div>`).join('')}</div>
-      ${line ? `<div class="pc-hl"><span>${icon('spark', 18)}</span><span>${esc(line)}</span></div>` : ''}`;
+      ${line ? `<div class="pc-hl"><span>${icon('spark', 18)}</span><span>${esc(line)}</span></div>` : ''}${ppBtn}`;
   },
 
   holes(app) {

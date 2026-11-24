@@ -16,6 +16,7 @@ import { ryderBoard, ryderPlayers, ryderActions, rotationStrips } from './ryder.
 import { riderState, isRider } from '../riderview.js';
 import { playFor } from '../playfor.js';
 import { board031 } from './play031.js';
+import { ppName, personOf } from './passport.js';
 
 const ordinal = (n) => `${n}${['th', 'st', 'nd', 'rd'][(n % 100 >= 11 && n % 100 <= 13) || n % 10 > 3 ? 0 : n % 10]}`;
 
@@ -49,7 +50,7 @@ function peopleRows(app) {
     const s = { points: r.points, officialPoints: r.officialPoints, provisionalPoints: r.provisionalPoints, available: r.available };
     return `<button class="row team-row${isMe ? ' me' : ''}" data-act="board-player" data-v="${esc(r.playerId)}" style="--jersey:${isMe ? 'var(--cart-you)' : 'var(--t-B)'}">
       <span class="rank">${r.rank}</span>
-      <div class="body"><div class="row-title ellipsis">${esc(p.name)}${isMe ? ' <span class="you-tag">YOU</span>' : ''}</div>
+      <div class="body"><div class="row-title ellipsis">${ppName(personOf(app, r.playerId), esc(p.name))}${isMe ? ' <span class="you-tag">YOU</span>' : ''}</div>
         <div class="detail ellipsis">thru ${p.thru} · ${fmtToPar(snap.hasStrokes ? p.netToPar : p.grossToPar)}${snap.hasStrokes ? ' net' : ''}</div>
         ${teamBar(false, s, scale)}</div>
       <div class="tval"><div class="n" style="color:${isMe ? 'var(--cart-you-text)' : 'var(--ink)'}">${fmtPts(r.points)}</div>${chip}</div></button>`;
@@ -148,7 +149,7 @@ function playerRows(app, mode) {
       return `<button class="prow" data-act="board-player" data-v="${esc(p.id)}" ${jersey}>
         <span class="rank">${p.thru ? i + 1 : ''}</span>
         <span class="ptp">${p.thru ? fmtToPar(v) : '–'}</span>
-        <span class="pwho">${p.teamId ? '<i class="jdot"></i>' : ''}<span class="pname">${esc(p.name)}</span>${p.id === app.me ? '<span class="me-dot"></span>' : ''}<span class="pteam">${esc(p.teamName || '')}${p.strokes ? ` · gets ${p.strokes}` : ''}</span></span>
+        <span class="pwho">${p.teamId ? '<i class="jdot"></i>' : ''}<span class="pname">${ppName(personOf(app, p.id), esc(p.name))}</span>${p.id === app.me ? '<span class="me-dot"></span>' : ''}<span class="pteam">${esc(p.teamName || '')}${p.strokes ? ` · gets ${p.strokes}` : ''}</span></span>
         <span class="pnum r">${p.thru || '–'}</span>
         <span class="pnum r">${p.thru ? p.grossTotal : '–'}</span>
       </button>`;

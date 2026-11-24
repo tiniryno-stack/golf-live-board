@@ -9,6 +9,9 @@
 
 import * as db from '../db.js';
 import * as fx from './toasts.js';
+import { chromePack } from './pack.js';
+import { landsFor, bookHtml, mountBook, pageOf } from './passport.js';
+import { passportOf } from '../stamps.js';
 import { esc, icon, reducedMotion } from '../ui.js';
 import {
   buildLocker, packsOf, openedOf, FINISHES, isAdmin, shortDay, longDay, toParLabel, finName, adminTotals, backRows,
@@ -200,14 +203,16 @@ function openPack(app, card, { replay = false } = {}) {
   const L = lockerOf(app, card.personId);
   if (!L) return;
   const left = replay ? 0 : packsOf(L.cards).filter((x) => x.key !== card.key).length;
-  packCtx = { personId: card.personId, key: card.key, replay };
+  // What lands under the card (036 §3.3), worked out as if this pack were already open.
+  const lands = landsFor(card, L.cards.map((c) => (c.key === card.key ? { ...c, opened: true } : c)).filter((c) => c.opened));
+  packCtx = { personId: card.personId, key: card.key, replay, page: lands.some((h) => h.includes('class="cs ')) ? 'courses' : lands.length ? 'milestones' : 'you' };
   fx.showPack({
-    fin: card.fin, reduced: reducedMotion(), replay, left,
+    fin: card.fin, reduced: reducedMotion(), replay, left, lands,
     cardHtml: slotHtml(card, { act: null }),
     kicker: `${replay ? 'Rip again' : 'Final'} · ${shortDay(card.day)}`,
-    packLine: `${card.course} · ${shortDay(card.day)}`,
     hint: `${card.course} · ${shortDay(card.day)} · you shot ${card.gross}`,
-    title: capFin(card), grade: card.grade, line: capLine(card), stamps: card.stamps,
+    title: capFin(card), grade: card.grade, shot: card.gross,
+    tilt: () => (gy.on ? { x: gy.x, y: gy.y } : null),
     onTear: () => { if (!replay) openNow(L, card); },
   });
 }
@@ -367,7 +372,7 @@ function packsView(app, L, readOnly) {
   const packs = packsOf(L.cards);
   if (!packs.length) return '<p class="ts-small lk-soft">Every pack is open.</p>';
   return `<div class="lk-packs">${packs.map((c) => {
-    const inner = `<span class="lk-ptile lk-foil" aria-hidden="true">${MARK}<b>Scorecard</b></span>
+    const inner = `<span class="lk-ptile" aria-hidden="true">${chromePack()}</span>
       <span class="lk-plabel"><span class="ts-body">${esc(c.course)}</span><span class="ts-small lk-soft">${esc(shortDay(c.day))}</span></span>`;
     return readOnly
       ? `<div class="lk-pcell" aria-label="${esc(`${c.course}, ${shortDay(c.day)}, sealed`)}">${inner}</div>`
@@ -375,7 +380,7 @@ function packsView(app, L, readOnly) {
   }).join('')}</div>`;
 }
 
-function oneView(app, opened) {
+function oneView(app, opened, readOnly) {
   const lk = app.ui.lk;
   const land = lk.land && Date.now() - lk.landAt < 900 ? lk.land : null;
   const slots = opened.map((c, i) => slotHtml(c, { i, flipped: lk.flip === c.key, extra: land === c.key ? ' land' : '' })).join('');
@@ -385,7 +390,7 @@ function oneView(app, opened) {
     <div class="lk-cap" aria-live="polite"></div>
     <div class="lk-foot"><span class="ts-label lk-pos"></span>
       <span class="lk-mid"><button class="pill lk-tiltbtn" data-act="lk-tilt"${tilt ? '' : ' hidden'}>Turn on tilt</button><span class="ts-small lk-soft lk-hint"${tilt ? ' hidden' : ''}>${gy.on ? 'Tilt your phone · tap to flip' : 'Tap the card to flip it'}</span></span>
-      <button class="btn small" data-act="lk-rip">${icon('redo', 18)} Rip again</button></div>
+      ${readOnly ? '<span></span>' : `<span class="lk-acts"><button class="icon-btn" data-act="lk-share" aria-label="Share this card">${icon('share', 20)}</button><button class="btn small" data-act="lk-rip">${icon('redo', 18)} Rip again</button></span>`}</div>
   </div>`;
 }
 
@@ -393,9 +398,12 @@ function allView(opened) {
   return `<div class="lk-all">${opened.map((c, i) => `<button class="lk-mini lkf-${c.fin}" data-act="lk-pick" data-v="${esc(c.key)}" style="--sx:${((((i * 37) % 9) / 9) - 0.5).toFixed(2)}" aria-label="${esc(label(c))}"><span class="lk-face lk-front">${frontHtml(c)}</span></button>`).join('')}</div>`;
 }
 
+const isView = (app) => app.route.mode === 'view' && app.route.person !== ownerId();
+const tabOf = (app) => app.ui.lk.tab || 'cards';
+
 function lockerBody(app) {
   const id = shownId(app);
-  const readOnly = app.route.mode === 'view';
+  const readOnly = isView(app);
   if (!id) {
     return `<div class="plain lk"><h1 class="ts-title">Locker</h1>
       <p class="ts-body lk-soft lk-gap">Open a round and pick your name once. Your scorecards show up here after that.</p></div>`;
@@ -403,29 +411,37 @@ function lockerBody(app) {
   const L = lockerOf(app, id);
   if (!L?.cards) {
     const err = L?.error && !L.loading;
-    return `<div class="plain lk"><h1 class="ts-title">Locker</h1>
-      ${err ? `<p class="ts-body lk-soft lk-gap">No signal. Your scorecards are safe, they just need a connection.</p><button class="btn block" data-act="lk-retry">Try again</button>`
-        : '<p class="meta lk-gap">Opening your locker…</p>'}</div>`;
+    return `<div class="plain lk"><h1 class="ts-title">${readOnly ? 'Passport' : 'Locker'}</h1>
+      ${err ? `<p class="ts-body lk-soft lk-gap">No signal. ${readOnly ? 'The passport' : 'Your scorecards'} need a connection.</p><button class="btn block" data-act="lk-retry">Try again</button>`
+        : `<p class="meta lk-gap">Opening ${readOnly ? 'the passport' : 'your locker'}…</p>`}</div>`;
   }
   const cards = L.cards;
   const opened = openedOf(cards), packs = packsOf(cards);
   const lk = app.ui.lk;
-  if (!opened.length && packs.length) lk.view = 'packs';
-  if (lk.view === 'packs' && !packs.length) lk.view = 'one';
   if (!cards.length) {
-    return `<div class="plain lk"><h1 class="ts-title">Locker</h1>
+    return `<div class="plain lk"><h1 class="ts-title">${readOnly ? 'Passport' : 'Locker'}</h1>
       <p class="ts-body lk-soft lk-gap">${readOnly ? 'No finished rounds yet.' : 'Finish 18 holes and your scorecard arrives here as a pack.'}</p></div>`;
   }
-  const who = readOnly ? (app.lockerAdmin?.people?.find((p) => p.person_id === id)?.name || cards[0]?.name || '') : '';
-  const sub = opened.length ? `${plural(opened.length, 'scorecard')} since ${shortDay(opened[opened.length - 1].day)}` : plural(packs.length, 'pack') + ' to open';
+  const tab = tabOf(app);
+  const who = readOnly ? (cards[cards.length - 1]?.fullName || app.lockerAdmin?.people?.find((p) => p.person_id === id)?.name || cards[0]?.name || '') : '';
+  const tabBtn = (v, lbl) => `<button data-act="lk-tab" data-v="${v}" aria-pressed="${tab === v}">${lbl}</button>`;
+  const tabs = `<div class="seg lk-tabs" role="group" aria-label="Locker">${tabBtn('cards', 'Cards')}${tabBtn('passport', 'Passport')}</div>`;
+  const head = `${who ? `<div class="ts-label lk-k">${esc(who)} · view only</div>` : ''}
+    <div class="lk-head"><h1 class="ts-title">${readOnly ? esc(`${who.split(' ')[0] || 'Their'}’s locker`) : 'Locker'}</h1>
+      ${packs.length && !readOnly ? `<button class="pill lk-ppill" data-act="lk-view" data-v="${lk.view === 'packs' && tab === 'cards' ? 'one' : 'packs'}" aria-pressed="${lk.view === 'packs' && tab === 'cards'}">${icon('pack', 18)} Packs · ${packs.length}</button>` : ''}</div>
+    ${tabs}`;
+  if (tab === 'passport') {
+    return `<div class="plain lk lk-t-passport">${head}${bookHtml(cards, app.ui.pp, { frontHtml, readOnly })}</div>`;
+  }
+  if (!opened.length && packs.length) lk.view = 'packs';
+  if (lk.view === 'packs' && !packs.length) lk.view = 'one';
+  const sub = opened.length ? `${plural(opened.length, 'scorecard')} since ${shortDay(opened[opened.length - 1].day)}` : `${plural(packs.length, 'pack')} ${readOnly ? 'sealed' : 'to open'}`;
   const segBtn = (v, ic, lbl) => `<button data-act="lk-view" data-v="${v}" aria-pressed="${lk.view === v}" aria-label="${lbl}">${icon(ic, 22)}</button>`;
-  const view = lk.view === 'packs' ? packsView(app, L, readOnly) : lk.view === 'all' ? allView(opened) : oneView(app, opened);
-  return `<div class="plain lk lk-v-${lk.view}">
-    ${who ? `<div class="ts-label lk-k">${esc(who)} · view only</div>` : ''}
-    <div class="lk-head"><h1 class="ts-title">Locker</h1>
-      ${opened.length ? `<div class="seg lk-seg" role="group" aria-label="View">${segBtn('one', 'cardone', 'One card at a time')}${segBtn('all', 'grid', 'All cards')}</div>` : ''}</div>
+  const view = lk.view === 'packs' ? packsView(app, L, readOnly) : lk.view === 'all' ? allView(opened) : oneView(app, opened, readOnly);
+  return `<div class="plain lk lk-t-cards lk-v-${lk.view}">${head}
     <div class="lk-subrow"><span class="ts-small lk-soft">${esc(sub)}</span>
-      ${packs.length && opened.length ? `<button class="pill lk-ppill" data-act="lk-view" data-v="${lk.view === 'packs' ? 'one' : 'packs'}" aria-pressed="${lk.view === 'packs'}">${icon('pack', 18)} Packs · ${packs.length}</button>` : ''}</div>
+      ${readOnly && packs.length && opened.length ? `<button class="pill lk-ppill" data-act="lk-view" data-v="${lk.view === 'packs' ? 'one' : 'packs'}" aria-pressed="${lk.view === 'packs'}">${icon('pack', 18)} Sealed · ${packs.length}</button>` : ''}
+      ${opened.length ? `<div class="seg lk-seg" role="group" aria-label="View">${segBtn('one', 'cardone', 'One card at a time')}${segBtn('all', 'grid', 'All cards')}</div>` : ''}</div>
     ${view}
   </div>`;
 }
@@ -469,6 +485,13 @@ async function loadAdmin(app) {
 
 // ───────────────────────────────────────────── Home (§7.1): the packs card + the Locker row
 
+/** 036 §4.1: "5 scorecards · 3 courses · 4 milestones". */
+function homeSub(opened) {
+  const pp = passportOf([...opened].reverse());
+  return [plural(opened.length, 'scorecard'), plural(pp.courses.length, 'course'), pp.milestones.length ? plural(pp.milestones.length, 'milestone') : '']
+    .filter(Boolean).join(' · ');
+}
+
 /** { packs, row } HTML for Home; both '' unless this phone's person has a card or pack. Never throws. */
 export function homeLocker(app) {
   try {
@@ -478,16 +501,16 @@ export function homeLocker(app) {
     const packs = packsOf(L.cards), opened = openedOf(L.cards);
     const newest = packs[packs.length - 1];
     const card = packs.length ? `<button class="lk-ready" data-act="lk-home-packs">
-        <span class="lk-rpack lk-foil" aria-hidden="true"><b class="lk-pip">${packs.length}</b></span>
+        <span class="lk-rpack" aria-hidden="true">${chromePack()}<b class="lk-pip">${packs.length}</b></span>
         <span class="lk-rtext"><span class="ts-label lk-soft">${plural(packs.length, 'pack')} ready</span><span class="ts-row">Open your scorecard${packs.length === 1 ? '' : 's'}</span>
           <span class="ts-small lk-soft ellipsis">${esc(newest.course)} · ${esc(shortDay(newest.day))}</span></span>
         <span class="hr-chev">${icon('fwd', 20)}</span></button>` : '';
     const fan = opened.length
       ? opened.slice(0, 3).reverse().map((c) => `<i class="lkf-${c.fin}"></i>`).join('')
-      : '<i class="lk-foil lk-fan-pack"></i>';
+      : '<i class="lk-fan-pack"></i>';
     const row = `<button class="home-row" data-act="go" data-v="#/locker">
         <span class="lk-fan" aria-hidden="true">${fan}</span>
-        <span class="hr-main"><span class="hr-name">Locker</span><span class="hr-sub">${opened.length ? plural(opened.length, 'scorecard') : `${plural(packs.length, 'pack')} to open`}</span></span>
+        <span class="hr-main"><span class="hr-name">Locker</span><span class="hr-sub">${opened.length ? homeSub(opened) : `${plural(packs.length, 'pack')} to open`}</span></span>
         <span class="hr-chev">${icon('fwd', 20)}</span></button>`;
     return { packs: card, row };
   } catch {
@@ -511,6 +534,8 @@ export const lockerSheets = {
       </ul>
       <p class="ts-small lk-soft"><b>Launch cards.</b> Rounds played by Nov 21, 2026 are ranked against each other: your best is prismatic, then gold, silver and bronze.</p>
       <p class="ts-small lk-soft"><b>Your normal.</b> Your last 20 rounds, leaving out the worst fifth, averaged. A bad streak never makes prismatic easier.</p>
+      <p class="ts-small lk-soft"><b>The card.</b> Your whole scorecard is on the front. Tap it to flip: who you played with and the round in numbers. Tilt your phone and the metal moves.</p>
+      <p class="ts-small lk-soft"><b>Passport.</b> The first time you finish 18 at a course, its stamp goes in your passport. Milestones (first birdie, broke 90, a new lowest round) get a stamp too. Tap a friend’s name to see theirs.</p>
       <button class="btn block" data-act="sheet-close" style="margin-top:12px">Done</button>`;
   },
 };
@@ -518,7 +543,8 @@ export const lockerSheets = {
 // ───────────────────────────────────────────── the screen
 
 function ensureUi(app) {
-  app.ui.lk ||= { view: 'one', key: null, flip: null, land: null, landAt: 0, person: null };
+  app.ui.lk ||= { view: 'one', key: null, flip: null, land: null, landAt: 0, person: null, tab: 'cards' };
+  app.ui.pp ||= { pg: 0 };
   return app.ui.lk;
 }
 
@@ -526,13 +552,15 @@ export default {
   get noscroll() {
     if (!A || A.route?.name !== 'locker' || A.route.mode === 'admin') return false;
     const L = lockerOf(A, shownId(A));
-    return !!L?.cards && A.ui.lk?.view === 'one' && openedOf(L.cards).length > 0;
+    return !!L?.cards && (A.ui.lk?.tab || 'cards') === 'cards' && A.ui.lk?.view === 'one' && openedOf(L.cards).length > 0;
   },
   enter(app) {
     A = app;
     const lk = ensureUi(app);
     const id = shownId(app);
-    if (lk.person !== id) { lk.person = id; lk.key = null; lk.flip = null; if (app.route.mode === 'view') lk.view = 'one'; }
+    if (lk.person !== id) { lk.person = id; lk.key = null; lk.flip = null; app.ui.pp.pg = app.route.tab === 'passport' ? 1 : 0; if (app.route.mode === 'view') lk.view = 'one'; }
+    if (app.route.tab) lk.tab = app.route.tab; // #/passport opens the book (on the holder page); #/locker the cards
+    if (/^#\/locker\/p\//.test(location.hash)) history.replaceState(null, '', `#/passport/${encodeURIComponent(id)}`); // 035 link → 036
     if (app.route.mode === 'admin') loadAdmin(app);
     else if (id) loadLocker(app, id);
     else startHomeLocker(app); // no owner yet: find who this phone played as, then load
@@ -541,12 +569,12 @@ export default {
   },
   topBack(app) {
     if (app.route.mode === 'admin') return `<button class="back" data-act="go" data-v="#/locker">${icon('back', 22)}<span>Locker</span></button>`;
-    if (app.route.mode === 'view') return `<button class="back" data-act="go" data-v="#/locker/admin">${icon('back', 22)}<span>Everyone</span></button>`;
+    if (isView(app)) return `<button class="back" data-act="lk-back">${icon('back', 22)}<span>Back</span></button>`;
     return '';
   },
   topRight(app) {
     if (app.route.mode === 'admin') return '';
-    const adm = app.route.mode !== 'view' && isAdmin(ownerId())
+    const adm = !isView(app) && isAdmin(ownerId())
       ? `<button class="icon-btn" data-act="go" data-v="#/locker/admin" aria-label="Who’s opened what">${icon('people')}</button>` : '';
     return `${adm}<button class="icon-btn" data-act="lk-how" aria-label="How cards work">${icon('info')}</button>`;
   },
@@ -562,10 +590,21 @@ export default {
   },
   mount(content, app) {
     car.track = null;
-    if (app.route.mode !== 'admin' && app.ui.lk?.view === 'one') mountCarousel(content, app);
+    if (app.route.mode === 'admin') return;
+    if (tabOf(app) === 'passport') mountBook(content, app.ui.pp);
+    else if (app.ui.lk?.view === 'one') mountCarousel(content, app);
   },
   actions: {
+    'lk-tab': (el, ev, app) => {
+      app.ui.lk.tab = el.dataset.v;
+      app.ui.lk.flip = null;
+      if (el.dataset.v === 'passport' && !app.ui.pp.pg) app.ui.pp.pg = 1;
+      app.render();
+      document.getElementById('content').scrollTop = 0;
+    },
+    'lk-back': (el, ev, app) => { if (history.length > 1) history.back(); else app.go('#/'); },
     'lk-view': (el, ev, app) => {
+      app.ui.lk.tab = 'cards';
       app.ui.lk.view = el.dataset.v;
       app.ui.lk.flip = null;
       app.render();
@@ -579,12 +618,28 @@ export default {
       f.classList.toggle('on', on);
       app.ui.lk.flip = on ? el.dataset.key : null;
     },
+    // the passport: a stamp or a showcase card opens the card it came from, in the Cards tab
+    'pp-card': (el, ev, app) => {
+      const L = lockerOf(app, shownId(app));
+      if (!L?.cards?.some((c) => c.key === el.dataset.v && c.opened)) return;
+      Object.assign(app.ui.lk, { tab: 'cards', view: 'one', key: el.dataset.v, flip: null });
+      app.render();
+    },
+    'pp-share': (el, ev, app) => {
+      const L = lockerOf(app, shownId(app));
+      if (L?.cards) import('./share036.js').then((m) => m.sharePassport(L.cards)).catch((e) => console.warn('share', e));
+    },
+    'lk-share': (el, ev, app) => {
+      const L = lockerOf(app, shownId(app));
+      const card = openedOf(L?.cards)[car.active];
+      if (card) import('./share036.js').then((m) => m.shareCard(card, L.cards)).catch((e) => console.warn('share', e));
+    },
     'lk-pick': (el, ev, app) => {
       Object.assign(app.ui.lk, { view: 'one', key: el.dataset.v, flip: null });
       app.render();
     },
     'lk-open': (el, ev, app) => {
-      if (app.route.mode === 'view') return; // someone else's packs stay sealed
+      if (isView(app)) return; // someone else's packs stay sealed
       const card = lockerOf(app, ownerId())?.cards?.find((c) => c.key === el.dataset.v && !c.opened);
       if (card) openPack(app, card);
     },
@@ -615,7 +670,23 @@ export default {
       fx.closePack();
       packCtx = null;
       if (!ctx) return;
-      Object.assign(ensureUi(app), { view: 'one', key: ctx.key, flip: null, land: ctx.replay ? null : ctx.key, landAt: Date.now() });
+      Object.assign(ensureUi(app), { tab: 'cards', view: 'one', key: ctx.key, flip: null, land: ctx.replay ? null : ctx.key, landAt: Date.now() });
+      if (app.route.name === 'locker' && app.route.mode === 'mine') app.render();
+      else app.go('#/locker');
+    },
+    'lk-pack-share': () => {
+      const ctx = packCtx;
+      const L = ctx && lockerOf(A, ctx.personId);
+      const card = L?.cards?.find((c) => c.key === ctx.key);
+      if (card) import('./share036.js').then((m) => m.shareCard(card, L.cards)).catch((e) => console.warn('share', e));
+    },
+    'lk-pack-pp': (el, ev, app) => {
+      const ctx = packCtx;
+      fx.closePack();
+      packCtx = null;
+      const L = ctx && lockerOf(app, ctx.personId);
+      ensureUi(app).tab = 'passport';
+      app.ui.pp.pg = L?.cards ? pageOf(L.cards.filter((c) => c.opened), ctx.page, { frontHtml }) : 1;
       if (app.route.name === 'locker' && app.route.mode === 'mine') app.render();
       else app.go('#/locker');
     },

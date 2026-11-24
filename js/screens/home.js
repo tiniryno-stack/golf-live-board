@@ -107,7 +107,8 @@ export function roundSummary(app) {
 function header(rounds) {
   const name = rounds.find((r) => r.myName)?.myName;
   if (!name) return '<div class="spacer"></div>';
-  return `<div class="home-me"><span class="avatar">${esc(initials(name))}</span><span class="hm-name">${esc(name)}</span></div>`;
+  // 036 §4.3: your avatar opens your passport.
+  return `<button class="home-me" data-act="go" data-v="#/passport" aria-label="${esc(`${name}, your passport`)}"><span class="avatar">${esc(initials(name))}</span><span class="hm-name">${esc(name)}</span></button>`;
 }
 
 function liveCard(r) {

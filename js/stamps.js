@@ -79,7 +79,13 @@ export function passportOf(cards) {
       if (s.startsWith('Best at ')) continue;
       if (s === 'Lowest round yet') { miles.push({ label: `Lowest round · ${c.gross}`, kind: 'lowest', day: c.day, course: c.course, gross: c.gross, cardKey: c.key }); continue; }
       if (once.has(s)) continue; once.add(s);
-      miles.push({ label: s, kind: s.toLowerCase().replace(/\s+/g, '-'), day: c.day, course: c.course, gross: c.gross, cardKey: c.key });
+      const m = { label: s, kind: s.toLowerCase().replace(/\s+/g, '-'), day: c.day, course: c.course, gross: c.gross, cardKey: c.key };
+      // 036 app: the hole of a first birdie / eagle ("31 OCT 2026 · TWIN CREEKS · HOLE 6")
+      if ((s === 'First birdie' || s === 'Eagle') && c.strokes && c.par) {
+        const h = c.strokes.findIndex((x, i) => x - c.par[i] <= (s === 'Eagle' ? -2 : -1));
+        if (h >= 0) m.hole = h + 1;
+      }
+      miles.push(m);
     }
   }
   return { courses: [...courses.values()], milestones: miles };

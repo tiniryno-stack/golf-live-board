@@ -152,6 +152,7 @@ export function buildLocker(rows, personId, { today = null, opens = [], pending 
       group: groupOf(e, r.scores, r.player.id),
       gross, toPar: gross - sum(r.par), stats,
       name: r.player.firstName || String(r.player.name || '').split(' ')[0] || '',
+      fullName: [r.player.firstName, r.player.lastName].filter(Boolean).join(' ') || String(r.player.name || ''),
       crew: (e.roster?.players || []).length > 1,
       opened: openAt.has(e.id) || pend.has(e.code), openedAt: typeof openAt.get(e.id) === 'string' ? openAt.get(e.id) : null,
       kind: null, fin: null, grade: null, line: '', normal: null, diff: null,

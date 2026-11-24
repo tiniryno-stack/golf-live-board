@@ -66,6 +66,7 @@ test("Andrew's real passport (§6.2)", () => {
     [['twin-creeks', 3, 87, '2026-10-16'], ['bridlewood', 1, 97, '2026-10-20'], ['firewheel', 1, 100, '2026-11-07']]);
   assert.deepEqual(pp.milestones.map((m) => `${m.label} ${m.day}`),
     ['Lowest round · 93 2026-10-31', 'First birdie 2026-10-31', 'Broke 90 2026-11-20', 'Lowest round · 87 2026-11-20']);
+  assert.equal(pp.milestones[1].hole, 6); // First birdie: Twin Creeks hole 6
   assert.deepEqual(goalsOf(pp, cards), ['Broke 80', 'Eagle']);
 });
 
