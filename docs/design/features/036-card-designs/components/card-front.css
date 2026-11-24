@@ -1,0 +1,37 @@
+/* 036 component: landscape scorecard card (front) and the five finishes, incl. tilt-driven prismatic.
+   Extracted from the approved prototype twin-creeks-art.html, gold-prismatic.html, dark-metals.html, five-grades.html (docs/design/features/036-card-designs/).
+   Reference code: port it into the app's own files; names may change. */
+
+/* card pieces (A, from round 1) */
+.lkf-standard { --m-inv: #1c1f24; --m-flat: #262a30; } .lkf-bronze { --m-inv: #5a3319; --m-flat: #7d4a24; }
+.lkf-silver { --m-inv: #f6f7f9; --m-flat: #cdd2d8; } .lkf-gold { --m-inv: #f6f7f9; --m-flat: #e2c365; } .lkf-prismatic { --m-inv: #f6f7f9; --m-flat: #e9ecf1; }
+.lk-slot, .x-big { --x-rule: color-mix(in srgb, var(--m-ink) 24%, transparent); }
+.x-land .lk-mat { border-radius: 4cqw; } .x-land .lk-tilt { border-radius: 4%; cursor: default; }
+.x-l1 { position: relative; height: 100%; padding: 4.2cqw 4.6cqw; display: flex; flex-direction: column; justify-content: space-between; text-shadow: var(--m-emboss); }
+.x-top, .x-bot { display: flex; align-items: center; justify-content: space-between; gap: 2cqw; font: 600 2.4cqw/1 var(--font-mono); letter-spacing: .24cqw; text-transform: uppercase; color: var(--m-soft); }
+.x-top .lk-brand svg { width: 3.8cqw; height: 3.8cqw; }
+.x-fin { font-weight: 700; color: var(--m-ink); }
+.x-bot b { font: 700 3.4cqw/1 var(--font-mono); letter-spacing: .36cqw; color: var(--m-ink); }
+.x-hero { display: flex; align-items: flex-end; gap: 4cqw; }
+.x-gross { font: 700 25cqw/.8 var(--font-mono); letter-spacing: -1.8cqw; margin-left: -1cqw; font-variant-numeric: tabular-nums; flex: none; }
+.x-meta { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1.5cqw; padding-bottom: .4cqw; }
+.x-course { font: 700 4.8cqw/1.05 var(--font-sans); letter-spacing: -.05cqw; }
+.x-sub { font: 600 2.8cqw/1 var(--font-mono); letter-spacing: .16cqw; color: var(--m-soft); }
+.x-stamps { display: flex; flex-wrap: wrap; gap: 1.2cqw; }
+.x-stamps .lk-st { height: 4.6cqw; padding: 0 1.6cqw; border-radius: 2.3cqw; border-width: .3cqw; font-size: 2.2cqw; letter-spacing: .18cqw; }
+.x-hero .x-stamps { padding-top: .8cqw; }
+.x-sc { display: flex; flex-direction: column; gap: 1.5cqw; padding-top: 1.8cqw; border-top: .25cqw solid var(--x-rule); }
+.x-n { display: grid; grid-template-columns: repeat(9, 1fr) 9cqw; justify-items: center; align-items: center; row-gap: .8cqw; }
+.x-h { font: 600 1.9cqw/1 var(--font-mono); letter-spacing: .1cqw; color: var(--m-soft); text-transform: uppercase; }
+.x-mk { display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; width: 5.6cqw; height: 5.6cqw; font: 700 3.5cqw/1 var(--font-mono); font-variant-numeric: tabular-nums; }
+.x-mk-u { border-radius: 50%; border: .35cqw solid currentColor; }
+.x-mk-e { border-radius: 50%; border: .9cqw double currentColor; }
+.x-mk-b { border-radius: .8cqw; border: .3cqw solid var(--m-soft); }
+.x-mk-d { border-radius: .8cqw; background: var(--m-ink); color: var(--m-inv); text-shadow: none; }
+.x-t { font: 700 4.2cqw/1 var(--font-mono); }
+.x-slick { position: absolute; inset: 0; pointer-events: none; mix-blend-mode: screen; background-size: 300% 100%; background-position: calc(50% + var(--sx, 0) * 50%) 0;
+  background-image: linear-gradient(115deg, hsl(320 90% 60% / .3), hsl(40 95% 60% / .22) 17%, hsl(160 80% 55% / .24) 33%, hsl(200 95% 60% / .3) 50%, hsl(270 90% 65% / .26) 67%, hsl(40 95% 60% / .22) 83%, hsl(320 90% 60% / .3)); }
+.x-prism { position: absolute; inset: -30% -90%; pointer-events: none; mix-blend-mode: screen; opacity: var(--mv, 0); transform: translate(calc(var(--sx, 0) * 50%), 0);
+  background: linear-gradient(100deg, transparent 38%, hsl(350 95% 68% / .06) 41%, hsl(20 100% 64% / .16) 44%, hsl(55 95% 60% / .28) 47%, hsl(150 80% 58% / .36) 50%, hsl(195 95% 62% / .28) 53%, hsl(240 95% 72% / .16) 56%, hsl(280 95% 76% / .06) 59%, transparent 62%); }
+.x-mslick { position: absolute; inset: 0; pointer-events: none; mix-blend-mode: screen; background-size: 300% 100%; background-position: calc(50% + var(--sx, 0) * 50%) 0;
+  background-image: linear-gradient(115deg, transparent, color-mix(in srgb, var(--m-ink) 24%, transparent) 17%, transparent 33%, color-mix(in srgb, var(--m-ink) 30%, transparent) 50%, transparent 67%, color-mix(in srgb, var(--m-ink) 22%, transparent) 83%, transparent); }

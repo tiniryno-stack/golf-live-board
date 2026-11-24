@@ -1,0 +1,27 @@
+/* 036 component: card back: players ranked on the left, stats on the right.
+   Extracted from the approved prototype reveal-back-book.html, card-back-big-group.html (docs/design/features/036-card-designs/).
+   Reference code: port it into the app's own files; names may change. */
+
+.cb { position: relative; height: 100%; box-sizing: border-box; padding: 4.4cqw 4.6cqw; display: flex; gap: 4.4cqw; color: var(--m-ink); text-shadow: var(--m-emboss); }
+.cb-col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1.7cqw; }
+.cb-col.sb { justify-content: space-between; }
+.cb-k { font: 600 2.2cqw/1 var(--font-mono); letter-spacing: .26cqw; text-transform: uppercase; color: var(--m-soft); }
+.cb-big { font: 700 31cqw/.8 var(--font-mono); letter-spacing: -1.6cqw; margin-left: -1.2cqw; }
+.cb-line { font: 600 3.3cqw/1.25 var(--font-sans); text-wrap: balance; }
+.cb-pl { display: flex; justify-content: space-between; align-items: baseline; font: 500 3.3cqw/1 var(--font-sans); padding: 1.25cqw 0; border-bottom: .2cqw solid var(--x-rule); color: var(--m-soft); }
+.cb-pl b { font: 700 3.6cqw/1 var(--font-mono); } .cb-pl.me { color: var(--m-ink); font-weight: 700; }
+.cb-tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.2cqw; }
+.cb-tile { display: flex; flex-direction: column; align-items: center; gap: .9cqw; padding: 1.7cqw 0 1.5cqw; border-radius: 1.6cqw; background: color-mix(in srgb, var(--m-ink) 10%, transparent); }
+.cb-tile b { font: 700 5.4cqw/1 var(--font-mono); } .cb-tile span, .cb-types i { font: 600 1.8cqw/1 var(--font-mono); letter-spacing: .14cqw; text-transform: uppercase; color: var(--m-soft); font-style: normal; }
+.cb-types { display: flex; justify-content: space-between; font: 700 3.2cqw/1 var(--font-mono); } .cb-types span { display: flex; flex-direction: column; gap: 1cqw; }
+.cb-stub { flex: none; width: 29cqw; border-right: .45cqw dashed var(--x-rule); padding-right: 3.8cqw; display: flex; flex-direction: column; justify-content: space-between; }
+.cb-stub b { font: 700 4.6cqw/1.05 var(--font-sans); } .cb-num { font: 700 13cqw/.85 var(--font-mono); letter-spacing: -.8cqw; }
+.cb-hl { display: flex; gap: 2cqw; align-items: baseline; font: 500 3.1cqw/1.2 var(--font-sans); } .cb-hl b { flex: none; width: 13cqw; font: 700 2.2cqw/1 var(--font-mono); letter-spacing: .2cqw; text-transform: uppercase; color: var(--m-soft); }
+.cb-two { display: grid; grid-template-columns: 1fr 1fr; column-gap: 4cqw; }
+.cb-two .cb-pl { font-size: 2.7cqw; padding: .95cqw 0; } .cb-two .cb-pl b { font-size: 2.9cqw; }
+.cb-pl i { font: 600 2.2cqw/1 var(--font-mono); font-style: normal; color: var(--m-soft); width: 4.4cqw; flex: none; }
+.cb-pl span { flex: 1; }
+.cb-dots { font: 700 3cqw/1 var(--font-mono); color: var(--m-soft); letter-spacing: .6cqw; padding: .6cqw 0; }
+.cb-sm .cb-pl { font-size: 2.7cqw; padding: .82cqw 0; } .cb-sm .cb-pl b { font-size: 2.9cqw; }
+.cb-sm .cb-dots { font-size: 2.4cqw; padding: .3cqw 0 .3cqw 4.4cqw; }
+.cb-pl.tm span::after { content: "●"; font-size: 1.5cqw; padding-left: 1.2cqw; vertical-align: .3cqw; color: var(--m-soft); }
