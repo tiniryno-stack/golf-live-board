@@ -1056,6 +1056,31 @@ Still open: nothing blocking. Design direction (section 9) is final.
   typing) and, in a round or Setup, only after 5 minutes away. A phone still running an older page needs one full close
   of the app first. The locker also finds its person without an owner: `lockerPerson()` = owner → latest `glb.people`
   → the person this phone's claims in Recent rounds belong to (`db.fetchRosters`, once per page load).
+- **036 · Landscape cards, chrome packs, the Passport, course stamps (Nov 24, brief
+  `docs/design/features/036-card-designs/SPEC.md`).** No database change. *Rules:* `js/locker.js` adds `courseObj`,
+  `fullName` and `group` to each card (`groupOf`: every roster player with 18 scores, by gross, ties share a rank,
+  `sameTeeTime` from `scoring.sameFoursome(…, 1)`), and `backRows(group, 11)` fits the big-group list (rank ≤ 11: top 11;
+  lower: 7, a gap, you ±1; `more`). `db.fetchPersonRounds` now fetches each round's **whole** score set (one query per
+  round, in parallel). `js/stamps.js` + `js/stamps-data.js` (68 DFW + Austin courses, emblems in `img/stamps/`):
+  `matchCourse` (id / alias, then normalised name), `stampFor` (monogram stamp for unknown courses, ink from a hash),
+  `courseStampSvg`, `stampDate`, `passportOf` (courses: first day, visits, best; milestones: First birdie (+ hole),
+  Broke 100/90/80, first Eagle, every Lowest round), `goalsOf` (goals left as outlines; Broke N drops once you've been
+  under N). Test `tests/stamps036.test.mjs` (Andrew's real passport, the Nov 7 back). *Card:* landscape 7 : 5, whole
+  scorecard on the front (`.x-*`), five dark-metal finishes (`.lkf-*`; prismatic ink and glow follow `--sx`, oil slick
+  `.x-slick` + flash `.x-prism` at `--mv`; gold/silver/bronze bands `.x-mslick`); back = people left (`.cb-*`: solo / 2–6
+  large / 7+ ranked list) + stats right. The carousel's `put()` feeds `--sx/--sy/--mv`. *Pack:* `js/screens/pack.js`
+  rewritten: horizontal chrome refractor pack (`chromePack()`, pattern = `PACK_PATTERN`, default `fine`), swipe the top
+  36 % to cut (hinged at the finger, the cut end lifts), > 94 % → `sep` (sends `open_card`) → `opened` 650 ms →
+  `reveal` 1650 ms (035's celebrations) → stamps land from 2550 ms, 420 ms apart → `done`; hold the body 1.3 s =
+  fallback; reduced motion = a tap. Result: Add to locker · Share · See in passport · Open next pack. *Passport:*
+  `js/screens/passport.js` (stamp markup, `landsFor`, the book: cover navy + gold, holder (showcase picked by the app,
+  tally, MRZ line, Share), courses 4 a page, milestones + outlines; pages turn on the spine, state `app.ui.pp.pg`). It
+  counts opened cards only. Locker tabs Cards | Passport (`app.ui.lk.tab`). Routes `#/passport`, `#/passport/<personId>`
+  (read-only for others; `#/locker/p/<id>` lands there). Home avatar → `#/passport`; Home's Locker row says "5
+  scorecards · 3 courses · 4 milestones". Names with a `personId` on the Board / Matches tables (031 `table()`, Ryder
+  players, older Board rows) and Season standings open that passport (`ppName`); the player sheet and the You sheet have a
+  passport button. Share images `js/screens/share036.js` (canvas; card + stamps, holder + courses). Styles all in
+  `css/locker.css` (pack class names prefixed `bp-` where the app already had `.mk/.pill/.face/.body/.spark`).
 
 ## 13. V2 backlog (running list)
 
