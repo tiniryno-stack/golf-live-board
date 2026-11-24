@@ -14,7 +14,7 @@ import { landsFor, bookHtml, mountBook, pageOf } from './passport.js';
 import { passportOf } from '../stamps.js';
 import { esc, icon, reducedMotion } from '../ui.js';
 import {
-  buildLocker, packsOf, openedOf, FINISHES, isAdmin, shortDay, longDay, toParLabel, finName, adminTotals, backRows,
+  buildLocker, packsOf, openedOf, FINISHES, isAdmin, LOCKER_ADMINS, shortDay, longDay, toParLabel, finName, adminTotals, backRows,
 } from '../locker.js';
 
 const STALE = 2 * 60 * 1000;
@@ -34,7 +34,7 @@ export async function loadLocker(app, personId, { force = false } = {}) {
   const L = (app.lockers[personId] ||= { personId, cards: null, loading: false, error: null, at: 0, local: new Set() });
   const mine = personId === lockerPerson();
   if (mine) app.locker = L;
-  if (L.loading) return L;
+  if (L.loading || L.practice) return L; // preview practice packs: keep the resealed copy until it's switched off
   if (L.cards && !force && Date.now() - L.at < STALE) return L;
   L.loading = true;
   try {
@@ -68,6 +68,7 @@ async function sendPending(personId, L) {
 /** Mark a pack opened here at once (the reveal never waits) and tell the server; offline → glb.lockerPending. */
 function openNow(L, card) {
   if (card.opened) return;
+  if (L.practice) { card.opened = true; return; } // preview practice: nothing is sent or saved
   card.opened = true;
   card.openedAt = new Date().toISOString();
   L.local.add(card.code);
@@ -81,6 +82,14 @@ function openNow(L, card) {
  * syncMyRounds does); else the person its own claims in Recent rounds belong to (found once, see startHomeLocker).
  */
 let resolved = null, resolving = false;
+/** Preview copy only (…/preview/): practice packs, so a finished locker can be ripped again without saving anything. */
+const PREVIEW = typeof location !== 'undefined' && /\/preview\//.test(location.pathname);
+function practiceRow(app, L) {
+  if (!PREVIEW || !L?.cards?.length) return '';
+  return L.practice
+    ? `<div class="lk-practice ts-small"><span>Preview · practice packs. Nothing is saved; a reload puts your cards back.</span><button class="pill" data-act="lk-practice">Stop</button></div>`
+    : `<div class="lk-practice ts-small"><span>Preview · reseal your ${L.cards.length} cards here to test opening them (nothing is saved)</span><button class="pill" data-act="lk-practice">Reseal</button></div>`;
+}
 export function lockerPerson() {
   const o = db.owner.get()?.personId;
   if (o) return o;
@@ -406,7 +415,8 @@ function lockerBody(app) {
   const readOnly = isView(app);
   if (!id) {
     return `<div class="plain lk"><h1 class="ts-title">Locker</h1>
-      <p class="ts-body lk-soft lk-gap">Open a round and pick your name once. Your scorecards show up here after that.</p></div>`;
+      <p class="ts-body lk-soft lk-gap">Open a round and pick your name once. Your scorecards show up here after that.</p>
+      ${PREVIEW ? `<button class="btn block" data-act="lk-testas">Preview · test as ${esc('Andrew Duong')}</button>` : ''}</div>`;
   }
   const L = lockerOf(app, id);
   if (!L?.cards) {
@@ -429,7 +439,7 @@ function lockerBody(app) {
   const head = `${who ? `<div class="ts-label lk-k">${esc(who)} · view only</div>` : ''}
     <div class="lk-head"><h1 class="ts-title">${readOnly ? esc(`${who.split(' ')[0] || 'Their'}’s locker`) : 'Locker'}</h1>
       ${packs.length && !readOnly ? `<button class="pill lk-ppill" data-act="lk-view" data-v="${lk.view === 'packs' && tab === 'cards' ? 'one' : 'packs'}" aria-pressed="${lk.view === 'packs' && tab === 'cards'}">${icon('pack', 18)} Packs · ${packs.length}</button>` : ''}</div>
-    ${tabs}`;
+    ${readOnly ? '' : practiceRow(app, L)}${tabs}`;
   if (tab === 'passport') {
     return `<div class="plain lk lk-t-passport">${head}${bookHtml(cards, app.ui.pp, { frontHtml, readOnly })}</div>`;
   }
@@ -602,6 +612,14 @@ export default {
       app.render();
       document.getElementById('content').scrollTop = 0;
     },
+    'lk-practice': (el, ev, app) => {
+      const L = lockerOf(app, ownerId());
+      if (!PREVIEW || !L?.cards) return;
+      if (L.practice) { L.cards = L.real; L.real = null; L.practice = false; }
+      else { L.real = L.cards; L.cards = L.cards.map((c) => ({ ...c, opened: false, openedAt: null })); L.practice = true; Object.assign(app.ui.lk, { tab: 'cards', view: 'packs' }); }
+      app.render();
+    },
+    'lk-testas': (el, ev, app) => { if (!PREVIEW) return; resolved = LOCKER_ADMINS[0]; loadLocker(app, resolved); app.render(); },
     'lk-back': (el, ev, app) => { if (history.length > 1) history.back(); else app.go('#/'); },
     'lk-view': (el, ev, app) => {
       app.ui.lk.tab = 'cards';
