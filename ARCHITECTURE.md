@@ -1057,6 +1057,23 @@ Still open: nothing blocking. Design direction (section 9) is final.
   of the app first. The locker also finds its person without an owner: `lockerPerson()` = owner → latest `glb.people`
   → the person this phone's claims in Recent rounds belong to (`db.fetchRosters`, once per page load).
 
+- **Nov 24 · returning players (branch `claude/busy-fermi-v729sd`).** A round link always opens in Safari, a separate
+  device from the home screen app, so friends claimed their spot in Safari and the app then said "in use". Now
+  `app.claim` first asks `sendToApp`: on iPhone Safari (not practice, not after **Stay in Safari** =
+  `glb.seen.CODE.here`), when Safari remembers Add to Home Screen (`glb.hasApp`) or the server says this person opened
+  a round in the app (RPC `person_has_app`, migration `supabase/migrations/2026-11-24-person-has-app.sql`), it opens the
+  `open-app` sheet instead and leaves the spot free for the app's auto-join. Pure rule `identity.appHandoff`. The lobby
+  landing / handicap invite say **Open it in Golf Board** instead of adding a second icon (`app.appLikely()`); **or join
+  in Safari** no longer counts as Stay in Safari. `markInApp` now runs in every round (it feeds `person_has_app`).
+  Home: `syncMyRounds` runs every time Home shows up again (at most once a minute, `homeReturn()` on return), so a
+  resumed app finds the round it was just added to; a home screen app that comes back elsewhere toasts **You're in …
+  · Open** (`newRoundToast`, never during your own live round). Your name at the top opens `home-me`: who this phone is,
+  names from your recent rounds (`identity.phonePeople`), **I'm not X**. Setup: a typed full name from your past rounds
+  (not only the crew list) becomes that same person (`s.pastFull`). Updates: `checkVersion` also runs on Home (every
+  minute + on landing) and never reloads over unsent scores in any round (`db.queue.any()`). **What's new**: a plain
+  Home card once per release (`js/whatsnew.js` `RELEASES`, seen key `glb.seen.whatsnew`; a brand-new phone just marks
+  it seen). Test: `tests/returning037.test.mjs`.
+
 ## 13. V2 backlog (running list)
 
 - **Carryovers (skins-style):** a tied point rolls onto the next hole instead of halving, so the next hole can be worth 3–4 points. Open design question: does an unresolved carry die at the end of a 6-hole rotation, or roll into the next opponent?

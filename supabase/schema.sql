@@ -795,6 +795,16 @@ begin
   return jsonb_build_object('ok', true, 'marked', v_n > 0, 'now', now());
 end $$;
 
+-- Nov 24: has this person opened any round in the home screen app? Safari asks before it claims a spot, so a friend
+-- who taps the group-chat link is sent to their app. Says yes / no only; no device ids, no rounds.
+create or replace function public.person_has_app(p_person_id text)
+returns jsonb language sql stable security definer set search_path = public as $$
+  select jsonb_build_object('ok', true, 'has_app', exists (
+    select 1 from public.claims c join public.events e on e.id = c.event_id
+     where c.in_app and coalesce(p_person_id, '') <> ''
+       and public._player(e.roster, c.player_id)->>'personId' = p_person_id));
+$$;
+
 -- Organizer only: for every roster player, whether a phone claimed them and whether it's the home screen app.
 -- No device ids leave the database; claims stay unreadable to anon.
 create or replace function public.lobby_status(p_code text, p_admin_pin text)
@@ -852,6 +862,7 @@ end $$;
 
 revoke all on function public._lobby_gate(public.events) from public, anon, authenticated;
 grant execute on function public.mark_in_app(text, uuid) to anon, authenticated;
+grant execute on function public.person_has_app(text) to anon, authenticated;
 grant execute on function public.lobby_status(text, text) to anon, authenticated;
 grant execute on function public.lobby_counts(text) to anon, authenticated;
 grant execute on function public.set_round_date(text, text, date, timestamptz) to anon, authenticated;

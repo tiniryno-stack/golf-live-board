@@ -333,6 +333,12 @@ export function createBackend() {
       if (c) c.in_app = true;
       return { ok: true, marked, now: pgTs(nowMs()) };
     },
+    // Nov 24: has this person opened a round in the home screen app (any in_app claim on a player with this personId)?
+    person_has_app({ p_person_id }) {
+      const has = !!p_person_id && t.claims.some((c) => c.in_app
+        && (t.events.find((e) => e.id === c.event_id)?.roster?.players || []).some((p) => p.id === c.player_id && p.personId === p_person_id));
+      return { ok: true, has_app: has };
+    },
     // 025: organizer only; every roster player, claimed / in_app (no device ids).
     lobby_status({ p_code, p_admin_pin }) {
       const e = ev(p_code);

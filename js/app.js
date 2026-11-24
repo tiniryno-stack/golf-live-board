@@ -10,7 +10,7 @@ import { replayHeadlines, latestMoment } from './headlines.js';
 import { esc, icon, initials, roundLink, copyText, growMeasure, growPlay } from './ui.js';
 import * as fx from './screens/toasts.js';
 import * as sheets from './screens/sheets.js';
-import home from './screens/home.js';
+import home, { homeReturn } from './screens/home.js';
 import setup from './screens/setup.js';
 import season from './screens/season.js';
 import enter from './screens/enter.js';
@@ -24,7 +24,7 @@ import { gps } from './gps.js';
 import { loadGeo } from './geoload.js';
 import { FLAGS } from './flags.js';
 import { initLoader, showLoader, updateLoader, loaderReady, hideLoaderNow } from './loader.js';
-import { joinPlan } from './identity.js';
+import { joinPlan, appHandoff } from './identity.js';
 import { lobbyState, lobbyView as pickLobbyView, spotGiven, clock12, wallClock, parseTime, hasHandicaps, revealCtx } from './lobby.js';
 import lobbyScreen from './screens/lobby.js';
 
@@ -411,7 +411,8 @@ function needsConfirm(pid) {
 }
 
 /** Claim a player. `auto` = the 024 auto-join of the owner (no Who are you?). Returns true when in. */
-app.claim = async (pid, { auto = false } = {}) => {
+app.claim = async (pid, { auto = false, here = false } = {}) => {
+  if (!here && await sendToApp(pid)) return false; // Nov 24: they have Golf Board: open it there, keep the spot free
   let res;
   try {
     res = await db.api.claimPlayer(app.code, pid);
@@ -456,10 +457,56 @@ app.claim = async (pid, { auto = false } = {}) => {
   return false;
 };
 
+/**
+ * Nov 24 · returning players. The group-chat link opens in Safari, a separate device from the home screen app, so
+ * claiming here would leave the app saying "in use". When this phone has the app (Safari's Add to Home Screen note, or
+ * the server: this person opened a round in the app), show "Open Golf Board" instead; Stay in Safari claims as before.
+ */
+const hasApp = new Map(); // personId → true / false (once per page load)
+async function personHasApp(personId) {
+  if (!personId) return null;
+  if (hasApp.has(personId)) return hasApp.get(personId);
+  try {
+    const res = await Promise.race([db.api.personHasApp(personId), new Promise((r) => setTimeout(() => r(null), 2500))]);
+    if (!res?.ok) return null; // no answer (offline, or the function isn't live yet): Safari as before
+    hasApp.set(personId, !!res.has_app);
+    return !!res.has_app;
+  } catch { return null; }
+}
+const handoffCtx = () => ({ standalone: db.STANDALONE, ios: db.isIOS(), practice: isPractice(), stayed: app.seenLobby('here'), hint: !!db.local.get('glb.hasApp') });
+async function sendToApp(pid) {
+  if (appHandoff({ ...handoffCtx(), serverHasApp: true }) === 'here') return false; // can't go to the app at all
+  const person = (app.event?.roster?.players || []).find((p) => p.id === pid)?.personId;
+  const ctx = handoffCtx();
+  if (appHandoff({ ...ctx, serverHasApp: ctx.hint ? null : await personHasApp(person) }) !== 'app') return false;
+  app.openSheet('open-app', { pid, keep: true });
+  return true;
+}
+/** Sync: does this Safari phone already know it has the app (for the lobby landing's words)? Starts the check. */
+app.appLikely = () => {
+  const ctx = handoffCtx();
+  const o = db.owner.get()?.personId;
+  if (o && !hasApp.has(o) && !ctx.hint && appHandoff({ ...ctx, serverHasApp: true }) === 'app') {
+    hasApp.set(o, null);
+    personHasApp(o).then((v) => { hasApp.set(o, v); if (v) render(); });
+  }
+  return appHandoff({ ...ctx, serverHasApp: o ? hasApp.get(o) : null }) === 'app';
+};
+/** "Stay in Safari" on the Open Golf Board sheet: remember it for this round, then claim here. */
+app.stayInSafari = (pid) => {
+  app.markLobbySeen('here');
+  app.closeSheet();
+  if (pid) { app.claim(pid, { here: true }); return; }
+  if (app.me) return;
+  const st = app.lobby();
+  if (st && !st.open) { app.ui.revealHere = app.code; app.ui.lobbyPick = app.code; app.ui.lobbyQ = ''; app.refreshClaimed(); render(); }
+  else app.openSheet('who', {});
+};
+
 /** 025: the home screen app opened this round as a player: Host counts "N of 16 have Golf Board". Keyed by player,
  *  so a re-claim ("I'm not X", a let-in) marks again. */
 async function markInApp() {
-  if (!db.STANDALONE || !app.me || !app.lobby() || app.lobby().open) return;
+  if (!db.STANDALONE || !app.me) return; // Nov 24: every round, so Safari can tell you have the app
   const key = `glb.inapp.${app.code}`;
   if (db.local.get(key) === app.me) return;
   try {
@@ -1227,9 +1274,12 @@ window.addEventListener('pageshow', (e) => {
 // update until iPhone happened to close it. Coming back: if version.json has moved on, reload once it's safe (nothing
 // unsent, no sheet / full-screen card, not typing; in a round or Setup only after 5 minutes away).
 let hiddenAt = 0, versionCheck = 0;
+// Nov 24: also on Home (every minute while it's open, and when you land there), not only after the app was hidden:
+// a friend sitting on Home gets the new version too. A round or Setup still waits for a return after 5 minutes away.
 async function checkVersion() {
   const mine = window.__glbVersion;
-  if (!mine || !hiddenAt || Date.now() - versionCheck < 30000) return;
+  const onHome = app.route.name === 'home';
+  if (!mine || (!hiddenAt && !onHome) || Date.now() - versionCheck < 30000) return;
   versionCheck = Date.now();
   let info = null;
   try {
@@ -1237,16 +1287,31 @@ async function checkVersion() {
     if (r.ok) info = await r.json();
   } catch { return; } // offline: next time
   if (!info?.v || info.v === mine || document.visibilityState !== 'visible') return;
-  const away = Date.now() - hiddenAt;
+  const away = hiddenAt ? Date.now() - hiddenAt : 0;
   const a = document.activeElement;
   const typing = a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName);
-  const busy = typing || app.sheet || $('overlay')?.classList.contains('open') || (app.code && db.queue.count(app.code) > 0)
-    || ((app.route.round || app.route.name === 'setup') && away < 5 * 60 * 1000);
+  const inRound = app.route.round || app.route.name === 'setup';
+  const busy = typing || app.sheet || $('overlay')?.classList.contains('open') || db.queue.any()
+    || (inRound && (!hiddenAt || away < 5 * 60 * 1000)) || (app.route.name !== 'home' && !hiddenAt);
   if (!busy) location.reload();
+}
+app.checkVersion = checkVersion;
+
+/** Nov 24: the home screen app came back somewhere other than Home (often an old round): if you were added to a new
+ *  round meanwhile, say so with one tap to it. Never while you're playing a live round of your own. */
+async function newRoundToast() {
+  if (app.event && app.me && !app.roundOver()) return;
+  let n = 0;
+  try { n = await db.syncMyRounds(); } catch { return; }
+  const r = n ? [...db.lastSynced].sort((a, b) => (b.at || 0) - (a.at || 0))[0] : null;
+  if (!r || r.code === app.code || app.sheet) return;
+  app.toast({ title: `You’re in ${r.name || 'a new round'}`, sub: r.course || '', action: 'Open', ms: 8000, onAction: () => app.go(`#/e/${r.code}`) });
 }
 
 async function onReturn() {
+  homeReturn(); // Nov 24: Home looks for new rounds again (a resumed home screen app finds the one it was added to)
   checkVersion();
+  if (db.STANDALONE && app.route.name !== 'home') newRoundToast();
   if (!app.event) return;
   db.flush();
   if (channel && !channel.isLive()) channel.reconnect();

@@ -1308,6 +1308,7 @@ details.fold summary::-webkit-details-marker { display: none; }
 .home-me { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--space-3); min-height: var(--tap-min); }
 .home-me .avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--surface-2); display: grid; place-items: center; font-size: 13px; font-weight: 600; }
 .home-me .hm-name { font-size: 15px; line-height: 20px; font-weight: 600; }
+.home-me:is(button) { text-align: left; } /* Nov 24: your name opens who this phone is */
 .home-title { margin: var(--space-2) 0 var(--space-5); }
 /* The mark (020): 30px, ring (center 58% down the box) on the capitals' middle (18px down a 32/36 title) */
 .home-title { display: flex; align-items: center; gap: 10px; }

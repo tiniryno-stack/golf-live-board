@@ -114,6 +114,7 @@ async function loadPast(app, crewId) {
   try {
     const rounds = await db.fetchCrewRounds(crewId);
     const people = new Map();
+    const pastFull = new Map(); // Nov 24: personId → first + last name, for matching a typed name
     const courses = new Map(); // course id → the copy from the group's latest round there (with any fixes)
     const plays = new Map(); // course id → rounds your group played there
     const lastHcp = {}; // person → strokes in the latest round they played (rounds come oldest first)
@@ -144,6 +145,7 @@ async function loadPast(app, crewId) {
     for (const { event } of rounds) {
       for (const p of event.roster?.players || []) {
         if (p.personId) people.set(p.personId, p.name);
+        if (p.personId && p.firstName && p.lastName) pastFull.set(p.personId, { personId: p.personId, firstName: p.firstName, lastName: p.lastName, nickname: p.nickname || '' });
         if (p.personId && p.strokes != null && p.strokes !== '') lastHcp[p.personId] = Number(p.strokes);
       }
       if (event.course?.id) {
@@ -166,6 +168,7 @@ async function loadPast(app, crewId) {
       app.setup.usual = usual;
       app.setup.groups = groups;
       app.setup.pastPeople = [...people].map(([personId, name]) => ({ personId, name })); // incl. people off the crew list
+      app.setup.pastFull = [...pastFull.values()]; // Nov 24: a typed full name from your past rounds = that same person
       app.setup.pastLoaded = true;
       quickAddMe(app.setup);
       paintCourses(app);
@@ -1732,6 +1735,9 @@ export default {
       const free = (p) => !s.players.some((x) => x.personId === p.personId);
       // Someone from your crew: the same person (full name), or a crew-mate from before last names.
       let pick = s.past.find((p) => free(p) && same(p.firstName, first) && same(p.lastName, last) && same(p.nickname, nick)) || null;
+      // Nov 24: someone from your past rounds who isn't on the crew list: still the same person, so their own phone
+      // finds this round (a new person with the same name never shows up in their app).
+      if (!pick && last) pick = (s.pastFull || []).find((p) => free(p) && same(p.firstName, first) && same(p.lastName, last) && same(p.nickname, nick)) || null;
       if (!pick && !nick) {
         const legacy = s.past.filter((p) => free(p) && same(p.firstName, first) && !p.lastName);
         if (legacy.length === 1) pick = legacy[0];

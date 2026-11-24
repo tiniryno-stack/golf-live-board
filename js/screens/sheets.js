@@ -5,7 +5,7 @@
 import { esc, icon, scoreClass, clock, mark, seg, syncMotion } from '../ui.js';
 import { fmtToPar, fmtPts, fmtSigned, maxHoleScore, componentNames, posOf, holeAt, holesLabel, matchesFor, playOrder, teeTimeName, groupIndex, allAtOnce } from '../scoring.js';
 import { teamColor, headlineColor, shortTeam } from '../teams.js';
-import { codeField } from './home.js';
+import { codeField, homeReturn } from './home.js';
 import { handicapSheet, teamNameSheet } from './setup.js';
 import { crewSheets } from './crew.js';
 import { seasonSheets } from './season.js';
@@ -14,9 +14,9 @@ import { GEO_ATTRIBUTION } from '../geoload.js';
 import { ryderMatchSheet } from './ryder.js';
 import { startTimeName } from '../lobby.js';
 import { enterSheets, beginTurn } from './enter.js';
-import { owner as phoneOwner } from '../db.js';
+import { owner as phoneOwner, recent as phoneRecent, me as phoneMe, fetchRosters } from '../db.js';
 import { fullName } from '../names.js';
-import { whoGroups } from '../identity.js';
+import { whoGroups, phonePeople } from '../identity.js';
 import { lobbySheets } from './hostlobby.js';
 import { lockerSheets } from './locker.js';
 
@@ -277,6 +277,47 @@ const BODIES = {
   join() {
     return `${head('Join a round', 'The code is in the group text')}
       <div class="sheet-join">${codeField()}</div>`;
+  },
+
+  /** Nov 24: the link opened in Safari on a phone that has Golf Board. The spot stays free for the app to take. */
+  'open-app'(app, { pid }) {
+    const p = (app.event?.roster?.players || []).find((x) => x.id === pid);
+    const round = app.event?.name || 'This round';
+    return `${head('Open Golf Board', 'You have it on your home screen')}
+      <ol class="hs-steps">
+        <li><span class="hs-n">1</span><span>Go to your home screen</span></li>
+        <li><span class="hs-n">2</span><span>Tap <b>Golf Board</b></span></li>
+        <li><span class="hs-n">3</span><span><b>${esc(round)}</b> is waiting there${p ? ` as <b>${esc(p.name)}</b>` : ''}</span></li>
+      </ol>
+      <p class="meta" style="margin:4px 0 14px">Links always open in Safari. Your scores, locker and rounds live in the app.</p>
+      <button class="btn ghost block" data-act="oa-here" data-v="${esc(pid || '')}">Stay in Safari instead</button>`;
+  },
+
+  /** Nov 24 · Home → your name: who this phone is (the owner), with the fix one tap away. */
+  'home-me'(app) {
+    const o = phoneOwner.get();
+    const hp = app.ui.homePeople;
+    if (!hp) {
+      app.ui.homePeople = { list: null };
+      const recentCodes = phoneRecent.all().map((r) => r.code);
+      const mine = Object.fromEntries(recentCodes.map((c) => [c, phoneMe.get(c)]).filter((x) => x[1]));
+      fetchRosters(recentCodes).then((rows) => { app.ui.homePeople = { list: phonePeople(rows, mine) }; app.render(); })
+        .catch(() => { app.ui.homePeople = { list: [], offline: true }; app.render(); });
+    }
+    const list = app.ui.homePeople?.list;
+    const pick = list == null ? '<p class="meta">Finding the names from your rounds…</p>'
+      : !list.length ? `<p class="meta">${app.ui.homePeople.offline ? 'No signal. Try again in a moment.' : 'No names yet. You’ll pick yours when you open a round.'}</p>`
+        : `<div class="who-grid one">${list.filter((p) => p.personId !== o?.personId).slice(0, 12)
+          .map((p) => `<button class="who-btn" data-act="home-me-pick" data-v="${esc(p.personId)}" data-n="${esc(p.name)}"><span class="ellipsis">${esc(p.name)}</span></button>`).join('')}</div>`;
+    if (o) {
+      return `${head(`You’re ${o.name || 'set'} on this phone`, 'Your rounds, locker and crew follow this name')}
+        <div class="lbl who-tee-h">Not you? Tap your name</div>
+        ${pick}
+        <button class="btn ghost block" data-act="home-me-clear" style="margin-top:12px">I’m not ${esc(o.name || 'them')}</button>`;
+    }
+    return `${head('Who are you?', 'So this phone opens your rounds and your locker')}
+      ${pick}
+      <button class="btn ghost block" data-act="sheet-close" style="margin-top:12px">Not now</button>`;
   },
 
   homescreen(app, { round } = {}) {
@@ -653,6 +694,21 @@ export const actions = {
   'me-yes': (el, ev, app) => app.confirmMe(),
   'me-again': (el, ev, app) => app.notMe(),
   'not-me': (el, ev, app) => app.notMe(),
+  'oa-here': (el, ev, app) => app.stayInSafari(el.dataset.v || null), // Nov 24
+  'home-me-pick': (el, ev, app) => {
+    phoneOwner.set(el.dataset.v, el.dataset.n);
+    app.ui.homePeople = null;
+    app.closeSheet();
+    homeReturn(); // look for this person's rounds now
+    app.toast({ title: `You’re ${el.dataset.n} on this phone`, sub: 'Your rounds and locker follow.' });
+  },
+  'home-me-clear': (el, ev, app) => {
+    const n = phoneOwner.get()?.name;
+    phoneOwner.clear();
+    app.ui.homePeople = null;
+    app.closeSheet();
+    app.toast({ title: n ? `This phone isn’t ${n} any more` : 'Cleared', sub: 'You’ll pick your name in your next round.' });
+  },
   'who-back': (el, ev, app) => {
     app.waiting = null;
     app.refreshClaimed();

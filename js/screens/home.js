@@ -10,6 +10,7 @@ import { recent, normCode, STANDALONE, moveLink, syncMyRounds, pruneGoneRounds, 
 import { lobbyState, homeCard } from '../lobby.js';
 import { homeCrew } from './crew.js';
 import { homeLocker, startHomeLocker } from './locker.js';
+import { whatsNew } from '../whatsnew.js';
 import { fmtPts, fmtToPar, playerLeaderboard } from '../scoring.js';
 
 /** iPhone or iPad in Safari (iPadOS says it's a Mac, but has touch). Tests set `__GLB_IOS`. */
@@ -104,10 +105,26 @@ export function roundSummary(app) {
 }
 
 /** Home's top bar, left side: your name from the newest round you joined (nothing on a new phone). */
+/** Your name at the top (Nov 24: a button → who this phone is, with a one-tap fix). The owner's name first. */
 function header(rounds) {
-  const name = rounds.find((r) => r.myName)?.myName;
-  if (!name) return '<div class="spacer"></div>';
-  return `<div class="home-me"><span class="avatar">${esc(initials(name))}</span><span class="hm-name">${esc(name)}</span></div>`;
+  const name = owner.get()?.name || (owner.get() ? '' : rounds.find((r) => r.myName)?.myName);
+  if (!name) {
+    return rounds.length ? '<button class="home-me" data-act="home-me"><span class="hm-name">Who are you?</span></button>' : '<div class="spacer"></div>';
+  }
+  return `<button class="home-me" data-act="home-me" aria-label="You’re ${esc(name)}. Not you?"><span class="avatar">${esc(initials(name))}</span><span class="hm-name">${esc(name)}</span></button>`;
+}
+
+/** Nov 24 · the one-time What's new card (js/whatsnew.js): a plain card, Home only, so never over a sheet or Enter. */
+function newsCard(hasRounds) {
+  const w = whatsNew({ seen: local.get('glb.seen.whatsnew'), hasRounds });
+  if (w.markSeen) local.set('glb.seen.whatsnew', w.markSeen);
+  if (!w.show) return '';
+  return `<div class="card lb-card lb-home" role="status">
+      <span class="lbl">What’s new</span>
+      <b class="lb-name">${esc(w.show.title)}</b>
+      ${w.show.lines.map((l) => `<span class="soft lb-line">${esc(l)}</span>`).join('')}
+      <button class="btn block lb-cbtn" data-act="home-news" data-v="${esc(w.show.id)}">Got it</button>
+    </div>`;
 }
 
 function liveCard(r) {
@@ -156,15 +173,19 @@ function codeField() {
 
 // The Home header: the mark (feature 020, L2 lockup: ring centered on the capitals, 10px gap).
 const TITLE = `<h1 class="ts-title home-title"><span class="home-mark" aria-hidden="true"><img class="mk-dark" src="img/mark-dark.svg" alt="" width="30" height="30"><img class="mk-light" src="img/mark-light.svg" alt="" width="30" height="30"></span>Golf Live Board</h1>`;
-let synced = false;
+// Nov 24: Home looks for your rounds every time it shows up again (not once per page load): a home screen app resumed
+// from the background now finds the round its owner was just added to. At most once a minute; a return resets it.
+let syncedAt = 0;
+export function homeReturn() { syncedAt = 0; }
 
 export default {
   topLeft: () => header(recent.all()),
 
   render(app) {
     // Once per open: pull in your rounds this phone has never seen (new phone / home screen app).
-    if (!synced) {
-      synced = true;
+    if (Date.now() - syncedAt > 60000) {
+      syncedAt = Date.now();
+      app.checkVersion?.(); // and a newer version, now that nothing is at stake (app.js decides)
       syncMyRounds().then((n) => { if (n) app.render(); }).catch(() => { /* offline: next open */ });
       pruneGoneRounds().then((n) => { if (n) app.render(); }).catch(() => { /* offline: next open */ }); // deleted rounds leave Recent
       refreshLobbies(clock.now()).then((n) => { if (n) app.render(); }).catch(() => { /* offline: next open */ }); // 025
@@ -184,6 +205,7 @@ export default {
           <span class="hr-chev">${icon('fwd', 20)}</span></button>` : ''}
 `;
     if (!rounds.length) {
+      newsCard(false); // a brand-new phone: nothing is news, mark it seen
       return `<div class="plain home">
         ${TITLE}
         ${empty({ icon: 'flag', headline: 'No rounds yet', help: 'Start one and text the code to your group, or join a round a friend started.' })}
@@ -194,6 +216,7 @@ export default {
     }
     return `<div class="plain home">
       ${TITLE}
+      ${newsCard(true)}
       ${live ? liveCard(live) : ''}
       ${coming.length ? `<div class="ts-label home-k">Coming up</div>${coming.map(comingCard).join('')}` : ''}
       ${lk.packs}${season}
@@ -217,6 +240,8 @@ export default {
       app.openSheet('homescreen', {});
     },
     'home-joinsheet': (el, ev, app) => app.openSheet('join', {}),
+    'home-news': (el, ev, app) => { local.set('glb.seen.whatsnew', el.dataset.v); app.render(); },
+    'home-me': (el, ev, app) => { app.ui.homePeople = null; app.openSheet('home-me', {}); },
     'home-text': async (el, ev, app) => {
       const text = `Hi ${el.dataset.v}, about ${el.dataset.r}: `;
       if (navigator.share) { try { await navigator.share({ text }); } catch { /* cancelled */ } return; }

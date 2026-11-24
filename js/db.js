@@ -336,6 +336,7 @@ export const owner = {
  * every event whose roster has the owner (024: only the owner; glb.people while there's no owner yet).
  * Added to Recent rounds in date order, newest first. Returns how many were added.
  */
+export let lastSynced = [];
 export async function syncMyRounds() {
   const o = owner.get();
   const ids = o ? [o.personId] : people.all();
@@ -355,6 +356,7 @@ export async function syncMyRounds() {
   }));
   const list = [...recent.all(), ...rows].sort((a, b) => (b.at || 0) - (a.at || 0));
   local.set('glb.recent', list.slice(0, 12));
+  lastSynced = rows; // Nov 24: a resumed app away from Home toasts the newest one
   return rows.length;
 }
 
@@ -528,6 +530,8 @@ export const api = {
     if (res?.now) clock.learn(res.now);
     return res;
   },
+  // Nov 24: has this person opened a round in the home screen app? Safari asks before it claims their spot.
+  personHasApp: (personId) => rpc('person_has_app', { p_person_id: personId }),
   lobbyStatus: (code, pin) => rpc('lobby_status', { p_code: code, p_admin_pin: pin }),
   lobbyCounts: (code) => rpc('lobby_counts', { p_code: code }),
   setRoundDate: (code, pin, date, opensAt = null) => rpc('set_round_date', { p_code: code, p_admin_pin: pin, p_date: date, p_opens_at: opensAt }),
@@ -583,6 +587,8 @@ const qKey = (code) => `glb.queue.${code}`;
 export const queue = {
   items: (code) => local.get(qKey(code), []),
   count: (code) => queue.items(code).length,
+  /** Nov 24: unsent scores in any round on this phone (the update check never reloads over them). */
+  any: () => { try { return local.keys().some((k) => k.startsWith('glb.queue.') && (local.get(k, []) || []).length > 0); } catch { return false; } },
   has: (code, playerId, hole) => queue.items(code).some((i) => i.playerId === playerId && i.hole === hole),
   value: (code, playerId, hole) => queue.items(code).find((i) => i.playerId === playerId && i.hole === hole),
   put(code, item) {
