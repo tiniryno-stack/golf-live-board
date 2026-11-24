@@ -1081,6 +1081,13 @@ Still open: nothing blocking. Design direction (section 9) is final.
   players, older Board rows) and Season standings open that passport (`ppName`); the player sheet and the You sheet have a
   passport button. Share images `js/screens/share036.js` (canvas; card + stamps, holder + courses). Styles all in
   `css/locker.css` (pack class names prefixed `bp-` where the app already had `.mk/.pill/.face/.body/.spark`).
+  **Revised Nov 24 with Andrew (reveal-options page):** the top strip is one piece, hinged at its far end, lifting from
+  where you started with a dark gap under it, then it flies off; 035's wait is back (`PLAN` in `pack.js`: the card rises
+  white-hot, pulses quicken, better cards wait longer, prismatic adds a dark beat, the last pulse in the finish's colour);
+  the reveal ladder replaces the rays and sparks: prismatic = two pearl rings + a pearl wash + a pop (soft pink / lilac /
+  aqua / warm gold, no rainbow bands), gold = two gold rings + a gold haze + a pop, silver = one ring + a faint haze + a
+  glint, bronze = one faint ring, standard / rookie just land. Tilt: iPhone asks once; later page loads re-ask silently on
+  the first tap. Preview copy only: "Test as Andrew" on Home (`glb.previewAs`) and practice packs (nothing saved).
 
 ## 13. V2 backlog (running list)
 
