@@ -384,17 +384,17 @@ canvas.x-px { image-rendering: pixelated; object-fit: cover; }
   <header class="x-intro">
     <div class="x-k">036 · round 3 · nothing here is in the app</div>
     <h1>The picture as part of the card</h1>
-    <p>Same card A, same 87. Three ways the art stops being a box: across the top, fading into the metal, or covering the whole card. Pick the art style and the finish in the bar.</p>
+    <p>Same card A, same 87. Three ways the art stops being a box: across the top, fading into the metal, or covering the whole card. Pick the art style and the finish in the bar. New: the Inks row recolors the Two-ink print.</p>
     <p>The picture is still a made-up hole drawn in code. It is not a photo of Twin Creeks.</p>
   </header>
-  <div class="x-bar" style="display:flex;flex-direction:column;gap:8px"><div class="x-row" id="arts"><span>Art</span></div><div class="x-row" id="fins"><span>Finish</span></div></div>
+  <div class="x-bar" style="display:flex;flex-direction:column;gap:8px"><div class="x-row" id="arts"><span>Art</span></div><div class="x-row" id="inks"><span>Inks</span></div><div class="x-row" id="fins"><span>Finish</span></div></div>
   <main id="out" style="display:flex;flex-direction:column;gap:52px"></main>
 </div>
 
 <script>
 const MARK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="2.6" fill="currentColor" stroke="none"/></svg>';
 const FIN = { gold: 'Gold', prismatic: 'Prismatic', silver: 'Silver', bronze: 'Bronze', standard: 'Standard' };
-const state = { fin: 'gold' };
+const state = { fin: 'gold', ink: 'coral' };
 const sum = (a) => a.reduce((x, y) => x + y, 0);
 const kind = (s, p) => { const d = s - p; return d <= -2 ? 'e' : d === -1 ? 'u' : d === 0 ? 'p' : d === 1 ? 'b' : 'd'; };
 /* Andrew's real round, Twin Creeks, Nov 20 (read from the live database, read-only). */
@@ -421,14 +421,30 @@ const STY = {
     c: { sun: '#fbf3df', cloud: '#f6cfae', hill1: '#8b9cbc', hill2: '#506d90', tree0: '#1b2c48', tree1: '#2b4c60', tree2: '#4b7a70', trunk: '#161c2c', roughFar: '#86ad90', rough: '#4a7a6c', fair: '#aecb9c', stripe: '#c0d8aa', fringe: '#79aa88', green: '#dbe7b2', sand: '#f1e4c8', sandLite: '#fbf3df', water: '#33608f', waterLite: '#b3cde0', bank: '#1b2c48', rock: '#ddd5c2', flag: '#c8442f', pole: '#161c2c', fg: '#132038', flower: '#f0a680', shade: '#1b2c48' } },
   night: { sky: ['#0b1120', '#15223a', '#22365a'], sunKind: 'moon',
     c: { sun: '#e8ecf2', cloud: '#22304c', hill1: '#1a2a40', hill2: '#132234', tree0: '#081214', tree1: '#0f201e', tree2: '#1b362e', trunk: '#05090b', roughFar: '#17352a', rough: '#0f2820', fair: '#1e4a35', stripe: '#27593f', fringe: '#2a6644', green: '#3f8a55', sand: '#b9aa80', sandLite: '#d8cba2', water: '#1d3b62', waterLite: '#7fa0cc', bank: '#070c10', rock: '#58626e', flag: '#ff6b6b', pole: '#e8ecf2', fg: '#04080a', flower: '#8090e4', shade: '#04080a' } },
-  riso: { sky: [mix(paperB, coral, .42), mix(paperB, coral, .2), paperB], sunKind: 'plain', grain: .8, dots: true,
-    c: { sun: paperB, cloud: paperB, hill1: mix(paperB, blue, .22), hill2: mix(paperB, blue, .45), tree0: blue, tree1: mix(blue, coral, .32), tree2: mix(paperB, coral, .8), trunk: '#16246e', roughFar: mix(paperB, blue, .2), rough: mix(paperB, blue, .36), fair: mix(paperB, coral, .3), stripe: mix(paperB, coral, .44), fringe: mix(paperB, blue, .5), green: mix(paperB, coral, .78), sand: paperB, sandLite: paperB, water: mix(paperB, blue, .7), waterLite: paperB, bank: blue, rock: paperB, flag: coral, pole: '#16246e', fg: '#16246e', flower: coral, shade: blue } },
   etch: { sunKind: 'rays', line: INK, lw: .9, hatch: { sky: 'h', hill2: 'd', tree0: 'x', tree1: 'd', water: 'h', fringe: 'd', rough: 'p', sand: 'p', shade: 'h' },
     c: { sky: FLAT, sun: FLAT, cloud: FLAT, hill1: FLAT, hill2: FLAT, tree0: FLAT, tree1: FLAT, tree2: FLAT, trunk: INK, roughFar: FLAT, rough: FLAT, fair: FLAT, stripe: 'none', fringe: FLAT, green: FLAT, sand: FLAT, sandLite: 'none', water: FLAT, waterLite: 'none', bank: INK, rock: FLAT, flag: INK, pole: INK, fg: INK, flower: FLAT, shade: 'none' } },
 };
+/* two-ink print: any paper + a dark ink + a bright ink. Every color in the picture is one of the inks, a tint of it, or the two overprinted. */
+const INKS = {
+  coral: ['Blue + coral', '#f3ecdc', '#2440c8', '#ff5a4a'],
+  forest: ['Green + marigold', '#f3ecd6', '#1d5c45', '#f0a316'],
+  dusk: ['Purple + orange', '#f6eadb', '#55288a', '#ff7a1a'],
+  teal: ['Teal + pink', '#efeadd', '#0d6b78', '#ff4f8b'],
+  press: ['Black + red', '#efe8da', '#232326', '#e0342a'],
+  night: ['Night paper', '#10141c', '#86a4ff', '#ff8f6e', '#f3ecdc'],
+  finish: ['Match the finish'],
+};
+const FIN_INK = { gold: ['#f6efdc', '#3a2a08', '#c9981f'], silver: ['#f1f2f3', '#2a3038', '#8a95a3'], bronze: ['#f4ebe0', '#3d1f0c', '#b5672f'], prismatic: ['#f4f2f8', '#4b3fd1', '#ff5fa8'], standard: ['#e9eaec', '#1c1f24', '#6b7480'] };
+function risoSty() {
+  const [paper, a, b, hi0] = state.ink === 'finish' ? FIN_INK[state.fin] : INKS[state.ink].slice(1);
+  const hi = hi0 || paper, dark = hi0 ? mix(a, paper, .78) : mix(a, '#000000', .42), tA = (x) => mix(paper, a, x), tB = (x) => mix(paper, b, x);
+  return { paper, sky: [tB(.42), tB(.2), paper], sunKind: 'plain', grain: hi0 ? 0 : .8, dots: true,
+    c: { sun: hi, cloud: hi0 ? tA(.3) : paper, hill1: tA(.22), hill2: tA(.45), tree0: hi0 ? tA(.55) : a, tree1: mix(hi0 ? tA(.55) : a, b, .32), tree2: tB(.8), trunk: dark, roughFar: tA(.2), rough: tA(.36), fair: tB(.3), stripe: tB(.44), fringe: tA(.5), green: tB(.78), sand: hi0 ? tB(.5) : paper, sandLite: hi0 ? tB(.7) : paper, water: tA(.7), waterLite: hi, bank: hi0 ? dark : a, rock: hi0 ? tA(.6) : paper, flag: b, pole: hi0 ? hi : dark, fg: dark, flower: b, shade: hi0 ? dark : a },
+    num: hi0 ? hi : dark };
+}
 let uid = 0;
 function scene(styleId, { grain = true, vb = '0 0 600 250' } = {}) {
-  const T = STY[styleId], id = 'g' + (++uid), r = rng(11), o = [];
+  const T = styleId === 'riso' ? risoSty() : STY[styleId], id = 'g' + (++uid), r = rng(11), o = [];
   const st = (fill, stroke, w, extra = '') => `style="fill:${fill};${stroke ? `stroke:${stroke};stroke-width:${w};stroke-linejoin:round;stroke-linecap:round` : ''}${extra}"`;
   const hatch = (d, key) => (T.hatch && T.hatch[key] ? `<path d="${d}" style="fill:url(#${id}${T.hatch[key]})"/>` : '');
   /* one outlined shape */
@@ -484,7 +500,7 @@ function scene(styleId, { grain = true, vb = '0 0 600 250' } = {}) {
   const defs = `<defs>
     ${T.sky ? `<linearGradient id="${id}sky" x1="0" y1="0" x2="0" y2="1">${T.sky.map((c, i) => `<stop offset="${f1(i / (T.sky.length - 1) * .5)}" stop-color="${c}"/>`).join('')}</linearGradient>` : ''}
     ${T.bokashi ? `<linearGradient id="${id}bk" x1="0" y1="0" x2="0" y2="1"><stop offset=".62" stop-color="${T.bokashi}" stop-opacity="0"/><stop offset="1" stop-color="${T.bokashi}" stop-opacity=".5"/></linearGradient>` : ''}
-    ${T.dots ? `<pattern id="${id}ht" width="3.2" height="3.2" patternUnits="userSpaceOnUse" patternTransform="rotate(28)"><circle cx="1.6" cy="1.6" r=".62" fill="${paperB}"/></pattern>` : ''}
+    ${T.dots ? `<pattern id="${id}ht" width="3.2" height="3.2" patternUnits="userSpaceOnUse" patternTransform="rotate(28)"><circle cx="1.6" cy="1.6" r=".62" fill="${T.paper}"/></pattern>` : ''}
     ${T.grain ? `<filter id="${id}gr" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" seed="4"/><feColorMatrix values="0 0 0 0 .3  0 0 0 0 .26  0 0 0 0 .2  0 0 0 .55 -.1"/></filter>` : ''}
     ${T.hatch ? `<pattern id="${id}h" width="8" height="3.4" patternUnits="userSpaceOnUse"><path d="M0 1.7H8" style="stroke:${INK};stroke-width:.5;opacity:.6"/></pattern>
       <pattern id="${id}d" width="3.6" height="3.6" patternUnits="userSpaceOnUse" patternTransform="rotate(-38)"><path d="M0 1.8H3.6" style="stroke:${INK};stroke-width:.55"/></pattern>
@@ -561,7 +577,7 @@ const body = () => `<div class="x-tbody"><div class="x-trow"><div class="x-gross
 const cardTop = () => `<div class="lk-mat">${layers}<div class="x-tart line">${art('top')}<i class="x-gl"></i></div><span class="x-tag l">${C.stamps[0]}</span>${finTag('r')}${body()}</div>`;
 const cardFade = () => `<div class="lk-mat">${layers}<div class="x-tart fade">${art('fade')}</div>${finTag('r')}${body()}</div>`;
 const cardFull = () => `<div class="lk-mat">${layers}<div class="x-fart">${art('full')}<i class="x-gl"></i></div>
-  <div class="x-fhead" style="color:${NUM[state.art]}"><div class="x-gross">${C.gross}</div><div><div class="x-course">${C.course}</div><div class="x-sub">${C.toPar} · ${C.day}</div></div></div>
+  <div class="x-fhead" style="color:${state.art === 'riso' ? risoSty().num : NUM[state.art]}"><div class="x-gross">${C.gross}</div><div><div class="x-course">${C.course}</div><div class="x-sub">${C.toPar} · ${C.day}</div></div></div>
   ${finTag('r')}<span class="x-tag r2">${C.name} · No. ${C.n}</span>
   <div class="x-plate"><i class="lk-holo"></i><i class="lk-facet"></i><div class="x-sc">${nine(0)}${nine(9)}</div></div></div>`;
 const slot = (inner) => `<div class="lk-slot lkf-${state.fin} x-land"><div class="lk-tilt"><div class="lk-flip"><div class="lk-face lk-front">${inner}</div></div></div></div>`;
@@ -580,10 +596,10 @@ function start() {
     for (const [id, name] of Object.entries(map)) {
       const b = document.createElement('button');
       b.className = 'x-chip'; b.id = key + '-' + id; b.textContent = name; b.setAttribute('aria-pressed', String(state[key] === id));
-      b.onclick = () => { state[key] = id; host.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); render(); };
+      b.onclick = () => { state[key] = id; if (key === 'ink') state.art = 'riso'; document.querySelectorAll('.x-chip').forEach((x) => { const [k, v] = x.id.split('-'); x.setAttribute('aria-pressed', String(state[k] === v)); }); render(); };
       host.appendChild(b);
     } };
-  mk('arts', ARTS, 'art'); mk('fins', FIN, 'fin');
+  mk('arts', ARTS, 'art'); mk('inks', Object.fromEntries(Object.entries(INKS).map(([k, v]) => [k, v[0]])), 'ink'); mk('fins', FIN, 'fin');
   render();
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   const page = document.getElementById('page');
