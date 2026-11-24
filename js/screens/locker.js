@@ -234,7 +234,7 @@ function openPack(app, card, { replay = false } = {}) {
 
 const car = { track: null, slots: [], centers: [], half: 0, step: 1, active: 0, raf: 0, touching: false, until: 0, missed: false, settle: 0 };
 const ptr = { on: false, x: 0, y: 0 };
-const gy = { on: false, x: 0, y: 0, b0: null, g0: null, listening: false };
+const gy = { on: false, asked: false, x: 0, y: 0, b0: null, g0: null, listening: false };
 const sm = { x: 0, y: 0 };
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const hasTilt = () => typeof window !== 'undefined' && 'DeviceOrientationEvent' in window
@@ -339,9 +339,21 @@ function windowOnce() {
   window.addEventListener('touchcancel', off, { passive: true });
   window.addEventListener('pointerup', (e) => { if (e.pointerType !== 'mouse') ptr.on = false; off(); });
   window.addEventListener('pointercancel', () => { ptr.on = false; off(); });
-  // Phone tilt: Android sends it without asking; iPhone needs the button once (remembered in glb.lockerTilt).
+  // Phone tilt: Android sends it without asking. iPhone asks once (the button; the yes is kept in glb.lockerTilt),
+  // but every page load must ask again inside a tap before it sends anything. Once allowed, that re-ask is silent
+  // (no prompt), so it rides on the first tap anywhere and the button never comes back.
   const D = window.DeviceOrientationEvent;
-  if (hasTilt() && D && (typeof D.requestPermission !== 'function' || db.local.get('glb.lockerTilt'))) listenTilt();
+  if (!hasTilt() || !D) return;
+  if (typeof D.requestPermission !== 'function') { listenTilt(); return; }
+  if (db.local.get('glb.lockerTilt')) {
+    gy.asked = true;
+    const again = () => {
+      D.requestPermission().then((r) => { if (r === 'granted') { listenTilt(); off2(); } }).catch(() => {});
+    };
+    const off2 = () => { window.removeEventListener('touchend', again, true); window.removeEventListener('click', again, true); };
+    window.addEventListener('touchend', again, true);
+    window.addEventListener('click', again, true);
+  }
 }
 /** A redraw held while the carousel moved runs once it has settled. */
 function settleLater() {
@@ -397,12 +409,13 @@ function oneView(app, opened, readOnly) {
   const lk = app.ui.lk;
   const land = lk.land && Date.now() - lk.landAt < 900 ? lk.land : null;
   const slots = opened.map((c, i) => slotHtml(c, { i, flipped: lk.flip === c.key, extra: land === c.key ? ' land' : '' })).join('');
-  const tilt = hasTilt() && !gy.on && typeof window.DeviceOrientationEvent?.requestPermission === 'function';
+  // The button only until this phone has said yes once (glb.lockerTilt); after that the re-ask is silent (windowOnce).
+  const tilt = hasTilt() && !gy.on && !gy.asked && !db.local.get('glb.lockerTilt') && typeof window.DeviceOrientationEvent?.requestPermission === 'function';
   return `<div class="lk-one">
     <div class="lk-stage"><div class="lk-track">${slots}</div></div>
     <div class="lk-cap" aria-live="polite"></div>
     <div class="lk-foot"><span class="ts-label lk-pos"></span>
-      <span class="lk-mid"><button class="pill lk-tiltbtn" data-act="lk-tilt"${tilt ? '' : ' hidden'}>Turn on tilt</button><span class="ts-small lk-soft lk-hint"${tilt ? ' hidden' : ''}>${gy.on ? 'Tilt your phone · tap to flip' : 'Tap the card to flip it'}</span></span>
+      <span class="lk-mid"><button class="pill lk-tiltbtn" data-act="lk-tilt"${tilt ? '' : ' hidden'}>Turn on tilt</button><span class="ts-small lk-soft lk-hint"${tilt ? ' hidden' : ''}>${gy.on || gy.asked ? 'Tilt your phone · tap to flip' : 'Tap the card to flip it'}</span></span>
       ${readOnly ? '<span></span>' : `<span class="lk-acts"><button class="icon-btn" data-act="lk-share" aria-label="Share this card">${icon('share', 20)}</button><button class="btn small" data-act="lk-rip">${icon('redo', 18)} Rip again</button></span>`}</div>
   </div>`;
 }
@@ -692,7 +705,14 @@ export default {
       const fail = () => { el.hidden = true; const h = document.querySelector('.lk-hint'); if (h) h.hidden = false; };
       if (typeof D?.requestPermission !== 'function') { listenTilt(); return; }
       D.requestPermission().then((r) => {
-        if (r === 'granted') { db.local.set('glb.lockerTilt', true); listenTilt(); } else fail();
+        if (r === 'granted') {
+          db.local.set('glb.lockerTilt', true);
+          gy.asked = true;
+          listenTilt();
+          el.hidden = true; // moves on at once, without waiting for the first tilt reading
+          const h = document.querySelector('.lk-hint');
+          if (h) { h.hidden = false; h.textContent = 'Tilt your phone · tap to flip'; }
+        } else fail();
       }).catch(fail);
     },
     'lk-how': (el, ev, app) => app.openSheet('lockerHow', {}),
