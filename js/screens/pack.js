@@ -33,8 +33,8 @@ export function chromePack(pattern = PACK_PATTERN, { cue = false } = {}) {
   const lay = (LAYERS[pattern] || LAYERS.fine) + '<i class="refract"></i>';
   const top = `${lay}<i class="sheen"></i>`;
   return `<div class="bp chrome${pattern === 'sapphire' ? ' sapphire' : ''}"><div class="topw"><div class="top base">${top}</div><div class="top cutp">${top}</div></div>
-    <div class="body">${lay}<div class="face"><div class="k">Scorecards · Series 1</div><span class="mk">${GLB}</span><div class="wm">Golf Live<br>Board<small>2026 Edition</small></div><span class="pill">1 Card</span></div><i class="sheen"></i></div>
-    ${cue ? '<i class="slit"></i><i class="spark"></i><i class="cue"></i><span class="cue-chip">Swipe to open</span>' : ''}</div>`;
+    <div class="bp-body">${lay}<div class="bp-face"><div class="k">Scorecards · Series 1</div><span class="bp-mk">${GLB}</span><div class="wm">Golf Live<br>Board<small>2026 Edition</small></div><span class="bp-pill">1 Card</span></div><i class="sheen"></i></div>
+    ${cue ? '<i class="slit"></i><i class="bp-spark"></i><i class="cue"></i><span class="cue-chip">Swipe to open</span>' : ''}</div>`;
 }
 
 /**

@@ -28,11 +28,13 @@ function placeHead(kicker, right, pl) {
     ${pl.place ? `<div class="p31-place"><span class="ts-title${/^(1st|T1)$/.test(pl.place) ? ' you' : ''}">${esc(pl.place)}</span><span>${esc(pl.detail)}</span></div>` : ''}`;
 }
 
+let APP = null; // set by board031 / matches031, so every table's names can open that person's passport (036)
+
 /** A table card: cols = [{ label, cls }] after Pos + Player; rows = [{ pos, name, cells: [html], me, lit, out, pid }]. */
 function table(cols, rows, { cls = '', cut = -1, cutLabel = 'Out of reach' } = {}) {
   const head = `<div class="p31-tr p31-th ts-label"><span></span><span>Player</span>${cols.map((c) => `<span>${esc(c)}</span>`).join('')}</div>`;
   const body = rows.map((r, i) => `${i === cut ? `<div class="p31-cut ts-label">${esc(cutLabel)}</div>` : ''}<button class="p31-tr${r.me ? ' me' : ''}${r.lit ? ' lit' : ''}${r.out ? ' out' : ''}"${r.pid ? ` data-act="board-player" data-v="${esc(r.pid)}"` : ' tabindex="-1"'}>
-      <span class="p31-pos mono">${esc(r.pos)}</span><b class="ellipsis">${ppName(r.person, esc(r.name))}</b>${r.cells.join('')}</button>`).join('');
+      <span class="p31-pos mono">${esc(r.pos)}</span><b class="ellipsis">${ppName(r.person ?? personOf(APP, r.pid), esc(r.name))}</b>${r.cells.join('')}</button>`).join('');
   return `<div class="p31-tab ${cls}" style="--cols:${cols.length}">${head}${body}</div>`;
 }
 const cell = (v, strong = false) => `<span class="mono${strong ? ' v' : ''}">${v}</span>`;
@@ -118,6 +120,7 @@ const segs = (app, first) => {
 // ───────────────────────────────────────────── Board
 
 export function board031(app, view, { final = '' } = {}) {
+  APP = app;
   const snap = app.snapshot;
   const g = snap.game;
   const left = HOLES - snap.officialThrough;
@@ -362,6 +365,7 @@ function matchesGroup(app) {
 }
 
 export function matches031(app, view) {
+  APP = app;
   if (view === 'alone') return matchesRace(app);
   if (view === 'stroke') return matchesGroup(app);
   if (view === 'partners' || view === 'oneMatch' || (view === 'cart' && app.snapshot.game.type !== 'rotationPlusMinus')) return matchesMatch(app, view);

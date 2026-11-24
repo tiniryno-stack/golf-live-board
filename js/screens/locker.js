@@ -559,7 +559,7 @@ export default {
     const lk = ensureUi(app);
     const id = shownId(app);
     if (lk.person !== id) { lk.person = id; lk.key = null; lk.flip = null; app.ui.pp.pg = app.route.tab === 'passport' ? 1 : 0; if (app.route.mode === 'view') lk.view = 'one'; }
-    if (app.route.tab) lk.tab = app.route.tab; // #/passport opens the book (on the holder page); #/locker the cards
+    if (app.route.tab) { lk.tab = app.route.tab; app.ui.pp.pg = 1; } // #/passport opens the book on the holder page
     if (/^#\/locker\/p\//.test(location.hash)) history.replaceState(null, '', `#/passport/${encodeURIComponent(id)}`); // 035 link → 036
     if (app.route.mode === 'admin') loadAdmin(app);
     else if (id) loadLocker(app, id);
