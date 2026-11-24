@@ -1,5 +1,5 @@
 {
- "v": "20261122002312",
+ "v": "20261124193300",
  "files": [
   "css/locker.css",
   "css/styles.css",
@@ -40,16 +40,20 @@
   "js/screens/locker.js",
   "js/screens/matches.js",
   "js/screens/pack.js",
+  "js/screens/passport.js",
   "js/screens/play031.js",
   "js/screens/recap.js",
   "js/screens/ryder.js",
   "js/screens/season.js",
   "js/screens/setup.js",
+  "js/screens/share036.js",
   "js/screens/sheets.js",
   "js/screens/toasts.js",
   "js/screens/todaysgame.js",
   "js/seasons.js",
   "js/sim.js",
+  "js/stamps-data.js",
+  "js/stamps.js",
   "js/teams.js",
   "js/todaysgame.js",
   "js/ui.js"

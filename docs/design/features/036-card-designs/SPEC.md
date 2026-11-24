@@ -1,6 +1,6 @@
 # 036 · Landscape cards, chrome packs, the Passport and course stamps
 
-Status: approved by Andrew Nov 24, 2026 for an overnight build. Not built yet.
+Status: built in baab314 (branch claude/zen-cerf-q426dq; approved by Andrew Nov 24, 2026).
 
 Changes 035 (`docs/design/features/035-scorecard-locker/`, live on `main`). 035 is not edited; where this SPEC and 035
 disagree, this SPEC wins. Everything in 035 that this SPEC does not mention stays as it is: the grading rules (launch
