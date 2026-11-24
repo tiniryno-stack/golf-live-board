@@ -591,13 +591,16 @@ canvas.x-px { image-rendering: pixelated; object-fit: cover; }
 .cb-pl i { font: 600 2.2cqw/1 var(--font-mono); font-style: normal; color: var(--m-soft); width: 4.4cqw; flex: none; }
 .cb-pl span { flex: 1; }
 .cb-dots { font: 700 3cqw/1 var(--font-mono); color: var(--m-soft); letter-spacing: .6cqw; padding: .6cqw 0; }
+.cb-sm .cb-pl { font-size: 2.7cqw; padding: .82cqw 0; } .cb-sm .cb-pl b { font-size: 2.9cqw; }
+.cb-sm .cb-dots { font-size: 2.4cqw; padding: .3cqw 0 .3cqw 4.4cqw; }
+.cb-pl.tm span::after { content: "●"; font-size: 1.5cqw; padding-left: 1.2cqw; vertical-align: .3cqw; color: var(--m-soft); }
 </style>
 
 <div class="x-page" id="page">
   <header class="x-intro">
     <div class="x-k">036 · the back of the card, big groups · nothing here is in the app</div>
-    <h1>When 16 people played</h1>
-    <p>Your real Nov 7 round at Firewheel Lakes: 16 players, you shot 100. Three ways the back handles it, then the small-group version for comparison.</p>
+    <h1>The mix: ranked names left, stats right</h1>
+    <p>Your real Nov 7 round at Firewheel Lakes: 16 players, you shot 100. Small names like the full list, as many as fit, your place always shown, and the stats kept on the right.</p>
   </header>
   <main id="out" style="display:flex;flex-direction:column;gap:52px"></main>
 </div>
@@ -888,21 +891,26 @@ const stats = (k) => { const r = R[k], d = r.s.map((s, i) => s - r.par[i]), t3 =
 const back = (k, inner) => `<div class="lk-slot lkf-${R[k].fin} x-land" style="${GRADE[R[k].fin]}"><div class="lk-tilt"><div class="lk-flip"><div class="lk-face lk-front"><div class="lk-mat"><i class="lk-sheen"></i>${R[k].fin === 'prismatic' ? '<i class="x-slick"></i>' : ''}${inner}</div></div></div></div></div>`;
 const right = (k, line) => `<div class="cb-col sb"><div><div class="cb-k">${R[k].fin === 'standard' ? 'Standard' : FIN[R[k].fin]}</div><div class="cb-line" style="padding-top:1.4cqw">${line}</div></div>${stats(k)}</div>`;
 const mine = FIELD.slice(0, 4).map(([n, g]) => ranked.find((x) => x[0] === n)).sort((a, b) => a[1] - b[1]);
+const TEE = ['Andrew', 'Alex', 'Chuck', 'Anthony'], CAP = 11;
+/* as many ranked rows as fit; if you are below the cut, the top rows, a gap, then you with a neighbor either side */
+function rows(who) {
+  const idx = ranked.findIndex((x) => x[0] === who), line = (p) => `<div class="cb-pl${p[0] === who ? ' me' : ''}${p[0] !== who && TEE.includes(p[0]) && TEE.includes(who) ? ' tm' : ''}"><i>${p[2]}</i><span>${p[0]}</span><b>${p[1]}</b></div>`;
+  if (idx < CAP) return ranked.slice(0, CAP).map(line).join('') + `<div class="cb-k" style="padding-top:1.4cqw">+ ${ranked.length - CAP} more played${TEE.includes(who) ? ' · ● your tee time' : ''}</div>`;
+  const a = Math.max(CAP - 4, 0), lo = Math.max(idx - 1, a), hi = Math.min(idx + 1, ranked.length - 1), below = ranked.length - 1 - hi;
+  return ranked.slice(0, a).map(line).join('') + '<div class="cb-dots">···</div>' + ranked.slice(lo, hi + 1).map(line).join('') + (below ? `<div class="cb-k" style="padding-top:1.4cqw">+ ${below} more played${TEE.includes(who) ? ' · ● your tee time' : ''}</div>` : '');
+}
+const mixBack = (who, line) => back('r4', `<div class="cb"><div class="cb-col cb-sm" style="gap:0"><div class="cb-k" style="padding-bottom:1.4cqw">16 played · Nov 7</div>${rows(who)}</div>${right('r4', line)}</div>`);
 function render() {
-  const fieldLine = `${ord(me[2])} of 16 · low round ${ranked[0][0]} ${ranked[0][1]}`;
   document.getElementById('out').innerHTML = `
-    <section class="x-sec"><div><div class="x-k">16 players</div><h2 style="font:700 20px/24px var(--font-sans);margin:2px 0 0">Three ways to fit a big day</h2></div>
-      ${v(1, 'Your tee time, then the field', 'The four you actually walked with, by name, with scores. Everyone else becomes one line: how many more played, where you finished, and who was low. The stats stay on the right.',
-        back('r4', `<div class="cb"><div class="cb-col"><div class="cb-k">Your tee time · Nov 7</div>${mine.map((p) => pl(p)).join('')}<div class="cb-k" style="padding-top:1.2cqw;line-height:1.5">+ 12 more played<br>${fieldLine}</div></div>${right('r4', '16 played at Firewheel Lakes')}</div>`))}
-      ${v(2, 'The podium, then you', 'The top three of the whole day, a gap, then your line with your place. Better when the day was one big competition and the leaderboard is the story.',
-        back('r4', `<div class="cb"><div class="cb-col"><div class="cb-k">16 played · Nov 7</div>${ranked.slice(0, 3).map((p) => pl(p, true)).join('')}<div class="cb-dots">···</div>${pl(me, true)}<div class="cb-k" style="padding-top:1.2cqw">With Alex, Chuck, Anthony</div></div>${right('r4', ord(me[2]) + ' of 16 on the day')}</div>`))}
-      ${v(3, 'Everyone', 'All 16, ranked, in two columns. It fits, but the names get small and the stats are gone. I would keep this for a tap-through, not the card.',
-        back('r4', `<div class="cb" style="flex-direction:column;gap:1.6cqw"><div class="cb-k">Everyone who played · Firewheel Lakes · Nov 7</div><div class="cb-two"><div>${ranked.slice(0, 8).map((p) => pl(p, true)).join('')}</div><div>${ranked.slice(8).map((p) => pl(p, true)).join('')}</div></div></div>`))}
-    </section>
-    <section class="x-sec"><div><div class="x-k">5 players, for comparison</div><h2 style="font:700 20px/24px var(--font-sans);margin:2px 0 0">A small day lists everyone</h2></div>
+    <section class="x-sec"><div><div class="x-k">Your card</div><h2 style="font:700 20px/24px var(--font-sans);margin:2px 0 0">You finished 11th of 16</h2></div>
+      ${mixBack('Andrew', '11th of 16 on the day')}
+      <p>Eleven rows fit down the left side at this size. You were 11th, so the list runs from first place straight down to you, then "+ 5 more played". The small dots mark the three people in your tee time.</p></section>
+    <section class="x-sec"><div><div class="x-k">If you finish lower</div><h2 style="font:700 20px/24px var(--font-sans);margin:2px 0 0">The same day for 14th place</h2></div>
+      ${mixBack('Joseph', '14th of 16 on the day').replace('Andrew</b><span>With the crew', 'Joseph</b><span>With the crew')}
+      <p>When your place is past what fits, the list shows the top seven, a gap, then you with the player just above and just below. This is Joseph's line from the same round, on your card's numbers, only to show the layout.</p></section>
+    <section class="x-sec"><div><div class="x-k">5 players, for comparison</div><h2 style="font:700 20px/24px var(--font-sans);margin:2px 0 0">A small day keeps the big names</h2></div>
       ${back('r5', `<div class="cb"><div class="cb-col"><div class="cb-k">Played with · Nov 20</div>${[['Andrew', 87], ['Justin', 91], ['Sean', 94], ['Mitchell', 94], ['Baker', 108]].map((p) => pl(p)).join('')}<div class="cb-k" style="padding-top:1cqw">Low round of the group</div></div>${right('r5', 'Your best of your first 5 rounds')}</div>`)}
-      <p>Up to five names fit in the left column, so a single group is always listed in full.</p>
-    </section>`;
+      <p>With six or fewer players the names stay large, since there is room.</p></section>`;
 }
 render();
 </script>
