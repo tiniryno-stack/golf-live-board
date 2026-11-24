@@ -6,6 +6,7 @@ import { esc, icon, reducedMotion } from '../ui.js';
 import { briefPages } from './brief.js';
 import { todaysGame } from '../todaysgame.js';
 import { playerHtml, startPlayer } from './todaysgame.js';
+import { packHtml, startPack } from './pack.js';
 import { recapImages, saveImage } from './recap.js';
 import { local } from '../db.js';
 import { TEAM_NAME_PICKS, isDefaultTeamName, headlineColor } from '../teams.js';
@@ -138,7 +139,7 @@ export function showCard(opts, app) {
 
 export function showAway(list, app, markSeen) {
   const root = $('overlay');
-  if (!list.length || picker || brief || recap) return; // don't cover the name picker / Today's game (shown next time)
+  if (!list.length || picker || brief || recap || pack) return; // don't cover the name picker / Today's game (shown next time)
   overlay = { onDismiss: markSeen, app, away: true };
   root.innerHTML = `<div class="away" data-act="away-dismiss" role="dialog">
     <div class="kicker">While you were away</div>
@@ -164,6 +165,8 @@ export function closeOverlay() {
   brief?.player?.stop();
   brief = null;
   recap = null;
+  pack?.player?.stop(); // 035: a route change stops the pack's timers
+  pack = null;
   if (overlay?.away) overlay.onDismiss?.();
   overlay = null;
   root.classList.remove('open');
@@ -285,6 +288,30 @@ function closeBrief() {
   root.classList.remove('open');
   root.innerHTML = '';
   done?.();
+}
+
+// ───────────────────────────────────────────── 035 · the pack (press and hold to rip)
+
+let pack = null; // { player }
+
+export const packOpen = () => !!pack;
+
+/** Full-screen pack for one card (o = packHtml's options + reduced, onTear). Owns #overlay until closePack. */
+export function showPack(o) {
+  closeOverlay();
+  const root = $('overlay');
+  root.innerHTML = packHtml(o);
+  root.classList.add('open');
+  pack = { player: startPack(root.querySelector('.pk'), o) };
+}
+
+export function closePack() {
+  if (!pack) return;
+  pack.player?.stop();
+  pack = null;
+  const root = $('overlay');
+  root.classList.remove('open');
+  root.innerHTML = '';
 }
 
 // ───────────────────────────────────────────── Round recap (swipe through keepsake images)

@@ -466,6 +466,49 @@ export async function fetchCrewRounds(crewId) {
   return events.map((event) => ({ event, scores: scores.filter((s) => s.event_id === event.id) }));
 }
 
+/**
+ * 035 Scorecard locker: every round a person is on (no limit), each with only that player's scores
+ * (two .eq() filters per round, in parallel; never a whole round's scores, never .or()).
+ */
+export async function fetchPersonRounds(personId) {
+  if (!personId) return [];
+  const events = (await select(sb().from('events').select('id,code,name,played_on,created_at,finalized_at,course,roster,settings')
+    .contains('roster', { players: [{ personId }] }))) || [];
+  const keep = events.filter((e) => String(e.settings?.practice) !== 'true');
+  // 036 §6.1: the card back lists everyone who finished, so fetch each round's whole score set (≤ 16 × 18 rows),
+  // one query per round, in parallel. Never one query across all rounds (the 1,000-row limit, 035 §4.2).
+  return Promise.all(keep.map(async (event) => {
+    const p = (event.roster?.players || []).find((x) => x?.personId === personId);
+    const scores = p ? (await select(sb().from('scores').select('player_id,hole,strokes').eq('event_id', event.id))) || [] : [];
+    return { event, scores };
+  }));
+}
+
+/** 035: rosters of some rounds by code (to find who this phone played as when it has no owner). */
+export async function fetchRosters(codes) {
+  const list = [...new Set((codes || []).filter((c) => /^[A-Z0-9]{4,8}$/.test(String(c || ''))))];
+  if (!list.length) return [];
+  return (await select(sb().from('events').select('code,roster,settings').in('code', list))) || [];
+}
+
+/** 035: which of a person's packs were opened (card_opens rows). */
+export async function fetchCardOpens(personId) {
+  if (!personId) return [];
+  return (await select(sb().from('card_opens').select('event_id,person_id,player_id,opened_at').eq('person_id', personId))) || [];
+}
+
+/** 035: packs opened on this phone while offline: [{ code, personId }], sent on the next load. */
+export const lockerPending = {
+  all: () => local.get('glb.lockerPending', []),
+  add(code, personId) {
+    const list = lockerPending.all();
+    if (!list.some((x) => x.code === code && x.personId === personId)) local.set('glb.lockerPending', [...list, { code, personId }].slice(-60));
+  },
+  remove(code, personId) {
+    local.set('glb.lockerPending', lockerPending.all().filter((x) => !(x.code === code && x.personId === personId)));
+  },
+};
+
 // ───────────────────────────────────────────── write functions (all return { ok, error?, ... })
 
 export const api = {
@@ -521,6 +564,9 @@ export const api = {
     rpc('crew_new_person', { p_crew_id: crewId, p_device_id: deviceId, p_first: first, p_last: last, p_nickname: nickname }),
   removeCrewPerson: (crewId, personId) => rpc('remove_crew_person', { p_crew_id: crewId, p_device_id: deviceId, p_person_id: personId }),
   startSeason: (crewId, name, startsOn = null) => rpc('start_season', { p_crew_id: crewId, p_device_id: deviceId, p_name: name, p_starts_on: startsOn }),
+  // 035 Scorecard locker
+  openCard: (code, personId) => rpc('open_card', { p_code: code, p_person_id: personId, p_device_id: deviceId }),
+  lockerAdmin: () => rpc('locker_admin', {}),
   upsertScore: (code, playerId, hole, strokes) =>
     rpc('upsert_score', { p_code: code, p_device_id: deviceId, p_player_id: playerId, p_hole: hole, p_strokes: strokes }),
   fillScore: (code, playerId, hole, strokes) =>

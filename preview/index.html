@@ -87,6 +87,7 @@
       var base = document.baseURI;
       function go(info) {
         var v = info && info.v;
+        window.__glbVersion = v || null; // app.js compares it with version.json when a home screen app comes back
         var q = v ? '?v=' + v : '';
         var imports = {};
         (info && info.files || []).forEach(function (f) { if (/\.js$/.test(f) && v) imports[new URL(f, base).href] = new URL(f + q, base).href; });
@@ -94,7 +95,7 @@
         map.type = 'importmap';
         map.textContent = JSON.stringify({ imports: imports });
         document.head.appendChild(map);
-        ['css/tokens.css', 'css/styles.css'].forEach(function (f) {
+        ['css/tokens.css', 'css/styles.css', 'css/locker.css'].forEach(function (f) {
           var l = document.createElement('link'); l.rel = 'stylesheet'; l.href = f + q; document.head.appendChild(l);
         });
         var start = function () { var s = document.createElement('script'); s.type = 'module'; s.src = 'js/app.js' + q; document.head.appendChild(s); };

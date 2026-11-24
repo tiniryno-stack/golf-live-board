@@ -7,6 +7,7 @@
 import { esc, icon, seg, seg2, mark, copyText } from '../ui.js';
 import { fmtPts, fmtToPar, playerLeaderboard, projectedGross, ryderState, ryderNeedLine, ryderHoleLine, teeTimeName, holeAt } from '../scoring.js';
 import { riderState, holeLines, matchState } from '../riderview.js';
+import { ppName, personOf } from './passport.js';
 import { local } from '../db.js';
 
 // 031: 2v2 too (its pairings change when partners switch; matchState reads every match from your side).
@@ -224,7 +225,7 @@ export function ryderPlayers(app) {
   const snap = app.snapshot;
   const rows = playerLeaderboard(snap, 'net').map((p, i) => `<button class="ry-prow" data-act="board-player" data-v="${esc(p.id)}">
       <span class="mono meta">${p.thru ? i + 1 : ''}</span>
-      <span class="ellipsis${p.id === app.me ? ' you' : ''}">${esc(p.name)}</span>
+      <span class="ellipsis${p.id === app.me ? ' you' : ''}">${ppName(personOf(app, p.id), esc(p.name))}</span>
       <span class="mono r">${p.thru || '–'}</span>
       <span class="mono r ry-pc">${p.thru ? `${fmtToPar(p.grossToPar)}<small>${p.grossTotal}</small>` : '–'}</span>
       <span class="mono r">${projectedGross(snap, p) ?? '–'}</span>

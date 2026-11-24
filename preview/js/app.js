@@ -19,6 +19,7 @@ import board from './screens/board.js';
 import card from './screens/card.js';
 import host from './screens/host.js';
 import crew from './screens/crew.js';
+import locker from './screens/locker.js';
 import { gps } from './gps.js';
 import { loadGeo } from './geoload.js';
 import { FLAGS } from './flags.js';
@@ -27,7 +28,7 @@ import { joinPlan } from './identity.js';
 import { lobbyState, lobbyView as pickLobbyView, spotGiven, clock12, wallClock, parseTime, hasHandicaps, revealCtx } from './lobby.js';
 import lobbyScreen from './screens/lobby.js';
 
-const SCREENS = { home, setup, season, enter, matches, board, card, host, crew };
+const SCREENS = { home, setup, season, enter, matches, board, card, host, crew, locker };
 const TABS = [
   ['enter', 'Enter', 'enter'],
   ['matches', 'Matches', 'matches'],
@@ -1209,6 +1210,7 @@ async function maybeAskWho() {
 
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') {
+    hiddenAt = Date.now();
     if (app.code) {
       const s = db.local.get(seenKey());
       if (s) db.local.set(seenKey(), { ...s, last: Date.now() });
@@ -1220,7 +1222,31 @@ document.addEventListener('visibilitychange', () => {
 window.addEventListener('pageshow', (e) => {
   if (e.persisted) onReturn();
 });
+
+// Nov 22: a home screen app usually resumes the page it left in the background, so it kept running old code after an
+// update until iPhone happened to close it. Coming back: if version.json has moved on, reload once it's safe (nothing
+// unsent, no sheet / full-screen card, not typing; in a round or Setup only after 5 minutes away).
+let hiddenAt = 0, versionCheck = 0;
+async function checkVersion() {
+  const mine = window.__glbVersion;
+  if (!mine || !hiddenAt || Date.now() - versionCheck < 30000) return;
+  versionCheck = Date.now();
+  let info = null;
+  try {
+    const r = await fetch('version.json', { cache: 'no-store' });
+    if (r.ok) info = await r.json();
+  } catch { return; } // offline: next time
+  if (!info?.v || info.v === mine || document.visibilityState !== 'visible') return;
+  const away = Date.now() - hiddenAt;
+  const a = document.activeElement;
+  const typing = a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName);
+  const busy = typing || app.sheet || $('overlay')?.classList.contains('open') || (app.code && db.queue.count(app.code) > 0)
+    || ((app.route.round || app.route.name === 'setup') && away < 5 * 60 * 1000);
+  if (!busy) location.reload();
+}
+
 async function onReturn() {
+  checkVersion();
   if (!app.event) return;
   db.flush();
   if (channel && !channel.isLive()) channel.reconnect();
@@ -1235,6 +1261,17 @@ function parseHash() {
   if (!parts.length) return { name: 'home' };
   if (parts[0] === 'setup') return { name: 'setup', from: parts[1] ? db.normCode(parts[1]) : null };
   if (parts[0] === 'season') return { name: 'season', crew: parts[1] || null, view: parts[2] || null };
+  // 035 Scorecard locker: #/locker · #/locker/admin · #/locker/p/<personId> (since 036: their passport)
+  if (parts[0] === 'locker') {
+    if (parts[1] === 'admin') return { name: 'locker', mode: 'admin' };
+    if (parts[1] === 'p' && parts[2]) { let person = parts[2]; try { person = decodeURIComponent(person); } catch { /* as is */ } return { name: 'locker', mode: 'view', person, tab: 'passport' }; }
+    return { name: 'locker', mode: 'mine' };
+  }
+  // 036 Passport = everyone's profile: #/passport (yours, on the holder page) · #/passport/<personId> (theirs, read-only)
+  if (parts[0] === 'passport') {
+    if (parts[1]) { let person = parts[1]; try { person = decodeURIComponent(person); } catch { /* as is */ } return { name: 'locker', mode: 'view', person, tab: 'passport' }; }
+    return { name: 'locker', mode: 'mine', tab: 'passport' };
+  }
   // Crews (feature 006): #/crew/start · #/crew/rename/<id> · #/crew/which/<id> · #/crew/<INVITE>
   if (parts[0] === 'crew') {
     if (parts[1] === 'start') return { name: 'crew', mode: 'start' };

@@ -1,0 +1,196 @@
+// pack.js — 036 pack overlay (docs/design/features/036-card-designs/SPEC.md §3; replaces 035's portrait pack art).
+// Markup + the player; toasts.showPack puts it in #overlay (like Today's game), so the render loop never redraws it,
+// and closeOverlay → stop() ends its timers. Prototype: chrome-packs-2.html.
+//
+//   sealed ──swipe on the strip──▶ cutting ──p > .94──▶ sep (620 ms, onTear: open_card is sent) ──650 ms──▶ opened
+//   (strip flies, card rises in the opening) ──1650 ms──▶ reveal (card springs out + 035's celebration by finish)
+//   ──2550 ms──▶ stamps land one every 420 ms ──▶ done (the result). Hold on the body 1.3 s = the fallback.
+// Classes on the .pk root: tearing · sep · opened · reveal · done. Reduced motion (html.rm): a tap opens it and
+// every step is a 150 ms fade. No sound, no haptics.
+
+import { esc, icon } from '../ui.js';
+
+/** Which chrome refractor pattern every pack uses (§3.1, §13 Q2). One of: fine bold brushed wave shimmer speckle atomic sapphire. */
+export const PACK_PATTERN = 'fine';
+const LAYERS = {
+  fine: '<i class="pat p-fine"></i>', bold: '<i class="pat p-bold"></i>', brushed: '<i class="pat p-brushed"></i><i class="p-brushed2"></i>',
+  wave: '<i class="pat p-wave"></i>', shimmer: '<i class="pat p-shimmer"></i>', speckle: '<i class="pat p-speckle"></i>',
+  atomic: '<i class="pat p-atomic"></i>', sapphire: '<i class="pat p-pin"></i>',
+};
+/** Per finish: rings and sparks on the reveal (035's celebrations). */
+const PLAN = {
+  standard: { rings: 1, sparks: 0 }, bronze: { rings: 1, sparks: 0 }, rookie: { rings: 1, sparks: 0 },
+  silver: { rings: 1, sparks: 0 }, gold: { rings: 2, sparks: 16 }, prismatic: { rings: 3, sparks: 28 },
+};
+const HOLD_MS = 1300;
+const T = { opened: 650, reveal: 1650, lands: 2550, step: 420, done: 2700 };
+const GLB = '<svg viewBox="0 0 100 100" aria-hidden="true"><circle class="r" cx="42" cy="58" r="30" fill="none" stroke-width="13"/><circle class="b" cx="82" cy="20" r="11"/></svg>';
+/** The rough-edge ink filter the stamps use (url(#glb-rough)); one per page that shows stamps. */
+export const ROUGH = '<svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="glb-rough" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency=".75" numOctaves="2" seed="3" result="n"/><feColorMatrix in="n" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -3 2.6" result="m"/><feComposite in="SourceGraphic" in2="m" operator="in"/></filter></svg>';
+
+/** The sealed chrome foil pack (§3.1). No course, no date: those go under it as a label. */
+export function chromePack(pattern = PACK_PATTERN, { cue = false } = {}) {
+  const lay = (LAYERS[pattern] || LAYERS.fine) + '<i class="refract"></i>';
+  const top = `${lay}<i class="sheen"></i>`;
+  return `<div class="bp chrome${pattern === 'sapphire' ? ' sapphire' : ''}"><div class="topw"><div class="top base">${top}</div><div class="top cutp">${top}</div></div>
+    <div class="bp-body">${lay}<div class="bp-face"><div class="k">Scorecards · Series 1</div><span class="bp-mk">${GLB}</span><div class="wm">Golf Live<br>Board<small>2026 Edition</small></div><span class="bp-pill">1 Card</span></div><i class="sheen"></i></div>
+    ${cue ? '<i class="slit"></i><i class="bp-spark"></i><i class="cue"></i><span class="cue-chip">Swipe to open</span>' : ''}</div>`;
+}
+
+/**
+ * The overlay's markup. o = { fin, cardHtml (a .lk-slot), kicker, hint, title, grade, shot, lands (stamp HTML, one
+ * element each), left (packs still sealed after this one), replay }.
+ */
+export function packHtml(o) {
+  const p = PLAN[o.fin] || PLAN.standard;
+  const sparks = Array.from({ length: p.sparks }, (_, i) => {
+    const half = p.sparks > 16 ? 14 : p.sparks;
+    const k = i % half;
+    return `<i style="--a:${Math.round((k * 360) / half + (i >= half ? 180 / half : 0))}deg${i >= half ? ';--sd:350ms' : ''}"></i>`;
+  }).join('');
+  const rings = Array.from({ length: p.rings }, (_, i) => `<i class="pk-ring" style="--rd:${i * 180}ms"></i>`).join('');
+  const lands = (o.lands || []).join('');
+  const add = o.replay ? 'Back to locker' : 'Add to locker';
+  return `<div class="pk lkf-${esc(o.fin)}" data-fin="${esc(o.fin)}" role="dialog" aria-modal="true" aria-label="Open your pack">${ROUGH}
+    <i class="pk-screen" aria-hidden="true"></i>
+    <div class="pk-top">
+      <button class="icon-btn pk-x" data-act="lk-pack-close" aria-label="Close">${icon('close')}</button>
+      <span class="ts-label pk-k">${esc(o.kicker)}</span>
+    </div>
+    <div class="pk-stage">
+      <i class="pk-rays" aria-hidden="true"></i>
+      <div class="pk-fx" aria-hidden="true"><i class="pk-flash"></i>${rings}<span class="pk-spark">${sparks}</span></div>
+      <div class="pk-card" data-act="lk-pack-flip">${o.cardHtml}</div>
+      <div class="pk-lands${(o.lands || []).length > 2 ? ' many' : ''}">${lands}</div>
+      <i class="pk-white" aria-hidden="true"></i>
+      <div class="pk-pack" role="button" tabindex="0" aria-label="Swipe across the top to open your pack">
+        <div class="pk-breathe"><div class="pk-shake">${chromePack(PACK_PATTERN, { cue: true })}</div></div>
+      </div>
+    </div>
+    <div class="pk-foot${o.left ? ' two' : ''}">
+      <div class="pk-hint"><div class="ts-row">${o.replay ? 'Swipe across the top to rip it again' : 'Swipe across the top'}</div><div class="ts-small pk-soft">${esc(o.hint)}</div></div>
+      <div class="pk-res">
+        <div class="pk-line"><b>${esc(o.title)}${o.grade ? ` · ${esc(o.grade)}` : ''}</b> · You shot ${esc(o.shot)}</div>
+        <button class="btn primary big block" data-act="lk-pack-add">${add}</button>
+        <div class="pk-two"><button class="btn big" data-act="lk-pack-share">${icon('share', 18)} Share</button><button class="btn big" data-act="lk-pack-pp">See in passport</button></div>
+        ${o.left ? `<button class="btn ghost block" data-act="lk-pack-next">Open next pack · ${o.left} left</button>` : ''}
+      </div>
+    </div>
+  </div>`;
+}
+
+/**
+ * Start the pack inside `root` (the .pk element). opts = { reduced, onTear, tilt () → {x, y} | null }. Returns { stop }.
+ * Everything it schedules is cleared by stop(), which toasts.closeOverlay calls on any route change.
+ */
+export function startPack(root, { reduced = false, onTear = () => {}, tilt = () => null } = {}) {
+  const pk = root.querySelector('.pk-pack');
+  const shk = root.querySelector('.pk-shake');
+  const bp = root.querySelector('.bp');
+  const base = bp.querySelector('.top.base'), cutp = bp.querySelector('.top.cutp');
+  const slot = root.querySelector('.pk-card .lk-slot');
+  const timers = [];
+  let stopped = false, p = 0, dir = 0, mode = null, held = false, done = false, holdRaf = 0, last = 0, swayRaf = 0;
+  const later = (ms, fn) => timers.push(setTimeout(() => { if (!stopped) fn(); }, ms));
+  const set = (k, v) => bp.style.setProperty(k, v);
+
+  // p = how far the cut has run. From the left: [0, p] is cut, hinged at p. From the right: [1 − p, 1], hinged at 1 − p.
+  const paint = () => {
+    const a = dir < 0 ? 1 - p : 0, b = dir < 0 ? 1 : p, hx = dir < 0 ? a : b, sgn = dir < 0 ? -1 : 1;
+    set('--ta', `${a * 100}%`); set('--tw', `${(b - a) * 100}%`); set('--hx', `${hx * 100}%`); set('--fx', sgn);
+    set('--ang', `${sgn * Math.min(6, 1.5 + p * 5) * (p > 0 ? 1 : 0)}deg`); // + from the left: the cut end rises (§3.2)
+    set('--lift', `${-p * 10}%`); set('--curl', `${p > 0 ? 12 + p * 18 : 0}deg`); set('--lit', (1 + p * 0.12).toFixed(3));
+    cutp.style.clipPath = `inset(-60% ${(1 - b) * 100}% 0 ${a * 100}%)`;
+    base.style.clipPath = dir < 0 ? `inset(0 ${p * 100}% 0 0)` : `inset(0 0 0 ${p * 100}%)`;
+    set('--ca', `${dir < 0 ? 3 : Math.max(3, p * 100)}%`); set('--cb', `${dir < 0 ? Math.max(3, p * 100) : 3}%`);
+    const j = mode === 'hold' ? p * p * 4 : 0;
+    shk.style.transform = j ? `translate(${((Math.random() - 0.5) * j).toFixed(2)}px, ${((Math.random() - 0.5) * j).toFixed(2)}px)` : '';
+  };
+  const finish = () => {
+    if (done) return;
+    done = true;
+    p = 1;
+    paint();
+    shk.style.transform = '';
+    if (reduced) {
+      root.classList.add('sep', 'opened', 'reveal', 'done');
+      root.querySelectorAll('.pk-lands > *').forEach((el) => el.classList.add('in'));
+      onTear();
+      return;
+    }
+    root.classList.add('sep');
+    onTear();
+    later(T.opened, () => root.classList.add('opened'));
+    later(T.reveal, () => root.classList.add('reveal'));
+    const lands = [...root.querySelectorAll('.pk-lands > *')];
+    lands.forEach((el, i) => later(T.lands + i * T.step, () => el.classList.add('in')));
+    later(T.done + lands.length * T.step, () => root.classList.add('done'));
+  };
+
+  const holdTick = (ts) => {
+    holdRaf = 0;
+    if (stopped || done) return;
+    const dt = Math.min(50, ts - (last || ts));
+    last = ts;
+    if (held) { p = Math.min(1, p + dt / HOLD_MS); paint(); }
+    if (p >= 1) { finish(); return; }
+    if (held) holdRaf = requestAnimationFrame(holdTick); else shk.style.transform = '';
+  };
+  const down = (e) => {
+    if (done) return;
+    e.preventDefault();
+    if (reduced) { dir = 1; finish(); return; }
+    try { pk.setPointerCapture(e.pointerId); } catch { /* not capturable */ }
+    const r = pk.getBoundingClientRect(), fy = (e.clientY - r.top) / r.height;
+    mode = fy < 0.36 ? 'swipe' : 'hold';
+    held = true;
+    root.classList.add('tearing');
+    if (!dir) dir = mode === 'swipe' && (e.clientX - r.left) / r.width > 0.5 ? -1 : 1;
+    if (mode === 'hold' && !holdRaf) { last = 0; holdRaf = requestAnimationFrame(holdTick); }
+  };
+  const move = (e) => {
+    if (!held || mode !== 'swipe' || done) return;
+    const r = pk.getBoundingClientRect(), fx = (e.clientX - r.left) / r.width;
+    const q = Math.max(0, Math.min(1, dir < 0 ? 1 - fx : fx));
+    if (q > p) { p = q; paint(); }
+    if (p > 0.94) finish();
+  };
+  const up = () => { held = false; };
+  const key = (e) => { if ((e.key === 'Enter' || e.key === ' ') && !done) { e.preventDefault(); dir = dir || 1; finish(); } };
+  const menu = (e) => e.preventDefault();
+  pk.addEventListener('pointerdown', down);
+  pk.addEventListener('pointermove', move);
+  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach((ev) => pk.addEventListener(ev, up));
+  pk.addEventListener('keydown', key);
+  pk.addEventListener('contextmenu', menu);
+
+  // Sway: the pack and (after the reveal) the card follow the phone's tilt, else a slow idle sway. --mv = speed.
+  let cx = 0, cy = 0, mv = 0;
+  const sway = (ts) => {
+    swayRaf = 0;
+    if (stopped || !root.isConnected) return;
+    const g = tilt();
+    const tx = reduced ? 0 : g ? g.y : Math.sin(ts / 1900) * 0.85, ty = reduced ? 0 : g ? g.x : Math.cos(ts / 2600) * 0.5;
+    const nx = cx + (tx - cx) * 0.16;
+    cy += (ty - cy) * 0.16;
+    mv = reduced ? 0 : Math.max(mv * 0.93, Math.min(1, Math.abs(nx - cx) * 130));
+    cx = nx;
+    const el = root.classList.contains('reveal') ? slot : bp;
+    if (el) {
+      el.style.setProperty('--sx', cx.toFixed(3)); el.style.setProperty('--sy', cy.toFixed(3)); el.style.setProperty('--mv', mv.toFixed(3));
+      el.style.setProperty('--ry', (cx * 6).toFixed(2)); el.style.setProperty('--rx', (-cy * 3).toFixed(2));
+    }
+    swayRaf = requestAnimationFrame(sway);
+  };
+  if (!reduced) swayRaf = requestAnimationFrame(sway);
+
+  return {
+    get stage() { return done ? 'open' : 'sealed'; },
+    stop() {
+      stopped = true;
+      timers.forEach(clearTimeout);
+      if (holdRaf) cancelAnimationFrame(holdRaf);
+      if (swayRaf) cancelAnimationFrame(swayRaf);
+    },
+  };
+}
