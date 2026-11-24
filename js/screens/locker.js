@@ -11,12 +11,13 @@ import * as db from '../db.js';
 import * as fx from './toasts.js';
 import { esc, icon, reducedMotion } from '../ui.js';
 import {
-  buildLocker, packsOf, openedOf, FINISHES, isAdmin, shortDay, longDay, toParLabel, finName, adminTotals,
+  buildLocker, packsOf, openedOf, FINISHES, isAdmin, shortDay, longDay, toParLabel, finName, adminTotals, backRows,
 } from '../locker.js';
 
 const STALE = 2 * 60 * 1000;
 const today = () => new Date().toLocaleDateString('en-CA');
-const MARK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="2.6" fill="currentColor" stroke="none"/></svg>';
+/** The real mark (img/mark-dark.svg, 036 §2.1): the ring in the ink, the ball green. */
+export const MARK = '<svg class="glb-mark" viewBox="0 0 100 100" aria-hidden="true"><circle cx="42" cy="58" r="30" fill="none" stroke="currentColor" stroke-width="13"/><circle cx="82" cy="20" r="11" fill="#3DDC84"/></svg>';
 const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
 let A = null; // the app, for the noscroll getter (read before render)
@@ -115,42 +116,61 @@ const lockerOf = (app, id) => (id ? app.lockers?.[id] : null) || null;
 
 // ───────────────────────────────────────────── the card (§5): every size in cqw
 
-const STRIP = { e: 'e', u: 'u', p: 'p', b: 'b', d: 'd' };
 const kind = (s, p) => { const d = s - p; return d <= -2 ? 'e' : d === -1 ? 'u' : d === 0 ? 'p' : d === 1 ? 'b' : 'd'; };
+const tot = (a) => a.reduce((x, y) => x + y, 0);
+const ordinal = (n) => `${n}${['th', 'st', 'nd', 'rd'][(n % 100 >= 11 && n % 100 <= 13) || n % 10 > 3 ? 0 : n % 10]}`;
+
+// 036 §2.1: landscape (7 : 5), the whole scorecard on the front. Every size in cqw of the card face.
+function nine(c, from) {
+  const par = c.par.slice(from, from + 9), sc = c.strokes.slice(from, from + 9);
+  return `<div class="x-n">${par.map((_, i) => `<span class="x-h">${from + i + 1}</span>`).join('')}<span class="x-h">${from ? 'In' : 'Out'}</span>
+    ${sc.map((s, i) => `<span class="x-mk x-mk-${kind(s, par[i])}">${s}</span>`).join('')}<span class="x-t">${tot(sc)}</span></div>`;
+}
+/** Finish layers (§2.2): prismatic = oil slick + flash (the ink shifts in CSS); gold/silver/bronze = metal bands. */
+const layers = (c) => (c.fin === 'prismatic' ? '<i class="x-slick"></i><i class="x-prism"></i>'
+  : ['gold', 'silver', 'bronze'].includes(c.fin) ? '<i class="x-mslick"></i>' : '');
 
 export function frontHtml(c) {
-  const strip = c.strokes.map((s, h) => `${h === 9 ? '<i class="lk-turn"></i>' : ''}<i class="lk-g-${STRIP[kind(s, c.par[h])]}"></i>`).join('');
   const fin = c.fin === 'standard' ? '' : finName(c);
-  return `<div class="lk-mat"><i class="lk-holo"></i><i class="lk-facet"></i><i class="lk-sheen"></i><div class="lk-fc">
-    <div class="lk-ftop"><span class="lk-brand">${MARK}Golf Live Board</span><span class="lk-ffin">${esc(fin)}</span></div>
-    <div class="lk-fmid"><div class="lk-fcourse">${esc(c.course)}</div><div class="lk-fgross">${c.gross}</div><div class="lk-fsub">${toParLabel(c.toPar)} · ${esc(longDay(c.day))}</div></div>
-    <div class="lk-strip" aria-hidden="true">${strip}</div>
-    <div class="lk-fstamps">${c.stamps.slice(0, 2).map((s) => `<span class="lk-st">${esc(s)}</span>`).join('')}</div>
-    <div class="lk-fbot"><span class="lk-fname">${esc(c.name)}</span><span>${c.crew ? 'With the crew' : 'Solo'}</span><span>No. ${c.n}</span></div>
+  return `<div class="lk-mat"><i class="lk-sheen"></i>${layers(c)}<div class="x-l1">
+    <div class="x-top"><span class="lk-brand">${MARK}Golf Live Board</span><span class="x-fin">${esc(fin)}</span></div>
+    <div class="x-hero"><div class="x-gross">${c.gross}</div><div class="x-meta"><div class="x-course">${esc(c.course)}</div>
+      <div class="x-sub">${toParLabel(c.toPar)} · ${esc(longDay(c.day))}</div>
+      <div class="x-stamps">${c.stamps.slice(0, 2).map((s) => `<span class="lk-st">${esc(s)}</span>`).join('')}</div></div></div>
+    <div class="x-sc">${nine(c, 0)}${nine(c, 9)}</div>
+    <div class="x-bot"><b>${esc(c.name)}</b><span>${c.crew ? 'With the crew' : 'Solo'}</span><span>No. ${c.n}</span></div>
   </div></div>`;
 }
 
-function nine(c, from) {
-  const par = c.par.slice(from, from + 9), sc = c.strokes.slice(from, from + 9);
-  const tot = (a) => a.reduce((x, y) => x + y, 0);
-  return `<div class="lk-nine"><span class="lk-nl">Hole</span>${par.map((_, i) => `<span class="lk-nh">${from + i + 1}</span>`).join('')}<span class="lk-nh">${from ? 'In' : 'Out'}</span>
-    <span class="lk-nl">Par</span>${par.map((p) => `<span class="lk-np">${p}</span>`).join('')}<span class="lk-np">${tot(par)}</span>
-    <span class="lk-nl">${esc(c.name ? c.name.slice(0, 6) : 'You')}</span>${sc.map((s, i) => `<span class="lk-mk lk-mk-${kind(s, par[i])}">${s}</span>`).join('')}<span class="lk-nt">${tot(sc)}</span></div>`;
+// 036 §2.3: the back = who you played with (left) + the round in numbers (right).
+const plRow = (p, rank) => `<div class="cb-pl${p.me ? ' me' : ''}${p.sameTeeTime ? ' tm' : ''}">${rank ? `<i>${p.rank}</i>` : ''}<span>${esc(p.name)}</span><b>${p.gross}</b></div>`;
+function peopleHtml(c) {
+  const g = c.group?.length ? c.group : [{ name: c.name, gross: c.gross, rank: 1, me: true }];
+  if (g.length === 1) return '<div class="cb-col"><div class="cb-k">Solo round</div></div>';
+  if (g.length <= 6) {
+    const low = g.find((x) => x.me)?.rank === 1 && g.filter((x) => x.rank === 1).length === 1;
+    return `<div class="cb-col"><div class="cb-k">Played with · ${esc(shortDay(c.day))}</div>${g.map((p) => plRow({ ...p, sameTeeTime: false })).join('')}
+      ${low ? '<div class="cb-k cb-after">Low round of the group</div>' : ''}</div>`;
+  }
+  const { rows, more, tee } = backRows(g);
+  const t = tee ? ' · ● your tee time' : '';
+  const tail = more ? `<div class="cb-k cb-after">+ ${more} more played${t}</div>` : tee ? '<div class="cb-k cb-after">● your tee time</div>' : '';
+  return `<div class="cb-col cb-sm"><div class="cb-k cb-before">${g.length} played · ${esc(shortDay(c.day))}</div>
+    ${rows.map((p) => (p.gap ? '<div class="cb-dots">···</div>' : plRow(p, true))).join('')}${tail}</div>`;
 }
-
 export function backHtml(c) {
   const k = c.stats.count;
-  const tile = (v, label) => `<div class="lk-tile"><b>${v}</b><span>${label}</span></div>`;
-  const why = c.fin === 'rookie' ? `${c.line}. The app is still learning your game.` : c.line;
+  const g = c.group || [];
+  const me = g.find((x) => x.me);
+  const line = g.length >= 7 && me ? `${ordinal(me.rank)} of ${g.length} on the day`
+    : c.fin === 'rookie' ? `${c.line}. The app is still learning your game.` : c.line;
+  const tile = (v, lbl) => `<div class="cb-tile"><b>${v}</b><span>${lbl}</span></div>`;
   const types = c.stats.byType.map((t) => `<span><i>Par ${t.par}s</i>${toParLabel(t.toPar)}</span>`).join('');
-  return `<div class="lk-mat"><div class="lk-bk">
-    <div class="lk-bh"><div class="lk-bh-l"><div class="lk-bh-c">${esc(c.course)}</div><div class="lk-bh-d">${esc(longDay(c.day))} · ${c.crew ? 'with the crew' : 'solo'}</div></div>
-      <div class="lk-bh-t">${c.gross}<span>${toParLabel(c.toPar)}</span></div></div>
-    ${nine(c, 0)}${nine(c, 9)}
-    ${why ? `<div class="lk-bw">${c.grade ? `<span class="lk-bg">${c.grade}</span>` : ''}<span>${esc(why)}</span></div>` : ''}
-    <div class="lk-tiles">${tile(k.eagles + k.birdies, 'Birdies+')}${tile(k.pars, 'Pars')}${tile(k.bogeys, 'Bogeys')}${tile(k.doubles, 'Doubles+')}</div>
-    <div class="lk-types">${types}${c.stats.bestRun >= 2 ? `<span><i>Best run</i>${c.stats.bestRun}</span>` : ''}</div>
-    <div class="lk-bs">${c.stamps.map((s) => `<span class="lk-st">${esc(s)}</span>`).join('')}</div>
+  return `<div class="lk-mat"><i class="lk-sheen"></i>${c.fin === 'prismatic' ? '<i class="x-slick"></i>' : ''}<div class="cb">
+    ${peopleHtml(c)}
+    <div class="cb-col sb"><div><div class="cb-k">${esc(finName(c))}${c.grade ? ` · ${c.grade}` : ''}</div>${line ? `<div class="cb-line">${esc(line)}</div>` : ''}</div>
+      <div class="cb-tiles">${tile(k.eagles + k.birdies, 'Birdies+')}${tile(k.pars, 'Pars')}${tile(k.bogeys, 'Bogeys')}${tile(k.doubles, 'Doubles+')}</div>
+      <div class="cb-types">${types}<span><i>Front · back</i>${c.stats.front} · ${c.stats.back}</span></div></div>
   </div></div>`;
 }
 
@@ -158,7 +178,7 @@ const label = (c) => `${c.course}, ${shortDay(c.day)}, ${c.gross}. ${FINISHES[c.
 
 /** One card in its slot: tilt → flip → front / back. `extra` = more classes on the slot. */
 export function slotHtml(c, { i = 0, flipped = false, extra = '', act = 'lk-card' } = {}) {
-  return `<div class="lk-slot lkf-${c.fin}${extra}" data-i="${i}" data-key="${esc(c.key)}"${act ? ` data-act="${act}"` : ''}>
+  return `<div class="lk-slot x-land lkf-${c.fin}${extra}" data-i="${i}" data-key="${esc(c.key)}"${act ? ` data-act="${act}"` : ''}>
     <div class="lk-tilt" role="button" tabindex="0" aria-label="${esc(label(c))} Tap to flip it.">
       <div class="lk-flip${flipped ? ' on' : ''}"><div class="lk-face lk-front">${frontHtml(c)}</div><div class="lk-face lk-back">${backHtml(c)}</div></div>
       <i class="pk-glare"></i><i class="pk-sweep"></i>
@@ -214,16 +234,22 @@ function scrollToIdx(i, smooth) {
   if (car.centers[i] == null) return;
   car.track.scrollTo({ left: car.centers[i] - car.half, behavior: smooth && !reducedMotion() ? 'smooth' : 'auto' });
 }
+/** 036 §2.2: --sx/--sy in −1…1 (the bands and prismatic ink follow them), --mv = how fast it moves (the flash). */
 function put(el, rx, ry, sc) {
-  const k = `${rx.toFixed(2)}|${ry.toFixed(2)}|${sc.toFixed(3)}`;
+  const sx = clamp(ry / 12, -1, 1);
+  const mv = reducedMotion() ? 0 : Math.max((el._mv || 0) * 0.93, Math.min(1, Math.abs(sx - (el._sx ?? sx)) * 130));
+  el._sx = sx;
+  el._mv = mv < 0.005 ? 0 : mv;
+  const k = `${rx.toFixed(2)}|${ry.toFixed(2)}|${sc.toFixed(3)}|${el._mv.toFixed(2)}`;
   if (el._k === k) return;
   el._k = k;
   const st = el.style;
   st.setProperty('--rx', rx.toFixed(2));
   st.setProperty('--ry', ry.toFixed(2));
   st.setProperty('--sc', sc.toFixed(3));
-  st.setProperty('--sx', clamp(ry / 22, -1.3, 1.3).toFixed(3));
-  st.setProperty('--sy', clamp(rx / 12, -1, 1).toFixed(3));
+  st.setProperty('--sx', sx.toFixed(3));
+  st.setProperty('--sy', clamp(rx / 8, -1, 1).toFixed(3));
+  st.setProperty('--mv', el._mv.toFixed(3));
 }
 function setActive(app, i) {
   const list = openedOf(lockerOf(app, shownId(app))?.cards);
@@ -244,7 +270,7 @@ function tick(ts) {
   if (!car.track?.isConnected || A?.route?.name !== 'locker') return; // the screen is gone: stop
   car.raf = requestAnimationFrame(tick);
   const rm = reducedMotion();
-  const idle = !rm && !ptr.on && !gy.on ? Math.sin(ts / 1700) * 6 : 0;
+  const idle = !rm && !ptr.on && !gy.on ? Math.sin(ts / 1900) * 7 : 0;
   const tx = rm ? 0 : (ptr.on ? ptr.x * 13 : 0) + gy.y * 18 + idle;
   const ty = rm ? 0 : (ptr.on ? -ptr.y * 10 : 0) - gy.x * 14;
   sm.x += (tx - sm.x) * 0.12;
