@@ -91,11 +91,13 @@ function practiceRow(app, L) {
     : `<div class="lk-practice ts-small"><span>Preview · reseal your ${L.cards.length} cards here to test opening them (nothing is saved)</span><button class="pill" data-act="lk-practice">Reseal</button></div>`;
 }
 export function lockerPerson() {
+  const pv = PREVIEW && db.local.get('glb.previewAs');
+  if (pv) return pv; // the preview's "test as" wins over whoever this browser was before
   const o = db.owner.get()?.personId;
   if (o) return o;
   const ppl = db.people.all();
   if (ppl.length) return ppl[ppl.length - 1];
-  return (PREVIEW && db.local.get('glb.previewAs')) || resolved;
+  return resolved;
 }
 async function resolveFromClaims() {
   const mine = db.recent.all().map((r) => ({ code: r.code, pid: db.me.get(r.code) })).filter((x) => x.pid);
@@ -516,9 +518,9 @@ function homeSub(opened) {
 export function homeLocker(app) {
   try {
     const pid = lockerPerson();
-    if (PREVIEW && !pid) {
+    if (PREVIEW && !db.local.get('glb.previewAs')) {
       return { packs: `<button class="lk-ready" data-act="lk-testas"><span class="lk-rtext"><span class="ts-label lk-soft">Preview only</span>
-        <span class="ts-row">Test the locker as Andrew Duong</span><span class="ts-small lk-soft">This browser doesn’t know who you are yet. Tap once; it’s remembered here.</span></span>
+        <span class="ts-row">Test the locker as Andrew Duong</span><span class="ts-small lk-soft">Shows your Locker and Passport in this browser. Tap once; it’s remembered here.</span></span>
         <span class="hr-chev">${icon('fwd', 20)}</span></button>`, row: '' };
     }
     const L = pid ? app.lockers?.[pid] : null;
