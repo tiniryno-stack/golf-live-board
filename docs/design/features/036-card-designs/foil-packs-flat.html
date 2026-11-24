@@ -611,6 +611,7 @@ canvas.x-px { image-rendering: pixelated; object-fit: cover; }
 .cue-chip { position: absolute; right: 4%; top: calc(var(--tt) + 2.4cqw); z-index: 5; font: 700 2.4cqw/1 var(--font-mono); letter-spacing: .5cqw; text-transform: uppercase; padding: 1.5cqw 2.4cqw; border-radius: 99px; background: rgba(8,9,11,.78); color: #f4f5f7; box-shadow: 0 0 0 .3cqw rgba(255,255,255,.35); }
 .thumb .cue, .thumb .cue-chip, .thumb .tear { display: none; }
 .stage.tearing .cue, .stage.tearing .cue-chip { opacity: 0; transition: opacity .2s; }
+.stage.opened .cue, .stage.opened .cue-chip { display: none; }
 .tear { position: absolute; left: var(--ta, 0%); width: var(--tw, 0%); top: var(--tt, 15%); height: .5cqw; margin-top: -.25cqw; background: #fff; box-shadow: 0 0 2.4cqw .8cqw rgba(255,255,255,.75); z-index: 6; }
 /* 1 · holo silver */
 .f-holo { --base: linear-gradient(170deg, #c9ced6, #f4f6f9 30%, #aeb4be 55%, #eef1f5 80%, #b9bec7); --ink: #111318; --sh: .6; }
