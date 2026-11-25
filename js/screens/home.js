@@ -9,13 +9,15 @@ import { esc, icon, prettyDate, initials, empty, foldIn, syncMotion, reducedMoti
 import { recent, normCode, STANDALONE, moveLink, syncMyRounds, pruneGoneRounds, local, refreshLobbies, owner, clock } from '../db.js';
 import { lobbyState, homeCard } from '../lobby.js';
 import { homeCrewData, crewNames } from './crew.js';
-import { homeLockerData, startHomeLocker, lockerName, frontHtml } from './locker.js';
+import { homeLockerData, startHomeLocker, lockerName, frontHtml, lockerPerson } from './locker.js';
 import { chromePack } from './pack.js';
 import { homeModel, allRounds, topKey } from '../homeview.js';
 import { whatsNew } from '../whatsnew.js';
 import { fmtPts, fmtToPar, playerLeaderboard } from '../scoring.js';
 
 /** iPhone or iPad in Safari (iPadOS says it's a Mac, but has touch). Tests set `__GLB_IOS`. */
+/** Preview copy only (…/preview/): Home acts as the locker's preview person, so a browser with no rounds still fills in. */
+const PREVIEW = typeof location !== 'undefined' && /\/preview\//.test(location.pathname);
 const isIOS = () => {
   if (typeof globalThis.__GLB_IOS === 'boolean') return globalThis.__GLB_IOS;
   return /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -287,7 +289,7 @@ export default {
     if (Date.now() - syncedAt > 60000) {
       syncedAt = Date.now();
       app.checkVersion?.(); // and a newer version, now that nothing is at stake (app.js decides)
-      syncMyRounds().then((n) => { if (n) app.render(); }).catch(() => { /* offline: next open */ });
+      syncMyRounds(PREVIEW ? [lockerPerson()] : []).then((n) => { if (n) app.render(); }).catch(() => { /* offline: next open */ });
       pruneGoneRounds().then((n) => { if (n) app.render(); }).catch(() => { /* offline: next open */ }); // deleted rounds leave Recent
       refreshLobbies(clock.now()).then((n) => { if (n) app.render(); }).catch(() => { /* offline: next open */ }); // 025
     }
