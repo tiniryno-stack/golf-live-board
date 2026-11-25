@@ -343,7 +343,7 @@ export async function syncMyRounds() {
   if (!ids.length) return 0;
   const found = new Map();
   for (const personId of ids) {
-    const rows = (await select(sb().from('events').select('code,name,played_on,crew_id,course,settings,created_at')
+    const rows = (await select(sb().from('events').select('code,name,played_on,crew_id,course,roster,settings,created_at')
       .contains('roster', { players: [{ personId }] }).order('created_at', { ascending: false }).limit(20))) || [];
     for (const r of rows) found.set(r.code, r);
   }
@@ -353,6 +353,8 @@ export async function syncMyRounds() {
   const rows = add.map((ev) => ({
     code: ev.code, name: ev.name, played_on: ev.played_on || null, crew_id: ev.crew_id || null,
     course: ev.course?.shortName || ev.course?.name || '', at: Date.parse(ev.created_at) || 0, synced: true,
+    // Nov 24: a round that hasn't started goes straight under Coming up (refreshLobbies only updates known lobbies)
+    ...(() => { try { const c = homeCard(ev, { pid: null, personId: o?.personId || null }, clock.now()); return c ? { lobby: c } : {}; } catch { return {}; } })(),
   }));
   const list = [...recent.all(), ...rows].sort((a, b) => (b.at || 0) - (a.at || 0));
   local.set('glb.recent', list.slice(0, 12));

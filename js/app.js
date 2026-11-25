@@ -1312,6 +1312,7 @@ async function onReturn() {
   homeReturn(); // Nov 24: Home looks for new rounds again (a resumed home screen app finds the one it was added to)
   checkVersion();
   if (db.STANDALONE && app.route.name !== 'home') newRoundToast();
+  if (app.route.name === 'home') render(); // Home redraws → looks for your rounds now
   if (!app.event) return;
   db.flush();
   if (channel && !channel.isLive()) channel.reconnect();

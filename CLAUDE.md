@@ -46,7 +46,7 @@ keep `brief.js`. Opens on its own once per phone on the first Enter of an open r
 
 Round links open in Safari; on a phone that has the app, Safari now says **Open Golf Board** (sheet `open-app`) instead
 of claiming the spot (`identity.appHandoff`, RPC `person_has_app`). Home re-syncs your rounds on every return, your name
-at the top fixes who this phone is (`home-me`), and `js/whatsnew.js` holds the one-time **What's new** card: **add a
+at the top fixes who this phone is (`home-me`), `npm run test:smoke037` (20 checks) drives it all, and `js/whatsnew.js` holds the one-time **What's new** card: **add a
 `RELEASES` entry when a release is worth telling friends about** (036 next). ARCHITECTURE.md 13a has the details.
 
 ## What it is / where things stand

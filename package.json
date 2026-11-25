@@ -14,7 +14,8 @@
     "preview": "bash tests/publish-preview.sh",
     "stamp": "node tools/stamp.mjs",
     "test:lobby": "node tests/lobby-smoke.mjs",
-    "test:smoke031": "node tests/smoke031.mjs"
+    "test:smoke031": "node tests/smoke031.mjs",
+    "test:smoke037": "node tests/smoke037.mjs"
   },
   "devDependencies": {
     "@supabase/supabase-js": "2.118.0",
