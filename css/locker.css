@@ -80,6 +80,9 @@
 
 /* 036: Home's avatar is a button to your passport */
 button.home-me { padding: 0; text-align: left; color: inherit; background: none; border: 0; }
+.home-me > button.avatar, .home-me > button.hm-name { padding: 0; border: 0; color: inherit; font: inherit; text-align: left; }
+.home-me > button.avatar { background: var(--surface-2); font-size: 13px; font-weight: 600; }
+.home-me > button.hm-name { background: none; font-size: 15px; line-height: 20px; font-weight: 600; min-height: var(--tap-min); }
 
 /* preview copy only: the practice-packs switch */
 .lk-practice { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3); margin-bottom: var(--space-3); border-radius: var(--radius-xl); border: 1px dashed var(--line); color: var(--text-muted); }

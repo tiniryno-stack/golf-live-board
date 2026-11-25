@@ -113,9 +113,17 @@ function invitation(app, st, { lineText, primary, quiet }) {
   ${foot(`${lineText ? note(lineText) : ''}${primary}${quiet}`)}`;
 }
 
+/** Nov 24: iPhone Safari on a phone that already has Golf Board: open the app (its round is waiting), not a second icon. */
+const openAppOffer = {
+  lineText: 'You have Golf Board on your home screen. This round is waiting there.',
+  primary: '<button class="btn primary nr-cta" data-act="lb-openapp">Open it in Golf Board</button>',
+  quiet: '<button class="lb-tiny" data-act="lb-find">or join in Safari</button>',
+};
+
 /** 1 · the lobby landing for a plain link (no handicaps yet): the invitation, Add Golf Board first on iPhone. */
 function landing(app, st) {
   const ios = safariPhone();
+  if (ios && app.appLikely()) return invitation(app, st, openAppOffer); // Nov 24: they have it, don't add a second one
   return invitation(app, st, {
     lineText: ios ? 'Your team and start time open in Golf Board on your home screen. About a minute.' : '',
     primary: ios ? '<button class="btn primary nr-cta" data-act="lb-guide">Add Golf Board to my home screen</button>' : '<button class="btn primary nr-cta" data-act="lb-find">Find my name</button>',
@@ -126,6 +134,7 @@ function landing(app, st) {
 /** The handicap invite (#/e/CODE/hcp, every player has a handicap). */
 function invite(app, st) {
   const ios = safariPhone();
+  if (ios && app.appLikely()) return invitation(app, st, openAppOffer);
   return invitation(app, st, {
     lineText: ios ? 'Your handicap opens in Golf Board on your home screen. About a minute.' : '',
     primary: `<button class="btn primary nr-cta" data-act="${ios ? 'lb-guide' : 'lb-find'}">Reveal my handicap</button>`,
@@ -634,12 +643,18 @@ export default {
   actions: {
     'lb-find': (el, ev, app) => {
       app.ui.revealHere = app.code; // chose Safari (Join in Safari for now): after the pick, the reveal, not the steps
-      app.markLobbySeen('here'); // and after a reload too
+      // Nov 24: not remembered as "stay in Safari" any more: after the pick, a phone that has the app is told so once
+      // (Open Golf Board · Stay in Safari instead), since the link put them here, not a choice.
       app.ui.lobbyPick = app.code;
       app.ui.lobbyWatch = null;
       app.ui.lobbyQ = '';
       app.refreshClaimed();
       app.render();
+    },
+    'lb-openapp': (el, ev, app) => {
+      const o = db.owner.get()?.personId;
+      const pid = (app.event?.roster?.players || []).find((p) => o && p.personId === o)?.id || null;
+      app.openSheet('open-app', { pid, keep: true });
     },
     'lb-follow': (el, ev, app) => { app.ui.lobbyWatch = app.code; app.ui.lobbyPick = null; app.render(); },
     'lb-followon': (el, ev, app) => {

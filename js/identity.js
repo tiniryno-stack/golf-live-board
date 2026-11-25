@@ -63,3 +63,36 @@ export function whoGroups({ roster, settings = {}, players }, teeLabel = (id) =>
     return { label: headers && i < groupIds.length ? teeLabel(groupIds[i]) : '', carts };
   });
 }
+
+/**
+ * Nov 24 · the group-chat link always opens in Safari, and Safari is a separate device from the home screen app.
+ * Before Safari claims a spot (which would leave the app asking "in use"), send the player to their app when this
+ * phone has it: Safari remembers tapping Add to Home Screen (hint), or the server says this person has opened a round
+ * in the app (serverHasApp). Never in the app itself, off iPhone, in a practice round, or once they chose Safari.
+ * Returns 'app' (show "Open Golf Board") or 'here' (claim in Safari as before).
+ */
+export function appHandoff({ standalone = false, ios = false, practice = false, stayed = false, hint = false, serverHasApp = null } = {}) {
+  if (standalone || !ios || practice || stayed) return 'here';
+  return hint || serverHasApp === true ? 'app' : 'here';
+}
+
+/**
+ * Nov 24 · Home → your name → "Who are you?": the people in this phone's recent rounds (real rounds only), the ones
+ * this phone played as first (most rounds first), then everyone else A–Z. rows = events { code, roster, settings };
+ * mine = { CODE: playerId } (this phone's claims). Returns [{ personId, name, mine }].
+ */
+export function phonePeople(rows = [], mine = {}) {
+  const by = new Map();
+  for (const ev of rows) {
+    if (String(ev?.settings?.practice) === 'true') continue;
+    for (const p of ev?.roster?.players || []) {
+      if (!p?.personId) continue;
+      const name = [p.firstName, p.lastName].filter(Boolean).join(' ') || p.name || '';
+      const cur = by.get(p.personId) || { personId: p.personId, name, mine: 0 };
+      if (mine[ev.code] === p.id) cur.mine += 1;
+      if (!cur.name) cur.name = name;
+      by.set(p.personId, cur);
+    }
+  }
+  return [...by.values()].filter((p) => p.name).sort((a, b) => b.mine - a.mine || a.name.localeCompare(b.name));
+}
