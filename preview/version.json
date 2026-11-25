@@ -1,5 +1,5 @@
 {
- "v": "20261125055624",
+ "v": "20261125205900",
  "files": [
   "css/locker.css",
   "css/styles.css",
@@ -16,6 +16,7 @@
   "js/geoload.js",
   "js/gps.js",
   "js/headlines.js",
+  "js/homeview.js",
   "js/identity.js",
   "js/loader.js",
   "js/lobby.js",
@@ -57,6 +58,7 @@
   "js/teams.js",
   "js/todaysgame.js",
   "js/ui.js",
-  "js/vendor/page-flip.js"
+  "js/vendor/page-flip.js",
+  "js/whatsnew.js"
  ]
 }

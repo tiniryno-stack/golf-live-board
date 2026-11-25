@@ -80,6 +80,9 @@
 
 /* 036: Home's avatar is a button to your passport */
 button.home-me { padding: 0; text-align: left; color: inherit; background: none; border: 0; }
+.home-me > button.avatar, .home-me > button.hm-name { padding: 0; border: 0; color: inherit; font: inherit; text-align: left; }
+.home-me > button.avatar { background: var(--surface-2); font-size: 13px; font-weight: 600; }
+.home-me > button.hm-name { background: none; font-size: 15px; line-height: 20px; font-weight: 600; min-height: var(--tap-min); }
 
 /* preview copy only: the practice-packs switch */
 .lk-practice { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3); margin-bottom: var(--space-3); border-radius: var(--radius-xl); border: 1px dashed var(--line); color: var(--text-muted); }
@@ -475,3 +478,10 @@ html.rm .pk.sep .bp .topw, html.rm .pk.sep .bp .bp-body, html.rm .pk.reveal .pk-
 html.rm .pk .pk-wash, html.rm .pk .pk-screen, html.rm .pk .pk-white, html.rm .pk .pk-glare { opacity: 0 !important; }
 html.rm .pk-lands > * { opacity: 1; }
 html.rm .lk-flip { transition-duration: 150ms; }
+
+/* ── 037 Home: the top is the real card or the real chrome pack, full width ── */
+.hm-card { box-shadow: none; }
+.hm-packart { position: relative; display: block; width: 100%; aspect-ratio: 8.4 / 6.2; container-type: inline-size; filter: drop-shadow(0 6px 12px var(--lk-shadow)); }
+.hm-packart > .bp { position: absolute; inset: 0; }
+.hm-pack:active .hm-packart, .hm-card:active { transform: scale(.98); }
+.x-crewline { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }

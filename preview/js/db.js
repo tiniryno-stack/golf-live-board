@@ -336,13 +336,14 @@ export const owner = {
  * every event whose roster has the owner (024: only the owner; glb.people while there's no owner yet).
  * Added to Recent rounds in date order, newest first. Returns how many were added.
  */
+export let lastSynced = [];
 export async function syncMyRounds() {
   const o = owner.get();
   const ids = o ? [o.personId] : people.all();
   if (!ids.length) return 0;
   const found = new Map();
   for (const personId of ids) {
-    const rows = (await select(sb().from('events').select('code,name,played_on,crew_id,course,settings,created_at')
+    const rows = (await select(sb().from('events').select('code,name,played_on,crew_id,course,roster,settings,created_at')
       .contains('roster', { players: [{ personId }] }).order('created_at', { ascending: false }).limit(20))) || [];
     for (const r of rows) found.set(r.code, r);
   }
@@ -352,9 +353,12 @@ export async function syncMyRounds() {
   const rows = add.map((ev) => ({
     code: ev.code, name: ev.name, played_on: ev.played_on || null, crew_id: ev.crew_id || null,
     course: ev.course?.shortName || ev.course?.name || '', at: Date.parse(ev.created_at) || 0, synced: true,
+    // Nov 24: a round that hasn't started goes straight under Coming up (refreshLobbies only updates known lobbies)
+    ...(() => { try { const c = homeCard(ev, { pid: null, personId: o?.personId || null }, clock.now()); return c ? { lobby: c } : {}; } catch { return {}; } })(),
   }));
   const list = [...recent.all(), ...rows].sort((a, b) => (b.at || 0) - (a.at || 0));
   local.set('glb.recent', list.slice(0, 12));
+  lastSynced = rows; // Nov 24: a resumed app away from Home toasts the newest one
   return rows.length;
 }
 
@@ -472,7 +476,7 @@ export async function fetchCrewRounds(crewId) {
  */
 export async function fetchPersonRounds(personId) {
   if (!personId) return [];
-  const events = (await select(sb().from('events').select('id,code,name,played_on,created_at,finalized_at,course,roster,settings')
+  const events = (await select(sb().from('events').select('id,code,name,played_on,created_at,finalized_at,course,roster,settings,crew_id')
     .contains('roster', { players: [{ personId }] }))) || [];
   const keep = events.filter((e) => String(e.settings?.practice) !== 'true');
   // 036 §6.1: the card back lists everyone who finished, so fetch each round's whole score set (≤ 16 × 18 rows),
@@ -530,6 +534,8 @@ export const api = {
     if (res?.now) clock.learn(res.now);
     return res;
   },
+  // Nov 24: has this person opened a round in the home screen app? Safari asks before it claims their spot.
+  personHasApp: (personId) => rpc('person_has_app', { p_person_id: personId }),
   lobbyStatus: (code, pin) => rpc('lobby_status', { p_code: code, p_admin_pin: pin }),
   lobbyCounts: (code) => rpc('lobby_counts', { p_code: code }),
   setRoundDate: (code, pin, date, opensAt = null) => rpc('set_round_date', { p_code: code, p_admin_pin: pin, p_date: date, p_opens_at: opensAt }),
@@ -585,6 +591,8 @@ const qKey = (code) => `glb.queue.${code}`;
 export const queue = {
   items: (code) => local.get(qKey(code), []),
   count: (code) => queue.items(code).length,
+  /** Nov 24: unsent scores in any round on this phone (the update check never reloads over them). */
+  any: () => { try { return local.keys().some((k) => k.startsWith('glb.queue.') && (local.get(k, []) || []).length > 0); } catch { return false; } },
   has: (code, playerId, hole) => queue.items(code).some((i) => i.playerId === playerId && i.hole === hole),
   value: (code, playerId, hole) => queue.items(code).find((i) => i.playerId === playerId && i.hole === hole),
   put(code, item) {
