@@ -1,5 +1,5 @@
 {
- "v": "20261125055621",
+ "v": "20261125065630",
  "files": [
   "css/locker.css",
   "css/styles.css",
@@ -57,6 +57,7 @@
   "js/teams.js",
   "js/todaysgame.js",
   "js/ui.js",
-  "js/vendor/page-flip.js"
+  "js/vendor/page-flip.js",
+  "js/whatsnew.js"
  ]
 }

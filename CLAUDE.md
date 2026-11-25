@@ -35,7 +35,7 @@ packs card + Locker row, `#/locker`). Pure rules `js/locker.js` (`buildLocker`, 
 `locker_admin` (live since Nov 21). Actions are `lk-*`. Home must stay exactly as it was if the locker can't load.
 Whose locker: `lockerPerson()` = the owner, else the latest `glb.people`, else this phone's claims in Recent rounds.
 
-## Cards, packs, Passport (036, Nov 24, branch `claude/zen-cerf-q426dq`). Brief: `docs/design/features/036-card-designs/SPEC.md`
+## Cards, packs, Passport (036, Nov 24–25, live on `main` with the returning-player flow). Brief: `docs/design/features/036-card-designs/SPEC.md`
 
 Landscape cards (whole scorecard on the front, "who you played with" back), horizontal chrome packs you swipe to tear,
 and the Passport (course + milestone stamps; everyone's profile). No DB change. Pure rules: `js/stamps.js` +
@@ -43,6 +43,11 @@ and the Passport (course + milestone stamps; everyone's profile). No DB change. 
 `tests/stamps036.test.mjs`. Screens: `js/screens/locker.js` (card markup, Cards | Passport tabs), `pack.js` (chrome pack,
 `PACK_PATTERN`), `passport.js` (stamps, book, `ppName` links), `share036.js` (canvas share). Routes `#/passport`,
 `#/passport/<personId>`. Every style in `css/locker.css`. Adding a course stamp: SPEC §7.3.
+Tuned with Andrew on the preview after the SPEC (ARCHITECTURE.md 13a "036 · …" + the Nov 24–25 passes): one-piece curling
+tear that scrubs both ways, 035's wait back per finish, pearl rings + wash for prismatic (a ladder for the rest), result
+screen without Add to locker, StPageFlip booklet passport (`js/vendor/page-flip.js`, MIT), metal card edge, Prismatic
+look from the card playground (pearly ink, water light 4.5%). Home: the avatar opens your passport, your name opens who
+this phone is (returning-player flow). Preview copy only (`…/preview/`): acts as Andrew, ⓘ → reseal packs (nothing saved).
 
 ## Today's game (032, Nov 20, live on `main`)
 

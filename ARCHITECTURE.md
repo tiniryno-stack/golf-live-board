@@ -1123,7 +1123,7 @@ Still open: nothing blocking. Design direction (section 9) is final.
   device from the home screen app, so friends claimed their spot in Safari and the app then said "in use". Now
   `app.claim` first asks `sendToApp`: on iPhone Safari (not practice, not after **Stay in Safari** =
   `glb.seen.CODE.here`), when Safari remembers Add to Home Screen (`glb.hasApp`) or the server says this person opened
-  a round in the app (RPC `person_has_app`, migration `supabase/migrations/2026-11-24-person-has-app.sql`), it opens the
+  a round in the app (RPC `person_has_app`, migration `supabase/migrations/2026-11-24-person-has-app.sql`, **applied to the live DB Nov 25** and checked as anon), it opens the
   `open-app` sheet instead and leaves the spot free for the app's auto-join. Pure rule `identity.appHandoff`. The lobby
   landing / handicap invite say **Open it in Golf Board** instead of adding a second icon (`app.appLikely()`); **or join
   in Safari** no longer counts as Stay in Safari. `markInApp` now runs in every round (it feeds `person_has_app`).
