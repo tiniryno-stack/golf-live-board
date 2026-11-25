@@ -4,6 +4,15 @@
 
 export const RELEASES = [
   {
+    id: '2026-11-25',
+    title: 'Your card is on Home now',
+    lines: [
+      'Every finished 18 is a scorecard card. Your latest one sits on top of Home, or the pack to open.',
+      'Under it: how that round finished. Your crew’s standings are one tap away.',
+      'Playing? The live round waits at the bottom of Home. Old rounds are under All rounds.',
+    ],
+  },
+  {
     id: '2026-11-24',
     title: 'Round links find your app',
     lines: [

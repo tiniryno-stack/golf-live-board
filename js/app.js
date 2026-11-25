@@ -10,7 +10,7 @@ import { replayHeadlines, latestMoment } from './headlines.js';
 import { esc, icon, initials, roundLink, copyText, growMeasure, growPlay } from './ui.js';
 import * as fx from './screens/toasts.js';
 import * as sheets from './screens/sheets.js';
-import home, { homeReturn } from './screens/home.js';
+import home, { homeReturn, roundsScreen } from './screens/home.js';
 import setup from './screens/setup.js';
 import season from './screens/season.js';
 import enter from './screens/enter.js';
@@ -28,7 +28,7 @@ import { joinPlan, appHandoff } from './identity.js';
 import { lobbyState, lobbyView as pickLobbyView, spotGiven, clock12, wallClock, parseTime, hasHandicaps, revealCtx } from './lobby.js';
 import lobbyScreen from './screens/lobby.js';
 
-const SCREENS = { home, setup, season, enter, matches, board, card, host, crew, locker };
+const SCREENS = { home, rounds: roundsScreen, setup, season, enter, matches, board, card, host, crew, locker };
 const TABS = [
   ['enter', 'Enter', 'enter'],
   ['matches', 'Matches', 'matches'],
@@ -1326,6 +1326,7 @@ function parseHash() {
   const parts = location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
   if (!parts.length) return { name: 'home' };
   if (parts[0] === 'setup') return { name: 'setup', from: parts[1] ? db.normCode(parts[1]) : null };
+  if (parts[0] === 'rounds') return { name: 'rounds' }; // 037 §5: All rounds
   if (parts[0] === 'season') return { name: 'season', crew: parts[1] || null, view: parts[2] || null };
   // 035 Scorecard locker: #/locker · #/locker/admin · #/locker/p/<personId> (since 036: their passport)
   if (parts[0] === 'locker') {

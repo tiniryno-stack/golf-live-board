@@ -476,7 +476,7 @@ export async function fetchCrewRounds(crewId) {
  */
 export async function fetchPersonRounds(personId) {
   if (!personId) return [];
-  const events = (await select(sb().from('events').select('id,code,name,played_on,created_at,finalized_at,course,roster,settings')
+  const events = (await select(sb().from('events').select('id,code,name,played_on,created_at,finalized_at,course,roster,settings,crew_id')
     .contains('roster', { players: [{ personId }] }))) || [];
   const keep = events.filter((e) => String(e.settings?.practice) !== 'true');
   // 036 §6.1: the card back lists everyone who finished, so fetch each round's whole score set (≤ 16 × 18 rows),

@@ -478,3 +478,10 @@ html.rm .pk.sep .bp .topw, html.rm .pk.sep .bp .bp-body, html.rm .pk.reveal .pk-
 html.rm .pk .pk-wash, html.rm .pk .pk-screen, html.rm .pk .pk-white, html.rm .pk .pk-glare { opacity: 0 !important; }
 html.rm .pk-lands > * { opacity: 1; }
 html.rm .lk-flip { transition-duration: 150ms; }
+
+/* ── 037 Home: the top is the real card or the real chrome pack, full width ── */
+.hm-card { box-shadow: none; }
+.hm-packart { position: relative; display: block; width: 100%; aspect-ratio: 8.4 / 6.2; container-type: inline-size; filter: drop-shadow(0 6px 12px var(--lk-shadow)); }
+.hm-packart > .bp { position: absolute; inset: 0; }
+.hm-pack:active .hm-packart, .hm-card:active { transform: scale(.98); }
+.x-crewline { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }

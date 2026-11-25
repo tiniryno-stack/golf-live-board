@@ -2839,3 +2839,52 @@ html.light .gs-seg, [data-theme="light"] .gs-seg { background: var(--bg); }
   .tg-lg, .tg-lg .cn { transition-duration: 150ms; }
 }
 .tg-lb.tight .tg-lbr { height: 40px; }
+
+/* ───────────────────────────────────────────── 037 Home (docs/design/features/037-home/SPEC.md)
+   One page: the top (card / pack / empty outline), the locker caption, Coming up, How it finished, the crew block,
+   end rows, and the pinned bar. Reuses .home-row, .home-list, .home-k, .empty-box, .pill, .seg, .btn, .nr-foot.
+   New patterns (§8): the deal (hm-deal / hm-rise), the live bar (the only glow on Home), the empty outline at the
+   card's aspect ratio. Pack + card sizing live in css/locker.css. */
+.home > :first-child { margin-top: var(--space-2); }
+.hm-news { border-radius: var(--radius-xl); background: var(--surface-1); }
+.hm-nl { display: flex; align-items: center; gap: var(--space-3); width: 100%; min-height: var(--tap-min); padding: 0 var(--space-3) 0 var(--space-4); text-align: left; }
+.hm-nk { color: var(--text-muted); flex: none; }
+.hm-nt { flex: 1; min-width: 0; font-size: 15px; line-height: 20px; font-weight: 600; }
+.hm-nc { transition: transform var(--motion-grow, 300ms) var(--ease-grow); }
+.hm-news.open .hm-nc { transform: rotate(90deg); }
+.hm-nb { display: flex; flex-direction: column; gap: 2px; padding: 0 var(--space-4) var(--space-4); }
+.hm-nb .lb-cbtn { margin-top: var(--space-3); }
+.hm-hero { margin-top: var(--space-3); }
+.hm-news + .hm-hero { margin-top: var(--space-4); }
+.hm-top { display: block; width: 100%; }
+.hm-empty .empty-box { aspect-ratio: 7 / 5; justify-content: center; }
+.hm-cap { border-bottom: 0; }
+.hm-fin { background: var(--surface-1); border-radius: var(--radius-xl); padding: 0 var(--space-4); }
+.hm-fr { display: flex; align-items: center; gap: var(--space-3); min-height: var(--tap-min); border-bottom: 1px solid var(--line); }
+.hm-fr:has(+ .hm-gap) { border-bottom: 0; }
+.hm-gap { height: var(--space-2); border-bottom: 1px dashed var(--line); }
+.hm-pos { width: 28px; flex: none; color: var(--text-muted); }
+.hm-fn { flex: 1; min-width: 0; font-size: 17px; line-height: 22px; font-weight: 600; }
+.hm-fr .hr-v { font-family: var(--font-mono); font-size: 17px; font-weight: 700; flex: none; font-variant-numeric: tabular-nums; }
+.hm-fr.me .hm-fn, .hm-fr.me .hr-v { color: var(--cart-you-text); }
+.hm-more { min-height: var(--tap-min); padding: 0; border-bottom: 0; }
+.hm-kk { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin: var(--space-5) 0 var(--space-2); color: var(--text-muted); }
+.hm-kact { display: flex; align-items: center; gap: var(--space-1); flex: none; color: var(--text); }
+.hm-crew + .home-list, .hm-b > .hm-ends { margin-top: var(--space-3); }
+.hm-b:has(> .hm-crew:only-child) { margin-top: var(--space-4); }
+.hm-live { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4); border-radius: var(--radius-xl);
+  background: linear-gradient(var(--tint-you), var(--tint-you)), var(--bg); box-shadow: inset 0 0 0 1.5px var(--cart-you), var(--glow-you); }
+.hm-live .lc-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--cart-you); flex: none; }
+.hm-lm { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.hm-lk { color: var(--cart-you-text); }
+.hm-ll { font-size: 17px; line-height: 22px; font-weight: 800; }
+.hm-lbtn { flex: none; }
+.hm-rh { margin: var(--space-2) 0 var(--space-4); }
+/* §6 · the opening: deal on a fresh open (the top drops in, the rest rises, the bar last); a quick fade coming back. */
+@keyframes hm-deal { from { opacity: 0; transform: translateY(-40px) rotate(-5deg) scale(1.06); } }
+@keyframes hm-rise { from { opacity: 0; transform: translateY(14px); } }
+@keyframes hm-fade { from { opacity: 0; } }
+.hm-hero.hm-deal { animation: hm-deal 700ms var(--ease-grow) both; }
+.hm-rise { animation: hm-rise 500ms var(--ease-grow) var(--hm-d, 0ms) both; }
+.home.hm-fade { animation: hm-fade 220ms ease both; }
+@media (prefers-reduced-motion: reduce) { .hm-hero.hm-deal, .hm-rise, .home.hm-fade { animation: none; } }

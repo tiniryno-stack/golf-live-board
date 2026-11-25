@@ -1135,6 +1135,28 @@ Still open: nothing blocking. Design direction (section 9) is final.
   minute + on landing) and never reloads over unsent scores in any round (`db.queue.any()`). **What's new**: a plain
   Home card once per release (`js/whatsnew.js` `RELEASES`, seen key `glb.seen.whatsnew`; a brand-new phone just marks
   it seen). Test: `tests/returning037.test.mjs`.
+- **037 · Home (Nov 25, brief `docs/design/features/037-home/SPEC.md`, branch `claude/037-home`).** No DB, sync, join,
+  queue or engine change. Home is one page: the **top** (first match wins: the newest pack = the real chrome pack, tap →
+  `lk-home-packs`; else your latest opened card = the real 036 front, tap → `#/locker`; else the dashed empty outline
+  "Your first card goes here"; nothing while the locker hasn't loaded / failed / has no person), the **locker caption**
+  (`.home-row` "Your locker" + `homeSub`), **Coming up** (025's `comingCard`, unchanged), **How it finished** for the
+  round on top (`seasons.roundFinish` units + the game's value; top three, a dashed break, you; ties "T3"; `Full board ›`
+  → `#/e/CODE`; "Last time out · Nov 20" when a round is coming or live; skipped for fewer than two units), the **crew
+  block** (kicker = crew name + Invite pill `crew-invite` + ⋯ `crew-settings`; 2+ crews "Your crews · N" + the `crew-pick`
+  `.seg`; Standings with the season line or "N rounds this season"; Name your crew; no crew → Start a crew row), **end
+  rows** (All rounds → new `#/rounds` screen = the old Recent rounds list; New round + Join with code while a round is
+  live; Add to Home Screen in iPhone Safari), and the **pinned bar** (`.nr-foot`: Join with code / New round, or the
+  live round: dot, `LIVE · HOLE 7`, `L.line`, **Back to hole 7**, `--tint-you` + `--cart-you` ring + `--glow-you`). The
+  Playing now card, the packs card, the Locker row, the crew card and the Recent rounds list are gone; the title shows
+  only on a brand-new phone. **What's new** is one slim line (`home-news-open` opens it in place; Got it = `home-news`).
+  Pure model `js/homeview.js` (`homeModel`, `topOf`, `finishUnits` / `finishRows`, `crewModel`, `allRounds`; one engine
+  run per round object, WeakMap) + test `tests/home037.test.mjs`. Data: `locker.homeLockerData` (the locker keeps its
+  `fetchPersonRounds` rows as `L.rows`; `crew_id` added to that select), `crew.homeCrewData` / `crewNames`. **Crew on the
+  card:** `frontHtml(c, { crewLine })` puts `FOUNDERS CREW · ANDREW` in the card's bottom line (its own ink and type)
+  on Home only. **Opening** (§6): the first Home arrival per page load deals (blocks rise 14 px staggered 70 ms, bar
+  last); the top deals when it first shows (the locker arrives) or differs from `glb.seen.homeTop`; any later arrival /
+  resume = 220 ms fade. `data-t0` + `ui.syncMotion` in `mount`, nothing under reduced motion. Styles: `/* 037 Home */`
+  at the end of styles.css + the pack / card bits at the end of locker.css. `RELEASES` entry `2026-11-25`.
 
 ## 13. V2 backlog (running list)
 

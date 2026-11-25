@@ -58,8 +58,12 @@ keep `brief.js`. Opens on its own once per phone on the first Enter of an open r
 
 ## Building Home (037)? Read `docs/design/features/037-home/SPEC.md` first
 
-Approved by Andrew Nov 25 (`prototype.html` in that folder, seven situations). Not built yet. Home becomes: your latest
-card on top (crew name on it), how that round finished, one crew block, pinned buttons that turn into the live round.
+Approved by Andrew Nov 25 (`prototype.html` in that folder, seven situations). **Built on branch `claude/037-home`**
+(not on `main` yet). Home = your latest card on top (crew name on it), how that round finished, one crew block, pinned
+buttons that turn into the live round. Pure model `js/homeview.js` (`homeModel`), test `tests/home037.test.mjs`; screen
+`js/screens/home.js` (+ `#/rounds` = All rounds, `roundsScreen`); data from `locker.homeLockerData` / `crew.homeCrewData`;
+`/* 037 Home */` at the end of styles.css. Opening motion uses `data-t0` + `ui.syncMotion`; seen key `glb.seen.homeTop`.
+ARCHITECTURE.md 13a "037 · Home".
 
 ## Returning players (Nov 24, live on `main` since b047ea2 with 036)
 
