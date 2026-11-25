@@ -364,7 +364,8 @@ html.rm .pp-hit { animation: none; }
 .pp { overflow: hidden; margin: 0 calc(-1 * var(--gutter, 16px)); align-items: stretch; }
 .pp-cap-row { align-self: center; }
 .pp-host { flex: none; --pp-faint: rgba(244,245,247,.36); --pp-line: rgba(255,255,255,.1); --pp-bg: #15171b; color: #f4f5f7; -webkit-user-select: none; user-select: none; }
-.pp-flip .pg { background: var(--pp-bg); overflow: hidden; }
+.pp-flip .pg { background: var(--pp-bg); overflow: hidden; border-radius: 4px 16px 16px 4px; } /* right-hand pages: round outside */
+.pp-flip .pg.pg-back, .pp-flip .pg:last-child { border-radius: 16px 4px 4px 16px; } /* left-hand backs + the back cover */
 .pp-blank { background: repeating-radial-gradient(circle at 90% 110%, transparent 0 15px, rgba(255,255,255,.022) 15px 16px), var(--pp-bg); box-shadow: inset -8px 0 10px -6px rgba(0,0,0,.5); }
 .bk-backcover { background: linear-gradient(135deg, #0f1830, #1b2a4a); }
 .pp-flip .pg > .pp-page, .pp-flip .pg > .bk-cover { height: 100%; }
