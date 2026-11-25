@@ -154,6 +154,14 @@ export function pageOf(cards, what, opts) {
 }
 
 let walking = false;
+/** The impact of a stamp: a short shake of `el` and a tap on phones that can buzz. */
+export function thud(el) {
+  if (!el || document.documentElement.classList.contains('rm')) return;
+  el.classList.remove('thud');
+  void el.offsetWidth;
+  el.classList.add('thud');
+  try { navigator.vibrate?.(18); } catch { /* no haptics */ }
+}
 /** True while the book is turning itself to a page: the Locker holds redraws until it's done. */
 export const bookBusy = () => walking;
 
@@ -175,7 +183,7 @@ export function mountBook(content, ui, cards, opts, key) {
   const caps = () => { if (cap && book) cap.textContent = caption(book.names.map((name) => ({ name })), Math.min(ui.pg, book.names.length - 1)); };
   // Size: the right-hand page fills the screen less a strip on the left, where the page before it peeks in.
   const W = document.documentElement.clientWidth, H = window.innerHeight;
-  const P = Math.round(Math.max(220, Math.min(W - 60, (H - 250) / 1.44, 460))), PH = Math.round(P * 1.44);
+  const P = Math.round(Math.max(220, Math.min(W - 72, (H - 250) / 1.44, 460))), PH = Math.round(P * 1.44);
   const sized = `${P}x${PH}`;
   if (!(book && book.key === key && book.sized === sized)) {
     try { book?.pf.destroy(); } catch { /* gone */ }
@@ -199,20 +207,30 @@ export function mountBook(content, ui, cards, opts, key) {
   } else if (book.wrap.parentNode !== host) {
     host.appendChild(book.wrap);
   }
-  // The spread is 2P wide; place it so the right page ends at the right gutter and the left page peeks in.
+  // The spread is 2P wide; the page you're reading (the right one) is centred on the screen and the one before it
+  // peeks in from the left edge (Andrew, Nov 25).
   host.style.width = `${2 * P}px`;
-  host.style.marginLeft = `${W - 16 - 2 * P}px`;
+  host.style.marginLeft = `${Math.round((W - P) / 2 - P)}px`;
   caps();
   // Walk to a page (after "See in passport"): from the cover, one page turn at a time, then the new stamp thumps.
   if (ui.walkTo != null) {
     const to = Math.min(book.names.length - 1, ui.walkTo), hit = ui.hit, pf = book.pf;
     ui.walkTo = null; ui.hit = null;
     walking = true;
+    // The new stamps (this card's) wait off the page, then get pounded on one by one once the book is open there,
+    // with the same weight as on the reveal: a hard stamp and a shake (Andrew, Nov 25).
+    const fresh = hit ? [...book.wrap.querySelectorAll(`[data-v="${CSS.escape(hit)}"]`)] : [];
+    fresh.forEach((el) => { el.classList.remove('pp-hit'); el.classList.add('pp-wait'); });
     const done = () => {
       book.onFlip = null;
-      setTimeout(() => { walking = false; }, 300);
-      if (!hit) return;
-      book.wrap.querySelectorAll(`[data-v="${CSS.escape(hit)}"]`).forEach((el) => { el.classList.remove('pp-hit'); void el.offsetWidth; el.classList.add('pp-hit'); });
+      const shake = content.querySelector('.pp');
+      fresh.forEach((el, i) => setTimeout(() => {
+        el.classList.remove('pp-wait');
+        void el.offsetWidth;
+        el.classList.add('pp-hit');
+        setTimeout(() => thud(shake), 210);
+      }, 350 + i * 520));
+      setTimeout(() => { walking = false; }, 600 + fresh.length * 520);
     };
     const next = () => { if (ui.pg >= to) done(); else setTimeout(() => pf.flipNext('top'), 120); };
     book.onFlip = next;

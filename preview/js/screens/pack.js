@@ -9,6 +9,7 @@
 // every step is a 150 ms fade. No sound, no haptics.
 
 import { esc, icon } from '../ui.js';
+import { thud } from './passport.js';
 
 /** Which chrome refractor pattern every pack uses (§3.1, §13 Q2). One of: fine bold brushed wave shimmer speckle atomic sapphire. */
 export const PACK_PATTERN = 'fine';
@@ -31,7 +32,7 @@ const PLAN = {
 };
 const HOLD_MS = 1300;
 /** After the strip comes off: the card shows (white-hot) at `wait`, the stamps land `lands` after the reveal. */
-const T = { wait: 500, lands: 900, step: 420, done: 150 };
+const T = { wait: 500, lands: 900, step: 620, done: 250 };
 /** Pulse start times (ms into the wait): each gap shorter than the last; the last pulse ends at `span`. */
 export function pulseTimes(n, span) {
   const r = 0.62, gaps = Array.from({ length: n }, (_, k) => r ** k);
@@ -174,7 +175,10 @@ export function startPack(root, { reduced = false, onTear = () => {}, tilt = () 
       const at = plan.span + (plan.dark ? 300 : 0);
       later(at, () => { root.classList.remove('dark'); root.classList.add('reveal'); });
       const lands = [...root.querySelectorAll('.pk-lands > *')];
-      lands.forEach((el, i) => later(at + T.lands + i * T.step, () => el.classList.add('in')));
+      lands.forEach((el, i) => later(at + T.lands + i * T.step, () => {
+        el.classList.add('in');
+        later(210, () => thud(root.querySelector('.pk-stage'))); // the stamp hits: the screen jolts
+      }));
       later(at + T.lands + lands.length * T.step + T.done, () => root.classList.add('done'));
     });
   };
