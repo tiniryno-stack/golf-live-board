@@ -163,12 +163,14 @@ html.rm .x-prism { display: none; }
 @property --drift { syntax: '<number>'; inherits: true; initial-value: 0; }
 .lk-slot.lkf-prismatic, .lk-mini.lkf-prismatic { animation: x-drift 3.6s ease-in-out infinite alternate; }
 @keyframes x-drift { from { --drift: -.55; } to { --drift: .55; } } /* option B (Andrew, Nov 25) */
-.lkf-prismatic { --m-base: linear-gradient(120deg, hsl(calc(230 + (var(--sx, 0) + var(--drift, 0)) * 150) 90% 60% / .2), transparent 62%), linear-gradient(135deg, #1a1b24 0%, #33344a 50%, #1a1b24 100%);
-  --m-ink: hsl(calc(230 + (var(--sx, 0) + var(--drift, 0)) * 150) 95% 82%); }
-.lkf-prismatic .x-slick { background-position: calc(50% + (var(--sx, 0) + var(--drift, 0)) * 50%) 0; }
+/* Andrew's tuning from the card playground (Nov 25): hue swing 245°, ink saturation 20%, body glow 36%, sheen 67%,
+   tilt response 180% (the tilt counts 1.8×), water light 4.5%. Drift, speed, hue 230, lightness, bands, flash unchanged. */
+.lkf-prismatic { --m-base: linear-gradient(120deg, hsl(calc(230 + (var(--sx, 0) * 1.8 + var(--drift, 0)) * 245) 90% 60% / .36), transparent 62%), linear-gradient(135deg, #1a1b24 0%, #33344a 50%, #1a1b24 100%);
+  --m-ink: hsl(calc(230 + (var(--sx, 0) * 1.8 + var(--drift, 0)) * 245) 20% 82%); --m-sheen: .67; }
+.lkf-prismatic .x-slick { background-position: calc(50% + (var(--sx, 0) * 1.8 + var(--drift, 0)) * 50%) 0; }
 /* water light (Andrew, Nov 25, "infinite water flowing and shimmering"): two seamless tiles of soft pool-bottom light
    (img/prism-water-*.png, softness baked in, no live blur) stream in different directions forever, at 4%. */
-.x-water { position: absolute; inset: 0; pointer-events: none; mix-blend-mode: screen; opacity: .04; background-repeat: repeat; }
+.x-water { position: absolute; inset: 0; pointer-events: none; mix-blend-mode: screen; opacity: .045; background-repeat: repeat; }
 .x-water.w1 { background-image: url(../img/prism-water-1.png); background-size: 60cqw 60cqw; animation: x-water1 2.8s linear infinite; }
 .x-water.w2 { background-image: url(../img/prism-water-2.png); background-size: 82cqw 82cqw; animation: x-water2 4.06s linear infinite; }
 @keyframes x-water1 { from { background-position: 0 0; } to { background-position: 60cqw -60cqw; } }
