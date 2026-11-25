@@ -1261,11 +1261,16 @@ function parseHash() {
   if (!parts.length) return { name: 'home' };
   if (parts[0] === 'setup') return { name: 'setup', from: parts[1] ? db.normCode(parts[1]) : null };
   if (parts[0] === 'season') return { name: 'season', crew: parts[1] || null, view: parts[2] || null };
-  // 035 Scorecard locker: #/locker · #/locker/admin · #/locker/p/<personId> (admin's read-only view)
+  // 035 Scorecard locker: #/locker · #/locker/admin · #/locker/p/<personId> (since 036: their passport)
   if (parts[0] === 'locker') {
     if (parts[1] === 'admin') return { name: 'locker', mode: 'admin' };
-    if (parts[1] === 'p' && parts[2]) { let person = parts[2]; try { person = decodeURIComponent(person); } catch { /* as is */ } return { name: 'locker', mode: 'view', person }; }
+    if (parts[1] === 'p' && parts[2]) { let person = parts[2]; try { person = decodeURIComponent(person); } catch { /* as is */ } return { name: 'locker', mode: 'view', person, tab: 'passport' }; }
     return { name: 'locker', mode: 'mine' };
+  }
+  // 036 Passport = everyone's profile: #/passport (yours, on the holder page) · #/passport/<personId> (theirs, read-only)
+  if (parts[0] === 'passport') {
+    if (parts[1]) { let person = parts[1]; try { person = decodeURIComponent(person); } catch { /* as is */ } return { name: 'locker', mode: 'view', person, tab: 'passport' }; }
+    return { name: 'locker', mode: 'mine', tab: 'passport' };
   }
   // Crews (feature 006): #/crew/start · #/crew/rename/<id> · #/crew/which/<id> · #/crew/<INVITE>
   if (parts[0] === 'crew') {

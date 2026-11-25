@@ -1,0 +1,18 @@
+/* 036 component: course stamp ink look (one ink, rough edge, uneven press).
+   Extracted from the approved prototype stamp-library.html (docs/design/features/036-card-designs/).
+   Reference code: port it into the app's own files; names may change. */
+
+:root { --ink-blue: #8fa8ff; --ink-red: #ff8a80; --ink-green: #6fd3a6; --ink-violet: #c3a6ff; --ink-amber: #f6c56a; --ink-teal: #6fd0e0; --ink-date: #ff8a80; }
+/* the rough-edge filter: <filter id="rough"> in stamp-library.html (feTurbulence + feColorMatrix), defined once per page */
+.cell svg { width: 100%; height: auto; display: block; overflow: visible; transform: rotate(var(--r, 0deg)); color: var(--ink); filter: url(#rough);
+  -webkit-mask-image: linear-gradient(var(--fa, 100deg), rgba(0,0,0,.55), #000 40%, #000 72%, rgba(0,0,0,.65)); mask-image: linear-gradient(var(--fa, 100deg), rgba(0,0,0,.55), #000 40%, #000 72%, rgba(0,0,0,.65)); }
+.cell .nm { font: 600 13px/17px var(--font-sans); color: var(--text); text-align: center; }
+.paper .cell .nm { color: #26303f; }
+.cell .ct { font: 600 10px/13px var(--font-mono); letter-spacing: 1px; text-transform: uppercase; color: var(--faint); text-align: center; }
+.cell .ct b { color: inherit; font-weight: 700; }
+svg text { fill: currentColor; font-family: var(--font-mono); font-weight: 700; text-anchor: middle; text-transform: uppercase; }
+svg .dt { fill: var(--ink-date); } svg .mono { font-family: Georgia, "Times New Roman", serif; font-weight: 700; text-transform: none; }
+.ln { fill: none; stroke: currentColor; stroke-linejoin: round; }
+.hit { animation: hit 420ms cubic-bezier(.2,1.5,.4,1) both; }
+@keyframes hit { 0% { scale: 1.45; opacity: 0; } 55% { opacity: 1; } 100% { scale: 1; } }
+@media (prefers-reduced-motion: reduce) { .hit { animation: none; } }

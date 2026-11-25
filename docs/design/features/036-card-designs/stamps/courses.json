@@ -1,0 +1,1294 @@
+[
+ {
+  "slug": "twin-creeks",
+  "name": "The Golf Club at Twin Creeks",
+  "short": "Twin Creeks",
+  "city": "Allen",
+  "state": "TX",
+  "region": "DFW",
+  "played": true,
+  "access": "Pub",
+  "emblem": "emblems/twin-creeks.png",
+  "emblemRatio": 0.77,
+  "monogram": null,
+  "stamp": {
+   "shape": "oval",
+   "ink": "blue"
+  },
+  "drawn": "spreading oak tree",
+  "sure": "sure"
+ },
+ {
+  "slug": "bridlewood",
+  "name": "Bridlewood Golf Club",
+  "short": "Bridlewood",
+  "city": "Flower Mound",
+  "state": "TX",
+  "region": "DFW",
+  "played": true,
+  "access": "Pub",
+  "emblem": "emblems/bridlewood.png",
+  "emblemRatio": 1.739,
+  "monogram": null,
+  "stamp": {
+   "shape": "box",
+   "ink": "green"
+  },
+  "drawn": "horse head (flagstick across it)",
+  "sure": "sure"
+ },
+ {
+  "slug": "firewheel",
+  "name": "Firewheel Golf Park (Lakes)",
+  "short": "Firewheel Lakes",
+  "city": "Garland",
+  "state": "TX",
+  "region": "DFW",
+  "played": true,
+  "access": "Muni",
+  "emblem": "emblems/firewheel.png",
+  "emblemRatio": 1.005,
+  "monogram": null,
+  "stamp": {
+   "shape": "ring",
+   "ink": "red"
+  },
+  "drawn": "firewheel wildflower",
+  "sure": "fairly sure"
+ },
+ {
+  "slug": "pga-frisco",
+  "name": "PGA Frisco \u2014 Fields Ranch",
+  "short": "Fields Ranch",
+  "city": "Frisco",
+  "state": "TX",
+  "region": "DFW",
+  "played": false,
+  "access": "Resort",
+  "emblem": "emblems/pga-frisco.png",
+  "emblemRatio": 0.81,
+  "monogram": null,
+  "stamp": {
+   "shape": "oval",
+   "ink": "red"
+  },
+  "drawn": "round hay bale with a star flag",
+  "sure": "sure"
+ },
+ {
+  "slug": "tpc-craig-ranch",
+  "name": "TPC Craig Ranch",
+  "short": "TPC Craig Ranch",
+  "city": "McKinney",
+  "state": "TX",
+  "region": "DFW",
+  "played": false,
+  "access": "Priv",
+  "emblem": "emblems/tpc-craig-ranch.png",
+  "emblemRatio": 0.765,
+  "monogram": null,
+  "stamp": {
+   "shape": "oval",
+   "ink": "red"
+  },
+  "drawn": "TPC network badge only; no own picture",
+  "sure": "sure"
+ },
+ {
+  "slug": "westin-stonebriar",
+  "name": "Stonebriar CC (Westin Stonebriar Fazio course)",
+  "short": "Stonebriar",
+  "city": "Frisco",
+  "state": "TX",
+  "region": "DFW",
+  "played": false,
+  "access": "Priv / Resort",
+  "emblem": "emblems/westin-stonebriar.png",
+  "emblemRatio": 0.67,
+  "monogram": null,
+  "stamp": {
+   "shape": "oval",
+   "ink": "red"
+  },
+  "drawn": "castle tower on a shield",
+  "sure": "fairly sure"
+ },
+ {
+  "slug": "colonial",
+  "name": "Colonial Country Club",
+  "short": "Colonial",
+  "city": "Fort Worth",
+  "state": "TX",
+  "region": "DFW",
+  "played": false,
+  "access": "Priv",
+  "emblem": "emblems/colonial.png",
+  "emblemRatio": 2.247,
+  "monogram": null,
+  "stamp": {
+   "shape": "box",
+   "ink": "red"
+  },
+  "drawn": "columned clubhouse between two trees",
+  "sure": "sure"
+ },
+ {
+  "slug": "rockwood-park",
+  "name": "Rockwood Park Golf Course",
+  "short": "Rockwood Park",
+  "city": "Fort Worth",
+  "state": "TX",
+  "region": "DFW",
+  "played": false,
+  "access": "Muni",
+  "emblem": "emblems/rockwood-park.png",
+  "emblemRatio": 1.299,
+  "monogram": null,
+  "stamp": {
+   "shape": "box",
+   "ink": "green"
+  },
+  "drawn": "leaning \"R\" with a flag cut in",
+  "sure": "sure"
+ },
+ {
+  "slug": "tpc-las-colinas",
+  "name": "The Nelson (former TPC Four Seasons Las Colinas)",
+  "short": "The Nelson",
+  "city": "Irving",
+  "state": "TX",
+  "region": "DFW",
+  "played": false,
+  "access": "Priv",
+  "emblem": "emblems/tpc-las-colinas.png",
+  "emblemRatio": 1.342,
+  "monogram": null,
+  "stamp": {
+   "shape": "box",
+   "ink": "teal"
+  },
+  "drawn": "Texas outline with an \"N\"",
+  "sure": "fairly sure"
+ },
+ {
+  "slug": "trinity-forest",
+  "name": "Trinity Forest Golf Club",
+  "short": "Trinity Forest",
+  "city": "Dallas",
+  "state": "TX",
+  "region": "DFW",
+  "played": false,
+  "access": "Priv",
+  "emblem": "emblems/trinity-forest.png",
+  "emblemRatio": 0.76,
+  "monogram": null,
+  "stamp": {
+   "shape": "ring",
+   "ink": "blue"
+  },
+  "drawn": "\"TF\" monogram, the F like a flag",
+  "sure": "sure"
+ },
+ {
+  "slug": "stevens-park",
+  "name": "Stevens Park Golf Course",
+  "short": "Stevens Park",
+  "city": "Dallas",
+  "state": "TX",
+  "region": "DFW",
+  "played": false,
+  "access": "Muni",
+  "emblem": "emblems/stevens-park.png",
+  "emblemRatio": 0.835,
+  "monogram": null,
+  "stamp": {
+   "shape": "oval",
+   "ink": "amber"
+  },
+  "drawn": "five-petal flower",
+  "sure": "fairly sure"
+ },
+ {
+  "slug": "cedar-crest",
+  "name": "Cedar Crest Golf Course",
+  "short": "Cedar Crest",
+  "city": "Dallas",
+  "state": "TX",
+  "region": "DFW",
+  "played": false,
+  "access": "Muni",
+  "emblem": "emblems/cedar-crest.png",
+  "emblemRatio": 1.01,
+  "monogram": null,
+  "stamp": {
+   "shape": "box",
+   "ink": "teal"
+  },
+  "drawn": "\"C\" with a leafy cedar sprig",
+  "sure": "sure"
+ },
+ {
+  "slug": "tour-18-dallas",
+  "name": "Tour 18 Dallas",
+  "short": "Tour 18",
+  "city": "Flower Mound",
+  "state": "TX",
+  "region": "DFW",
+  "played": false,
+  "access": "Pub",
+  "emblem": "emblems/tour-18-dallas.png",
+  "emblemRatio": 0.92,
+  "monogram": null,
+  "stamp": {
+   "shape": "ring",
+   "ink": "violet"
+  },
+  "drawn": "flagstick in the cup",
+  "sure": "fairly sure"
+ },
+ {
+  "slug": "cowboys-golf-club",
+  "name": "Cowboys Golf Club",
+  "short": "Cowboys",
+  "city": "Grapevine",
+  "state": "TX",
+  "region": "DFW",
+  "played": false,
+  "access": "Pub",
+  "emblem": "emblems/cowboys-golf-club.png",
+  "emblemRatio": 1.064,
+  "monogram": null,
+  "stamp": {
+   "shape": "oval",
+   "ink": "red"
+  },
+  "drawn": "the Cowboys star (NFL mark)",
+  "sure": "sure"
+ },
+ {
+  "slug": "grapevine",
+  "name": "Grapevine Golf Course",
+  "short": "Grapevine",
+  "city": "Grapevine",
+  "state": "TX",
+  "region": "DFW",
+  "played": false,
+  "access": "Muni",
+  "emblem": "emblems/grapevine.png",
+  "emblemRatio": 1.064,
+  "monogram": null,
+  "stamp": {
+   "shape": "box",
+   "ink": "teal"
+  },
+  "drawn": "bunch of grapes with a vine leaf",
+  "sure": "sure"
+ },
+ {
+  "slug": "texas-star",
+  "name": "Texas Star Golf Course",
+  "short": "Texas Star",
+  "city": "Euless",
+  "state": "TX",
+  "region": "DFW",
+  "played": false,
+  "access": "Muni",
+  "emblem": "emblems/texas-star.png",
+  "emblemRatio": 1.639,
+  "monogram": null,
+  "stamp": {
+   "shape": "box",
+   "ink": "red"
+  },
+  "drawn": "star with swoosh stripes",
+  "sure": "fairly sure"
+ },
+ {
+  "slug": "tribute",
+  "name": "The Tribute Golf Links",
+  "short": "The Tribute",
+  "city": "The Colony",
+  "state": "TX",
+  "region": "DFW",
+  "played": false,
+  "access": "Pub",
+  "emblem": "emblems/tribute.png",
+  "emblemRatio": 0.945,
+  "monogram": null,
+  "stamp": {
+   "shape": "box",
+   "ink": "teal"
+  },
+  "drawn": "rearing winged lion",
+  "sure": "sure"
+ },
+ {
+  "slug": "old-american",
+  "name": "The Old American Golf Club",
+  "short": "Old American",
+  "city": "The Colony",
+  "state": "TX",
+  "region": "DFW",
+  "played": false,
+  "access": "Pub",
+  "emblem": "emblems/old-american.png",
+  "emblemRatio": 3.077,
+  "monogram": null,
+  "stamp": {
+   "shape": "box",
+   "ink": "amber"
+  },
+  "drawn": "quill feather",
+  "sure": "sure"
+ },
+ {
+  "slug": "sherrill-park",
+  "name": "Sherrill Park Golf Course",
+  "short": "Sherrill Park",
+  "city": "Richardson",
+  "state": "TX",
+  "region": "DFW",
+  "played": false,
+  "access": "Muni",
+  "emblem": "emblems/sherrill-park.png",
+  "emblemRatio": 0.895,
+  "monogram": null,
+  "stamp": {
+   "shape": "box",
+   "ink": "green"
+  },
+  "drawn": "quartered shield with \"SP\"",
+  "sure": "sure"
+ },
+ {
+  "slug": "pecan-hollow",
+  "name": "Pecan Hollow Golf Course",
+  "short": "Pecan Hollow",
+  "city": "Plano",
+  "state": "TX",
+  "region": "DFW",
+  "played": false,
+  "access": "Muni",
+  "emblem": "emblems/pecan-hollow.png",
+  "emblemRatio": 1.047,
+  "monogram": null,
+  "stamp": {
+   "shape": "box",
+   "ink": "teal"
+  },
+  "drawn": "pecan tree with crossed clubs",
+  "sure": "sure (tiny file)"
+ },
+ {
+  "slug": "texas-rangers-golf-club",
+  "name": "Texas Rangers Golf Club (former Chester W. Ditto)",
+  "short": "Texas Rangers",
+  "city": "Arlington",
+  "state": "TX",
+  "region": "DFW",
+  "played": false,
+  "access": "Muni",
+  "emblem": "emblems/texas-rangers-golf-club.png",
+  "emblemRatio": 0.89,
+  "monogram": null,
+  "stamp": {
+   "shape": "box",
+   "ink": "green"
+  },
+  "drawn": "Rangers \"T\" (MLB mark)",
+  "sure": "sure"
+ },
+ {
+  "slug": "tierra-verde",
+  "name": "Tierra Verde Golf Club",
+  "short": "Tierra Verde",
+  "city": "Arlington",
+  "state": "TX",
+  "region": "DFW",
+  "played": false,
+  "access": "Muni",
+  "emblem": null,
+  "emblemRatio": 1,
+  "monogram": "TV",
+  "stamp": {
+   "shape": "ring",
+   "ink": "blue"
+  },
+  "drawn": "lettering only; needs a motif",
+  "sure": "sure"
+ },
+ {
+  "slug": "buffalo-creek",
+  "name": "Buffalo Creek Golf Club",
+  "short": "Buffalo Creek",
+  "city": "Rockwall",
+  "state": "TX",
+  "region": "DFW",
+  "played": false,
+  "access": "Pub",
+  "emblem": "emblems/buffalo-creek.png",
+  "emblemRatio": 1.515,
+  "monogram": null,
+  "stamp": {
+   "shape": "box",
+   "ink": "amber"
+  },
+  "drawn": "walking bison",
+  "sure": "sure"
+ },
+ {
+  "slug": "coyote-ridge",
+  "name": "Coyote Ridge Golf Club",
+  "short": "Coyote Ridge",
+  "city": "Carrollton",
+  "state": "TX",
+  "region": "DFW",
+  "played": false,
+  "access": "Semi",
+  "emblem": "emblems/coyote-ridge.png",
+  "emblemRatio": 0.8,
+  "monogram": null,
+  "stamp": {
+   "shape": "oval",
+   "ink": "teal"
+  },
+  "drawn": "coyote paw print",
+  "sure": "sure"
+ },
+ {
+  "slug": "indian-creek",
+  "name": "Indian Creek Golf Club",
+  "short": "Indian Creek",
+  "city": "Carrollton",
+  "state": "TX",
+  "region": "DFW",
+  "played": false,
+  "access": "Muni",
+  "emblem": "emblems/indian-creek.png",
+  "emblemRatio": 0.815,
+  "monogram": null,
+  "stamp": {
+   "shape": "oval",
+   "ink": "amber"
+  },
+  "drawn": "arrowhead over two creek lines",
+  "sure": "sure"
+ },
+ {
+  "slug": "riverchase",
+  "name": "Riverchase Golf Club",
+  "short": "Riverchase",
+  "city": "Coppell",
+  "state": "TX",
+  "region": "DFW",
+  "played": false,
+  "access": "Pub",
+  "emblem": null,
+  "emblemRatio": 1,
+  "monogram": "RC",
+  "stamp": {
+   "shape": "oval",
+   "ink": "red"
+  },
+  "drawn": "lettering only; water is its thing",
+  "sure": "sure"
+ },
+ {
+  "slug": "lake-park",
+  "name": "Lake Park Golf Club",
+  "short": "Lake Park",
+  "city": "Lewisville",
+  "state": "TX",
+  "region": "DFW",
+  "played": false,
+  "access": "Pub",
+  "emblem": "emblems/lake-park.png",
+  "emblemRatio": 1.099,
+  "monogram": null,
+  "stamp": {
+   "shape": "oval",
+   "ink": "amber"
+  },
+  "drawn": "circled \"9/18\" with crossed clubs",
+  "sure": "fairly sure"
+ },
+ {
+  "slug": "wildhorse-robson-ranch",
+  "name": "Wildhorse Golf Club at Robson Ranch",
+  "short": "Wildhorse",
+  "city": "Denton",
+  "state": "TX",
+  "region": "DFW",
+  "played": false,
+  "access": "Semi",
+  "emblem": "emblems/wildhorse-robson-ranch.png",
+  "emblemRatio": 0.645,
+  "monogram": null,
+  "stamp": {
+   "shape": "ring",
+   "ink": "green"
+  },
+  "drawn": "prancing horse",
+  "sure": "fairly sure"
+ },
+ {
+  "slug": "lantana",
+  "name": "Lantana Golf Club",
+  "short": "Lantana",
+  "city": "Lantana",
+  "state": "TX",
+  "region": "DFW",
+  "played": false,
+  "access": "Priv",
+  "emblem": "emblems/lantana.png",
+  "emblemRatio": 0.975,
+  "monogram": null,
+  "stamp": {
+   "shape": "ring",
+   "ink": "blue"
+  },
+  "drawn": "butterfly",
+  "sure": "sure"
+ },
+ {
+  "slug": "ridgeview-ranch",
+  "name": "Ridgeview Ranch Golf Club",
+  "short": "Ridgeview Ranch",
+  "city": "Plano",
+  "state": "TX",
+  "region": "DFW",
+  "played": false,
+  "access": "Pub",
+  "emblem": "emblems/ridgeview-ranch.png",
+  "emblemRatio": 1.13,
+  "monogram": null,
+  "stamp": {
+   "shape": "box",
+   "ink": "green"
+  },
+  "drawn": "\"R\" in a curling ring",
+  "sure": "sure"
+ },
+ {
+  "slug": "watters-creek",
+  "name": "The Courses at Watters Creek",
+  "short": "Watters Creek",
+  "city": "Allen / Plano",
+  "state": "TX",
+  "region": "DFW",
+  "played": false,
+  "access": "Pub",
+  "emblem": "emblems/watters-creek.png",
+  "emblemRatio": 1.117,
+  "monogram": null,
+  "stamp": {
+   "shape": "oval",
+   "ink": "red"
+  },
+  "drawn": "duck on water with a flag",
+  "sure": "sure"
+ },
+ {
+  "slug": "heritage-ranch",
+  "name": "Heritage Ranch Golf & CC",
+  "short": "Heritage Ranch",
+  "city": "Fairview",
+  "state": "TX",
+  "region": "DFW",
+  "played": false,
+  "access": "Semi",
+  "emblem": "emblems/heritage-ranch.png",
+  "emblemRatio": 2.597,
+  "monogram": null,
+  "stamp": {
+   "shape": "box",
+   "ink": "red"
+  },
+  "drawn": "cowboy on horseback",
+  "sure": "sure"
+ },
+ {
+  "slug": "plantation",
+  "name": "The Club at Frisco Farms (former Plantation GC)",
+  "short": "Frisco Farms",
+  "city": "Frisco",
+  "state": "TX",
+  "region": "DFW",
+  "played": false,
+  "access": "Pub",
+  "emblem": "emblems/plantation.png",
+  "emblemRatio": 1.0,
+  "monogram": null,
+  "stamp": {
+   "shape": "box",
+   "ink": "green"
+  },
+  "drawn": "\"FF\" monogram in a circle",
+  "sure": "sure"
+ },
+ {
+  "slug": "woodbridge",
+  "name": "Woodbridge Golf Club",
+  "short": "Woodbridge",
+  "city": "Wylie",
+  "state": "TX",
+  "region": "DFW",
+  "played": false,
+  "access": "Pub",
+  "emblem": "emblems/woodbridge.png",
+  "emblemRatio": 1.19,
+  "monogram": null,
+  "stamp": {
+   "shape": "oval",
+   "ink": "amber"
+  },
+  "drawn": "\"W\" crossed by an arrow",
+  "sure": "sure"
+ },
+ {
+  "slug": "tenison-park",
+  "name": "Tenison Park Golf Course",
+  "short": "Tenison Park",
+  "city": "Dallas",
+  "state": "TX",
+  "region": "DFW",
+  "played": false,
+  "access": "Muni",
+  "emblem": "emblems/tenison-park.png",
+  "emblemRatio": 0.905,
+  "monogram": null,
+  "stamp": {
+   "shape": "box",
+   "ink": "teal"
+  },
+  "drawn": "flagstick over \"TP\" on a green",
+  "sure": "sure"
+ },
+ {
+  "slug": "luna-vista",
+  "name": "Luna Vista Golf Course",
+  "short": "Luna Vista",
+  "city": "Dallas",
+  "state": "TX",
+  "region": "DFW",
+  "played": false,
+  "access": "Muni",
+  "emblem": "emblems/luna-vista.png",
+  "emblemRatio": 1.55,
+  "monogram": null,
+  "stamp": {
+   "shape": "box",
+   "ink": "green"
+  },
+  "drawn": "striped half moon with a flag",
+  "sure": "sure (tiny file)"
+ },
+ {
+  "slug": "golf-club-of-dallas",
+  "name": "The Golf Club of Dallas",
+  "short": "Golf Club of Dallas",
+  "city": "Dallas",
+  "state": "TX",
+  "region": "DFW",
+  "played": false,
+  "access": "Semi",
+  "emblem": "emblems/golf-club-of-dallas.png",
+  "emblemRatio": 1.19,
+  "monogram": null,
+  "stamp": {
+   "shape": "ring",
+   "ink": "blue"
+  },
+  "drawn": "oak leaf",
+  "sure": "sure"
+ },
+ {
+  "slug": "waterview",
+  "name": "Waterview Golf Club",
+  "short": "Waterview",
+  "city": "Rowlett",
+  "state": "TX",
+  "region": "DFW",
+  "played": false,
+  "access": "Pub",
+  "emblem": "emblems/waterview.png",
+  "emblemRatio": 1.29,
+  "monogram": null,
+  "stamp": {
+   "shape": "box",
+   "ink": "green"
+  },
+  "drawn": "branch-like \"W\" in an oval",
+  "sure": "sure"
+ },
+ {
+  "slug": "mesquite",
+  "name": "Mesquite Golf Club",
+  "short": "Mesquite",
+  "city": "Mesquite",
+  "state": "TX",
+  "region": "DFW",
+  "played": false,
+  "access": "Muni",
+  "emblem": "emblems/mesquite.png",
+  "emblemRatio": 2.564,
+  "monogram": null,
+  "stamp": {
+   "shape": "box",
+   "ink": "red"
+  },
+  "drawn": "golf ball dotting the \"i\"",
+  "sure": "sure"
+ },
+ {
+  "slug": "bear-creek",
+  "name": "Bear Creek Golf Club",
+  "short": "Bear Creek",
+  "city": "DFW Airport",
+  "state": "TX",
+  "region": "DFW",
+  "played": false,
+  "access": "Pub",
+  "emblem": "emblems/bear-creek.png",
+  "emblemRatio": 1.852,
+  "monogram": null,
+  "stamp": {
+   "shape": "box",
+   "ink": "blue"
+  },
+  "drawn": "bear walking with a flagstick",
+  "sure": "sure"
+ },
+ {
+  "slug": "iron-horse",
+  "name": "Iron Horse Golf Course",
+  "short": "Iron Horse",
+  "city": "North Richland Hills",
+  "state": "TX",
+  "region": "DFW",
+  "played": false,
+  "access": "Pub",
+  "emblem": "emblems/iron-horse.png",
+  "emblemRatio": 1.481,
+  "monogram": null,
+  "stamp": {
+   "shape": "box",
+   "ink": "violet"
+  },
+  "drawn": "steam locomotive",
+  "sure": "sure (tiny file)"
+ },
+ {
+  "slug": "sky-creek-ranch",
+  "name": "Sky Creek Ranch Golf Club",
+  "short": "Sky Creek Ranch",
+  "city": "Keller",
+  "state": "TX",
+  "region": "DFW",
+  "played": false,
+  "access": "Pub",
+  "emblem": "emblems/sky-creek-ranch.png",
+  "emblemRatio": 1.0,
+  "monogram": null,
+  "stamp": {
+   "shape": "oval",
+   "ink": "red"
+  },
+  "drawn": "horse head with flowing mane",
+  "sure": "sure"
+ },
+ {
+  "slug": "riverside",
+  "name": "Riverside Golf Club",
+  "short": "Riverside",
+  "city": "Grand Prairie",
+  "state": "TX",
+  "region": "DFW",
+  "played": false,
+  "access": "Pub",
+  "emblem": "emblems/riverside.png",
+  "emblemRatio": 1.754,
+  "monogram": null,
+  "stamp": {
+   "shape": "box",
+   "ink": "teal"
+  },
+  "drawn": "winding river in a box",
+  "sure": "sure"
+ },
+ {
+  "slug": "tangle-ridge",
+  "name": "Tangle Ridge Golf Club",
+  "short": "Tangle Ridge",
+  "city": "Grand Prairie",
+  "state": "TX",
+  "region": "DFW",
+  "played": false,
+  "access": "Muni",
+  "emblem": null,
+  "emblemRatio": 1,
+  "monogram": "TR",
+  "stamp": {
+   "shape": "ring",
+   "ink": "blue"
+  },
+  "drawn": "lettering only; \"TR\" monogram",
+  "sure": "sure"
+ },
+ {
+  "slug": "prairie-lakes",
+  "name": "Prairie Lakes Golf Course",
+  "short": "Prairie Lakes",
+  "city": "Grand Prairie",
+  "state": "TX",
+  "region": "DFW",
+  "played": false,
+  "access": "Muni",
+  "emblem": "emblems/prairie-lakes.png",
+  "emblemRatio": 1.058,
+  "monogram": null,
+  "stamp": {
+   "shape": "oval",
+   "ink": "red"
+  },
+  "drawn": "cattails in a ripple",
+  "sure": "sure"
+ },
+ {
+  "slug": "lake-arlington",
+  "name": "Lake Arlington Golf Course",
+  "short": "Lake Arlington",
+  "city": "Arlington",
+  "state": "TX",
+  "region": "DFW",
+  "played": false,
+  "access": "Muni",
+  "emblem": "emblems/lake-arlington.png",
+  "emblemRatio": 1.307,
+  "monogram": null,
+  "stamp": {
+   "shape": "ring",
+   "ink": "violet"
+  },
+  "drawn": "\"A\" with lake waves",
+  "sure": "sure"
+ },
+ {
+  "slug": "mansfield-national",
+  "name": "Mansfield National Golf Club",
+  "short": "Mansfield National",
+  "city": "Mansfield",
+  "state": "TX",
+  "region": "DFW",
+  "played": false,
+  "access": "Pub",
+  "emblem": "emblems/mansfield-national.png",
+  "emblemRatio": 1.053,
+  "monogram": null,
+  "stamp": {
+   "shape": "ring",
+   "ink": "violet"
+  },
+  "drawn": "five-point star",
+  "sure": "sure"
+ },
+ {
+  "slug": "hidden-creek",
+  "name": "Hidden Creek Golf Course",
+  "short": "Hidden Creek",
+  "city": "Burleson",
+  "state": "TX",
+  "region": "DFW",
+  "played": false,
+  "access": "Muni",
+  "emblem": "emblems/hidden-creek.png",
+  "emblemRatio": 1.053,
+  "monogram": null,
+  "stamp": {
+   "shape": "oval",
+   "ink": "amber"
+  },
+  "drawn": "\"hc\" over a creek wave",
+  "sure": "sure"
+ },
+ {
+  "slug": "old-brickyard",
+  "name": "The Old Brickyard Golf Club",
+  "short": "Old Brickyard",
+  "city": "Ferris",
+  "state": "TX",
+  "region": "DFW",
+  "played": false,
+  "access": "Pub",
+  "emblem": "emblems/old-brickyard.png",
+  "emblemRatio": 2.941,
+  "monogram": null,
+  "stamp": {
+   "shape": "box",
+   "ink": "teal"
+  },
+  "drawn": "arched brick wall sign",
+  "sure": "sure"
+ },
+ {
+  "slug": "pecan-valley",
+  "name": "Pecan Valley Golf Course",
+  "short": "Pecan Valley",
+  "city": "Fort Worth",
+  "state": "TX",
+  "region": "DFW",
+  "played": false,
+  "access": "Muni",
+  "emblem": "emblems/pecan-valley.png",
+  "emblemRatio": 1.942,
+  "monogram": null,
+  "stamp": {
+   "shape": "box",
+   "ink": "amber"
+  },
+  "drawn": "two pecan trees on hills",
+  "sure": "sure"
+ },
+ {
+  "slug": "meadowbrook",
+  "name": "Meadowbrook Golf Course",
+  "short": "Meadowbrook",
+  "city": "Fort Worth",
+  "state": "TX",
+  "region": "DFW",
+  "played": false,
+  "access": "Muni",
+  "emblem": "emblems/meadowbrook.png",
+  "emblemRatio": 1.081,
+  "monogram": null,
+  "stamp": {
+   "shape": "box",
+   "ink": "teal"
+  },
+  "drawn": "sitting duck",
+  "sure": "sure"
+ },
+ {
+  "slug": "waterchase",
+  "name": "Waterchase Golf Club",
+  "short": "Waterchase",
+  "city": "Fort Worth",
+  "state": "TX",
+  "region": "DFW",
+  "played": false,
+  "access": "Pub",
+  "emblem": "emblems/waterchase.png",
+  "emblemRatio": 1.026,
+  "monogram": null,
+  "stamp": {
+   "shape": "oval",
+   "ink": "red"
+  },
+  "drawn": "gold pin flag in a ring",
+  "sure": "sure"
+ },
+ {
+  "slug": "hawks-creek",
+  "name": "Hawks Creek Golf Club",
+  "short": "Hawks Creek",
+  "city": "Westworth Village",
+  "state": "TX",
+  "region": "DFW",
+  "played": false,
+  "access": "Muni",
+  "emblem": "emblems/hawks-creek.png",
+  "emblemRatio": 1.111,
+  "monogram": null,
+  "stamp": {
+   "shape": "oval",
+   "ink": "red"
+  },
+  "drawn": "diving hawk",
+  "sure": "sure"
+ },
+ {
+  "slug": "austin-country-club",
+  "name": "Austin Country Club",
+  "short": "Austin CC",
+  "city": "Austin",
+  "state": "TX",
+  "region": "Austin",
+  "played": false,
+  "access": "Priv",
+  "emblem": "emblems/austin-country-club.png",
+  "emblemRatio": 1.695,
+  "monogram": null,
+  "stamp": {
+   "shape": "box",
+   "ink": "red"
+  },
+  "drawn": "\"A\" between two script \"C\"s (lettering only)",
+  "sure": "sure"
+ },
+ {
+  "slug": "barton-creek",
+  "name": "Barton Creek Country Club",
+  "short": "Barton Creek",
+  "city": "Austin",
+  "state": "TX",
+  "region": "Austin",
+  "played": false,
+  "access": "Priv / Resort",
+  "emblem": "emblems/barton-creek.png",
+  "emblemRatio": 1.961,
+  "monogram": null,
+  "stamp": {
+   "shape": "box",
+   "ink": "blue"
+  },
+  "drawn": "tipi under an arch over a creek",
+  "sure": "sure"
+ },
+ {
+  "slug": "wolfdancer",
+  "name": "Wolfdancer Golf Club",
+  "short": "Wolfdancer",
+  "city": "Cedar Creek (Lost Pines)",
+  "state": "TX",
+  "region": "Austin",
+  "played": false,
+  "access": "Resort",
+  "emblem": "emblems/wolfdancer.png",
+  "emblemRatio": 3.448,
+  "monogram": null,
+  "stamp": {
+   "shape": "box",
+   "ink": "violet"
+  },
+  "drawn": "running wolf",
+  "sure": "sure"
+ },
+ {
+  "slug": "lions-municipal",
+  "name": "Lions Municipal (\"Muny\")",
+  "short": "Lions Muny",
+  "city": "Austin",
+  "state": "TX",
+  "region": "Austin",
+  "played": false,
+  "access": "Muni",
+  "emblem": "emblems/lions-municipal.png",
+  "emblemRatio": 1.058,
+  "monogram": null,
+  "stamp": {
+   "shape": "oval",
+   "ink": "red"
+  },
+  "drawn": "roaring lion head",
+  "sure": "fairly sure"
+ },
+ {
+  "slug": "avery-ranch",
+  "name": "Avery Ranch Golf Club",
+  "short": "Avery Ranch",
+  "city": "Austin",
+  "state": "TX",
+  "region": "Austin",
+  "played": false,
+  "access": "Pub",
+  "emblem": "emblems/avery-ranch.png",
+  "emblemRatio": 1.01,
+  "monogram": null,
+  "stamp": {
+   "shape": "ring",
+   "ink": "violet"
+  },
+  "drawn": "ribbon \"A\" with leaf curls",
+  "sure": "sure"
+ },
+ {
+  "slug": "grey-rock",
+  "name": "Grey Rock Golf Club",
+  "short": "Grey Rock",
+  "city": "Austin",
+  "state": "TX",
+  "region": "Austin",
+  "played": false,
+  "access": "Pub",
+  "emblem": null,
+  "emblemRatio": 1,
+  "monogram": "GR",
+  "stamp": {
+   "shape": "box",
+   "ink": "teal"
+  },
+  "drawn": "stacked-stone block",
+  "sure": "sure"
+ },
+ {
+  "slug": "roy-kizer",
+  "name": "Roy Kizer Golf Course",
+  "short": "Roy Kizer",
+  "city": "Austin",
+  "state": "TX",
+  "region": "Austin",
+  "played": false,
+  "access": "Muni",
+  "emblem": "emblems/roy-kizer.png",
+  "emblemRatio": 1.093,
+  "monogram": null,
+  "stamp": {
+   "shape": "ring",
+   "ink": "blue"
+  },
+  "drawn": "water bird head with reeds (shared with Jimmy Clay)",
+  "sure": "fairly sure"
+ },
+ {
+  "slug": "jimmy-clay",
+  "name": "Jimmy Clay Golf Course",
+  "short": "Jimmy Clay",
+  "city": "Austin",
+  "state": "TX",
+  "region": "Austin",
+  "played": false,
+  "access": "Muni",
+  "emblem": "emblems/jimmy-clay.png",
+  "emblemRatio": 1.093,
+  "monogram": null,
+  "stamp": {
+   "shape": "ring",
+   "ink": "blue"
+  },
+  "drawn": "same bird as Kizer; maybe its island green",
+  "sure": "fairly sure"
+ },
+ {
+  "slug": "morris-williams",
+  "name": "Morris Williams Golf Course",
+  "short": "Morris Williams",
+  "city": "Austin",
+  "state": "TX",
+  "region": "Austin",
+  "played": false,
+  "access": "Muni",
+  "emblem": "emblems/morris-williams.png",
+  "emblemRatio": 1.818,
+  "monogram": null,
+  "stamp": {
+   "shape": "box",
+   "ink": "teal"
+  },
+  "drawn": "\"MW\" brush monogram",
+  "sure": "fairly sure"
+ },
+ {
+  "slug": "hancock",
+  "name": "Hancock Golf Course",
+  "short": "Hancock",
+  "city": "Austin",
+  "state": "TX",
+  "region": "Austin",
+  "played": false,
+  "access": "Muni",
+  "emblem": null,
+  "emblemRatio": 1,
+  "monogram": "1899",
+  "stamp": {
+   "shape": "box",
+   "ink": "teal"
+  },
+  "drawn": "no emblem; oldest course in Texas (1899)",
+  "sure": "sure there's none"
+ },
+ {
+  "slug": "falconhead",
+  "name": "Falconhead Golf Club",
+  "short": "Falconhead",
+  "city": "Austin (Bee Cave)",
+  "state": "TX",
+  "region": "Austin",
+  "played": false,
+  "access": "Pub",
+  "emblem": "emblems/falconhead.png",
+  "emblemRatio": 0.735,
+  "monogram": null,
+  "stamp": {
+   "shape": "oval",
+   "ink": "teal"
+  },
+  "drawn": "falcon in flight",
+  "sure": "sure (tiny file)"
+ },
+ {
+  "slug": "teravista",
+  "name": "Teravista Golf Club",
+  "short": "Teravista",
+  "city": "Round Rock",
+  "state": "TX",
+  "region": "Austin",
+  "played": false,
+  "access": "Pub",
+  "emblem": "emblems/teravista.png",
+  "emblemRatio": 0.825,
+  "monogram": null,
+  "stamp": {
+   "shape": "ring",
+   "ink": "blue"
+  },
+  "drawn": "upright leaf on a fan",
+  "sure": "sure (tiny file)"
+ },
+ {
+  "slug": "forest-creek",
+  "name": "Forest Creek Golf Club",
+  "short": "Forest Creek",
+  "city": "Round Rock",
+  "state": "TX",
+  "region": "Austin",
+  "played": false,
+  "access": "Pub",
+  "emblem": "emblems/forest-creek.png",
+  "emblemRatio": 0.48,
+  "monogram": null,
+  "stamp": {
+   "shape": "oval",
+   "ink": "red"
+  },
+  "drawn": "water tower",
+  "sure": "sure"
+ },
+ {
+  "slug": "crystal-falls",
+  "name": "Crystal Falls Golf Course",
+  "short": "Crystal Falls",
+  "city": "Leander",
+  "state": "TX",
+  "region": "Austin",
+  "played": false,
+  "access": "Muni",
+  "emblem": "emblems/crystal-falls.png",
+  "emblemRatio": 4.167,
+  "monogram": null,
+  "stamp": {
+   "shape": "box",
+   "ink": "teal"
+  },
+  "drawn": "stream falling between two hills",
+  "sure": "sure"
+ },
+ {
+  "slug": "plum-creek",
+  "name": "Plum Creek Golf Course",
+  "short": "Plum Creek",
+  "city": "Kyle",
+  "state": "TX",
+  "region": "Austin",
+  "played": false,
+  "access": "Pub",
+  "emblem": "emblems/plum-creek.png",
+  "emblemRatio": 0.735,
+  "monogram": null,
+  "stamp": {
+   "shape": "oval",
+   "ink": "violet"
+  },
+  "drawn": "tee with an arc curling into a ball",
+  "sure": "sure"
+ }
+]

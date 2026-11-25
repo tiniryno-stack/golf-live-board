@@ -9,14 +9,20 @@
 
 import * as db from '../db.js';
 import * as fx from './toasts.js';
+import { chromePack } from './pack.js';
+import { landsFor, bookHtml, mountBook, pageOf, bookBusy } from './passport.js';
+import { passportOf } from '../stamps.js';
 import { esc, icon, reducedMotion } from '../ui.js';
 import {
-  buildLocker, packsOf, openedOf, FINISHES, isAdmin, shortDay, longDay, toParLabel, finName, adminTotals,
+  buildLocker, packsOf, openedOf, FINISHES, isAdmin, LOCKER_ADMINS, shortDay, longDay, toParLabel, finName, adminTotals, backRows,
 } from '../locker.js';
 
 const STALE = 2 * 60 * 1000;
+/** Preview copy only (…/preview/): test as a person in Safari (glb.previewAs) + practice packs. Never on the live site. */
+const PREVIEW = typeof location !== 'undefined' && /\/preview\//.test(location.pathname);
 const today = () => new Date().toLocaleDateString('en-CA');
-const MARK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="2.6" fill="currentColor" stroke="none"/></svg>';
+/** The real mark (img/mark-dark.svg, 036 §2.1): the ring in the ink, the ball green. */
+export const MARK = '<svg class="glb-mark" viewBox="0 0 100 100" aria-hidden="true"><circle cx="42" cy="58" r="30" fill="none" stroke="currentColor" stroke-width="13"/><circle cx="82" cy="20" r="11" fill="#3DDC84"/></svg>';
 const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
 let A = null; // the app, for the noscroll getter (read before render)
@@ -30,7 +36,7 @@ export async function loadLocker(app, personId, { force = false } = {}) {
   const L = (app.lockers[personId] ||= { personId, cards: null, loading: false, error: null, at: 0, local: new Set() });
   const mine = personId === lockerPerson();
   if (mine) app.locker = L;
-  if (L.loading) return L;
+  if (L.loading || L.practice) return L; // preview practice packs: keep the resealed copy until it's switched off
   if (L.cards && !force && Date.now() - L.at < STALE) return L;
   L.loading = true;
   try {
@@ -64,6 +70,7 @@ async function sendPending(personId, L) {
 /** Mark a pack opened here at once (the reveal never waits) and tell the server; offline → glb.lockerPending. */
 function openNow(L, card) {
   if (card.opened) return;
+  if (L.practice) { card.opened = true; return; } // preview practice: nothing is sent or saved
   card.opened = true;
   card.openedAt = new Date().toISOString();
   L.local.add(card.code);
@@ -77,11 +84,20 @@ function openNow(L, card) {
  * syncMyRounds does); else the person its own claims in Recent rounds belong to (found once, see startHomeLocker).
  */
 let resolved = null, resolving = false;
+function practiceRow(app, L) {
+  if (!PREVIEW || !L?.cards?.length) return '';
+  return L.practice
+    ? `<div class="lk-practice ts-small"><span>Preview · practice packs. Nothing is saved; a reload puts your cards back.</span><button class="pill" data-act="lk-practice">Stop</button></div>`
+    : `<div class="lk-practice ts-small"><span>Preview · reseal your ${L.cards.length} cards here to test opening them (nothing is saved)</span><button class="pill" data-act="lk-practice">Reseal</button></div>`;
+}
 export function lockerPerson() {
+  // The preview copy acts as Andrew in any browser, so it feels like the real app without a setup step.
+  if (PREVIEW) return db.local.get('glb.previewAs') || LOCKER_ADMINS[0];
   const o = db.owner.get()?.personId;
   if (o) return o;
   const ppl = db.people.all();
-  return ppl.length ? ppl[ppl.length - 1] : resolved;
+  if (ppl.length) return ppl[ppl.length - 1];
+  return resolved;
 }
 async function resolveFromClaims() {
   const mine = db.recent.all().map((r) => ({ code: r.code, pid: db.me.get(r.code) })).filter((x) => x.pid);
@@ -99,6 +115,7 @@ async function resolveFromClaims() {
 /** Home, every render: start this phone's locker once per person per page load. Never throws. */
 let homeFor = null;
 export function startHomeLocker(app) {
+  A = app;
   try {
     const pid = lockerPerson();
     if (pid && homeFor !== pid) { homeFor = pid; loadLocker(app, pid).catch(() => {}); }
@@ -115,52 +132,73 @@ const lockerOf = (app, id) => (id ? app.lockers?.[id] : null) || null;
 
 // ───────────────────────────────────────────── the card (§5): every size in cqw
 
-const STRIP = { e: 'e', u: 'u', p: 'p', b: 'b', d: 'd' };
 const kind = (s, p) => { const d = s - p; return d <= -2 ? 'e' : d === -1 ? 'u' : d === 0 ? 'p' : d === 1 ? 'b' : 'd'; };
+const tot = (a) => a.reduce((x, y) => x + y, 0);
+const ordinal = (n) => `${n}${['th', 'st', 'nd', 'rd'][(n % 100 >= 11 && n % 100 <= 13) || n % 10 > 3 ? 0 : n % 10]}`;
+
+// 036 §2.1: landscape (7 : 5), the whole scorecard on the front. Every size in cqw of the card face.
+function nine(c, from) {
+  const par = c.par.slice(from, from + 9), sc = c.strokes.slice(from, from + 9);
+  return `<div class="x-n">${par.map((_, i) => `<span class="x-h">${from + i + 1}</span>`).join('')}<span class="x-h">${from ? 'In' : 'Out'}</span>
+    ${sc.map((s, i) => `<span class="x-mk x-mk-${kind(s, par[i])}">${s}</span>`).join('')}<span class="x-t">${tot(sc)}</span></div>`;
+}
+/** Finish layers (§2.2): prismatic = oil slick + flash (the ink shifts in CSS); gold/silver/bronze = metal bands. */
+const layers = (c) => (c.fin === 'prismatic' ? '<i class="x-water w1"></i><i class="x-water w2"></i><i class="x-slick"></i><i class="x-prism"></i>'
+  : ['gold', 'silver', 'bronze'].includes(c.fin) ? '<i class="x-mslick"></i>' : '');
 
 export function frontHtml(c) {
-  const strip = c.strokes.map((s, h) => `${h === 9 ? '<i class="lk-turn"></i>' : ''}<i class="lk-g-${STRIP[kind(s, c.par[h])]}"></i>`).join('');
   const fin = c.fin === 'standard' ? '' : finName(c);
-  return `<div class="lk-mat"><i class="lk-holo"></i><i class="lk-facet"></i><i class="lk-sheen"></i><div class="lk-fc">
-    <div class="lk-ftop"><span class="lk-brand">${MARK}Golf Live Board</span><span class="lk-ffin">${esc(fin)}</span></div>
-    <div class="lk-fmid"><div class="lk-fcourse">${esc(c.course)}</div><div class="lk-fgross">${c.gross}</div><div class="lk-fsub">${toParLabel(c.toPar)} · ${esc(longDay(c.day))}</div></div>
-    <div class="lk-strip" aria-hidden="true">${strip}</div>
-    <div class="lk-fstamps">${c.stamps.slice(0, 2).map((s) => `<span class="lk-st">${esc(s)}</span>`).join('')}</div>
-    <div class="lk-fbot"><span class="lk-fname">${esc(c.name)}</span><span>${c.crew ? 'With the crew' : 'Solo'}</span><span>No. ${c.n}</span></div>
+  return `<div class="lk-mat"><i class="lk-sheen"></i>${layers(c)}<div class="x-l1">
+    <div class="x-top"><span class="lk-brand">${MARK}Golf Live Board</span><span class="x-fin">${esc(fin)}</span></div>
+    <div class="x-hero"><div class="x-gross">${c.gross}</div><div class="x-meta"><div class="x-course">${esc(c.course)}</div>
+      <div class="x-sub">${toParLabel(c.toPar)} · ${esc(longDay(c.day))}</div>
+      <div class="x-stamps">${c.stamps.slice(0, 2).map((s) => `<span class="lk-st">${esc(s)}</span>`).join('')}</div></div></div>
+    <div class="x-sc">${nine(c, 0)}${nine(c, 9)}</div>
+    <div class="x-bot"><b>${esc(c.name)}</b><span>${c.crew ? 'With the crew' : 'Solo'}</span><span>No. ${c.n}</span></div>
   </div></div>`;
 }
 
-function nine(c, from) {
-  const par = c.par.slice(from, from + 9), sc = c.strokes.slice(from, from + 9);
-  const tot = (a) => a.reduce((x, y) => x + y, 0);
-  return `<div class="lk-nine"><span class="lk-nl">Hole</span>${par.map((_, i) => `<span class="lk-nh">${from + i + 1}</span>`).join('')}<span class="lk-nh">${from ? 'In' : 'Out'}</span>
-    <span class="lk-nl">Par</span>${par.map((p) => `<span class="lk-np">${p}</span>`).join('')}<span class="lk-np">${tot(par)}</span>
-    <span class="lk-nl">${esc(c.name ? c.name.slice(0, 6) : 'You')}</span>${sc.map((s, i) => `<span class="lk-mk lk-mk-${kind(s, par[i])}">${s}</span>`).join('')}<span class="lk-nt">${tot(sc)}</span></div>`;
+// 036 §2.3: the back = who you played with (left) + the round in numbers (right).
+const plRow = (p, rank) => `<div class="cb-pl${p.me ? ' me' : ''}${p.sameTeeTime ? ' tm' : ''}">${rank ? `<i>${p.rank}</i>` : ''}<span>${esc(p.name)}</span><b>${p.gross}</b></div>`;
+function peopleHtml(c) {
+  const g = c.group?.length ? c.group : [{ name: c.name, gross: c.gross, rank: 1, me: true }];
+  if (g.length === 1) return '<div class="cb-col"><div class="cb-k">Solo round</div></div>';
+  if (g.length <= 6) {
+    const low = g.find((x) => x.me)?.rank === 1 && g.filter((x) => x.rank === 1).length === 1;
+    return `<div class="cb-col"><div class="cb-k">Played with · ${esc(shortDay(c.day))}</div>${g.map((p) => plRow({ ...p, sameTeeTime: false })).join('')}
+      ${low ? '<div class="cb-k cb-after">Low round of the group</div>' : ''}</div>`;
+  }
+  const { rows, more, tee } = backRows(g);
+  const t = tee ? ' · ● your tee time' : '';
+  const tail = more ? `<div class="cb-k cb-after">+ ${more} more played${t}</div>` : tee ? '<div class="cb-k cb-after">● your tee time</div>' : '';
+  return `<div class="cb-col cb-sm"><div class="cb-k cb-before">${g.length} played · ${esc(shortDay(c.day))}</div>
+    ${rows.map((p) => (p.gap ? '<div class="cb-dots">···</div>' : plRow(p, true))).join('')}${tail}</div>`;
 }
-
 export function backHtml(c) {
   const k = c.stats.count;
-  const tile = (v, label) => `<div class="lk-tile"><b>${v}</b><span>${label}</span></div>`;
-  const why = c.fin === 'rookie' ? `${c.line}. The app is still learning your game.` : c.line;
+  const g = c.group || [];
+  const me = g.find((x) => x.me);
+  const line = g.length >= 7 && me ? `${ordinal(me.rank)} of ${g.length} on the day`
+    : c.fin === 'rookie' ? `${c.line}. The app is still learning your game.` : c.line;
+  const tile = (v, lbl) => `<div class="cb-tile"><b>${v}</b><span>${lbl}</span></div>`;
   const types = c.stats.byType.map((t) => `<span><i>Par ${t.par}s</i>${toParLabel(t.toPar)}</span>`).join('');
-  return `<div class="lk-mat"><div class="lk-bk">
-    <div class="lk-bh"><div class="lk-bh-l"><div class="lk-bh-c">${esc(c.course)}</div><div class="lk-bh-d">${esc(longDay(c.day))} · ${c.crew ? 'with the crew' : 'solo'}</div></div>
-      <div class="lk-bh-t">${c.gross}<span>${toParLabel(c.toPar)}</span></div></div>
-    ${nine(c, 0)}${nine(c, 9)}
-    ${why ? `<div class="lk-bw">${c.grade ? `<span class="lk-bg">${c.grade}</span>` : ''}<span>${esc(why)}</span></div>` : ''}
-    <div class="lk-tiles">${tile(k.eagles + k.birdies, 'Birdies+')}${tile(k.pars, 'Pars')}${tile(k.bogeys, 'Bogeys')}${tile(k.doubles, 'Doubles+')}</div>
-    <div class="lk-types">${types}${c.stats.bestRun >= 2 ? `<span><i>Best run</i>${c.stats.bestRun}</span>` : ''}</div>
-    <div class="lk-bs">${c.stamps.map((s) => `<span class="lk-st">${esc(s)}</span>`).join('')}</div>
+  return `<div class="lk-mat"><i class="lk-sheen"></i>${c.fin === 'prismatic' ? '<i class="x-slick"></i>' : ''}<div class="cb">
+    ${peopleHtml(c)}
+    <div class="cb-col sb"><div><div class="cb-k">${esc(finName(c))}${c.grade ? ` · ${c.grade}` : ''}</div>${line ? `<div class="cb-line">${esc(line)}</div>` : ''}</div>
+      <div class="cb-tiles">${tile(k.eagles + k.birdies, 'Birdies+')}${tile(k.pars, 'Pars')}${tile(k.bogeys, 'Bogeys')}${tile(k.doubles, 'Doubles+')}</div>
+      <div class="cb-types">${types}<span><i>Front · back</i>${c.stats.front} · ${c.stats.back}</span></div></div>
   </div></div>`;
 }
 
 const label = (c) => `${c.course}, ${shortDay(c.day)}, ${c.gross}. ${FINISHES[c.fin].name} card.`;
 
 /** One card in its slot: tilt → flip → front / back. `extra` = more classes on the slot. */
+/** The card's metal edge (Andrew, Nov 25: "like a credit card"): thin layers stacked between the two faces. */
+const EDGE = Array.from({ length: 7 }, (_, k) => `<i class="lk-edge" style="--z:${k - 3}"></i>`).join('');
 export function slotHtml(c, { i = 0, flipped = false, extra = '', act = 'lk-card' } = {}) {
-  return `<div class="lk-slot lkf-${c.fin}${extra}" data-i="${i}" data-key="${esc(c.key)}"${act ? ` data-act="${act}"` : ''}>
+  return `<div class="lk-slot x-land lkf-${c.fin}${extra}" data-i="${i}" data-key="${esc(c.key)}"${act ? ` data-act="${act}"` : ''}>
     <div class="lk-tilt" role="button" tabindex="0" aria-label="${esc(label(c))} Tap to flip it.">
-      <div class="lk-flip${flipped ? ' on' : ''}"><div class="lk-face lk-front">${frontHtml(c)}</div><div class="lk-face lk-back">${backHtml(c)}</div></div>
+      <div class="lk-flip${flipped ? ' on' : ''}">${EDGE}<div class="lk-face lk-front">${frontHtml(c)}</div><div class="lk-face lk-back">${backHtml(c)}</div></div>
       <i class="pk-glare"></i><i class="pk-sweep"></i>
     </div></div>`;
 }
@@ -180,14 +218,16 @@ function openPack(app, card, { replay = false } = {}) {
   const L = lockerOf(app, card.personId);
   if (!L) return;
   const left = replay ? 0 : packsOf(L.cards).filter((x) => x.key !== card.key).length;
-  packCtx = { personId: card.personId, key: card.key, replay };
+  // What lands under the card (036 §3.3), worked out as if this pack were already open.
+  const lands = landsFor(card, L.cards.map((c) => (c.key === card.key ? { ...c, opened: true } : c)).filter((c) => c.opened));
+  packCtx = { personId: card.personId, key: card.key, replay, page: lands.some((h) => h.includes('class="cs ')) ? 'courses' : lands.length ? 'milestones' : 'you' };
   fx.showPack({
-    fin: card.fin, reduced: reducedMotion(), replay, left,
+    fin: card.fin, reduced: reducedMotion(), replay, left, lands,
     cardHtml: slotHtml(card, { act: null }),
     kicker: `${replay ? 'Rip again' : 'Final'} · ${shortDay(card.day)}`,
-    packLine: `${card.course} · ${shortDay(card.day)}`,
     hint: `${card.course} · ${shortDay(card.day)} · you shot ${card.gross}`,
-    title: capFin(card), grade: card.grade, line: capLine(card), stamps: card.stamps,
+    title: capFin(card), grade: card.grade, shot: card.gross,
+    tilt: () => (gy.on ? { x: gy.x, y: gy.y } : null),
     onTear: () => { if (!replay) openNow(L, card); },
   });
 }
@@ -196,7 +236,7 @@ function openPack(app, card, { replay = false } = {}) {
 
 const car = { track: null, slots: [], centers: [], half: 0, step: 1, active: 0, raf: 0, touching: false, until: 0, missed: false, settle: 0 };
 const ptr = { on: false, x: 0, y: 0 };
-const gy = { on: false, x: 0, y: 0, b0: null, g0: null, listening: false };
+const gy = { on: false, asked: false, x: 0, y: 0, b0: null, g0: null, listening: false };
 const sm = { x: 0, y: 0 };
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const hasTilt = () => typeof window !== 'undefined' && 'DeviceOrientationEvent' in window
@@ -214,16 +254,22 @@ function scrollToIdx(i, smooth) {
   if (car.centers[i] == null) return;
   car.track.scrollTo({ left: car.centers[i] - car.half, behavior: smooth && !reducedMotion() ? 'smooth' : 'auto' });
 }
+/** 036 §2.2: --sx/--sy in −1…1 (the bands and prismatic ink follow them), --mv = how fast it moves (the flash). */
 function put(el, rx, ry, sc) {
-  const k = `${rx.toFixed(2)}|${ry.toFixed(2)}|${sc.toFixed(3)}`;
+  const sx = clamp(ry / 12, -1, 1);
+  const mv = reducedMotion() ? 0 : Math.max((el._mv || 0) * 0.93, Math.min(1, Math.abs(sx - (el._sx ?? sx)) * 130));
+  el._sx = sx;
+  el._mv = mv < 0.005 ? 0 : mv;
+  const k = `${rx.toFixed(2)}|${ry.toFixed(2)}|${sc.toFixed(3)}|${el._mv.toFixed(2)}`;
   if (el._k === k) return;
   el._k = k;
   const st = el.style;
   st.setProperty('--rx', rx.toFixed(2));
   st.setProperty('--ry', ry.toFixed(2));
   st.setProperty('--sc', sc.toFixed(3));
-  st.setProperty('--sx', clamp(ry / 22, -1.3, 1.3).toFixed(3));
-  st.setProperty('--sy', clamp(rx / 12, -1, 1).toFixed(3));
+  st.setProperty('--sx', sx.toFixed(3));
+  st.setProperty('--sy', clamp(rx / 8, -1, 1).toFixed(3));
+  st.setProperty('--mv', el._mv.toFixed(3));
 }
 function setActive(app, i) {
   const list = openedOf(lockerOf(app, shownId(app))?.cards);
@@ -237,16 +283,18 @@ function setActive(app, i) {
   const cap = root?.querySelector('.lk-cap');
   if (cap) cap.innerHTML = captionHtml(c);
   const pos = root?.querySelector('.lk-pos');
-  if (pos) pos.textContent = `${i + 1} of ${list.length}`;
+  // Dots say "there's more, swipe" (Andrew, Nov 25); past 9 cards, a count instead.
+  if (pos) pos.innerHTML = list.length > 9 ? `${i + 1} of ${list.length}` : list.length > 1 ? `<span class="lk-dots" aria-label="Card ${i + 1} of ${list.length}">${list.map((_, k) => `<i${k === i ? ' class="on"' : ''}></i>`).join('')}</span>` : '';
 }
 function tick(ts) {
   car.raf = 0;
   if (!car.track?.isConnected || A?.route?.name !== 'locker') return; // the screen is gone: stop
   car.raf = requestAnimationFrame(tick);
   const rm = reducedMotion();
-  const idle = !rm && !ptr.on && !gy.on ? Math.sin(ts / 1700) * 6 : 0;
-  const tx = rm ? 0 : (ptr.on ? ptr.x * 13 : 0) + gy.y * 18 + idle;
-  const ty = rm ? 0 : (ptr.on ? -ptr.y * 10 : 0) - gy.x * 14;
+  const idle = !rm && !ptr.on && !gy.on ? Math.sin(ts / 1900) * 7 : 0;
+  // Inverse tilt (Andrew, Nov 25): the card leans against the phone's tilt so it keeps facing you, 20% stronger.
+  const tx = rm ? 0 : (ptr.on ? ptr.x * 13 : 0) - gy.y * 21.6 + idle;
+  const ty = rm ? 0 : (ptr.on ? -ptr.y * 10 : 0) + gy.x * 16.8;
   sm.x += (tx - sm.x) * 0.12;
   sm.y += (ty - sm.y) * 0.12;
   const sl = car.track.scrollLeft;
@@ -256,7 +304,7 @@ function tick(ts) {
     if (a < bd) { bd = a; best = i; }
     if (a > 1.6) { put(car.slots[i], 0, o > 0 ? -24 : 24, 0.9); continue; }
     const act = a < 0.5;
-    put(car.slots[i], act ? sm.y : 0, (rm ? 0 : -o * 18) + (act ? sm.x * (1 - a * 2) : 0), 1 - Math.min(1, a) * 0.1);
+    put(car.slots[i], act ? sm.y : 0, (rm ? 0 : -o * 12) + (act ? sm.x * (1 - a * 2) : 0), 1 - Math.min(1, a) * 0.06);
   }
   if (best !== car.active) setActive(A, best);
 }
@@ -271,7 +319,7 @@ function onOri(e) {
   if (!gy.on) {
     gy.on = true;
     document.querySelectorAll('.lk-tiltbtn').forEach((b) => { b.hidden = true; });
-    document.querySelectorAll('.lk-hint').forEach((b) => { b.hidden = false; b.textContent = 'Tilt your phone · tap to flip'; });
+
   }
 }
 function listenTilt() {
@@ -295,9 +343,27 @@ function windowOnce() {
   window.addEventListener('touchcancel', off, { passive: true });
   window.addEventListener('pointerup', (e) => { if (e.pointerType !== 'mouse') ptr.on = false; off(); });
   window.addEventListener('pointercancel', () => { ptr.on = false; off(); });
-  // Phone tilt: Android sends it without asking; iPhone needs the button once (remembered in glb.lockerTilt).
+  // Phone tilt: Android sends it without asking. iPhone asks once (the button; the yes is kept in glb.lockerTilt),
+  // but every page load must ask again inside a tap before it sends anything. Once allowed, that re-ask is silent
+  // (no prompt), so it rides on the first tap anywhere and the button never comes back.
   const D = window.DeviceOrientationEvent;
-  if (hasTilt() && D && (typeof D.requestPermission !== 'function' || db.local.get('glb.lockerTilt'))) listenTilt();
+  if (!hasTilt() || !D) return;
+  if (typeof D.requestPermission !== 'function') { listenTilt(); return; }
+  {
+    // No button (Andrew, Nov 25): the first tap on the Locker asks iPhone once (its own prompt); later page loads
+    // ask again silently on the first tap. A no is remembered and never asked again.
+    if (db.local.get('glb.lockerTilt') === 'no') return;
+    gy.asked = true;
+    const again = () => {
+      D.requestPermission().then((r) => {
+        if (r === 'granted') { db.local.set('glb.lockerTilt', true); listenTilt(); } else db.local.set('glb.lockerTilt', 'no');
+        off2();
+      }).catch(() => {});
+    };
+    const off2 = () => { window.removeEventListener('touchend', again, true); window.removeEventListener('click', again, true); };
+    window.addEventListener('touchend', again, true);
+    window.addEventListener('click', again, true);
+  }
 }
 /** A redraw held while the carousel moved runs once it has settled. */
 function settleLater() {
@@ -320,6 +386,12 @@ function mountCarousel(content, app) {
   scrollToIdx(i, false);
   setActive(app, i);
   track.addEventListener('scroll', () => { car.until = Date.now() + 160; settleLater(); }, { passive: true });
+  // Once per phone: a small nudge toward the next card, so it's clear the cards swipe.
+  if (list.length > 1 && !db.local.get('glb.lockerPeek') && !reducedMotion()) {
+    db.local.set('glb.lockerPeek', true);
+    setTimeout(() => { if (track.isConnected) track.scrollBy({ left: Math.min(90, car.step * 0.3), behavior: 'smooth' }); }, 700);
+    setTimeout(() => { if (track.isConnected) scrollToIdx(car.active, true); }, 1300);
+  }
   track.addEventListener('touchstart', () => { car.touching = true; }, { passive: true });
   const onPtr = (e) => {
     const s = e.target.closest?.('.lk-slot');
@@ -341,7 +413,7 @@ function packsView(app, L, readOnly) {
   const packs = packsOf(L.cards);
   if (!packs.length) return '<p class="ts-small lk-soft">Every pack is open.</p>';
   return `<div class="lk-packs">${packs.map((c) => {
-    const inner = `<span class="lk-ptile lk-foil" aria-hidden="true">${MARK}<b>Scorecard</b></span>
+    const inner = `<span class="lk-ptile" aria-hidden="true">${chromePack()}</span>
       <span class="lk-plabel"><span class="ts-body">${esc(c.course)}</span><span class="ts-small lk-soft">${esc(shortDay(c.day))}</span></span>`;
     return readOnly
       ? `<div class="lk-pcell" aria-label="${esc(`${c.course}, ${shortDay(c.day)}, sealed`)}">${inner}</div>`
@@ -349,17 +421,18 @@ function packsView(app, L, readOnly) {
   }).join('')}</div>`;
 }
 
-function oneView(app, opened) {
+function oneView(app, opened, readOnly) {
   const lk = app.ui.lk;
   const land = lk.land && Date.now() - lk.landAt < 900 ? lk.land : null;
   const slots = opened.map((c, i) => slotHtml(c, { i, flipped: lk.flip === c.key, extra: land === c.key ? ' land' : '' })).join('');
-  const tilt = hasTilt() && !gy.on && typeof window.DeviceOrientationEvent?.requestPermission === 'function';
+  // The button only until this phone has said yes once (glb.lockerTilt); after that the re-ask is silent (windowOnce).
   return `<div class="lk-one">
     <div class="lk-stage"><div class="lk-track">${slots}</div></div>
     <div class="lk-cap" aria-live="polite"></div>
-    <div class="lk-foot"><span class="ts-label lk-pos"></span>
-      <span class="lk-mid"><button class="pill lk-tiltbtn" data-act="lk-tilt"${tilt ? '' : ' hidden'}>Turn on tilt</button><span class="ts-small lk-soft lk-hint"${tilt ? ' hidden' : ''}>${gy.on ? 'Tilt your phone · tap to flip' : 'Tap the card to flip it'}</span></span>
-      <button class="btn small" data-act="lk-rip">${icon('redo', 18)} Rip again</button></div>
+    <div class="lk-foot">
+      <span class="ts-small lk-soft lk-hint">${db.local.get('glb.lockerFlipped') ? '' : 'Tap to flip'}</span>
+      <span class="ts-label lk-pos"></span>
+      <span class="lk-acts">${readOnly ? '' : `<button class="icon-btn" data-act="lk-share" aria-label="Share this card">${icon('share', 20)}</button>`}</span></div>
   </div>`;
 }
 
@@ -367,39 +440,51 @@ function allView(opened) {
   return `<div class="lk-all">${opened.map((c, i) => `<button class="lk-mini lkf-${c.fin}" data-act="lk-pick" data-v="${esc(c.key)}" style="--sx:${((((i * 37) % 9) / 9) - 0.5).toFixed(2)}" aria-label="${esc(label(c))}"><span class="lk-face lk-front">${frontHtml(c)}</span></button>`).join('')}</div>`;
 }
 
+const isView = (app) => app.route.mode === 'view' && app.route.person !== ownerId();
+const tabOf = (app) => app.ui.lk.tab || 'cards';
+
 function lockerBody(app) {
   const id = shownId(app);
-  const readOnly = app.route.mode === 'view';
+  const readOnly = isView(app);
   if (!id) {
     return `<div class="plain lk"><h1 class="ts-title">Locker</h1>
-      <p class="ts-body lk-soft lk-gap">Open a round and pick your name once. Your scorecards show up here after that.</p></div>`;
+      <p class="ts-body lk-soft lk-gap">Open a round and pick your name once. Your scorecards show up here after that.</p>
+      ${PREVIEW ? `<button class="btn block" data-act="lk-testas">Preview · test as ${esc('Andrew Duong')}</button>` : ''}</div>`;
   }
   const L = lockerOf(app, id);
   if (!L?.cards) {
     const err = L?.error && !L.loading;
-    return `<div class="plain lk"><h1 class="ts-title">Locker</h1>
-      ${err ? `<p class="ts-body lk-soft lk-gap">No signal. Your scorecards are safe, they just need a connection.</p><button class="btn block" data-act="lk-retry">Try again</button>`
-        : '<p class="meta lk-gap">Opening your locker…</p>'}</div>`;
+    return `<div class="plain lk"><h1 class="ts-title">${readOnly ? 'Passport' : 'Locker'}</h1>
+      ${err ? `<p class="ts-body lk-soft lk-gap">No signal. ${readOnly ? 'The passport' : 'Your scorecards'} need a connection.</p><button class="btn block" data-act="lk-retry">Try again</button>`
+        : `<p class="meta lk-gap">Opening ${readOnly ? 'the passport' : 'your locker'}…</p>`}</div>`;
   }
   const cards = L.cards;
   const opened = openedOf(cards), packs = packsOf(cards);
   const lk = app.ui.lk;
-  if (!opened.length && packs.length) lk.view = 'packs';
-  if (lk.view === 'packs' && !packs.length) lk.view = 'one';
   if (!cards.length) {
-    return `<div class="plain lk"><h1 class="ts-title">Locker</h1>
+    return `<div class="plain lk"><h1 class="ts-title">${readOnly ? 'Passport' : 'Locker'}</h1>
       <p class="ts-body lk-soft lk-gap">${readOnly ? 'No finished rounds yet.' : 'Finish 18 holes and your scorecard arrives here as a pack.'}</p></div>`;
   }
-  const who = readOnly ? (app.lockerAdmin?.people?.find((p) => p.person_id === id)?.name || cards[0]?.name || '') : '';
-  const sub = opened.length ? `${plural(opened.length, 'scorecard')} since ${shortDay(opened[opened.length - 1].day)}` : plural(packs.length, 'pack') + ' to open';
+  const tab = tabOf(app);
+  const who = readOnly ? (cards[cards.length - 1]?.fullName || app.lockerAdmin?.people?.find((p) => p.person_id === id)?.name || cards[0]?.name || '') : '';
+  const tabBtn = (v, lbl) => `<button data-act="lk-tab" data-v="${v}" aria-pressed="${tab === v}">${lbl}</button>`;
+  const tabs = `<div class="seg lk-tabs" role="group" aria-label="Locker">${tabBtn('cards', 'Cards')}${tabBtn('passport', 'Passport')}</div>`;
+  const head = `${who ? `<div class="ts-label lk-k">${esc(who)} · view only</div>` : ''}
+    <div class="lk-head"><h1 class="ts-title">${readOnly ? esc(`${who.split(' ')[0] || 'Their'}’s locker`) : 'Locker'}</h1>
+      ${packs.length && !readOnly ? `<button class="pill lk-ppill" data-act="lk-view" data-v="${lk.view === 'packs' && tab === 'cards' ? 'one' : 'packs'}" aria-pressed="${lk.view === 'packs' && tab === 'cards'}">${icon('pack', 18)} Packs · ${packs.length}</button>` : ''}</div>
+    ${tabs}`;
+  if (tab === 'passport') {
+    return `<div class="plain lk lk-t-passport">${head}${bookHtml(cards, app.ui.pp, { frontHtml, readOnly })}</div>`;
+  }
+  if (!opened.length && packs.length) lk.view = 'packs';
+  if (lk.view === 'packs' && !packs.length) lk.view = 'one';
+  const sub = opened.length ? `${plural(opened.length, 'scorecard')} since ${shortDay(opened[opened.length - 1].day)}` : `${plural(packs.length, 'pack')} ${readOnly ? 'sealed' : 'to open'}`;
   const segBtn = (v, ic, lbl) => `<button data-act="lk-view" data-v="${v}" aria-pressed="${lk.view === v}" aria-label="${lbl}">${icon(ic, 22)}</button>`;
-  const view = lk.view === 'packs' ? packsView(app, L, readOnly) : lk.view === 'all' ? allView(opened) : oneView(app, opened);
-  return `<div class="plain lk lk-v-${lk.view}">
-    ${who ? `<div class="ts-label lk-k">${esc(who)} · view only</div>` : ''}
-    <div class="lk-head"><h1 class="ts-title">Locker</h1>
-      ${opened.length ? `<div class="seg lk-seg" role="group" aria-label="View">${segBtn('one', 'cardone', 'One card at a time')}${segBtn('all', 'grid', 'All cards')}</div>` : ''}</div>
+  const view = lk.view === 'packs' ? packsView(app, L, readOnly) : lk.view === 'all' ? allView(opened) : oneView(app, opened, readOnly);
+  return `<div class="plain lk lk-t-cards lk-v-${lk.view}">${head}
     <div class="lk-subrow"><span class="ts-small lk-soft">${esc(sub)}</span>
-      ${packs.length && opened.length ? `<button class="pill lk-ppill" data-act="lk-view" data-v="${lk.view === 'packs' ? 'one' : 'packs'}" aria-pressed="${lk.view === 'packs'}">${icon('pack', 18)} Packs · ${packs.length}</button>` : ''}</div>
+      ${readOnly && packs.length && opened.length ? `<button class="pill lk-ppill" data-act="lk-view" data-v="${lk.view === 'packs' ? 'one' : 'packs'}" aria-pressed="${lk.view === 'packs'}">${icon('pack', 18)} Sealed · ${packs.length}</button>` : ''}
+      ${opened.length ? `<div class="seg lk-seg" role="group" aria-label="View">${segBtn('one', 'cardone', 'One card at a time')}${segBtn('all', 'grid', 'All cards')}</div>` : ''}</div>
     ${view}
   </div>`;
 }
@@ -443,25 +528,45 @@ async function loadAdmin(app) {
 
 // ───────────────────────────────────────────── Home (§7.1): the packs card + the Locker row
 
+/** Home's avatar name when this browser has no rounds of its own but knows its locker person (the preview in Safari). */
+export function lockerName() {
+  try {
+    const cards = A?.lockers?.[lockerPerson()]?.cards;
+    return cards?.length ? cards[cards.length - 1].fullName || cards[cards.length - 1].name : '';
+  } catch { return ''; }
+}
+
+/** 036 §4.1: "5 scorecards · 3 courses · 4 milestones". */
+function homeSub(opened) {
+  const pp = passportOf([...opened].reverse());
+  return [plural(opened.length, 'scorecard'), plural(pp.courses.length, 'course'), pp.milestones.length ? plural(pp.milestones.length, 'milestone') : '']
+    .filter(Boolean).join(' · ');
+}
+
 /** { packs, row } HTML for Home; both '' unless this phone's person has a card or pack. Never throws. */
 export function homeLocker(app) {
   try {
     const pid = lockerPerson();
+    if (false) { // 036 rev: the preview no longer shows a test card (it acts as Andrew)
+      return { packs: `<button class="lk-ready" data-act="lk-testas"><span class="lk-rtext"><span class="ts-label lk-soft">Preview only</span>
+        <span class="ts-row">Test the locker as Andrew Duong</span><span class="ts-small lk-soft">Shows your Locker and Passport in this browser. Tap once; it’s remembered here.</span></span>
+        <span class="hr-chev">${icon('fwd', 20)}</span></button>`, row: '' };
+    }
     const L = pid ? app.lockers?.[pid] : null;
     if (!L?.cards?.length) return { packs: '', row: '' };
     const packs = packsOf(L.cards), opened = openedOf(L.cards);
     const newest = packs[packs.length - 1];
     const card = packs.length ? `<button class="lk-ready" data-act="lk-home-packs">
-        <span class="lk-rpack lk-foil" aria-hidden="true"><b class="lk-pip">${packs.length}</b></span>
+        <span class="lk-rpack" aria-hidden="true">${chromePack()}<b class="lk-pip">${packs.length}</b></span>
         <span class="lk-rtext"><span class="ts-label lk-soft">${plural(packs.length, 'pack')} ready</span><span class="ts-row">Open your scorecard${packs.length === 1 ? '' : 's'}</span>
           <span class="ts-small lk-soft ellipsis">${esc(newest.course)} · ${esc(shortDay(newest.day))}</span></span>
         <span class="hr-chev">${icon('fwd', 20)}</span></button>` : '';
     const fan = opened.length
       ? opened.slice(0, 3).reverse().map((c) => `<i class="lkf-${c.fin}"></i>`).join('')
-      : '<i class="lk-foil lk-fan-pack"></i>';
+      : '<i class="lk-fan-pack"></i>';
     const row = `<button class="home-row" data-act="go" data-v="#/locker">
         <span class="lk-fan" aria-hidden="true">${fan}</span>
-        <span class="hr-main"><span class="hr-name">Locker</span><span class="hr-sub">${opened.length ? plural(opened.length, 'scorecard') : `${plural(packs.length, 'pack')} to open`}</span></span>
+        <span class="hr-main"><span class="hr-name">Locker</span><span class="hr-sub">${opened.length ? homeSub(opened) : `${plural(packs.length, 'pack')} to open`}</span></span>
         <span class="hr-chev">${icon('fwd', 20)}</span></button>`;
     return { packs: card, row };
   } catch {
@@ -485,14 +590,19 @@ export const lockerSheets = {
       </ul>
       <p class="ts-small lk-soft"><b>Launch cards.</b> Rounds played by Nov 21, 2026 are ranked against each other: your best is prismatic, then gold, silver and bronze.</p>
       <p class="ts-small lk-soft"><b>Your normal.</b> Your last 20 rounds, leaving out the worst fifth, averaged. A bad streak never makes prismatic easier.</p>
-      <button class="btn block" data-act="sheet-close" style="margin-top:12px">Done</button>`;
+      <p class="ts-small lk-soft"><b>The card.</b> Your whole scorecard is on the front. Tap it to flip: who you played with and the round in numbers. Tilt your phone and the metal moves.</p>
+      <p class="ts-small lk-soft"><b>Passport.</b> The first time you finish 18 at a course, its stamp goes in your passport. Milestones (first birdie, broke 90, a new lowest round) get a stamp too. Tap a friend’s name to see theirs.</p>
+      <button class="btn block" data-act="sheet-close" style="margin-top:12px">Done</button>
+      ${app.route?.name === 'locker' && !isView(app) && tabOf(app) === 'cards' && openedOf(lockerOf(app, ownerId())?.cards).length ? `<button class="btn ghost block" data-act="lk-rip" style="margin-top:8px">${icon('redo', 18)} Rip this card again</button>` : ''}
+      ${PREVIEW ? `<button class="btn ghost block" data-act="lk-practice" style="margin-top:8px">${app.lockers?.[lockerPerson()]?.practice ? 'Preview: put my cards back' : 'Preview: reseal my packs to test (nothing is saved)'}</button>` : ''}`;
   },
 };
 
 // ───────────────────────────────────────────── the screen
 
 function ensureUi(app) {
-  app.ui.lk ||= { view: 'one', key: null, flip: null, land: null, landAt: 0, person: null };
+  app.ui.lk ||= { view: 'one', key: null, flip: null, land: null, landAt: 0, person: null, tab: 'cards' };
+  app.ui.pp ||= { pg: 0 };
   return app.ui.lk;
 }
 
@@ -500,13 +610,15 @@ export default {
   get noscroll() {
     if (!A || A.route?.name !== 'locker' || A.route.mode === 'admin') return false;
     const L = lockerOf(A, shownId(A));
-    return !!L?.cards && A.ui.lk?.view === 'one' && openedOf(L.cards).length > 0;
+    return !!L?.cards && (A.ui.lk?.tab || 'cards') === 'cards' && A.ui.lk?.view === 'one' && openedOf(L.cards).length > 0;
   },
   enter(app) {
     A = app;
     const lk = ensureUi(app);
     const id = shownId(app);
-    if (lk.person !== id) { lk.person = id; lk.key = null; lk.flip = null; if (app.route.mode === 'view') lk.view = 'one'; }
+    if (lk.person !== id) { lk.person = id; lk.key = null; lk.flip = null; app.ui.pp.pg = app.route.tab === 'passport' ? 1 : 0; if (app.route.mode === 'view') lk.view = 'one'; }
+    if (app.route.tab) { lk.tab = app.route.tab; app.ui.pp.pg = 1; } // #/passport opens the book on the holder page
+    if (/^#\/locker\/p\//.test(location.hash)) history.replaceState(null, '', `#/passport/${encodeURIComponent(id)}`); // 035 link → 036
     if (app.route.mode === 'admin') loadAdmin(app);
     else if (id) loadLocker(app, id);
     else startHomeLocker(app); // no owner yet: find who this phone played as, then load
@@ -515,16 +627,17 @@ export default {
   },
   topBack(app) {
     if (app.route.mode === 'admin') return `<button class="back" data-act="go" data-v="#/locker">${icon('back', 22)}<span>Locker</span></button>`;
-    if (app.route.mode === 'view') return `<button class="back" data-act="go" data-v="#/locker/admin">${icon('back', 22)}<span>Everyone</span></button>`;
+    if (isView(app)) return `<button class="back" data-act="lk-back">${icon('back', 22)}<span>Back</span></button>`;
     return '';
   },
   topRight(app) {
     if (app.route.mode === 'admin') return '';
-    const adm = app.route.mode !== 'view' && isAdmin(ownerId())
+    const adm = !isView(app) && isAdmin(ownerId())
       ? `<button class="icon-btn" data-act="go" data-v="#/locker/admin" aria-label="Who’s opened what">${icon('people')}</button>` : '';
     return `${adm}<button class="icon-btn" data-act="lk-how" aria-label="How cards work">${icon('info')}</button>`;
   },
   keepContent() {
+    if (bookBusy()) return true; // the passport is turning itself to the new stamp
     const held = !!car.track?.isConnected && (car.touching || Date.now() < car.until);
     if (held) car.missed = true;
     return held;
@@ -536,10 +649,38 @@ export default {
   },
   mount(content, app) {
     car.track = null;
-    if (app.route.mode !== 'admin' && app.ui.lk?.view === 'one') mountCarousel(content, app);
+    if (app.route.mode === 'admin') return;
+    if (tabOf(app) === 'passport') {
+      const L = lockerOf(app, shownId(app));
+      if (L?.cards?.length) mountBook(content, app.ui.pp, L.cards, { frontHtml, readOnly: isView(app) }, `${shownId(app)}|${isView(app)}|${L.cards.map((c) => `${c.key}${c.opened ? 1 : 0}`).join(',')}`);
+    }
+    else if (app.ui.lk?.view === 'one') mountCarousel(content, app);
   },
   actions: {
+    'lk-tab': (el, ev, app) => {
+      app.ui.lk.tab = el.dataset.v;
+      app.ui.lk.flip = null;
+      if (el.dataset.v === 'passport' && !app.ui.pp.pg) app.ui.pp.pg = 1;
+      app.render();
+      document.getElementById('content').scrollTop = 0;
+    },
+    'lk-practice': (el, ev, app) => {
+      const L = lockerOf(app, ownerId());
+      if (!PREVIEW || !L?.cards) return;
+      if (L.practice) { L.cards = L.real; L.real = null; L.practice = false; }
+      else { L.real = L.cards; L.cards = L.cards.map((c) => ({ ...c, opened: false, openedAt: null })); L.practice = true; Object.assign(app.ui.lk, { tab: 'cards', view: 'packs' }); }
+      app.closeSheet?.();
+      app.render();
+    },
+    'lk-testas': (el, ev, app) => {
+      if (!PREVIEW) return;
+      db.local.set('glb.previewAs', LOCKER_ADMINS[0]); // remembered in this browser; only the preview reads it
+      startHomeLocker(app);
+      app.render();
+    },
+    'lk-back': (el, ev, app) => { if (history.length > 1) history.back(); else app.go('#/'); },
     'lk-view': (el, ev, app) => {
+      app.ui.lk.tab = 'cards';
       app.ui.lk.view = el.dataset.v;
       app.ui.lk.flip = null;
       app.render();
@@ -550,19 +691,37 @@ export default {
       if (i !== car.active) { scrollToIdx(i, true); return; }
       const f = el.querySelector('.lk-flip');
       const on = !f.classList.contains('on');
+      if (!db.local.get('glb.lockerFlipped')) { db.local.set('glb.lockerFlipped', true); document.querySelectorAll('.lk-hint').forEach((h) => { h.textContent = ''; }); }
       f.classList.toggle('on', on);
       app.ui.lk.flip = on ? el.dataset.key : null;
+    },
+    // the passport: a stamp or a showcase card opens the card it came from, in the Cards tab
+    'pp-card': (el, ev, app) => {
+      const L = lockerOf(app, shownId(app));
+      if (!L?.cards?.some((c) => c.key === el.dataset.v && c.opened)) return;
+      Object.assign(app.ui.lk, { tab: 'cards', view: 'one', key: el.dataset.v, flip: null });
+      app.render();
+    },
+    'pp-share': (el, ev, app) => {
+      const L = lockerOf(app, shownId(app));
+      if (L?.cards) import('./share036.js').then((m) => m.sharePassport(L.cards)).catch((e) => console.warn('share', e));
+    },
+    'lk-share': (el, ev, app) => {
+      const L = lockerOf(app, shownId(app));
+      const card = openedOf(L?.cards)[car.active];
+      if (card) import('./share036.js').then((m) => m.shareCard(card, L.cards)).catch((e) => console.warn('share', e));
     },
     'lk-pick': (el, ev, app) => {
       Object.assign(app.ui.lk, { view: 'one', key: el.dataset.v, flip: null });
       app.render();
     },
     'lk-open': (el, ev, app) => {
-      if (app.route.mode === 'view') return; // someone else's packs stay sealed
+      if (isView(app)) return; // someone else's packs stay sealed
       const card = lockerOf(app, ownerId())?.cards?.find((c) => c.key === el.dataset.v && !c.opened);
       if (card) openPack(app, card);
     },
     'lk-rip': (el, ev, app) => {
+      app.closeSheet?.();
       const card = openedOf(lockerOf(app, shownId(app))?.cards)[car.active];
       if (card) openPack(app, card, { replay: true });
     },
@@ -571,7 +730,14 @@ export default {
       const fail = () => { el.hidden = true; const h = document.querySelector('.lk-hint'); if (h) h.hidden = false; };
       if (typeof D?.requestPermission !== 'function') { listenTilt(); return; }
       D.requestPermission().then((r) => {
-        if (r === 'granted') { db.local.set('glb.lockerTilt', true); listenTilt(); } else fail();
+        if (r === 'granted') {
+          db.local.set('glb.lockerTilt', true);
+          gy.asked = true;
+          listenTilt();
+          el.hidden = true; // moves on at once, without waiting for the first tilt reading
+          const h = document.querySelector('.lk-hint');
+          if (h) { h.hidden = false; h.textContent = 'Tilt your phone · tap to flip'; }
+        } else fail();
       }).catch(fail);
     },
     'lk-how': (el, ev, app) => app.openSheet('lockerHow', {}),
@@ -589,7 +755,26 @@ export default {
       fx.closePack();
       packCtx = null;
       if (!ctx) return;
-      Object.assign(ensureUi(app), { view: 'one', key: ctx.key, flip: null, land: ctx.replay ? null : ctx.key, landAt: Date.now() });
+      Object.assign(ensureUi(app), { tab: 'cards', view: 'one', key: ctx.key, flip: null, land: ctx.replay ? null : ctx.key, landAt: Date.now() });
+      if (app.route.name === 'locker' && app.route.mode === 'mine') app.render();
+      else app.go('#/locker');
+    },
+    'lk-pack-share': () => {
+      const ctx = packCtx;
+      const L = ctx && lockerOf(A, ctx.personId);
+      const card = L?.cards?.find((c) => c.key === ctx.key);
+      if (card) import('./share036.js').then((m) => m.shareCard(card, L.cards)).catch((e) => console.warn('share', e));
+    },
+    'lk-pack-pp': (el, ev, app) => {
+      const ctx = packCtx;
+      fx.closePack();
+      packCtx = null;
+      const L = ctx && lockerOf(app, ctx.personId);
+      ensureUi(app).tab = 'passport';
+      // Open on the cover, then turn the pages one by one to the new stamp (Andrew, Nov 25), so it's clearly in the book.
+      app.ui.pp.pg = 0;
+      app.ui.pp.walkTo = L?.cards ? pageOf(L.cards.filter((c) => c.opened), ctx.page, { frontHtml }) : 1;
+      app.ui.pp.hit = ctx.key;
       if (app.route.name === 'locker' && app.route.mode === 'mine') app.render();
       else app.go('#/locker');
     },

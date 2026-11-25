@@ -1,0 +1,637 @@
+<title>Scorecard Card Designs</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600;700&display=swap">
+<!-- 036 card designs, round 1. Card CSS below is css/locker.css copied whole from the app (Nov 24); everything
+     prefixed x- is new and only here. Single dark look on purpose (Night Round). -->
+<style>
+/* layout: one phone-width column of design options, a sticky bar that switches the finish + art style for all of them */
+:root { color-scheme: dark;
+  --bg: #0b0d10; --surface-1: #14171b; --surface-2: #1c2026; --surface-3: #2a2f37; --line: rgba(255,255,255,.1);
+  --text: #f4f5f7; --text-muted: #a7acb4;
+  --font-sans: "Geist", system-ui, -apple-system, "Segoe UI", sans-serif; --font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --ease-grow: cubic-bezier(.2,.8,.2,1);
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --radius-sm: 6px; --radius-xl: 16px; --radius-pill: 999px; }
+body { background: var(--bg); color: var(--text); font: 400 15px/22px var(--font-sans); -webkit-font-smoothing: antialiased; }
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+/* locker.css — 035 Scorecard locker (docs/design/features/035-scorecard-locker/SPEC.md). Loaded by index.html
+   after styles.css. Every style for the Locker, the pack overlay and Home's two entries lives here, and only there.
+   NEW, NOT IN THE DESIGN SYSTEM (SPEC §10, flagged): the five finishes + the pack foil (new colors and gradients),
+   shine on cards and light on the reveal, a reveal lasting seconds and cards that move continuously, phone tilt as
+   an input, card-face type in cqw outside the six type styles. Green still means you: no finish uses it.
+   Class names: lk-* (locker + card), lkf-* (finishes), pk-* (pack). */
+
+/* ── finishes: objects, the same in light and dark ── */
+.lkf-standard { --m-base: linear-gradient(135deg, #1c1f24 0%, #2d3139 48%, #191c20 100%); --m-ink: #f4f5f7; --m-soft: rgba(244,245,247,.64); --m-edge: rgba(255,255,255,.12); --m-sheen: .22; --m-emboss: 0 -1px 0 rgba(0,0,0,.55); --m-grain: .5; --m-glow: rgba(244,245,247,.85); }
+.lkf-rookie   { --m-base: linear-gradient(180deg, #edefea 0%, #e1e4de 100%); --m-ink: #14171b; --m-soft: rgba(20,23,27,.62); --m-edge: rgba(20,23,27,.16); --m-sheen: 0; --m-emboss: none; --m-grain: 0; --m-glow: rgba(237,239,234,.95); }
+.lkf-bronze   { --m-base: linear-gradient(118deg, #4f2c13 0%, #96592c 16%, #6a3d1c 34%, #9d6032 52%, #55301a 70%, #8a5228 86%, #4f2c13 100%); --m-ink: #ffeedd; --m-soft: rgba(255,238,221,.76); --m-edge: rgba(255,214,170,.38); --m-sheen: .55; --m-emboss: 0 -1px 0 rgba(40,18,4,.6); --m-grain: 1; --m-glow: rgba(214,140,80,.95); }
+.lkf-silver   { --m-base: linear-gradient(118deg, #99a0a8 0%, #eef1f4 16%, #aeb5bd 34%, #f8fafb 52%, #a1a8b0 70%, #dde1e6 86%, #99a0a8 100%); --m-ink: #14181c; --m-soft: rgba(20,24,28,.68); --m-edge: rgba(255,255,255,.72); --m-sheen: .8; --m-emboss: 0 1px 0 rgba(255,255,255,.55); --m-grain: 1; --m-glow: rgba(214,224,236,.95); }
+.lkf-gold     { --m-base: linear-gradient(118deg, #b08a2e 0%, #f6dc8c 16%, #c9a03a 34%, #fdeeb4 52%, #b88f2f 70%, #ecca68 86%, #b08a2e 100%); --m-ink: #2b1e03; --m-soft: rgba(43,30,3,.7); --m-edge: rgba(255,246,205,.78); --m-sheen: .85; --m-emboss: 0 1px 0 rgba(255,246,210,.6); --m-grain: 1; --m-glow: rgba(246,210,110,.98); }
+.lkf-prismatic{ --m-base: linear-gradient(118deg, #c3c9d2 0%, #ffffff 18%, #d3d8df 36%, #ffffff 54%, #c9ced6 72%, #f4f6f8 88%, #c3c9d2 100%); --m-ink: #10122a; --m-soft: rgba(16,18,42,.72); --m-edge: rgba(255,255,255,.85); --m-sheen: .9; --m-emboss: 0 1px 0 rgba(255,255,255,.6); --m-grain: .6; --m-glow: rgba(190,160,255,.98); }
+.lkf-standard, .lkf-bronze, .lkf-silver, .lkf-gold, .lkf-prismatic { --panel: rgba(10,11,13,.9); --p-ink: #f4f5f7; --p-soft: #a7acb4; --p-line: rgba(255,255,255,.12); --p-dbl: #ff6b6b; --p-dbl-bg: rgba(255,107,107,.16); }
+.lkf-rookie { --panel: transparent; --p-ink: #14171b; --p-soft: rgba(20,23,27,.62); --p-line: rgba(20,23,27,.16); --p-dbl: #b42318; --p-dbl-bg: rgba(180,35,24,.10); }
+:root { --lk-shadow: rgba(0,0,0,.6); }
+[data-theme="light"] { --lk-shadow: rgba(11,13,16,.32); }
+.lk-foil { background: linear-gradient(118deg, #23262c 0%, #4a505a 26%, #1b1e22 52%, #3a3f48 78%, #1f2227 100%); color: #f4f5f7; }
+
+.lk-soft { color: var(--text-muted); }
+.lk-gap { margin: var(--space-3) 0 var(--space-4); }
+.lk-k { color: var(--text-muted); margin-bottom: var(--space-1); }
+
+/* ── screen layout ── */
+.lk-head { display: flex; align-items: center; gap: var(--space-3); min-height: 48px; }
+.lk-head .ts-title { flex: 1; margin: 0; }
+.lk-seg { flex: none; display: flex; padding: 4px; border-radius: var(--radius-pill); }
+.lk-seg button { width: 48px; min-height: 40px; border-radius: var(--radius-pill); display: grid; place-items: center; padding: 0; }
+.lk-subrow { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); min-height: 40px; margin-bottom: var(--space-2); }
+.lk-ppill { min-height: 36px; font-size: 13px; line-height: 18px; }
+.lk-v-one { height: 100%; display: flex; flex-direction: column; padding-bottom: calc(8px + var(--sab, 0px)); }
+.lk-one { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.lk-stage { position: relative; flex: 1; min-height: 0; container-type: size; margin: 0 calc(-1 * var(--gutter, 16px)); }
+.lk-track { position: absolute; inset: 0; display: flex; align-items: center; gap: 12px; overflow-x: auto; overflow-y: hidden;
+  scroll-snap-type: x mandatory; scrollbar-width: none; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch;
+  --cw: min(72cqw, calc((100cqh - 28px) * .714)); }
+.lk-track::-webkit-scrollbar { display: none; }
+.lk-track::before, .lk-track::after { content: ""; flex: none; width: calc((100% - var(--cw)) / 2 - 12px); height: 1px; }
+.lk-track .lk-slot { flex: none; width: var(--cw); scroll-snap-align: center; scroll-snap-stop: always; touch-action: pan-x; }
+.lk-slot { aspect-ratio: 5 / 7; perspective: 1000px; position: relative; }
+.lk-slot.land .lk-tilt { animation: lk-land 520ms var(--ease-grow); }
+@keyframes lk-land { from { transform: scale(1.14) translateY(-14px); opacity: 0; } }
+.lk-cap { flex: none; min-height: 64px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 2px; padding-top: var(--space-2); }
+.lk-capfin { display: flex; align-items: center; gap: var(--space-2); }
+.lk-gr { min-width: 24px; height: 24px; padding: 0 6px; border-radius: var(--radius-sm); background: var(--surface-3); color: var(--text); display: inline-grid; place-items: center; font: 700 13px/1 var(--font-mono); letter-spacing: 0; }
+.lk-foot { flex: none; min-height: 52px; display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.lk-foot .lk-mid { flex: 1; min-width: 0; text-align: center; }
+.lk-foot .btn.small { gap: 6px; }
+.lk-tiltbtn { min-height: 36px; font-size: 13px; }
+.lk-all { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding-top: var(--space-2); }
+.lk-mini { position: relative; aspect-ratio: 5 / 7; display: block; width: 100%; padding: 0; }
+.lk-mini:active { transform: scale(.97); }
+
+/* packs view */
+.lk-packs { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding-top: var(--space-2); }
+.lk-pcell { display: flex; flex-direction: column; gap: var(--space-2); text-align: left; padding: 0; }
+.lk-pcell:active .lk-ptile { transform: scale(.97); }
+.lk-ptile { position: relative; width: 100%; aspect-ratio: 5 / 7.25; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  box-shadow: 0 6px 16px var(--lk-shadow), inset 0 0 0 1px rgba(255,255,255,.12); transition: transform .12s ease-out; overflow: hidden; }
+.lk-ptile svg { width: 32px; height: 32px; }
+.lk-ptile b { font: 700 12px/16px var(--font-mono); letter-spacing: 2px; text-transform: uppercase; }
+.lk-ptile::before, .lk-ptile::after, .lk-rpack::before, .lk-rpack::after { content: ""; position: absolute; left: 0; right: 0; height: 8%; background: repeating-linear-gradient(90deg, rgba(255,255,255,.18) 0 2px, rgba(0,0,0,.3) 2px 5px); }
+.lk-ptile::before, .lk-rpack::before { top: 0; } .lk-ptile::after, .lk-rpack::after { bottom: 0; }
+.lk-plabel { display: flex; flex-direction: column; }
+
+/* ── Home: packs card + Locker row ── */
+.lk-ready { display: flex; align-items: center; gap: var(--space-4); width: 100%; padding: var(--space-4); margin-bottom: var(--space-3); text-align: left;
+  background: var(--surface-1); border: 1px solid var(--line); border-radius: var(--radius-2xl); }
+.lk-ready:active { background: var(--surface-2); }
+.lk-rpack { position: relative; width: 40px; height: 56px; border-radius: 5px; flex: none; transform: rotate(-6deg); box-shadow: 0 4px 10px var(--lk-shadow), inset 0 0 0 1px rgba(255,255,255,.14); overflow: visible; }
+.lk-rpack::before { border-radius: 5px 5px 0 0; height: 6px; } .lk-rpack::after { border-radius: 0 0 5px 5px; height: 6px; }
+.lk-pip { position: absolute; right: -9px; top: -9px; min-width: 22px; height: 22px; padding: 0 5px; border-radius: 11px; background: var(--button); color: var(--on-button); font: 700 12px/22px var(--font-mono); text-align: center; transform: rotate(6deg); z-index: 1; }
+.lk-rtext { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.lk-ready .hr-chev { color: var(--text-muted); display: inline-flex; flex: none; }
+.lk-fan { width: 40px; height: 40px; position: relative; flex: none; }
+.lk-fan i { position: absolute; left: 10px; top: 2px; width: 22px; height: 31px; border-radius: 4px; background: var(--m-base); box-shadow: 0 2px 5px var(--lk-shadow), inset 0 0 0 1px var(--m-edge, rgba(255,255,255,.14)); }
+.lk-fan i:nth-child(1):not(:last-child) { transform: translateX(-9px) rotate(-14deg); }
+.lk-fan i:nth-child(2):not(:last-child) { transform: translateY(-2px); }
+.lk-fan i:nth-child(3), .lk-fan i:nth-child(2):last-child { transform: translateX(9px) rotate(14deg); }
+.lk-fan i.lk-fan-pack { transform: rotate(-6deg); background: linear-gradient(118deg, #23262c 0%, #4a505a 26%, #1b1e22 52%, #3a3f48 78%, #1f2227 100%); }
+
+/* ── admin ── */
+.lk-ahead, .lk-arow { display: grid; grid-template-columns: 1fr 40px 44px 40px 56px; align-items: center; gap: 4px; }
+.lk-ahead { padding: var(--space-2) var(--space-4); color: var(--text-muted); }
+.lk-ahead span:not(:first-child), .lk-arow span:not(:first-child) { text-align: right; }
+.lk-atable { border-radius: var(--radius-xl); background: var(--surface-1); overflow: hidden; }
+.lk-arow { width: 100%; min-height: 52px; padding: 0 var(--space-4); border-bottom: 1px solid var(--line); text-align: left; font-size: 15px; }
+.lk-arow:last-child { border-bottom: 0; }
+.lk-arow:active { background: var(--surface-2); }
+.lk-aname { font-weight: 600; }
+.lk-wait { font-weight: 700; }
+
+/* ── How cards work sheet ── */
+.lk-how { list-style: none; padding: 0; margin: var(--space-2) 0 var(--space-3); display: flex; flex-direction: column; gap: var(--space-3); }
+.lk-how li { display: flex; align-items: center; gap: var(--space-3); }
+.lk-howt { display: flex; flex-direction: column; min-width: 0; }
+.lk-sw { width: 30px; height: 42px; border-radius: 5px; flex: none; background: var(--m-base); box-shadow: inset 0 0 0 1px var(--m-edge), 0 2px 6px var(--lk-shadow); position: relative; overflow: hidden; }
+.lk-sw.lkf-prismatic::after { content: ""; position: absolute; inset: 0; background: linear-gradient(110deg, hsl(350 95% 76%), hsl(35 100% 72%), hsl(155 80% 70%), hsl(195 95% 72%), hsl(290 90% 79%)); mix-blend-mode: multiply; }
+.lk + .lk-how { margin-top: 0; }
+
+/* ── the card ── */
+.lk-tilt { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; -webkit-transform-style: preserve-3d; cursor: pointer;
+  transform: scale(var(--sc, 1)) rotateX(calc(var(--rx, 0) * 1deg)) rotateY(calc(var(--ry, 0) * 1deg)); border-radius: 5.5%; }
+.lk-flip { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; -webkit-transform-style: preserve-3d; transition: transform 700ms var(--ease-grow); }
+.lk-flip.on { transform: rotateY(180deg); }
+.lk-face { position: absolute; inset: 0; container-type: inline-size; -webkit-backface-visibility: hidden; backface-visibility: hidden; isolation: isolate; display: block; }
+.lk-face.lk-back { transform: rotateY(180deg); }
+.lk-mat { position: absolute; inset: 0; border-radius: 5.5cqw; overflow: hidden; background: var(--m-base); color: var(--m-ink); box-shadow: 0 5cqw 9cqw -3cqw var(--lk-shadow); text-align: left; }
+.lk-mat::before { content: ""; position: absolute; inset: 0; opacity: var(--m-grain); background: repeating-linear-gradient(90deg, rgba(255,255,255,.07) 0 1px, rgba(0,0,0,.06) 1px 2px, transparent 2px 3px); mix-blend-mode: overlay; }
+.lk-mat::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; box-shadow: inset 0 0 0 .4cqw var(--m-edge), inset 0 .7cqw .7cqw rgba(255,255,255,.22), inset 0 -.7cqw .9cqw rgba(0,0,0,.22); }
+.lkf-rookie .lk-mat::before { opacity: 1; mix-blend-mode: normal; background: repeating-linear-gradient(0deg, transparent 0 5.6cqw, rgba(20,23,27,.07) 5.6cqw 5.9cqw); }
+.lkf-rookie .lk-mat::after { box-shadow: inset 0 0 0 .4cqw var(--m-edge); }
+.lk-sheen { position: absolute; inset: -30% -60%; background: linear-gradient(100deg, transparent 38%, rgba(255,255,255,.95) 50%, transparent 62%); opacity: var(--m-sheen); mix-blend-mode: overlay; transform: translate(calc(var(--sx, 0) * 55%), calc(var(--sy, 0) * 10%)); pointer-events: none; }
+.lk-holo, .lk-facet { display: none; position: absolute; pointer-events: none; }
+.lkf-prismatic .lk-holo { display: block; inset: -60% -130%; background: repeating-linear-gradient(110deg, hsl(350 95% 76%) 0%, hsl(35 100% 72%) 7%, hsl(80 85% 70%) 14%, hsl(155 80% 70%) 21%, hsl(195 95% 72%) 28%, hsl(235 95% 79%) 35%, hsl(290 90% 79%) 42%, hsl(350 95% 76%) 50%); mix-blend-mode: multiply; transform: translate(calc(var(--sx, 0) * 20%), calc(var(--sy, 0) * 10%)); }
+.lkf-prismatic .lk-facet { display: block; inset: -20%; mix-blend-mode: soft-light; transform: translateX(calc(var(--sx, 0) * -5%));
+  background:
+    repeating-linear-gradient(60deg, rgba(255,255,255,.7) 0 3.2cqw, rgba(255,255,255,0) 3.2cqw 6.4cqw, rgba(0,0,0,.16) 6.4cqw 9.6cqw, rgba(255,255,255,0) 9.6cqw 12.8cqw),
+    repeating-linear-gradient(-60deg, rgba(255,255,255,.55) 0 3.2cqw, rgba(255,255,255,0) 3.2cqw 6.4cqw, rgba(0,0,0,.14) 6.4cqw 9.6cqw, rgba(255,255,255,0) 9.6cqw 12.8cqw),
+    repeating-linear-gradient(0deg, rgba(255,255,255,.4) 0 2.77cqw, rgba(255,255,255,0) 2.77cqw 5.54cqw, rgba(0,0,0,.1) 5.54cqw 8.31cqw, rgba(255,255,255,0) 8.31cqw 11.08cqw); }
+/* front */
+.lk-fc { position: relative; height: 100%; padding: 6cqw; display: flex; flex-direction: column; text-shadow: var(--m-emboss); }
+.lk-ftop { display: flex; align-items: center; justify-content: space-between; gap: 2cqw; font: 600 3.3cqw/1 var(--font-mono); letter-spacing: .3cqw; text-transform: uppercase; }
+.lk-brand { display: flex; align-items: center; gap: 1.8cqw; color: var(--m-soft); }
+.lk-brand svg { width: 5.4cqw; height: 5.4cqw; }
+.lk-ffin { font-weight: 700; }
+.lk-fmid { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 1.6cqw; min-height: 0; }
+.lk-fcourse { font: 600 3.8cqw/1 var(--font-mono); letter-spacing: .34cqw; text-transform: uppercase; color: var(--m-soft); }
+.lk-fgross { font: 700 35cqw/.86 var(--font-mono); letter-spacing: -2.4cqw; margin-left: -1.6cqw; font-variant-numeric: tabular-nums; }
+.lk-fsub { font: 600 4.2cqw/1 var(--font-mono); letter-spacing: .2cqw; color: var(--m-soft); padding-top: 1.4cqw; }
+.lk-strip { display: flex; align-items: center; justify-content: space-between; height: 4cqw; }
+.lk-strip i { display: block; flex: none; box-sizing: border-box; }
+.lk-strip .lk-turn { width: 1.6cqw; }
+.lk-g-p { width: 1.3cqw; height: 1.3cqw; border-radius: 50%; background: currentColor; opacity: .55; }
+.lk-g-u { width: 2.9cqw; height: 2.9cqw; border-radius: 50%; border: .5cqw solid currentColor; }
+.lk-g-e { width: 3.6cqw; height: 3.6cqw; border-radius: 50%; border: 1.2cqw double currentColor; }
+.lk-g-b { width: 2.5cqw; height: 2.5cqw; border-radius: .5cqw; border: .45cqw solid currentColor; opacity: .7; }
+.lk-g-d { width: 2.5cqw; height: 2.5cqw; border-radius: .5cqw; background: currentColor; opacity: .7; }
+.lk-fstamps { display: flex; flex-wrap: wrap; gap: 1.6cqw; min-height: 6.6cqw; padding-top: 3.4cqw; }
+.lk-st { height: 6.2cqw; padding: 0 2.2cqw; border-radius: 3.1cqw; border: .4cqw solid currentColor; display: inline-flex; align-items: center; font: 700 3.1cqw/1 var(--font-mono); letter-spacing: .25cqw; text-transform: uppercase; white-space: nowrap; }
+.lk-fbot { display: flex; align-items: baseline; justify-content: space-between; gap: 2cqw; padding-top: 3.4cqw; font: 600 3.3cqw/1 var(--font-mono); letter-spacing: .3cqw; text-transform: uppercase; color: var(--m-soft); }
+.lk-fname { font: 700 5cqw/1 var(--font-mono); letter-spacing: .5cqw; color: var(--m-ink); }
+/* back: the scorecard */
+.lk-bk { position: absolute; inset: 3.2cqw; border-radius: 3.4cqw; background: var(--panel); color: var(--p-ink); padding: 4cqw 3.6cqw 3.4cqw; display: flex; flex-direction: column; gap: 2.2cqw; z-index: 1; }
+.lk-bh { display: flex; align-items: flex-end; justify-content: space-between; gap: 2cqw; }
+.lk-bh-l { min-width: 0; }
+.lk-bh-c { font: 700 5.2cqw/1.15 var(--font-sans); letter-spacing: -.1cqw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lk-bh-d, .lk-nl, .lk-nh { font: 600 2.9cqw/1 var(--font-mono); letter-spacing: .25cqw; text-transform: uppercase; color: var(--p-soft); }
+.lk-bh-d { padding-top: 1.2cqw; }
+.lk-bh-t { font: 700 9cqw/.9 var(--font-mono); letter-spacing: -.4cqw; display: flex; align-items: baseline; gap: 1.6cqw; flex: none; }
+.lk-bh-t span { font: 600 3.8cqw/1 var(--font-mono); letter-spacing: 0; color: var(--p-soft); }
+.lk-nine { display: grid; grid-template-columns: 9.5cqw repeat(9, 1fr) 9cqw; align-items: center; justify-items: center; row-gap: 1.1cqw; padding: 2cqw 0 0; border-top: .3cqw solid var(--p-line); }
+.lk-nl { justify-self: start; letter-spacing: .1cqw; overflow: hidden; max-width: 100%; }
+.lk-np { font: 600 3.4cqw/1 var(--font-mono); color: var(--p-soft); }
+.lk-nt { font: 700 4.4cqw/1 var(--font-mono); }
+.lk-mk { display: inline-flex; align-items: center; justify-content: center; width: 6.4cqw; height: 6.4cqw; box-sizing: border-box; font: 700 3.8cqw/1 var(--font-mono); font-variant-numeric: tabular-nums; letter-spacing: -.1cqw; }
+.lk-mk-u { border-radius: 50%; border: .4cqw solid currentColor; }
+.lk-mk-e { border-radius: 50%; border: 1cqw double currentColor; }
+.lk-mk-b { border-radius: 1cqw; border: .4cqw solid var(--p-soft); }
+.lk-mk-d { border-radius: 1cqw; border: 1cqw double var(--p-dbl); background: var(--p-dbl-bg); color: var(--p-dbl); }
+.lk-bw { display: flex; align-items: center; gap: 2cqw; padding-top: 2.2cqw; border-top: .3cqw solid var(--p-line); font: 600 3.9cqw/1.25 var(--font-sans); }
+.lk-bg { flex: none; min-width: 7.6cqw; height: 7.6cqw; border-radius: 2cqw; display: inline-grid; place-items: center; background: var(--m-base); color: var(--m-ink); font: 700 4.4cqw/1 var(--font-mono); box-shadow: inset 0 0 0 .3cqw var(--m-edge); }
+.lk-tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.6cqw; }
+.lk-tile { display: flex; flex-direction: column; align-items: center; gap: 1cqw; padding: 1.8cqw 0 1.6cqw; border-radius: 2cqw; background: var(--p-line); }
+.lk-tile b { font: 700 7cqw/1 var(--font-mono); font-variant-numeric: tabular-nums; }
+.lk-tile span, .lk-types i { font: 600 2.5cqw/1 var(--font-mono); letter-spacing: .15cqw; text-transform: uppercase; color: var(--p-soft); font-style: normal; }
+.lk-types { display: flex; justify-content: space-between; gap: 1.6cqw; font: 700 3.8cqw/1 var(--font-mono); }
+.lk-types span { display: flex; flex-direction: column; gap: 1cqw; }
+.lk-bs { display: flex; flex-wrap: wrap; gap: 1.4cqw; margin-top: auto; }
+.lk-bs .lk-st { height: 5.6cqw; font-size: 2.8cqw; border-color: var(--p-soft); }
+
+/* ── the pack overlay ── */
+.pk { position: absolute; inset: 0; display: flex; flex-direction: column; background: var(--bg); color: var(--text); overflow: hidden;
+  padding: var(--sat, 0px) 0 var(--sab, 0px); -webkit-user-select: none; user-select: none; animation: pk-in 220ms var(--ease-grow); }
+@keyframes pk-in { from { opacity: 0; } }
+.pk-top { position: relative; z-index: 4; flex: none; height: 56px; display: flex; align-items: center; gap: var(--space-3); padding: 0 var(--gutter, 16px); }
+.pk-k { color: var(--text-muted); }
+.pk-stage { position: relative; flex: 1; min-height: 0; container-type: size; --cw: min(68cqw, calc((100cqh - 24px) * .62)); }
+.pk-card, .pk-pack, .pk-fx, .pk-rays, .pk-pulses { position: absolute; left: 50%; top: 50%; translate: -50% -50%; }
+.pk-card { width: var(--cw); aspect-ratio: 5 / 7; z-index: 1; transform: translateY(4%) scale(.9); visibility: hidden; }
+.pk-card .lk-slot { width: 100%; height: 100%; }
+.pk-card .lk-tilt { border-radius: calc(var(--cw) * .055); }
+.pk-pack { width: calc(var(--cw) * 1.07); aspect-ratio: 5 / 7.25; z-index: 2; touch-action: none; -webkit-touch-callout: none; border-radius: 6px; cursor: pointer; }
+.pk-breathe { width: 100%; height: 100%; animation: pk-breathe 2.6s ease-in-out infinite; }
+@keyframes pk-breathe { 50% { transform: scale(1.018); } }
+.pk-shake { position: relative; width: 100%; height: 100%; transform: translate(var(--jx, 0px), var(--jy, 0px)) rotate(var(--jr, 0deg)) scale(calc(1 + var(--p, 0) * .04)); }
+.pk-ptop, .pk-body { position: absolute; left: 0; right: 0; }
+.pk-ptop { top: 0; height: 13%; transform-origin: 100% 100%; transform: rotate(calc(var(--p, 0) * -5deg));
+  -webkit-mask: conic-gradient(from 135deg at top, #0000, #000 1deg 89deg, #0000 90deg) 50% / 12px 100%; mask: conic-gradient(from 135deg at top, #0000, #000 1deg 89deg, #0000 90deg) 50% / 12px 100%; }
+.pk-body { top: 13%; bottom: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; box-shadow: inset 0 0 0 1px rgba(255,255,255,.1);
+  -webkit-mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / 12px 100%; mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / 12px 100%; }
+.pk-ptop::after, .pk-body::after { content: ""; position: absolute; left: 0; right: 0; height: 22px; background: repeating-linear-gradient(90deg, rgba(255,255,255,.16) 0 2px, rgba(0,0,0,.28) 2px 5px); }
+.pk-ptop::after { top: 0; } .pk-body::after { bottom: 0; }
+.pk-body::before { content: ""; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,.16) 46%, transparent 60%); transform: translateX(calc(-30% + var(--p, 0) * 60%)); }
+.pk-body svg { width: 44px; height: 44px; }
+.pk-l1 { font: 700 15px/20px var(--font-mono); letter-spacing: 3px; text-transform: uppercase; }
+.pk-l2 { font: 600 12px/16px var(--font-mono); letter-spacing: 1px; text-transform: uppercase; opacity: .7; padding: 0 12px; }
+.pk-tear { position: absolute; left: 0; top: 13%; height: 2px; margin-top: -1px; width: calc(var(--p, 0) * 100%); background: #fff; box-shadow: 0 0 14px 3px rgba(255,255,255,.75); border-radius: 2px; opacity: calc(var(--p, 0) * 3); }
+.pk-glare { position: absolute; inset: 0; border-radius: inherit; background: radial-gradient(circle at 50% 38%, #fff 0%, rgba(255,255,255,.94) 100%); opacity: 0; pointer-events: none; transform: translateZ(1px); }
+.pk-sweep { position: absolute; inset: 0; border-radius: inherit; overflow: hidden; pointer-events: none; opacity: 0; transform: translateZ(2px); }
+.pk-sweep::before { content: ""; position: absolute; top: -20%; bottom: -20%; width: 40%; left: -60%; background: linear-gradient(100deg, transparent, rgba(255,255,255,.9), transparent); mix-blend-mode: overlay; }
+.pk-fx { width: var(--cw); aspect-ratio: 1; z-index: 0; pointer-events: none; }
+.pk-flash { position: absolute; inset: -60%; border-radius: 50%; background: radial-gradient(circle, rgba(255,255,255,.9) 0%, rgba(255,255,255,0) 62%); opacity: 0; }
+.pk-ring { position: absolute; inset: 0; border-radius: 50%; border: 3px solid var(--m-glow, var(--text)); opacity: 0; }
+.pk-spark i { position: absolute; left: 50%; top: 50%; width: 4px; height: 18px; margin: -9px 0 0 -2px; border-radius: 2px; background: var(--m-glow, var(--text)); opacity: 0; transform: rotate(var(--a)) translateY(-40px); }
+.pk[data-fin="prismatic"] .pk-spark i:nth-child(3n) { background: hsl(195 95% 72%); } .pk[data-fin="prismatic"] .pk-spark i:nth-child(3n+1) { background: hsl(350 95% 76%); }
+.pk-rays { width: calc(var(--cw) * 2.6); aspect-ratio: 1; z-index: 0; border-radius: 50%; opacity: 0; pointer-events: none;
+  background: repeating-conic-gradient(from 0deg, hsl(350 95% 76% / .5) 0deg 6deg, transparent 6deg 18deg, hsl(195 95% 72% / .5) 18deg 24deg, transparent 24deg 36deg, hsl(80 85% 70% / .45) 36deg 42deg, transparent 42deg 54deg, hsl(290 90% 79% / .5) 54deg 60deg, transparent 60deg 72deg);
+  -webkit-mask: radial-gradient(circle, #000 18%, transparent 68%); mask: radial-gradient(circle, #000 18%, transparent 68%); }
+.pk-pulses { width: calc(var(--cw) * 1.5); aspect-ratio: 1; top: calc(50% - var(--cw) * .574); z-index: 0; pointer-events: none; }
+.pk-pulse { position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(circle, rgba(255,255,255,.95) 0%, rgba(255,255,255,0) 58%); opacity: 0; animation: pk-pulse var(--pd, 500ms) ease-out forwards; }
+.pk-pulse.last { background: radial-gradient(circle, var(--m-glow) 0%, transparent 60%); }
+.pk[data-fin="prismatic"] .pk-pulse.last { background: radial-gradient(circle, #fff 0%, transparent 26%), conic-gradient(hsl(350 95% 76%), hsl(35 100% 72%), hsl(155 80% 70%), hsl(195 95% 72%), hsl(290 90% 79%), hsl(350 95% 76%));
+  -webkit-mask: radial-gradient(circle, #000 0%, transparent 60%); mask: radial-gradient(circle, #000 0%, transparent 60%); }
+@keyframes pk-pulse { 0% { opacity: 0; transform: scale(.35); } 30% { opacity: 1; } 100% { opacity: 0; transform: scale(1.25); } }
+.pk-screen { position: absolute; inset: 0; z-index: 3; pointer-events: none; opacity: 0; background: #fff; }
+.pk-foot { position: relative; z-index: 4; flex: none; min-height: 170px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; text-align: center; gap: var(--space-2); padding: 0 var(--gutter, 16px) var(--space-4); }
+.pk-foot.two { min-height: 236px; }
+.pk-soft { color: var(--text-muted); }
+.pk-res { display: none; flex-direction: column; align-items: center; gap: var(--space-2); width: 100%; }
+.pk-res .btn + .btn { margin-top: 0; }
+.pk-fin { display: flex; align-items: center; gap: var(--space-2); }
+.pk-name span { display: inline-block; }
+.pk-stamps { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-2); padding-bottom: var(--space-2); }
+.lk-chip { height: 28px; padding: 0 10px; border-radius: var(--radius-pill); border: 1px solid var(--line); display: inline-flex; align-items: center; font: 600 12px/16px var(--font-mono); letter-spacing: 1px; text-transform: uppercase; }
+
+/* 1–2 sealed + hold */
+.pk.torn .pk-breathe { animation: none; }
+.pk.torn .pk-pack { pointer-events: none; }
+.pk.torn .pk-tear { display: none; }
+/* 3 tear: strip flies, flash; the card shows, white-hot, and starts to rise */
+.pk.torn .pk-ptop { animation: pk-ptop 520ms cubic-bezier(.3,.6,.3,1) forwards; }
+.pk.torn .pk-flash { animation: pk-flash 700ms ease-out both; }
+.pk.torn .pk-card { visibility: visible; transform: translateY(-30%) scale(.9); transition: transform 900ms var(--ease-grow); }
+.pk.torn .pk-glare { opacity: 1; }
+@keyframes pk-ptop { to { transform: translate(46%, -190%) rotate(26deg); opacity: 0; } }
+@keyframes pk-flash { 0% { opacity: 0; transform: scale(.4); } 25% { opacity: 1; } 100% { opacity: 0; transform: scale(1.2); } }
+/* 4 the wait: prismatic ends on a held dark beat */
+.pk.dark .pk-screen { background: #000; opacity: .55; transition: opacity 250ms ease-out; }
+/* 5 reveal */
+.pk.rv .pk-body { animation: pk-drop 520ms cubic-bezier(.5,0,.8,.4) forwards; }
+.pk.rv .pk-card { transition: none; animation: pk-settle 700ms var(--ease-grow) both; }
+.pk.rv .pk-glare { animation: pk-glare 700ms 80ms ease-out both; }
+.pk.rv .pk-ring { animation: pk-ring 900ms calc(120ms + var(--rd, 0ms)) ease-out both; }
+.pk.rv .pk-spark i { animation: pk-spark 820ms calc(140ms + var(--sd, 0ms)) ease-out both; }
+@keyframes pk-drop { to { transform: translateY(125%) rotate(5deg); opacity: 0; } }
+@keyframes pk-settle { from { transform: translateY(-30%) scale(.9); } to { transform: none; } }
+@keyframes pk-glare { from { opacity: 1; } to { opacity: 0; } }
+@keyframes pk-ring { 0% { opacity: .9; transform: scale(.5); } 100% { opacity: 0; transform: scale(1.9); border-width: 1px; } }
+@keyframes pk-spark { 0% { opacity: 1; transform: rotate(var(--a)) translateY(-40px) scaleY(1); } 100% { opacity: 0; transform: rotate(var(--a)) translateY(calc(var(--cw) * -1.05)) scaleY(.3); } }
+/* silver: a sheen sweeps across */
+.pk.rv[data-fin="silver"] .pk-sweep { opacity: 1; }
+.pk.rv[data-fin="silver"] .pk-sweep::before { animation: pk-sweep 900ms 350ms ease-in-out both; }
+@keyframes pk-sweep { from { left: -60%; } to { left: 120%; } }
+/* gold: the screen flashes gold, the card overshoots, "Gold" stamps in */
+.pk.rv[data-fin="gold"] .pk-screen { background: radial-gradient(circle at 50% 45%, rgba(253,238,180,.95), rgba(201,160,58,.55) 60%, rgba(176,138,46,0)); animation: pk-screen 650ms ease-out both; }
+.pk.rv[data-fin="gold"] .pk-card { animation: pk-pop 900ms var(--ease-grow) both; }
+.pk.done[data-fin="gold"] .pk-name { animation: pk-stamp 420ms cubic-bezier(.3,1.6,.5,1) both; }
+@keyframes pk-pop { 0% { transform: translateY(-30%) scale(.9); } 55% { transform: scale(1.08); } 100% { transform: none; } }
+@keyframes pk-screen { 0% { opacity: 0; } 18% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes pk-stamp { from { transform: scale(1.7); opacity: 0; } }
+/* prismatic: white flash, rays turning slowly (they stay), three rings, two bursts, the card spins in, a shake, the name lands letter by letter */
+.pk.rv[data-fin="prismatic"] .pk-screen { background: #fff; animation: pk-screen 700ms ease-out both; }
+.pk.rv[data-fin="prismatic"] .pk-rays { opacity: 1; animation: pk-rays-in 900ms ease-out both, pk-rays 14s linear infinite; }
+.pk.rv[data-fin="prismatic"] .pk-card { animation: pk-spin 1300ms var(--ease-grow) both; }
+.pk.rv[data-fin="prismatic"] .pk-stage { animation: pk-shake 420ms 260ms ease-out both; }
+.pk.done[data-fin="prismatic"] .pk-name span { animation: pk-letter 360ms var(--ld, 0ms) cubic-bezier(.3,1.4,.5,1) both; }
+@keyframes pk-rays-in { from { opacity: 0; scale: .6; } }
+@keyframes pk-rays { to { rotate: 360deg; } }
+@keyframes pk-spin { 0% { transform: translateY(-30%) scale(.9) rotateY(0deg); } 70% { transform: scale(1.06) rotateY(340deg); } 100% { transform: none; } }
+@keyframes pk-shake { 0%, 100% { transform: none; } 20% { transform: translate(-7px, 3px); } 40% { transform: translate(6px, -4px); } 60% { transform: translate(-4px, 2px); } 80% { transform: translate(3px, -1px); } }
+@keyframes pk-letter { from { opacity: 0; transform: translateY(-18px) scale(1.4); } }
+/* 6 result */
+.pk.done .pk-hint { display: none; }
+.pk.done .pk-res { display: flex; animation: pk-res 360ms var(--ease-grow); }
+.pk.done .lk-chip { animation: pk-chip 320ms var(--cd, 0ms) var(--ease-grow) both; }
+.pk.done .pk-card { cursor: pointer; }
+@keyframes pk-res { from { opacity: 0; transform: translateY(8px); } }
+@keyframes pk-chip { from { opacity: 0; transform: scale(.7); } }
+
+/* reduced motion (html.rm, set by app.js): a tap opens it; everything is a 150 ms fade */
+html.rm .pk, html.rm .pk *, html.rm .lk-slot.land .lk-tilt { animation: none !important; }
+html.rm .lk-flip { transition-duration: 150ms; }
+html.rm .pk .pk-card { transition: opacity 150ms ease-out; }
+html.rm .pk.torn .pk-card { transform: none; }
+html.rm .pk.torn .pk-glare, html.rm .pk .pk-rays, html.rm .pk .pk-screen { opacity: 0; }
+html.rm .pk.rv .pk-pack { opacity: 0; transition: opacity 150ms ease-out; }
+html.rm .pk.done .pk-res { display: flex; }
+
+
+/* ───────── page ───────── */
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+.x-page { max-width: 520px; margin: 0 auto; padding-block: 20px 72px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 44px; }
+.x-intro h1 { font: 700 26px/30px var(--font-sans); letter-spacing: -.4px; margin: 0 0 8px; text-wrap: balance; }
+.x-intro p, .x-sec p { margin: 0; color: var(--text-muted); max-width: 60ch; }
+.x-bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 9; margin: -24px 0 -20px; padding: 10px 0; background: var(--bg); border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; }
+.x-row { display: flex; align-items: center; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+.x-row::-webkit-scrollbar { display: none; }
+.x-row > span { flex: none; width: 52px; font: 600 11px/16px var(--font-mono); letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); }
+.x-chip { flex: none; min-height: 36px; padding: 0 12px; border-radius: var(--radius-pill); background: var(--surface-1); color: var(--text-muted); font: 600 13px/18px var(--font-sans); }
+.x-chip[aria-pressed="true"] { background: var(--surface-3); color: var(--text); }
+.x-chip:focus-visible, .lk-tilt:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+.x-sec { display: flex; flex-direction: column; gap: 14px; }
+.x-k { font: 600 12px/16px var(--font-mono); letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); }
+.x-sec h2 { font: 700 20px/24px var(--font-sans); letter-spacing: -.2px; margin: 2px 0 0; }
+.x-hint { font: 600 12px/16px var(--font-mono); letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); text-align: center; }
+.x-land { aspect-ratio: 7 / 5; width: 100%; max-width: 100%; }
+.x-port { width: min(78%, 310px); margin: 0 auto; }
+.x-two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.x-scroll { display: flex; gap: 14px; overflow-x: auto; margin: 0 -16px; padding: 4px 16px 18px; scroll-snap-type: x mandatory; scrollbar-width: none; }
+.x-scroll::-webkit-scrollbar { display: none; }
+.x-scroll figure { flex: none; width: min(74%, 290px); margin: 0; scroll-snap-align: center; display: flex; flex-direction: column; gap: 12px; }
+.x-scroll figcaption { color: var(--text-muted); font-size: 14px; line-height: 20px; }
+.x-scroll figcaption b { display: block; color: var(--text); font-weight: 600; }
+
+/* ───────── new card pieces (036) ───────── */
+.lkf-standard { --m-inv: #1c1f24; } .lkf-bronze { --m-inv: #5a3319; } .lkf-silver, .lkf-gold, .lkf-prismatic { --m-inv: #f6f7f9; } .lkf-rookie { --m-inv: #edefea; }
+.lk-slot { --x-rule: color-mix(in srgb, var(--m-ink) 24%, transparent); --x-tint: color-mix(in srgb, var(--m-ink) 10%, transparent); }
+.x-land .lk-mat { border-radius: 4cqw; } .x-land .lk-tilt { border-radius: 4%; }
+/* engraved: the scorecard cut straight into the metal instead of sitting on a dark panel */
+.x-engr { --panel: transparent; --p-ink: var(--m-ink); --p-soft: var(--m-soft); --p-line: var(--x-rule); --p-dbl: var(--m-ink); --p-dbl-bg: var(--x-tint); text-shadow: var(--m-emboss); }
+.x-engr .lk-tile { background: var(--x-tint); }
+.x-engr .lk-bs .lk-st { border-color: currentColor; }
+
+/* A · landscape, whole scorecard on the front */
+.x-l1 { position: relative; height: 100%; padding: 4.2cqw 4.6cqw; display: flex; flex-direction: column; justify-content: space-between; text-shadow: var(--m-emboss); }
+.x-top, .x-bot { display: flex; align-items: center; justify-content: space-between; gap: 2cqw; font: 600 2.4cqw/1 var(--font-mono); letter-spacing: .24cqw; text-transform: uppercase; color: var(--m-soft); }
+.x-top .lk-brand svg { width: 3.8cqw; height: 3.8cqw; }
+.x-fin { font-weight: 700; color: var(--m-ink); }
+.x-bot b { font: 700 3.4cqw/1 var(--font-mono); letter-spacing: .36cqw; color: var(--m-ink); }
+.x-hero { display: flex; align-items: flex-end; gap: 4cqw; }
+.x-gross { font: 700 25cqw/.8 var(--font-mono); letter-spacing: -1.8cqw; margin-left: -1cqw; font-variant-numeric: tabular-nums; flex: none; }
+.x-meta { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1.5cqw; padding-bottom: .4cqw; }
+.x-course { font: 700 4.8cqw/1.05 var(--font-sans); letter-spacing: -.05cqw; }
+.x-sub { font: 600 2.8cqw/1 var(--font-mono); letter-spacing: .16cqw; color: var(--m-soft); }
+.x-stamps { display: flex; flex-wrap: wrap; gap: 1.2cqw; padding-top: .8cqw; }
+.x-stamps .lk-st { height: 4.6cqw; padding: 0 1.6cqw; border-radius: 2.3cqw; border-width: .3cqw; font-size: 2.2cqw; letter-spacing: .18cqw; }
+.x-sc { display: flex; flex-direction: column; gap: 1.5cqw; padding-top: 1.8cqw; border-top: .25cqw solid var(--x-rule); }
+.x-n { display: grid; grid-template-columns: repeat(9, 1fr) 9cqw; justify-items: center; align-items: center; row-gap: .8cqw; }
+.x-h { font: 600 1.9cqw/1 var(--font-mono); letter-spacing: .1cqw; color: var(--m-soft); text-transform: uppercase; }
+.x-mk { display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; width: 5.6cqw; height: 5.6cqw; font: 700 3.5cqw/1 var(--font-mono); font-variant-numeric: tabular-nums; }
+.x-mk-u { border-radius: 50%; border: .35cqw solid currentColor; }
+.x-mk-e { border-radius: 50%; border: .9cqw double currentColor; }
+.x-mk-b { border-radius: .8cqw; border: .3cqw solid var(--m-soft); }
+.x-mk-d { border-radius: .8cqw; background: var(--m-ink); color: var(--m-inv); text-shadow: none; }
+.x-t { font: 700 4.2cqw/1 var(--font-mono); }
+/* A · back: the grade and the stats */
+.x-sb { position: relative; height: 100%; padding: 4.6cqw; display: flex; gap: 4.6cqw; }
+.x-sb-l { flex: none; width: 28cqw; display: flex; flex-direction: column; justify-content: space-between; }
+.x-sb-f { font: 700 3.2cqw/1 var(--font-mono); letter-spacing: .34cqw; text-transform: uppercase; }
+.x-grade { font: 700 36cqw/.8 var(--font-mono); letter-spacing: -2cqw; margin-left: -1.4cqw; }
+.x-grade.num { font-size: 21cqw; letter-spacing: -1.4cqw; }
+.x-sb-r { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: space-between; gap: 2cqw; }
+.x-line { font: 600 3.5cqw/1.25 var(--font-sans); text-wrap: balance; }
+.x-land .lk-tile b { font-size: 6cqw; } .x-land .lk-tile span, .x-land .lk-types i { font-size: 1.9cqw; }
+.x-land .lk-types { font-size: 3.2cqw; }
+.x-land .lk-bs .lk-st { height: 4.6cqw; font-size: 2.2cqw; border-width: .3cqw; }
+.x-land .lk-bs { margin-top: 0; }
+/* B · landscape, course art */
+.x-artw { position: relative; overflow: hidden; background: #0d0f12; z-index: 1; }
+.x-artw svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.x-artw::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; box-shadow: inset 0 0 0 .3cqw rgba(0,0,0,.4), inset 0 .8cqw 1.6cqw rgba(0,0,0,.28); }
+.x-artw .x-gl { position: absolute; inset: -30% -60%; pointer-events: none; background: linear-gradient(100deg, transparent 40%, rgba(255,255,255,.5) 50%, transparent 60%); mix-blend-mode: soft-light; transform: translate(calc(var(--sx, 0) * 55%), 0); }
+.x-l2 .x-artw { position: absolute; left: 2.6cqw; right: 2.6cqw; top: 2.6cqw; bottom: 21cqw; border-radius: 2.2cqw; }
+.x-tag { position: absolute; z-index: 2; right: 4.4cqw; top: 4.4cqw; height: 5cqw; padding: 0 2cqw; border-radius: 2.5cqw; display: inline-flex; align-items: center; background: var(--m-base); color: var(--m-ink); box-shadow: inset 0 0 0 .3cqw var(--m-edge), 0 .6cqw 1.6cqw rgba(0,0,0,.35); font: 700 2.3cqw/1 var(--font-mono); letter-spacing: .26cqw; text-transform: uppercase; }
+.x-band { position: absolute; left: 4.6cqw; right: 4.6cqw; bottom: 0; height: 21cqw; display: flex; align-items: center; gap: 3.6cqw; text-shadow: var(--m-emboss); }
+.x-band .x-gross { font-size: 17cqw; letter-spacing: -1.2cqw; margin-left: -.6cqw; }
+.x-bmid { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1.6cqw; }
+.x-bmid .x-course { font-size: 4.2cqw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.x-bmid .lk-strip { height: 3.6cqw; margin-top: .6cqw; }
+.x-bright { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 1.6cqw; font: 600 2.3cqw/1 var(--font-mono); letter-spacing: .24cqw; text-transform: uppercase; color: var(--m-soft); }
+.x-bright b { font: 700 3.4cqw/1 var(--font-mono); letter-spacing: .36cqw; color: var(--m-ink); }
+/* B · back: the scorecard, engraved, landscape */
+.x-land .lk-bk { inset: 0; padding: 4.4cqw 4.6cqw; gap: 2cqw; justify-content: space-between; }
+.x-land .lk-bh-c { font-size: 4.6cqw; } .x-land .lk-bh-t { font-size: 8cqw; }
+.x-land .lk-nine { grid-template-columns: 9cqw repeat(9, 1fr) 9cqw; row-gap: .9cqw; padding-top: 1.6cqw; }
+.x-land .lk-mk { width: 5.6cqw; height: 5.6cqw; font-size: 3.5cqw; }
+.x-land .lk-nh, .x-land .lk-nl, .x-land .lk-bh-d { font-size: 2.2cqw; } .x-land .lk-np { font-size: 2.8cqw; } .x-land .lk-nt { font-size: 4cqw; }
+.x-land .lk-bw { font-size: 3cqw; padding-top: 1.6cqw; } .x-land .lk-bg { min-width: 6cqw; height: 6cqw; font-size: 3.4cqw; border-radius: 1.4cqw; }
+/* C · portrait, course art */
+.x-p2 .x-artw { flex: none; aspect-ratio: 4 / 3; margin-top: 3.6cqw; border-radius: 3cqw; }
+.x-prow { display: flex; align-items: flex-end; gap: 4cqw; padding-top: 5cqw; }
+.x-prow .x-gross { font-size: 27cqw; letter-spacing: -1.9cqw; margin-left: -1.2cqw; }
+.x-p2 .x-course { font-size: 5.8cqw; } .x-p2 .x-sub { font-size: 3.5cqw; }
+.x-p2 .lk-strip { margin-top: auto; }
+/* backs · metal header */
+.x-k1h { position: absolute; left: 6cqw; right: 6cqw; top: 0; height: 31cqw; display: flex; align-items: center; justify-content: space-between; gap: 3cqw; text-shadow: var(--m-emboss); z-index: 1; }
+.x-k1f { font: 700 7.4cqw/1 var(--font-mono); letter-spacing: .7cqw; text-transform: uppercase; }
+.x-k1l { font: 600 3.7cqw/1.25 var(--font-sans); color: var(--m-soft); padding-top: 1.8cqw; text-wrap: balance; }
+.x-k1g { font: 700 25cqw/.8 var(--font-mono); letter-spacing: -1.4cqw; flex: none; }
+.x-k1 .lk-bk { top: 31cqw; }
+.x-k1 .lk-mk-u, .x-k1 .lk-mk-e, .x-k1 .lk-bh-t { color: var(--m-glow); }
+/* backs · full metal */
+.x-wm { position: absolute; right: -5cqw; bottom: -16cqw; font: 700 120cqw/.8 var(--font-mono); letter-spacing: -6cqw; opacity: .1; color: var(--m-ink); pointer-events: none; }
+.x-k2 .lk-bk { inset: 2cqw; }
+/* art · line style */
+.x-ink .s { fill: none; stroke: #f4f5f7; stroke-width: 1.3; stroke-opacity: .78; stroke-linejoin: round; stroke-linecap: round; }
+.x-ink .s2 { fill: none; stroke: #f4f5f7; stroke-width: .8; stroke-opacity: .34; stroke-dasharray: 2 4; }
+.x-ink .gr { fill: var(--m-glow); fill-opacity: .9; stroke: none; }
+@media (prefers-reduced-motion: reduce) { .lk-flip { transition-duration: 150ms; } }
+</style>
+
+<div class="x-page" id="page">
+  <header class="x-intro">
+    <div class="x-k">036 · round 1 · nothing here is in the app</div>
+    <h1>Scorecard card designs</h1>
+    <p>Your real 87 at Twin Creeks on Nov 20, drawn five ways. Change the finish and the art style in the bar and every card follows. Tap a card to flip it.</p>
+  </header>
+  <div class="x-bar">
+    <div class="x-row" id="fins"><span>Finish</span></div>
+    <div class="x-row" id="arts"><span>Art</span></div>
+  </div>
+  <main id="out" style="display:flex;flex-direction:column;gap:52px"></main>
+</div>
+
+<script>
+const MARK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="2.6" fill="currentColor" stroke="none"/></svg>';
+const FIN = { prismatic: ['Prismatic', 'S', '6 better than your normal of 93'], gold: ['Gold', 'A', '3 better than your normal of 90'], silver: ['Silver', 'B', 'Right on your normal of 87'], bronze: ['Bronze', 'C', '2 over your normal of 85'], standard: ['Standard', '', ''] };
+const ARTS = { wc: 'Watercolor', night: 'Night', ink: 'Line' };
+const state = { fin: 'prismatic', art: 'wc' };
+const sum = (a) => a.reduce((x, y) => x + y, 0);
+const kind = (s, p) => { const d = s - p; return d <= -2 ? 'e' : d === -1 ? 'u' : d === 0 ? 'p' : d === 1 ? 'b' : 'd'; };
+const toPar = (n) => (n > 0 ? '+' + n : n === 0 ? 'E' : String(n));
+
+/* Andrew's real rounds (read from the live database Nov 24, read-only). */
+const TC = [5,4,3,4,4,5,3,4,4,4,3,4,5,4,3,5,4,4];
+const ROUNDS = {
+  tc: { course: 'Twin Creeks', art: 'tc', day: 'Nov 20, 2026', n: 5, par: TC, strokes: [6,3,4,4,4,7,4,6,6,5,3,4,6,5,4,6,5,5], stamps: ['Broke 90', 'Lowest round yet', 'Best at Twin Creeks'] },
+  bw: { course: 'Bridlewood', art: 'bw', day: 'Oct 20, 2026', n: 2, par: [4,5,3,4,4,5,4,3,4,4,4,3,5,4,4,5,3,4], strokes: [8,7,6,6,5,5,5,3,5,8,5,3,7,5,5,5,5,4], stamps: [] },
+  fl: { course: 'Firewheel Lakes', art: 'fl', day: 'Nov 7, 2026', n: 4, par: [4,4,3,5,4,4,4,3,5,4,3,4,5,4,3,4,5,4], strokes: [6,5,3,7,6,5,6,4,6,6,4,5,10,8,3,5,5,6], stamps: [] },
+};
+function card(id) {
+  const r = ROUNDS[id], d = r.strokes.map((s, i) => s - r.par[i]);
+  const gross = sum(r.strokes), f = FIN[state.fin];
+  let best = 0, run = 0; for (const x of d) { run = x <= 0 ? run + 1 : 0; best = Math.max(best, run); }
+  return { ...r, name: 'Andrew', gross, toPar: gross - sum(r.par), fin: state.fin, finName: f[0], grade: f[1], line: f[2],
+    k: { bird: d.filter((x) => x < 0).length, pars: d.filter((x) => x === 0).length, bog: d.filter((x) => x === 1).length, dbl: d.filter((x) => x >= 2).length },
+    types: [3, 4, 5].map((p) => [p, sum(d.filter((_, i) => r.par[i] === p))]), best };
+}
+
+/* ── course art: one made-up hole per course, drawn in code. Stand-in for a real painting of each course. ── */
+const PAL = {
+  wc: {
+    tc: { paper: '#f4eee0', sky: '#9dc4d6', far: '#6f8f78', tree: '#3d5e45', rough: '#8aa868', fair: '#b4cc7a', green: '#d3e294', sand: '#ecdcb4', water: '#74a6c2', flag: '#c8442f' },
+    bw: { paper: '#f5eedd', sky: '#c9d3cf', far: '#b08a55', tree: '#93512a', rough: '#aaa45c', fair: '#c9cb7c', green: '#dfe39c', sand: '#efdfb8', water: '#86a7b6', flag: '#b53a2a' },
+    fl: { paper: '#f6ece2', sky: '#e6b7a4', far: '#7d8198', tree: '#414c60', rough: '#7f9a72', fair: '#a9c284', green: '#cddd9a', sand: '#efdcbd', water: '#8fb0cf', flag: '#c8442f' },
+  },
+  night: {
+    tc: { paper: '#0f1626', sky: '#131c30', far: '#1a2c3a', tree: '#0c1719', rough: '#1b3529', fair: '#285539', green: '#3f8a55', sand: '#b9aa80', water: '#27466a', flag: '#ff6b6b' },
+    bw: { paper: '#161420', sky: '#1d1a2b', far: '#2b2430', tree: '#120f17', rough: '#2c3324', fair: '#44512f', green: '#74883f', sand: '#bda982', water: '#2a4460', flag: '#ff6b6b' },
+    fl: { paper: '#1a1422', sky: '#2a1c33', far: '#2a2a44', tree: '#110f1c', rough: '#1e3430', fair: '#2c5448', green: '#44896c', sand: '#b9aa8a', water: '#3a5a8c', flag: '#ff6b6b' },
+  },
+};
+const SH = {
+  far: 'M-10 104 C40 84 90 96 140 90 S230 78 280 92 S370 84 410 96 V132 H-10Z',
+  rough: 'M-10 112 H410 V270 H-10Z',
+  fair: 'M120 270 C110 220 190 200 200 170 C208 146 236 132 262 126 L300 128 C290 140 262 150 256 172 C246 210 330 230 320 270Z',
+  fair2: 'M150 270 C150 226 214 204 222 174 C228 152 250 140 272 134',
+  fair3: 'M290 270 C300 234 236 210 240 176 C244 156 268 146 290 138',
+  creek: 'M-10 180 C40 170 70 196 110 190 C140 186 150 210 130 232 C110 252 60 246 40 270 H-10Z',
+  lake: 'M-10 146 C60 136 130 146 178 166 C156 200 92 216 -10 222Z',
+  trees: [[20,98,14],[48,94,12],[120,96,9],[150,93,10],[330,92,13],[360,96,15],[388,92,12]],
+  fg: [[374,140,26],[356,156,18],[392,160,18],[30,150,20],[12,166,16]],
+  sand: [[232,135,14,5],[320,135,12,4],[172,198,20,7]],
+};
+let uid = 0;
+function art(course, style) {
+  const lake = course === 'fl', water = lake ? SH.lake : SH.creek, id = 'a' + (++uid);
+  const circ = (a, cls, extra = '') => a.map(([x, y, r]) => `<circle class="${cls}" cx="${x}" cy="${y}" r="${r}" ${extra}/>`).join('');
+  const ell = (a, cls, extra = '') => a.map(([x, y, rx, ry]) => `<ellipse class="${cls}" cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" ${extra}/>`).join('');
+  const open = `<svg viewBox="0 0 400 260" preserveAspectRatio="xMidYMid slice" aria-hidden="true"`;
+  if (style === 'ink') {
+    return `${open} class="x-ink"><rect width="400" height="260" fill="#0d0f12"/>
+      <path class="s" d="${SH.far.replace(/ V132 H-10Z/, '')}"/>${circ(SH.trees, 's')}
+      <path class="s" d="${SH.fair}"/><path class="s2" d="${SH.fair2}"/><path class="s2" d="${SH.fair3}"/>
+      <path class="s" d="${water}"/><path class="s2" d="M4 ${lake ? 172 : 206} h${lake ? 120 : 96} M10 ${lake ? 188 : 222} h${lake ? 84 : 70} M6 ${lake ? 204 : 238} h${lake ? 50 : 40}"/>
+      ${ell(SH.sand, 's')}${circ(SH.fg, 's')}<path class="s" d="M374 166 V216 M30 170 V200"/>
+      <ellipse class="gr" cx="282" cy="124" rx="40" ry="11"/><path class="s" d="M290 124 V95 l14 5 -14 5"/></svg>`;
+  }
+  const p = PAL[style][course], wc = style === 'wc';
+  const f = wc ? ` filter="url(#${id}w)"` : '';
+  const o = (v) => (wc ? v : 1);
+  const edge = (c) => (wc ? ` stroke="${c}" stroke-opacity=".45" stroke-width="1.4"` : '');
+  return `${open}><defs>
+      <filter id="${id}w" x="-6%" y="-6%" width="112%" height="112%"><feTurbulence type="fractalNoise" baseFrequency=".02" numOctaves="3" seed="${course.charCodeAt(0)}" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="15" xChannelSelector="R" yChannelSelector="G"/><feGaussianBlur stdDeviation=".6"/></filter>
+      <filter id="${id}g" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency=".85" numOctaves="2" seed="7"/><feColorMatrix values="0 0 0 0 .32  0 0 0 0 .27  0 0 0 0 .2  0 0 0 .5 -.12"/></filter>
+      <linearGradient id="${id}s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${p.sky}"/><stop offset="1" stop-color="${p.sky}" stop-opacity="${wc ? .25 : .7}"/></linearGradient>
+    </defs>
+    <rect width="400" height="260" fill="${p.paper}"/>
+    <g${f}>
+      <rect x="-10" y="-10" width="420" height="132" fill="url(#${id}s)" opacity="${o(.85)}"/>
+      ${wc ? `<ellipse cx="120" cy="44" rx="56" ry="13" fill="${p.paper}" opacity=".85"/><ellipse cx="288" cy="30" rx="40" ry="9" fill="${p.paper}" opacity=".7"/>`
+           : `<circle cx="96" cy="44" r="13" fill="#e8ecf2"/><circle cx="210" cy="26" r="1.2" fill="#e8ecf2"/><circle cx="300" cy="50" r="1" fill="#e8ecf2"/><circle cx="350" cy="22" r="1.3" fill="#e8ecf2"/><circle cx="160" cy="62" r=".9" fill="#e8ecf2"/>`}
+      <path d="${SH.far}" fill="${p.far}" opacity="${o(.6)}"${edge(p.far)}/>
+      ${circ(SH.trees, '', `fill="${p.tree}" opacity="${o(.68)}"`)}
+      <path d="${SH.rough}" fill="${p.rough}" opacity="${o(.66)}"/>
+      <path d="${water}" fill="${p.water}" opacity="${o(.72)}"${edge(p.water)}/>
+      <path d="${SH.fair}" fill="${p.fair}" opacity="${o(.82)}"${edge(p.rough)}/>
+      ${ell(SH.sand, '', `fill="${p.sand}" opacity="${o(.95)}"`)}
+      <ellipse cx="282" cy="124" rx="40" ry="11" fill="${p.green}" opacity="${o(.95)}"${edge(p.fair)}/>
+      <ellipse cx="374" cy="216" rx="34" ry="6" fill="${p.tree}" opacity=".28"/><ellipse cx="26" cy="200" rx="26" ry="5" fill="${p.tree}" opacity=".28"/>
+      <path d="M372 160 h5 V216 h-5Z M28 168 h4 V200 h-4Z" fill="${p.tree}" opacity="${o(.8)}"/>
+      ${circ(SH.fg, '', `fill="${p.tree}" opacity="${o(.74)}"`)}
+      ${wc ? circ([[366,132,12],[24,144,9]], '', `fill="${p.rough}" opacity=".5"`) : ''}
+    </g>
+    <path d="M290 124 V95" stroke="${wc ? '#3a2f2a' : '#e8ecf2'}" stroke-width="1.3"/><path d="M290 95 l14 5 -14 5Z" fill="${p.flag}"/>
+    ${wc ? `<rect width="400" height="260" filter="url(#${id}g)" style="mix-blend-mode:multiply"/>` : ''}</svg>`;
+}
+
+/* ── card pieces ── */
+const stampsHtml = (c, n) => c.stamps.slice(0, n).map((s) => `<span class="lk-st">${s}</span>`).join('');
+const strip = (c) => `<div class="lk-strip" aria-hidden="true">${c.strokes.map((s, h) => `${h === 9 ? '<i class="lk-turn"></i>' : ''}<i class="lk-g-${kind(s, c.par[h])}"></i>`).join('')}</div>`;
+const layers = '<i class="lk-holo"></i><i class="lk-facet"></i><i class="lk-sheen"></i>';
+const artw = (c) => `<div class="x-artw">${art(c.art, state.art)}<i class="x-gl"></i></div>`;
+function nine(c, from) {
+  const par = c.par.slice(from, from + 9), sc = c.strokes.slice(from, from + 9);
+  return `<div class="lk-nine"><span class="lk-nl">Hole</span>${par.map((_, i) => `<span class="lk-nh">${from + i + 1}</span>`).join('')}<span class="lk-nh">${from ? 'In' : 'Out'}</span>
+    <span class="lk-nl">Par</span>${par.map((p) => `<span class="lk-np">${p}</span>`).join('')}<span class="lk-np">${sum(par)}</span>
+    <span class="lk-nl">${c.name.slice(0, 6)}</span>${sc.map((s, i) => `<span class="lk-mk lk-mk-${kind(s, par[i])}">${s}</span>`).join('')}<span class="lk-nt">${sum(sc)}</span></div>`;
+}
+const bh = (c) => `<div class="lk-bh"><div class="lk-bh-l"><div class="lk-bh-c">${c.course}</div><div class="lk-bh-d">${c.day} · with the crew</div></div><div class="lk-bh-t">${c.gross}<span>${toPar(c.toPar)}</span></div></div>`;
+const bw = (c) => (c.line ? `<div class="lk-bw">${c.grade ? `<span class="lk-bg">${c.grade}</span>` : ''}<span>${c.line}</span></div>` : '');
+const tile = (v, l) => `<div class="lk-tile"><b>${v}</b><span>${l}</span></div>`;
+const tiles = (c) => `<div class="lk-tiles">${tile(c.k.bird, 'Birdies+')}${tile(c.k.pars, 'Pars')}${tile(c.k.bog, 'Bogeys')}${tile(c.k.dbl, 'Doubles+')}</div>`;
+const types = (c) => `<div class="lk-types">${c.types.map(([p, v]) => `<span><i>Par ${p}s</i>${toPar(v)}</span>`).join('')}${c.best >= 2 ? `<span><i>Best run</i>${c.best}</span>` : ''}</div>`;
+const bs = (c) => `<div class="lk-bs">${stampsHtml(c, 9)}</div>`;
+
+/* today's card (css/locker.css + js/screens/locker.js, unchanged) */
+const frontNow = (c) => `<div class="lk-mat">${layers}<div class="lk-fc">
+  <div class="lk-ftop"><span class="lk-brand">${MARK}Golf Live Board</span><span class="lk-ffin">${c.fin === 'standard' ? '' : c.finName}</span></div>
+  <div class="lk-fmid"><div class="lk-fcourse">${c.course}</div><div class="lk-fgross">${c.gross}</div><div class="lk-fsub">${toPar(c.toPar)} · ${c.day}</div></div>
+  ${strip(c)}<div class="lk-fstamps">${stampsHtml(c, 2)}</div>
+  <div class="lk-fbot"><span class="lk-fname">${c.name}</span><span>With the crew</span><span>No. ${c.n}</span></div></div></div>`;
+const backNow = (c) => `<div class="lk-mat"><div class="lk-bk">${bh(c)}${nine(c, 0)}${nine(c, 9)}${bw(c)}${tiles(c)}${types(c)}${bs(c)}</div></div>`;
+
+/* A */
+function xNine(c, from) {
+  const par = c.par.slice(from, from + 9), sc = c.strokes.slice(from, from + 9);
+  return `<div class="x-n">${par.map((_, i) => `<span class="x-h">${from + i + 1}</span>`).join('')}<span class="x-h">${from ? 'In' : 'Out'}</span>
+    ${sc.map((s, i) => `<span class="x-mk x-mk-${kind(s, par[i])}">${s}</span>`).join('')}<span class="x-t">${sum(sc)}</span></div>`;
+}
+const frontA = (c) => `<div class="lk-mat">${layers}<div class="x-l1">
+  <div class="x-top"><span class="lk-brand">${MARK}Golf Live Board</span><span class="x-fin">${c.fin === 'standard' ? '' : c.finName}</span></div>
+  <div class="x-hero"><div class="x-gross">${c.gross}</div><div class="x-meta"><div class="x-course">${c.course}</div><div class="x-sub">${toPar(c.toPar)} · ${c.day}</div><div class="x-stamps">${stampsHtml(c, 2)}</div></div></div>
+  <div class="x-sc">${xNine(c, 0)}${xNine(c, 9)}</div>
+  <div class="x-bot"><b>${c.name}</b><span>With the crew</span><span>No. ${c.n}</span></div></div></div>`;
+const backA = (c) => `<div class="lk-mat">${layers}<div class="x-sb x-engr">
+  <div class="x-sb-l"><div class="x-sb-f">${c.finName}</div><div class="x-grade${c.grade ? '' : ' num'}">${c.grade || c.gross}</div><div class="x-sub">${c.grade ? `${c.gross} · ${toPar(c.toPar)}` : toPar(c.toPar)}</div></div>
+  <div class="x-sb-r"><div class="x-line">${c.line || `${c.course} · ${c.day}`}</div>${tiles(c)}${types(c)}${bs(c)}</div></div></div>`;
+/* B */
+const frontB = (c) => `<div class="lk-mat x-l2">${layers}${artw(c)}${c.fin === 'standard' ? '' : `<span class="x-tag">${c.finName}</span>`}
+  <div class="x-band"><div class="x-gross">${c.gross}</div>
+    <div class="x-bmid"><div class="x-course">${c.course}</div><div class="x-sub">${toPar(c.toPar)} · ${c.day}</div>${strip(c)}</div>
+    <div class="x-bright"><b>${c.name}</b><span>No. ${c.n}</span></div></div></div>`;
+const backB = (c) => `<div class="lk-mat">${layers}<div class="lk-bk x-engr">${bh(c)}${nine(c, 0)}${nine(c, 9)}${bw(c)}</div></div>`;
+/* C */
+const frontC = (c) => `<div class="lk-mat">${layers}<div class="lk-fc x-p2">
+  <div class="lk-ftop"><span class="lk-brand">${MARK}Golf Live Board</span><span class="lk-ffin">${c.fin === 'standard' ? '' : c.finName}</span></div>
+  ${artw(c)}
+  <div class="x-prow"><div class="x-gross">${c.gross}</div><div class="x-meta"><div class="x-course">${c.course}</div><div class="x-sub">${toPar(c.toPar)} · ${c.day}</div></div></div>
+  ${strip(c)}<div class="lk-fstamps">${stampsHtml(c, 2)}</div>
+  <div class="lk-fbot"><span class="lk-fname">${c.name}</span><span>With the crew</span><span>No. ${c.n}</span></div></div></div>`;
+/* backs */
+const backHead = (c) => `<div class="lk-mat x-k1">${layers}
+  <div class="x-k1h"><div><div class="x-k1f">${c.finName}</div><div class="x-k1l">${c.line || 'Standard card'}</div></div>${c.grade ? `<b class="x-k1g">${c.grade}</b>` : ''}</div>
+  <div class="lk-bk">${bh(c)}${nine(c, 0)}${nine(c, 9)}${tiles(c)}${types(c)}${bs(c)}</div></div>`;
+const backMetal = (c) => `<div class="lk-mat x-k2">${layers}${c.grade ? `<b class="x-wm">${c.grade}</b>` : ''}<div class="lk-bk x-engr">${bh(c)}${nine(c, 0)}${nine(c, 9)}${bw(c)}${tiles(c)}${types(c)}${bs(c)}</div></div>`;
+
+const slot = (c, front, back, cls = '') => `<div class="lk-slot lkf-${c.fin} ${cls}"><div class="lk-tilt" ${back ? 'data-flip role="button" tabindex="0" aria-label="Flip the card"' : ''}>
+  <div class="lk-flip"><div class="lk-face lk-front">${front}</div>${back ? `<div class="lk-face lk-back">${back}</div>` : ''}</div></div></div>`;
+const sec = (k, h, p, body) => `<section class="x-sec"><div><div class="x-k">${k}</div><h2>${h}</h2></div><p>${p}</p>${body}</section>`;
+
+function render() {
+  uid = 0;
+  const c = card('tc'), b = card('bw'), f = card('fl');
+  document.getElementById('out').innerHTML = [
+    sec('A · landscape', 'The whole scorecard on the front', 'Turned sideways there is room for all 18 scores under the big number, cut straight into the metal. The back then holds the grade and the stats.',
+      slot(c, frontA(c), backA(c), 'x-land') + '<div class="x-hint">Tap to flip</div>'),
+    sec('B · landscape', 'A picture of the course', 'The course is the card, the metal is the frame. The scorecard moves to the back, engraved in the same metal. Each course gets its own picture.',
+      slot(c, frontB(c), backB(c), 'x-land') + '<div class="x-hint">Tap to flip</div>' +
+      `<div class="x-two">${slot(b, frontB(b), null, 'x-land')}${slot(f, frontB(f), null, 'x-land')}</div>`),
+    sec('C · portrait', 'Course picture, card shape you have now', 'Same idea as B in today\'s upright shape, so the Locker and the pack would not need to change. Flips to the full metal back.',
+      slot(c, frontC(c), backMetal(c), 'x-port') + '<div class="x-hint">Tap to flip</div>'),
+    sec('Backs', 'Three ways the back could show the finish', 'Swipe across. Change the finish in the bar to see how far apart gold, silver and prismatic get.',
+      `<div class="x-scroll">
+        <figure>${slot(c, backNow(c), null)}<figcaption><b>Today</b>Dark panel, thin metal edge. Every finish looks close to the same.</figcaption></figure>
+        <figure>${slot(c, backHead(c), null)}<figcaption><b>Metal header</b>Finish name and grade letter on a slab of the metal. Birdies and the total pick up its color.</figcaption></figure>
+        <figure>${slot(c, backMetal(c), null)}<figcaption><b>Full metal</b>No dark panel. The whole scorecard is engraved, the grade letter sits behind it.</figcaption></figure>
+      </div>`),
+    sec('For reference', 'The card in the app today', 'Unchanged, so you can compare.', slot(c, frontNow(c), backNow(c), 'x-port') + '<div class="x-hint">Tap to flip</div>'),
+  ].join('');
+}
+function bar() {
+  const mk = (host, map, key) => {
+    for (const [id, v] of Object.entries(map)) {
+      const b = document.createElement('button');
+      b.className = 'x-chip'; b.id = key + '-' + id; b.textContent = Array.isArray(v) ? v[0] : v; b.setAttribute('aria-pressed', String(state[key] === id));
+      b.onclick = () => { state[key] = id; host.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); render(); };
+      host.appendChild(b);
+    }
+  };
+  mk(document.getElementById('fins'), FIN, 'fin'); mk(document.getElementById('arts'), ARTS, 'art');
+}
+function start() {
+  bar(); render();
+  const page = document.getElementById('page');
+  const flip = (el) => el && el.querySelector('.lk-flip').classList.toggle('on');
+  page.addEventListener('click', (e) => flip(e.target.closest('[data-flip]')));
+  page.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { const t = e.target.closest('[data-flip]'); if (t) { e.preventDefault(); flip(t); } } });
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  /* a slow sway so the shine moves; the app uses phone tilt for this, which this viewer cannot read */
+  const tick = (t) => {
+    const sx = Math.sin(t / 1900) * .85, sy = Math.cos(t / 2600) * .5;
+    page.style.setProperty('--sx', sx.toFixed(3)); page.style.setProperty('--sy', sy.toFixed(3));
+    page.style.setProperty('--ry', (sx * 6).toFixed(2)); page.style.setProperty('--rx', (-sy * 3).toFixed(2));
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+start();
+</script>

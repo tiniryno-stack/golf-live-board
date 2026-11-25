@@ -7,6 +7,7 @@ import * as db from '../db.js';
 import { esc, icon } from '../ui.js';
 import { shortDate, nextSeasonLabel, placeLabel, seasonRecordTable, seasonBests, recordLabel, pctLabel, ordinal, MIN_ROUNDS } from '../seasons.js';
 import { loadCrew, crewSeasons } from './crew.js';
+import { ppName } from './passport.js';
 
 const today = () => new Date().toLocaleDateString('en-CA');
 const shortName = (r) => {
@@ -57,7 +58,7 @@ function standingsView(app, id, data, season) {
   const open = !!(app.ui.seasonMe && t.me);
   const ranked = t.rows.filter((r) => r.ranked), rest = t.rows.filter((r) => !r.ranked);
   const row = (r) => `<div class="st-row${r.me ? ' me' : ''}${r.ranked ? '' : ' unranked'}"><span class="st-rank mono">${r.ranked ? `${r.tied ? 'T' : ''}${r.rank}` : ''}</span>
-        <span class="st-name ellipsis">${esc(shortName(r))}</span><span class="st-n mono">${r.rounds}</span>${rec(r.w, r.l)}<span class="st-n st-pts mono">${pctLabel(r.pct)}</span></div>`;
+        <span class="st-name ellipsis">${ppName(r.personId, esc(shortName(r)))}</span><span class="st-n mono">${r.rounds}</span>${rec(r.w, r.l)}<span class="st-n st-pts mono">${pctLabel(r.pct)}</span></div>`;
   const table = t.rows.length
     ? `<div class="st-head ts-label"><span>#</span><span>Player</span><span class="st-n">Rds</span><span class="st-c">Record</span><span class="st-n">Win</span></div>
       <div class="st-table">${ranked.map(row).join('')}${rest.length ? `<div class="st-cut ts-label">${MIN_ROUNDS} rounds to be ranked</div>${rest.map(row).join('')}` : ''}</div>`

@@ -1056,6 +1056,68 @@ Still open: nothing blocking. Design direction (section 9) is final.
   typing) and, in a round or Setup, only after 5 minutes away. A phone still running an older page needs one full close
   of the app first. The locker also finds its person without an owner: `lockerPerson()` = owner → latest `glb.people`
   → the person this phone's claims in Recent rounds belong to (`db.fetchRosters`, once per page load).
+- **036 · Landscape cards, chrome packs, the Passport, course stamps (Nov 24, brief
+  `docs/design/features/036-card-designs/SPEC.md`).** No database change. *Rules:* `js/locker.js` adds `courseObj`,
+  `fullName` and `group` to each card (`groupOf`: every roster player with 18 scores, by gross, ties share a rank,
+  `sameTeeTime` from `scoring.sameFoursome(…, 1)`), and `backRows(group, 11)` fits the big-group list (rank ≤ 11: top 11;
+  lower: 7, a gap, you ±1; `more`). `db.fetchPersonRounds` now fetches each round's **whole** score set (one query per
+  round, in parallel). `js/stamps.js` + `js/stamps-data.js` (68 DFW + Austin courses, emblems in `img/stamps/`):
+  `matchCourse` (id / alias, then normalised name), `stampFor` (monogram stamp for unknown courses, ink from a hash),
+  `courseStampSvg`, `stampDate`, `passportOf` (courses: first day, visits, best; milestones: First birdie (+ hole),
+  Broke 100/90/80, first Eagle, every Lowest round), `goalsOf` (goals left as outlines; Broke N drops once you've been
+  under N). Test `tests/stamps036.test.mjs` (Andrew's real passport, the Nov 7 back). *Card:* landscape 7 : 5, whole
+  scorecard on the front (`.x-*`), five dark-metal finishes (`.lkf-*`; prismatic ink and glow follow `--sx`, oil slick
+  `.x-slick` + flash `.x-prism` at `--mv`; gold/silver/bronze bands `.x-mslick`); back = people left (`.cb-*`: solo / 2–6
+  large / 7+ ranked list) + stats right. The carousel's `put()` feeds `--sx/--sy/--mv`. *Pack:* `js/screens/pack.js`
+  rewritten: horizontal chrome refractor pack (`chromePack()`, pattern = `PACK_PATTERN`, default `fine`), swipe the top
+  36 % to cut (hinged at the finger, the cut end lifts), > 94 % → `sep` (sends `open_card`) → `opened` 650 ms →
+  `reveal` 1650 ms (035's celebrations) → stamps land from 2550 ms, 420 ms apart → `done`; hold the body 1.3 s =
+  fallback; reduced motion = a tap. Result: Add to locker · Share · See in passport · Open next pack. *Passport:*
+  `js/screens/passport.js` (stamp markup, `landsFor`, the book: cover navy + gold, holder (showcase picked by the app,
+  tally, MRZ line, Share), courses 4 a page, milestones + outlines; pages turn on the spine, state `app.ui.pp.pg`). It
+  counts opened cards only. Locker tabs Cards | Passport (`app.ui.lk.tab`). Routes `#/passport`, `#/passport/<personId>`
+  (read-only for others; `#/locker/p/<id>` lands there). Home avatar → `#/passport`; Home's Locker row says "5
+  scorecards · 3 courses · 4 milestones". Names with a `personId` on the Board / Matches tables (031 `table()`, Ryder
+  players, older Board rows) and Season standings open that passport (`ppName`); the player sheet and the You sheet have a
+  passport button. Share images `js/screens/share036.js` (canvas; card + stamps, holder + courses). Styles all in
+  `css/locker.css` (pack class names prefixed `bp-` where the app already had `.mk/.pill/.face/.body/.spark`).
+  **Revised Nov 24 with Andrew (reveal-options page):** the top strip is one piece, hinged at its far end, lifting from
+  where you started with a dark gap under it, then it flies off; 035's wait is back (`PLAN` in `pack.js`: the card rises
+  white-hot, pulses quicken, better cards wait longer, prismatic adds a dark beat, the last pulse in the finish's colour);
+  the reveal ladder replaces the rays and sparks: prismatic = two pearl rings + a pearl wash + a pop (soft pink / lilac /
+  aqua / warm gold, no rainbow bands), gold = two gold rings + a gold haze + a pop, silver = one ring + a faint haze + a
+  glint, bronze = one faint ring, standard / rookie just land. Tilt: iPhone asks once; later page loads re-ask silently on
+  the first tap. Preview copy only: it acts as Andrew (`glb.previewAs` overrides) and the ⓘ sheet can reseal his packs
+  (practice: nothing saved).
+  **Nov 25 with Andrew:** the tear scrubs both ways and settles shut if you let go early (only the strip, slit and cue
+  are touched per frame); the result screen drops "Add to locker" (it's saved at the tear): "Saved to your locker · N new
+  stamps", then Open next pack · N left, or Done, plus Share / See in passport; See in passport opens the book on the
+  cover and turns page by page to the new stamp, which thumps (`app.ui.pp.walkTo/hit`, redraws held via `bookBusy()`);
+  no Turn on tilt button (the first tap asks; `.pill` was overriding `hidden`, so the old button never went away);
+  tilt is inverted (the card keeps facing you) and 20% stronger; the carousel shows its neighbours, dots and a one-time
+  nudge (`glb.lockerPeek`); prismatic drifts on its own when still (`@property --drift`, a faint pearl haze).
+  **Nov 25, second pass:** the strip curls as it peels (a chain of 10 nested slices from the hinge; the slices past the
+  finger bend more each; eased behind the finger); a touch on the pack never starts Safari's back-swipe (touchstart
+  preventDefault + a spare same-address history entry); cards have a metal edge (7 layers between the faces); the
+  carousel footer = Tap to flip (until the first flip, `glb.lockerFlipped`) · dots · share, and Rip this card again moved
+  to the ⓘ sheet; prismatic's resting drift is stronger; the Passport is StPageFlip (`js/vendor/page-flip.js`, MIT,
+  vendored, its CSS in locker.css): real page curls that follow the finger, a hard cover, built once and re-attached on
+  redraw; 6 course stamps a page in loose spots (`SPOTS`), milestones 6 a page.
+  **Nov 25, third pass:** the Passport is a two-page booklet (StPageFlip landscape, `showCover`): each content page has a
+  plain back and there's a hard back cover, so a turned page lands on the left (content page c = book index 2c); the
+  spread is wider than the screen with the right page in full and the left page peeking in; turning back curls too.
+  The pack's white glare is back in front of the card (it sat behind the faces once the metal edge moved them forward);
+  the peel's bend is spread more evenly from the finger (`7.5 · u^0.6` per slice).
+  **Nov 25, fourth pass:** the page you read is centred (the left page peeks in); the reveal's stamps have their own
+  band between the card and the buttons (no overlap) and are pounded on (`pk-stamp`: big and blurred → slam → settle,
+  620 ms apart) with a screen jolt and a buzz where phones can (`thud()` in passport.js); See in passport holds this
+  card's new stamps off the page until the book is open there, then lands them the same way.
+  **Prismatic at rest (final, Nov 25, picked on the shimmer-options page):** option B's colour drift (±.55, 3.6 s) plus
+  "water light": two seamless soft caustic tiles (`img/prism-water-1/2.png`, made once from sums of whole-number sine
+  waves, softness baked in with a wrapping box blur, no live blur) streaming in different directions forever at 4%
+  (`.x-water`). The lava pools and the glint are gone.
+  **Tuned by Andrew in the card playground (Nov 25):** hue swing 245° (was 150), ink saturation 20% (was 95, so the ink
+  reads pearl-white with a hint of colour), body glow 36%, sheen 67%, tilt response 1.8×, water light 4.5%.
 
 ## 13. V2 backlog (running list)
 

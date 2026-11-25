@@ -1,0 +1,382 @@
+<title>036 Build Handoff</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500;600&display=swap">
+<style>
+/* layout: one readable column; a sticky strip of section links; tables scroll inside their own box */
+:root { color-scheme: dark; --bg: #0b0d10; --s1: #14171b; --s2: #1c2026; --line: rgba(255,255,255,.1); --text: #f4f5f7; --muted: #a7acb4; --accent: #3DDC84;
+  --sans: "Geist", system-ui, -apple-system, sans-serif; --mono: "Geist Mono", ui-monospace, Menlo, monospace; }
+body { background: var(--bg); color: var(--text); font: 400 15px/1.6 var(--sans); margin: 0; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+.wrap { max-width: 760px; margin: 0 auto; padding-block: 20px 80px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.toc { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); display: flex; gap: 6px; overflow-x: auto; padding: 10px 0; scrollbar-width: none; }
+.toc::-webkit-scrollbar { display: none; }
+.toc a { flex: none; font: 600 12px/16px var(--sans); color: var(--muted); background: var(--s1); padding: 8px 12px; border-radius: 999px; text-decoration: none; }
+h1 { font: 700 28px/1.2 var(--sans); letter-spacing: -.4px; text-wrap: balance; margin: 8px 0 12px; }
+h2 { font: 700 21px/1.25 var(--sans); margin: 40px 0 10px; padding-top: 8px; scroll-margin-top: 64px; text-wrap: balance; }
+h3 { font: 600 16px/1.3 var(--sans); margin: 26px 0 6px; scroll-margin-top: 64px; }
+p, li, td { color: #d9dce1; overflow-wrap: anywhere; }
+code { overflow-wrap: anywhere; } p { margin: 0 0 12px; max-width: 68ch; }
+ul, ol { padding-left: 20px; margin: 0 0 12px; } li { margin: 3px 0; }
+b { color: var(--text); font-weight: 600; }
+code { font: 500 .86em/1 var(--mono); background: var(--s2); padding: 2px 5px; border-radius: 5px; color: #e8ebf0; }
+pre { font: 500 12px/1.45 var(--mono); background: var(--s1); border: 1px solid var(--line); border-radius: 12px; padding: 14px; overflow-x: auto; color: #cfd4db; }
+hr { border: 0; border-top: 1px solid var(--line); margin: 32px 0; }
+.tw { overflow-x: auto; margin: 0 0 14px; border: 1px solid var(--line); border-radius: 12px; }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+th, td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+th { font: 600 11px/1.3 var(--mono); letter-spacing: .8px; text-transform: uppercase; color: var(--muted); background: var(--s1); }
+tr:last-child td { border-bottom: 0; }
+a { color: var(--accent); }
+.k { font: 600 12px/16px var(--mono); letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
+</style>
+<div class="wrap"><div class="k">Golf Live Board · design handoff · docs/design/features/036-card-designs/SPEC.md</div>
+<h1 id="036-landscape-cards-chrome-packs-the-pas">036 · Landscape cards, chrome packs, the Passport and course stamps</h1><nav class="toc"><a href="#0-read-this-first-for-the-engineer">0. Read this first (for the engineer)</a><a href="#1-decisions-andrew-nov-24">1. Decisions (Andrew, Nov 24)</a><a href="#2-the-card">2. The card</a><a href="#3-the-pack-prototype-chrome-packs-2-html">3. The pack (prototype: <code>chrome-packs-2.html</code>)</a><a href="#4-where-it-lives-flow-a-prototype-flows-">4. Where it lives: flow A (prototype: <code>flows.html</code> → "A · Two tabs")</a><a href="#5-the-passport-book-prototypes-reveal-ba">5. The Passport book (prototypes: <code>reveal-back-book.html</code> Part 3, <code>passport-booklet.html</code>)</a><a href="#6-rules-pure-add-to-js-locker-js-js-stam">6. Rules (pure; add to <code>js/locker.js</code> / <code>js/stamps.js</code>, tested)</a><a href="#7-course-stamps-and-the-stamp-library">7. Course stamps and the stamp library</a><a href="#8-share">8. Share</a><a href="#9-files">9. Files</a><a href="#10-new-patterns-to-flag-not-in-the-desig">10. New patterns to flag (not in the design system)</a><a href="#11-prototypes-which-file-is-the-truth-fo">11. Prototypes: which file is the truth for what</a><a href="#12-order-of-work-and-checks">12. Order of work and checks</a><a href="#13-open-questions-build-the-default-list">13. Open questions (build the default, list them in the hand-back)</a></nav>
+<p>Status: approved by Andrew Nov 24, 2026 for an overnight build. Not built yet.</p>
+<p>Changes 035 (<code>docs/design/features/035-scorecard-locker/</code>, live on <code>main</code>). 035 is not edited; where this SPEC and 035 disagree, this SPEC wins. Everything in 035 that this SPEC does not mention stays as it is: the grading rules (launch ladder, your normal, rookie cards), <code>card_opens</code>, <code>open_card</code>, the admin list, offline opens, Home staying exactly as it was if the locker can't load.</p>
+<p>One sentence: cards turn sideways with the whole scorecard on the front and a "who you played with" back, packs become horizontal chrome foil packs you open by swiping across the top, and the Locker gets a second tab, the <b>Passport</b>, a book of course stamps (cut from each club's real logo) and milestone stamps that is also your profile and your friends' profiles.</p>
+<hr>
+<h2 id="0-read-this-first-for-the-engineer">0. Read this first (for the engineer)</h2>
+<ul>
+<li><b>Every screen in this SPEC has an approved prototype in this folder.</b> The table in §11 says which file is the</li>
+</ul>
+<p>  truth for which part. Open them in a browser (they are self-contained HTML, no server needed).</p>
+<ul>
+<li><b><code>components/</code> holds the code lifted from those prototypes</b>: CSS, markup builders and the controllers (tear,</li>
+</ul>
+<p>  tilt, page turn). Port it into the app's files; rename freely. The prototypes use plain DOM; the app's screens   return HTML strings and wire actions through the global action table (<code>lk-*</code> for the locker), so follow 035's   patterns (<code>js/screens/locker.js</code>, <code>js/screens/pack.js</code>).</p>
+<ul>
+<li><b><code>components/stamps.js</code> + <code>components/stamps-data.js</code> are ready to drop in</b> as <code>js/stamps.js</code> and</li>
+</ul>
+<p>  <code>js/stamps-data.js</code> (pure, tested by hand; add the unit test in §12).</p>
+<ul>
+<li><b>No database change.</b> Everything new is derived from <code>events</code> + <code>scores</code> + <code>card_opens</code>, all already readable by</li>
+</ul>
+<p>  the browser. No migration, no RPC.</p>
+<ul>
+<li><b>Do not touch</b> score entry, sync, joining or the engine beyond what §9 says. No smoke run is needed unless a</li>
+</ul>
+<p>  change reaches those (it shouldn't).</p>
+<ul>
+<li>Run <code>npm test</code> only (CLAUDE.md → Testing). Do not push to <code>main</code> without Andrew's OK.</li>
+</ul>
+<hr>
+<h2 id="1-decisions-andrew-nov-24">1. Decisions (Andrew, Nov 24)</h2>
+<div class="tw"><table><thead><tr><th>#</th><th>Decision</th></tr></thead><tbody><tr><td>1</td><td><b>Cards are landscape (7 : 5)</b> with the <b>whole scorecard on the front</b>: big gross, course, date, to-par, the 18 scores with score marks, out/in totals, up to two milestone pills. Portrait cards are retired.</td></tr><tr><td>2</td><td><b>Finishes stay metal, in the dark-metal family.</b> Standard is flat black. <b>Gold is the bright gold.</b> Prismatic is a dark card whose colour <b>comes from tilting it</b>, not a painted rainbow.</td></tr><tr><td>3</td><td><b>Prismatic = oil slick bands + colour-shifting ink + a soft flash when it moves.</b> <b>Every other grade also gets sliding bands, in its own metal colour</b> (Andrew: "the bands should be only on prismatic and every grade"; read as: bands on all grades, colour only on Prismatic. See §13, Q1).</td></tr><tr><td>4</td><td><b>The back of the card = who you played with (left) + stats (right).</b> Small groups list everyone in large type; big groups list as many ranked names as fit in small type, always showing your place.</td></tr><tr><td>5</td><td><b>No course art on the cards.</b> Watercolour, posters, two-ink prints and course pictures were explored and dropped. Pictures of courses belong to the passport stamps only.</td></tr><tr><td>6</td><td><b>Packs are horizontal chrome refractor foil packs</b>, same shape as the card, so the card slides straight out with no turn. <b>No course branding on the pack.</b> The real Golf Live Board mark (ring + green ball) is on every pack.</td></tr><tr><td>7</td><td><b>Opening = swipe across the top.</b> A glowing dashed line marks the strip; the pack cuts under your finger, the cut edge curls up, at the end the strip peels away upward and flies off. Holding the pack still works as a fallback.</td></tr><tr><td>8</td><td><b>The reveal = the card lands, then whatever the round earned is stamped under it</b> (milestone stamps, and a course stamp the first time you finish 18 somewhere). That screen is the thing people share.</td></tr><tr><td>9</td><td><b>Flow A: the Locker has two tabs, Cards and Passport.</b> Home stays quiet (a packs card when packs wait, one Locker row).</td></tr><tr><td>10</td><td><b>The Passport is a book you swipe through</b> (pages turn on the spine): cover, holder page (you), courses, milestones. <b>No "rounds" page</b>: rounds and history are the cards; the passport is achievements, like Strava badges.</td></tr><tr><td>11</td><td><b>The Passport replaces the plain profile.</b> Your avatar opens your passport. <b>Tapping a friend's name</b> on the Board or Season standings opens <b>their</b> passport (and their cards), read-only.</td></tr><tr><td>12</td><td><b>Course stamps look like real passport stamps in a single ink</b>, and their picture is <b>the club's own logo emblem, icon only, no words</b>. The stamp prints the course name, city and the date you first played there in its own type.</td></tr><tr><td>13</td><td><b>68 DFW + Austin courses are hard-coded</b> with their emblems (§7). Courses not in the library get an automatic monogram stamp. Adding a course later = collect its logo, cut the emblem, add a line.</td></tr><tr><td>14</td><td><b>Milestone pills stay on the card</b> and the same milestones are also rubber stamps in the passport.</td></tr><tr><td>15</td><td><b>Share</b> = the card. A framed share image of the reveal (card + stamps) and a share of your passport page.</td></tr><tr><td>16</td><td>Andrew's group is the audience now ("me and my friends"). Scaling to strangers is far off; don't design for it.</td></tr></tbody></table></div>
+<hr>
+<h2 id="2-the-card">2. The card</h2>
+<h3 id="2-1-front-prototype-five-grades-html-lay">2.1 Front (prototype: <code>five-grades.html</code>, layout from <code>twin-creeks-art.html</code> "Where we were")</h3>
+<p>Landscape, <code>aspect-ratio: 7 / 5</code>, every size in <code>cqw</code> (container = the card face), so one markup works in the carousel, the grid, the pack and the share image. Components: <code>components/card-front.css</code>, <code>card-front.js</code>.</p>
+<pre>┌──────────────────────────────────────────────┐
+│ ◯• GOLF LIVE BOARD                  PRISMATIC │  brand row (real mark), finish name (none on Standard)
+│ 87   Twin Creeks                              │  gross 25cqw · course 4.8cqw · &quot;+15 · Nov 20, 2026&quot;
+│      +15 · Nov 20, 2026                       │
+│      [BROKE 90] [LOWEST ROUND YET]            │  up to 2 milestone pills (035 stamps)
+│ ─────────────────────────────────────────── │
+│ 1  2  3  4  5  6  7  8  9  OUT                │  hole numbers 1.9cqw
+│ 6 (3) 4  4  4 [7] 4 [6] 6   44                │  score marks: ○ birdie, ◎ eagle, □ bogey, ■ double+
+│ 10 … 18  IN                                   │
+│ 5  3  4 [6] 5  4 [6] 5  5   43                │
+│ ANDREW           WITH THE CREW          NO. 5 │
+└──────────────────────────────────────────────┘</pre>
+<ul>
+<li>Score marks: the same rules as 035 (<code>kind(s, par)</code>): eagle or better = double circle, birdie = circle, par = bare,</li>
+</ul>
+<p>  bogey = outline square in the soft ink, double or worse = filled square in the ink (text in <code>--m-inv</code>).</p>
+<ul>
+<li><b>Brand mark:</b> replace 035's <code>MARK</code> with the real mark from <code>img/mark-dark.svg</code>: ring stroke 13 at (42, 58) r 30</li>
+</ul>
+<p>  in the card ink, ball r 11 at (82, 20) in <code>#3DDC84</code> (<code>--cart-you</code>). Use it on cards, packs and the passport cover.</p>
+<ul>
+<li>Pills: 035's <code>.lk-st</code>, smaller (<code>.x-stamps .lk-st</code>).</li>
+</ul>
+<h3 id="2-2-finishes-prototype-five-grades-html">2.2 Finishes (prototype: <code>five-grades.html</code>)</h3>
+<p>All five are dark metal: a 135° gradient body and a light "metal" ink. Exact values (<code>components/card-front.js</code> <code>GRADE</code>):</p>
+<div class="tw"><table><thead><tr><th>Grade</th><th>Body (<code>--m-base</code>)</th><th>Ink (<code>--m-ink</code>)</th><th><code>--m-inv</code></th><th>Sheen</th></tr></thead><tbody><tr><td>Prismatic</td><td><code>#1a1b24 → #33344a → #1a1b24</code></td><td>colour-shifting (below)</td><td><code>#1a1b24</code></td><td>.25</td></tr><tr><td>Gold</td><td><code>#4a3806 → #b0871a → #4a3806</code></td><td><code>#fff0b4</code></td><td><code>#4a3806</code></td><td>.45</td></tr><tr><td>Silver</td><td><code>#2a3546 → #687a92 → #2a3546</code></td><td><code>#f5f9ff</code></td><td><code>#2a3546</code></td><td>.40</td></tr><tr><td>Bronze</td><td><code>#3a200f → #804923 → #3a200f</code></td><td><code>#ffc79a</code></td><td><code>#3a200f</code></td><td>.35</td></tr><tr><td>Standard</td><td><code>#141518 → #26282d → #141518</code></td><td><code>#b4b9c1</code></td><td><code>#141518</code></td><td>.20</td></tr><tr><td>Rookie</td><td>unchanged from 035 (paper)</td><td></td><td></td><td></td></tr></tbody></table></div>
+<p><code>--m-soft</code> = ink at 64 %, <code>--m-edge</code> = ink at 30 % (<code>color-mix</code>). <code>--m-emboss: 0 -1px 0 rgba(0,0,0,.55)</code>, <code>--m-grain: .5</code>. The 035 <code>holo</code> / <code>facet</code> layers are <b>removed</b> (no painted rainbow, no diamond pattern).</p>
+<p><b>Prismatic</b> (Andrew picked "Shift + soft flash" <i>and</i> "Oil slick"; build both together):</p>
+<ol>
+<li><b>Oil slick bands</b> <code>.x-slick</code>: soft bands of colour (<code>mix-blend-mode: screen</code>), <code>background-position</code> follows the tilt <code>--sx</code>.</li>
+<li><b>Colour-shifting ink:</b> <code>--m-ink: hsl(calc(230 + var(--sx) * 150) 95% 82%)</code> plus a faint tinted glow <code>linear-gradient(120deg, hsl(&lt;same hue&gt; 90% 60% / .2), transparent 62%)</code> over the body.</li>
+<li><b>Soft flash</b> <code>.x-prism</code>: a thin feathered rainbow streak, <code>opacity: var(--mv)</code>, where <code>--mv</code> is how fast the card is moving (0 at rest). It only appears while the card moves.</li>
+</ol>
+<p><b>Every other grade:</b> <code>.x-mslick</code>, the same sliding bands but in the grade's own ink (white-ish on Silver, gold on Gold…), never multicolour. Standard gets none.</p>
+<p><b>Tilt input</b> (<code>components/card-front.js</code> end): <code>--sx</code>, <code>--sy</code> in −1…1, eased (0.16 per frame), <code>--mv</code> decays at 0.93 per frame. In the app, feed it from 035's tilt loop (phone tilt after the iPhone permission tap, pointer otherwise, slow idle sway). Reduced motion: no sway, no flash, bands at rest.</p>
+<h3 id="2-3-back-prototype-card-back-big-group-h">2.3 Back (prototype: <code>card-back-big-group.html</code>; 5-player version in <code>reveal-back-book.html</code> Part 2 #1)</h3>
+<p>Tap to flip (035's flip). Left column = the people, right column = the round in numbers. Components: <code>components/card-back.css</code>, <code>card-back.js</code>.</p>
+<p><b>Right column, always:</b> finish name (kicker) and one line (grade reason for small groups: 035's <code>c.line</code>, e.g. "Your best of your first 5 rounds"; for groups of 7+: "11th of 16 on the day"), then four tiles (Birdies+, Pars, Bogeys, Doubles+, from <code>cardStats</code>), then a row: Par 3s / Par 4s / Par 5s against par and Front · back totals.</p>
+<p><b>Left column:</b></p>
+<div class="tw"><table><thead><tr><th>Players who finished 18</th><th>Left column</th></tr></thead><tbody><tr><td>1 (solo)</td><td>"Solo round" and nothing else (keep the stats)</td></tr><tr><td>2–6</td><td>Kicker "Played with · Nov 20", every player in large type (3.3cqw), sorted by gross, you in bold; "Low round of the group" under it when you were lowest</td></tr><tr><td>7+</td><td>Kicker "16 played · Nov 7"; a ranked list in small type (2.7cqw) with the rank number; ties share a rank (three players at 94 are all "5")</td></tr></tbody></table></div>
+<p><b>Fitting the big list</b> (<code>rows()</code> in <code>card-back.js</code>, <code>CAP = 11</code> rows fit the column):</p>
+<ul>
+<li>Your rank ≤ CAP: rows 1…CAP, then "+ N more played".</li>
+<li>Your rank &gt; CAP: rows 1…7, a "···" gap, then the player above you, you, the player below you, then "+ N more played"</li>
+</ul>
+<p>  if anyone is left.</p>
+<ul>
+<li>A small dot <code>●</code> after the names in <b>your tee time</b> (same group: `scoring.sameFoursome(roster, settings, you, them,</li>
+</ul>
+<p>  1)`), and "· ● your tee time" appended to the last line.</p>
+<ul>
+<li>Players who did not finish 18 are left out of the list and the count.</li>
+</ul>
+<p>Real checks: Nov 7 Firewheel Lakes (code <code>AMTXQ</code>), 16 players, Andrew 100 = 11th, Harold 76 low. Nov 20 Twin Creeks (<code>R866T</code>), 5 players: Andrew 87, Justin 91, Sean 94, Mitchell 94, Baker 108.</p>
+<p><b>Not on the back (later):</b> who won the game that day (needs the engine's match result), photos.</p>
+<hr>
+<h2 id="3-the-pack-prototype-chrome-packs-2-html">3. The pack (prototype: <code>chrome-packs-2.html</code>)</h2>
+<p>Components: <code>components/pack.css</code>, <code>pack.js</code>. Replaces 035's portrait pack art; the overlay plumbing (<code>toasts.showPack</code> / <code>closePack</code>, <code>#overlay</code>, <code>open_card</code> sent at the tear, offline pending) stays.</p>
+<h3 id="3-1-look">3.1 Look</h3>
+<ul>
+<li><b>Horizontal</b>, <code>aspect-ratio: 8.4 / 6.2</code>, width <code>min(92%, 400px)</code>, centred in the overlay.</li>
+<li><b>Two pieces</b>: a top strip (<code>--tt: 15%</code> of the height) and the body, each with a zig-zag crimp edge (CSS masks)</li>
+</ul>
+<p>  and a ridged crimp band (<code>repeating-linear-gradient</code>).</p>
+<ul>
+<li><b>Chrome body</b>: one chrome gradient whose dark horizon sits right at the tear line (`#eef1f5 0%, #8d95a0 7%,</li>
+</ul>
+<p>  #3a3f47 13%, #23262c 15.6%, #f6f8fa 17%, #c9cfd6 40%, #e9ecf0 66%, #aab1bb 86%, #dfe3e8 100%<code>). The top strip and   body share it (</code>background-size` 666.7 % on the strip, 117.65 % on the body, positioned top and bottom).</p>
+<ul>
+<li><b>Refractor</b>: a pattern layer plus a faint rainbow (<code>.refract</code>, <code>mix-blend-mode: color</code>, opacity .2) that slides</li>
+</ul>
+<p>  with the tilt, plus the moving sheen.</p>
+<ul>
+<li><b>Pattern</b>: Andrew approved the set without naming one. <b>Default: Fine line</b> (<code>.p-fine</code>). The other seven</li>
+</ul>
+<p>  (Bold stripe, Brushed, Wave, Shimmer, Speckle, Atomic, Sapphire) are in the prototype; keep the CSS so Andrew can   switch with one constant (<code>PACK_PATTERN</code>). See §13, Q2.</p>
+<ul>
+<li><b>Face</b>: kicker "SCORECARDS · SERIES 1", the real mark (ring in the dark ink, ball green), "Golf Live / Board"</li>
+</ul>
+<p>  (800, −0.25cqw, title case), "2026 Edition", a "1 CARD" pill. <b>No course name, no logo, no date on the pack.</b> In   the Locker's packs grid the course and date go <i>under</i> each pack as a label (035 §7.2), not on it.</p>
+<h3 id="3-2-the-tear-swipe-exact-behaviour">3.2 The tear (swipe) — exact behaviour</h3>
+<pre>sealed ──swipe on the strip──▶ cutting ──reach 94 %──▶ separate (620 ms) ──▶ fly (520 ms) ──▶ reveal
+   └──── hold anywhere on the body for 1.3 s (fallback) ───────────────▲</pre>
+<ol>
+<li><b>Sealed.</b> A dashed line glows along the tear line with a light running along it (1.6 s loop), and a "Swipe to open" chip sits under the right end. Pack sways with the tilt.</li>
+<li><b>Touch.</b> A pointer down in the <b>top 36 %</b> of the pack starts a swipe; the side you start on (left or right half) sets the direction. A pointer down lower starts the hold fallback (left to right).</li>
+<li><b>Cutting.</b> <code>p</code> = how far the cut has run (0…1), only ever increases, follows the finger x. The strip is drawn twice: the uncut part stays sealed (<code>clip-path</code>), the cut part lifts <b>upward</b>, hinged at the finger: <code>transform-origin: &lt;finger x&gt; 100%</code>, <code>rotate(±(1.5 + 5p)°, capped at 6°)</code> (positive when cutting from the left, negative from the right: the far end rises), <code>rotateX(12 + 18p deg)</code> with <code>perspective(70cqw)</code> (the edge curls back), <code>translateY(-10p %)</code>, brightness <code>1 + .12p</code>. A dark slit with a light lower lip shows along the cut, and a small spark sits at the fingertip. The dashed line only shows ahead of the finger.</li>
+<ul>
+<li><b>Bug fixed in the last round:</b> the rotation sign was backwards and the strip tipped down. Rotation must lift the cut end.</li>
+</ul>
+<li><b>Finish</b> at <code>p &gt; 0.94</code>. <b>Separate</b>: the whole strip peels up and back, 620 ms <code>cubic-bezier(.25,.7,.3,1)</code> to <code>translateY(-70%) rotate(±5°) rotateX(38°)</code>, hinged at the far edge.</li>
+<li><b>Fly</b> (starts at 650 ms): 520 ms to <code>translate(±60%, -420%) rotate(±26°) rotateX(60°)</code>, fading out, in the swipe direction. The body drops away (700 ms, starts 380 ms after fly begins).</li>
+<li><b>Card out.</b> The card sits inside the pack, clipped to the opening (only the part above the tear shows), rises 46 % during the fly, then at <b>1650 ms</b> the clip is removed and it springs to its resting place (800 ms, <code>cubic-bezier(.25,1.25,.4,1)</code>) with a white flash. No rotation: the pack is already sideways.</li>
+<li><b>Stamps land</b> from 2550 ms, one every 420 ms, each a 380 ms "thump" (scale 1.8 → 1, slight overshoot), then the result appears.</li>
+</ol>
+<p><code>open_card</code> is sent at step 4 (the moment the strip separates), as 035 sends it at the tear.</p>
+<p>Hold fallback: <code>p</code> grows at 1/1300 ms while held, with a growing jitter, stops (does not shrink) on release. Reduced motion: a tap opens it; every step is a 150 ms fade (035 §6).</p>
+<p>Keep 035's grade celebrations (gold flash and overshoot, prismatic rays, rings and sparks) layered on step 6; they were not redesigned.</p>
+<h3 id="3-3-the-reveal-screen-prototypes-chrome-">3.3 The reveal screen (prototypes: <code>chrome-packs-2.html</code> end state, <code>reveal-back-book.html</code> Part 1)</h3>
+<pre>            [ the card, landscape ]
+   [ BROKE 90 stamp ]  [ LOWEST ROUND · 87 stamp ]     ← milestones the round earned (rubber stamps, §6.3)
+           or  [ course stamp, ring/oval/box ]          ← first finished round at this course (§7)
+        PRISMATIC · S · YOU SHOT 87
+        [ Add to locker ]                 (primary)
+        [ Share ]  [ See in passport ]
+        Open next pack · 2 left           (when more wait)</pre>
+<ul>
+<li>What lands: the round's passport-worthy stamps (§6.3), plus the course stamp when this is the first card at that</li>
+</ul>
+<p>  course. Up to two side by side; three or more wrap to a second row.</p>
+<ul>
+<li><b>Share</b> builds a PNG with a canvas (follow <code>js/screens/recap.js</code>): framed, the player's name and date on top, the</li>
+</ul>
+<p>  card, the stamps, "◯• Golf Live Board · Scorecard No. 5" at the bottom (prototype: <code>reveal-back-book.html</code> Part 1 #3   "Share card"). Then <code>navigator.share({ files })</code>, falling back to saving the image.</p>
+<ul>
+<li><b>See in passport</b> closes the overlay and opens the Passport on the page that got the new stamp.</li>
+</ul>
+<hr>
+<h2 id="4-where-it-lives-flow-a-prototype-flows-">4. Where it lives: flow A (prototype: <code>flows.html</code> → "A · Two tabs")</h2>
+<h3 id="4-1-home-js-screens-home-js">4.1 Home (<code>js/screens/home.js</code>)</h3>
+<p>Unchanged from 035 except the Locker row's subline: "5 scorecards · 3 courses · 4 milestones" (counts from §6). The packs card and the pack thumbnail use the new horizontal chrome pack.</p>
+<h3 id="4-2-locker-locker">4.2 Locker (<code>#/locker</code>)</h3>
+<ul>
+<li>Title "Locker", a two-tab segment <b>Cards | Passport</b> under it (the existing one-at-a-time / all toggle moves into</li>
+</ul>
+<p>  the Cards tab), the <b>Packs · N</b> pill and the ⓘ sheet as in 035.</p>
+<ul>
+<li><b>Cards tab:</b> 035's carousel and grid with the landscape card. Carousel slot width = the screen width minus the</li>
+</ul>
+<p>  gutter peek; the grid becomes one column of landscape cards (two columns are too small for the scores). Tap flips.</p>
+<ul>
+<li><b>Passport tab:</b> the book (§5).</li>
+<li>Remember the last tab in <code>app.ui</code> (in memory).</li>
+</ul>
+<h3 id="4-3-profiles">4.3 Profiles</h3>
+<ul>
+<li><b>You:</b> the Home avatar opens <code>#/passport</code> (your book, on the holder page). In a round, the existing "You" sheet</li>
+</ul>
+<p>  (<code>sheets.js</code> <code>you</code>) keeps its actions and gets a first row "Your passport" (§13, Q4).</p>
+<ul>
+<li><b>Friends:</b> a person's name on the Board standings, Matches and Season standings becomes a button →</li>
+</ul>
+<p>  <code>#/passport/&lt;personId&gt;</code>: their book, read-only, with a <b>Cards</b> tab showing their opened cards (sealed packs show as   sealed and cannot be opened; 035's admin view-as already does this, now for everyone). Names without a <code>personId</code>   (old rounds) are not tappable.</p>
+<ul>
+<li>Routes (<code>js/app.js</code> <code>parseHash</code>): <code>#/passport</code> (mine), <code>#/passport/&lt;personId&gt;</code>. Keep <code>#/locker/p/&lt;id&gt;</code> working</li>
+</ul>
+<p>  (redirect to the passport).</p>
+<ul>
+<li>Loading another person's locker: <code>loadLocker(app, personId)</code> already works for any personId (anon reads).</li>
+</ul>
+<hr>
+<h2 id="5-the-passport-book-prototypes-reveal-ba">5. The Passport book (prototypes: <code>reveal-back-book.html</code> Part 3, <code>passport-booklet.html</code>)</h2>
+<p>Components: <code>components/passport.css</code>, <code>passport.js</code>, <code>stamps.css</code>, <code>stamps.js</code>.</p>
+<h3 id="5-1-the-book">5.1 The book</h3>
+<ul>
+<li>Pages are stacked; each turns on the left spine: <code>transform-origin: left center</code>, <code>rotateY(-176deg)</code>, 760 ms</li>
+</ul>
+<p>  <code>cubic-bezier(.3,.1,.2,1)</code>, <code>backface-visibility: hidden</code>, <code>perspective: 1700px</code> on the book, aspect 5 : 7.2,   rounded <code>6px 16px 16px 6px</code>.</p>
+<ul>
+<li>Tap the right 60 % = next page, the left 40 % = back; a swipe &gt; 30 px turns too. A caption under the book: "Cover ·</li>
+</ul>
+<p>  tap to open", "You · page 1 of 3", "Courses · page 2 of 3"…</p>
+<ul>
+<li>Dark pages (the app's <code>--surface-1</code> with faint guilloche rings). <b>Cover: navy with gold</b> (`linear-gradient(135deg,</li>
+</ul>
+<p>  #1b2a4a, #0f1830)<code>, ink </code>#f6d98a`): the mark, "GOLF LIVE BOARD", "PASSPORT", the holder's name (§13, Q5).</p>
+<ul>
+<li>Reduced motion: pages swap with a 150 ms fade.</li>
+</ul>
+<h3 id="5-2-pages-in-order">5.2 Pages, in order</h3>
+<ol>
+<li><b>Cover.</b></li>
+<li><b>Holder (you).</b> A photo box with the initials (no photos yet), Name, Since (first round in the app), Best round ("87 · Twin Creeks"), Rounds, Courses; <b>Showcase</b>: three cards (best grade, then lowest gross; newest; your best round), not pinned by hand in this build (§13, Q3); "Cards in the locker": a tally per grade (Prism, Gold, Silver, Bronze, Std) in each grade's ink; the machine-readable line at the bottom (<code>GLB&lt;&lt;DUONG&lt;&lt;ANDREW&lt;&lt;&lt;5RDS&lt;3CRS&lt;&lt;ISSUED16OCT2026&lt;&lt;&lt;…</code>).</li>
+<li><b>Courses</b> (one or more pages, 4 stamps per page): every course you finished 18 at, as its course stamp (§7), dated by your first round there, placed crooked and slightly overlapping (rotation −6…7°, positions from the slug hash so they never move), with "N visits · best 87" in small type under each (optional, see prototype <code>passport-booklet.html</code>). A dashed circle "Your next course" fills the next free spot.</li>
+<li><b>Milestones</b> (one or more pages): rubber stamps (§6.3), newest at the bottom, then dashed outlines for the goals not earned yet (Broke 80, Eagle, …).</li>
+</ol>
+<p>Tapping a course stamp or milestone opens the card it came from (in the Cards tab).</p>
+<hr>
+<h2 id="6-rules-pure-add-to-js-locker-js-js-stam">6. Rules (pure; add to <code>js/locker.js</code> / <code>js/stamps.js</code>, tested)</h2>
+<h3 id="6-1-cards">6.1 Cards</h3>
+<p>035 §3 unchanged. Add to each card: <code>courseObj</code> (= <code>event.course</code>) so stamps can match it, and for the back: <code>group</code> = every roster player with 18 strokes in that round: <code>{ personId, name, gross, rank, sameTeeTime }</code>.</p>
+<p><b>Loading change:</b> the back needs everyone's gross, so <code>db.fetchPersonRounds</code> fetches <b>each event's whole score set</b> (<code>.eq('event_id', id)</code>, ≤ 16 × 18 = 288 rows), one query per event, in parallel. Still never one query across all events (the 1,000-row limit; 035 §4.2).</p>
+<h3 id="6-2-passport-pages-passportof-cards-in-c">6.2 Passport pages: <code>passportOf(cards)</code> in <code>components/stamps.js</code></h3>
+<ul>
+<li><b>Courses:</b> one entry per <code>courseKey</code>, <code>first</code> = date of the first round there, <code>visits</code>, <code>best</code> (lowest gross).</li>
+<li><b>Milestones</b> (from the cards' stamps, 035 §3.4):</li>
+<ul>
+<li>once ever: <b>First birdie</b>, <b>Broke 100</b>, <b>Broke 90</b>, <b>Broke 80</b>, the first <b>Eagle</b>;</li>
+<li>every time: <b>Lowest round</b> (one stamp per personal best, labelled "Lowest round · 87");</li>
+<li><b>"Best at &lt;course&gt;" is not a milestone</b>: the course stamp already shows your best there.</li>
+</ul>
+<li>Goals shown as outlines: <code>MILESTONE_GOALS</code> minus the ones earned.</li>
+</ul>
+<p>Andrew's real passport (check against it): courses <b>Twin Creeks</b> (3 visits, best 87, first 16 Oct 2026), <b>Bridlewood</b> (1, 97, 20 Oct), <b>Firewheel Lakes</b> (1, 100, 7 Nov). Milestones: <b>Lowest round · 93</b> (31 Oct), <b>First birdie</b> (31 Oct, Twin Creeks hole 6), <b>Broke 90</b> (20 Nov), <b>Lowest round · 87</b> (20 Nov). Outlines: Broke 80, Eagle (Broke 100 never fired: his first round was already 97).</p>
+<h3 id="6-3-milestone-stamps-rubber-stamps">6.3 Milestone stamps (rubber stamps)</h3>
+<p><code>pp-rs</code> in <code>components/passport.css</code>: a rectangle (or pill for "First birdie") with a double border, big mono uppercase title, a small line "20 NOV 2026 · TWIN CREEKS · 87", rotated −6…6°, the rough-edge filter, one ink:</p>
+<div class="tw"><table><thead><tr><th>Milestone</th><th>Ink (dark page)</th></tr></thead><tbody><tr><td>First birdie</td><td><code>#6fd3a6</code> green (pill shape)</td></tr><tr><td>Lowest round</td><td><code>#8fa8ff</code> blue</td></tr><tr><td>Broke 100 / 90 / 80</td><td><code>#ff8a80</code> red</td></tr><tr><td>Eagle</td><td><code>#f6c56a</code> amber</td></tr></tbody></table></div>
+<hr>
+<h2 id="7-course-stamps-and-the-stamp-library">7. Course stamps and the stamp library</h2>
+<h3 id="7-1-the-look-prototype-stamp-library-htm">7.1 The look (prototype: <code>stamp-library.html</code>; earlier rounds <code>passport-keepsake-stamps.html</code>)</h3>
+<ul>
+<li><b>One ink, outlines and letters only</b>, like a border stamp. A rough, patchy press (<code>filter: url(#rough)</code>:</li>
+</ul>
+<p>  <code>feTurbulence</code> + <code>feColorMatrix</code> alpha threshold, defined once per page) and an uneven press (a linear mask from   55 % to 100 % to 65 % at a per-stamp angle).</p>
+<ul>
+<li><b>The emblem</b> in the middle is the club's own logo icon with the words removed, filled with the ink (an SVG</li>
+</ul>
+<p>  <code>&lt;mask&gt;</code> from the white-on-transparent PNG).</p>
+<ul>
+<li><b>Three shapes</b>, fixed per course (<code>stamp.shape</code>): <b>ring</b> (name around the top, date around the bottom in the</li>
+</ul>
+<p>  date ink, city under the emblem), <b>oval</b> (name over, city under, date under the emblem), <b>box</b> for wide emblems   (emblem, a rule, name, date + city). Code: <code>courseStampSvg(course, date)</code> in <code>components/stamps.js</code>.</p>
+<ul>
+<li><b>Inks</b> (dark page): blue <code>#8fa8ff</code>, red <code>#ff8a80</code>, green <code>#6fd3a6</code>, violet <code>#c3a6ff</code>, amber <code>#f6c56a</code>, teal</li>
+</ul>
+<p>  <code>#6fd0e0</code>; the date is always <code>#ff8a80</code>. Paper-page values are in <code>stamp-library.html</code> (<code>.paper</code>) if ever needed.</p>
+<ul>
+<li>Andrew's three: <b>Twin Creeks blue oval</b> (the oak), <b>Bridlewood green box</b> (the horse head), **Firewheel red</li>
+</ul>
+<p>  ring** (the firewheel flower).</p>
+<h3 id="7-2-the-library-hard-coded">7.2 The library (hard-coded)</h3>
+<ul>
+<li><code>components/stamps-data.js</code> → <code>js/stamps-data.js</code>: <code>STAMP_COURSES</code>, 68 entries: `slug, name, short, city, state,</li>
+</ul>
+<p>  region (DFW | Austin), access, emblem (path or null), emblemRatio, monogram, stamp {shape, ink}, aliases`.</p>
+<ul>
+<li><b>Emblems:</b> copy <code>stamps/emblems/*.png</code> (63 files, ~800 KB, white on transparent, ≤ 200 px) to <code>img/stamps/</code>. The</li>
+</ul>
+<p>  five lettering-only clubs (Tierra Verde, Riverchase, Tangle Ridge, Grey Rock, Hancock) have <code>emblem: null</code> and print   their <code>monogram</code>.</p>
+<ul>
+<li><b>Matching a round's course</b> (<code>matchCourse(event.course)</code>): by course id or exact alias first, then by normalised</li>
+</ul>
+<p>  name (lower case, punctuation and the words golf / club / course / country / the / at / of / park / links removed).   Checked: "The Golf Club at Twin Creeks" → twin-creeks, "Firewheel Golf Park · Lakes" → firewheel, "Bridlewood Golf   Course" → bridlewood, "Bear Creek Golf Club" → bear-creek.</p>
+<ul>
+<li><b>Not in the library:</b> <code>stampFor()</code> builds one: the course's initials as a monogram, ring or oval and an ink picked</li>
+</ul>
+<p>  from a hash of the course id, so it is stable for everyone.</p>
+<ul>
+<li><b>Third-party logos.</b> These are the clubs' trademarks, used here for a private app among friends (Andrew's call).</li>
+</ul>
+<p>  Do not use them in anything public, marketed or sold.</p>
+<h3 id="7-3-adding-courses-later">7.3 Adding courses later</h3>
+<ol>
+<li>Run <code>LOGO-COLLECTION-PROMPT.md</code> in a session with a browser; it saves logos + <code>LOGOS.md</code> to a branch (the 68 are on <code>design/036-course-logos</code>, <code>docs/design/features/036-card-designs/logos/</code>).</li>
+<li>Cut the emblem: add a line to <code>SPEC</code> in <code>stamps/make-emblems.py</code> (which file, which crop, which ink mode), run it (needs <code>stamps/mask.py</code> and the logo PNGs in <code>lg/png/</code>), copy the PNG to <code>img/stamps/</code>.</li>
+<li>Add the course to <code>js/stamps-data.js</code> with its aliases (the names rounds store for it).</li>
+</ol>
+<h3 id="7-4-known-rough-emblems-fine-for-now-red">7.4 Known rough emblems (fine for now, redo when convenient)</h3>
+<p>Words inside the icon: Luna Vista, Mesquite, Old Brickyard, Tenison Park. Soft (tiny source): Falconhead, Indian Creek. Jimmy Clay shares Roy Kizer's bird (the city uses one mark for both).</p>
+<hr>
+<h2 id="8-share">8. Share</h2>
+<ul>
+<li><b>Card share</b> (§3.3): from the reveal and from any card in the Locker (⋯ on the card or a Share button under the</li>
+</ul>
+<p>  carousel).</p>
+<ul>
+<li><b>Passport share:</b> a Share button on the holder page draws the holder page and the courses page side by side</li>
+</ul>
+<p>  into one PNG.</p>
+<ul>
+<li>Both use canvas like <code>recap.js</code> and wait for fonts first. Emblems are same-origin PNGs, so the canvas stays</li>
+</ul>
+<p>  exportable.</p>
+<hr>
+<h2 id="9-files">9. Files</h2>
+<div class="tw"><table><thead><tr><th>File</th><th>Change</th></tr></thead><tbody><tr><td><code>js/stamps.js</code>, <code>js/stamps-data.js</code> (new)</td><td>from <code>components/</code>; <code>matchCourse</code>, <code>stampFor</code>, <code>courseStampSvg</code>, <code>stampDate</code>, <code>passportOf</code>, <code>MILESTONE_GOALS</code></td></tr><tr><td><code>img/stamps/*.png</code> (new)</td><td>63 emblems from <code>stamps/emblems/</code></td></tr><tr><td><code>js/locker.js</code></td><td><code>courseObj</code> and <code>group</code> on each card (§6.1)</td></tr><tr><td><code>js/db.js</code></td><td><code>fetchPersonRounds</code>: whole score set per event (§6.1)</td></tr><tr><td><code>js/screens/locker.js</code></td><td>landscape card front/back markup, finishes, Cards/Passport tabs, the book, friend view, share</td></tr><tr><td><code>js/screens/pack.js</code></td><td>horizontal chrome pack, swipe tear, new reveal</td></tr><tr><td><code>js/screens/passport.js</code> (new, optional)</td><td>the book and its pages if <code>locker.js</code> gets too long</td></tr><tr><td><code>css/locker.css</code></td><td>all new styles (cards, pack, passport, stamps). Keep everything in this one file (035 rule)</td></tr><tr><td><code>js/app.js</code></td><td>routes <code>#/passport</code>, <code>#/passport/&lt;id&gt;</code>; old <code>#/locker/p/&lt;id&gt;</code> redirects</td></tr><tr><td><code>js/screens/home.js</code></td><td>Locker row subline; avatar → passport</td></tr><tr><td><code>js/screens/board.js</code>, <code>season.js</code>, <code>ryder.js</code>/<code>play031.js</code></td><td>names with a <code>personId</code> → <code>#/passport/&lt;id&gt;</code></td></tr><tr><td><code>js/screens/sheets.js</code></td><td>"Your passport" row in the <code>you</code> sheet; update <code>lockerHow</code> text (landscape cards, passport)</td></tr><tr><td><code>tests/stamps036.test.mjs</code> (new)</td><td>§12</td></tr><tr><td><code>ARCHITECTURE.md</code> 13a, <code>CLAUDE.md</code>, <code>README.md</code></td><td>what was built; set this SPEC's status to "built in &lt;commit&gt;"</td></tr></tbody></table></div>
+<p>Do not edit the 035 folder or the tracked <code>preview/</code> copy.</p>
+<hr>
+<h2 id="10-new-patterns-to-flag-not-in-the-desig">10. New patterns to flag (not in the design system)</h2>
+<p>Everything lives in <code>css/locker.css</code> and appears only on the Locker, the pack overlay, the passport and Home's two entries. Round screens are untouched.</p>
+<ul>
+<li>New colours: the five dark-metal finishes (§2.2), the chrome pack gradient (§3.1), six stamp inks and the date ink</li>
+</ul>
+<p>  (§7.1), milestone inks (§6.3), the passport cover navy and gold.</p>
+<ul>
+<li>Rainbow light that follows the tilt (prismatic, refractor), and movement-driven flash (<code>--mv</code>).</li>
+<li>3D transforms: the tear curl and the book's page turn.</li>
+<li>SVG turbulence filter for the stamp ink; third-party logo artwork as stamp emblems.</li>
+<li>Card-face, pack and stamp type in <code>cqw</code> / SVG units, outside the six type styles.</li>
+<li>Green stays "you": the only green on these screens is the brand mark's ball and the green stamp ink (§13, Q6).</li>
+</ul>
+<hr>
+<h2 id="11-prototypes-which-file-is-the-truth-fo">11. Prototypes: which file is the truth for what</h2>
+<div class="tw"><table><thead><tr><th>Part</th><th>File (this folder)</th><th>Published</th></tr></thead><tbody><tr><td>Card front + all five finishes</td><td><code>five-grades.html</code></td><td><a href="https://claude.ai/artifact/BGSswxbKf9MmSVPgsuRMro">claude.ai/artifact/BGSswxbKf9MmSVPgsuRMro</a></td></tr><tr><td>Prismatic options, gold levels</td><td><code>gold-prismatic.html</code></td><td>…/PqXDYxse3AMxXot6mdZZGM</td></tr><tr><td>Tilt + flash controller</td><td><code>dark-metals.html</code></td><td>…/39PynNKaY2HRwTDAQioYJV</td></tr><tr><td>Card back, big group</td><td><code>card-back-big-group.html</code></td><td>…/XRxS1ghNgHS6ej9J7pVyHB</td></tr><tr><td>Card back small group, reveal variants, book</td><td><code>reveal-back-book.html</code></td><td>…/Rcpq28nAHZ2r7ZBqDWTnVi</td></tr><tr><td><b>Pack + tear + reveal (final)</b></td><td><code>chrome-packs-2.html</code></td><td>…/W85g7pHL5URCfHyvVs962q</td></tr><tr><td>Flow A storyboard</td><td><code>flows.html</code></td><td>…/1VZjCrWtsPny581Pd4R7C1</td></tr><tr><td>Passport pages (holder, milestones)</td><td><code>passport-booklet.html</code></td><td>…/8xnm9CdRC4eiCg7StKpza1</td></tr><tr><td>Stamp library (68 courses)</td><td><code>stamp-library.html</code></td><td>…/NZEZ3ErpzEdBMwDjsPEHZA</td></tr><tr><td>Logo-based stamps, first three</td><td><code>passport-keepsake-stamps.html</code></td><td>…/66n2j3dt5cLvKQyBCFDb53</td></tr></tbody></table></div>
+<p>Explored and <b>rejected</b> (kept for the record, do not build): <code>prototype.html</code> (round 1: course pictures), <code>twin-creeks-art.html</code> (art styles), <code>art-on-card.html</code>, <code>finishes.html</code>, <code>ink-grades.html</code>, <code>colorway-grades.html</code> (ink colour as grade), <code>metal-finishes.html</code>, <code>packs.html</code> (airmail, gift box, ticket, pouch), <code>foil-packs.html</code> (portrait packs), <code>foil-packs-flat.html</code> (first swipe), <code>chrome-packs.html</code> (first chrome set; its tear tips the wrong way), <code>passport.html</code>, <code>passport-designs.html</code>, <code>passport-real-stamps.html</code> (hole map), <code>passport-emblems.html</code> (drawn emblems), <code>passport-logo-stamps.html</code> (redrawn logos).</p>
+<hr>
+<h2 id="12-order-of-work-and-checks">12. Order of work and checks</h2>
+<ol>
+<li><code>js/stamps-data.js</code>, <code>js/stamps.js</code>, <code>img/stamps/</code>; <code>tests/stamps036.test.mjs</code>:</li>
+<ul>
+<li><code>matchCourse</code> on the four names in §7.2; an unknown course → <code>stampFor</code> returns a monogram stamp, same output twice.</li>
+<li><code>passportOf</code> on Andrew's five rounds (fixture built from 035 §2 data) → exactly the courses and milestones in §6.2.</li>
+<li>the card back <code>rows()</code> on the 16-player fixture (§2.3): 11 rows ending in Andrew at 11th, "+ 5 more"; and the same field viewed as the 14th-place player: 7 rows, gap, 13–15, "+ 1 more".</li>
+<li><code>npm test</code>.</li>
+</ul>
+<li><code>js/locker.js</code> (<code>courseObj</code>, <code>group</code>) + <code>db.fetchPersonRounds</code>; <code>npm test</code>.</li>
+<li>Card front, finishes, tilt; card back; the Cards tab.</li>
+<li>The pack and the reveal (keep 035's overlay plumbing and <code>open_card</code> timing).</li>
+<li>The Passport tab and book; routes; profile and friend links; share images.</li>
+<li>Docs; <code>npm run stamp</code>; push to the work branch; <b>ask Andrew before <code>main</code></b>.</li>
+</ol>
+<p>Check before handing back: open Andrew's locker (personId <code>eeae7a48-33fa-4052-ad0c-fc7623173fe6</code>) read-only against the live data and compare with §6.2; open Sean's passport from the Board's standings.</p>
+<hr>
+<h2 id="13-open-questions-build-the-default-list">13. Open questions (build the default, list them in the hand-back)</h2>
+<ol>
+<li><b>Bands on every grade.</b> Default: Gold / Silver / Bronze get metal-coloured sliding bands; only Prismatic is multicolour; Standard has none. Andrew may have meant "bands only on Prismatic".</li>
+<li><b>Which chrome pattern.</b> Default Fine line; one constant switches it.</li>
+<li><b>Showcase.</b> Default: chosen by the app (best grade, newest, lowest). Pinning your own three needs a small store (<code>glb.pins</code>, or a table later).</li>
+<li><b>The "You" sheet.</b> Default: keep it in rounds with "Your passport" on top; Home's avatar goes straight to the passport.</li>
+<li><b>Passport cover colour.</b> Default navy + gold (black and green + gold are in <code>reveal-back-book.html</code>).</li>
+<li><b>Green stamp ink.</b> Green means "you" in the app; the green ink is used for Bridlewood's stamp and First birdie. Andrew approved the look; flag it in case it reads as "you".</li>
+</ol>
+<p>Still open from 035, unchanged: rookie cards after a gold launch card; cut-offs per player; course rating / tee; a pack offered on the Board's final card; "won the match" stamp; profile borders; old cards changing when an old score is fixed.</p>
+</div>
