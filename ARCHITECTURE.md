@@ -1103,6 +1103,11 @@ Still open: nothing blocking. Design direction (section 9) is final.
   to the ⓘ sheet; prismatic's resting drift is stronger; the Passport is StPageFlip (`js/vendor/page-flip.js`, MIT,
   vendored, its CSS in locker.css): real page curls that follow the finger, a hard cover, built once and re-attached on
   redraw; 6 course stamps a page in loose spots (`SPOTS`), milestones 6 a page.
+  **Nov 25, third pass:** the Passport is a two-page booklet (StPageFlip landscape, `showCover`): each content page has a
+  plain back and there's a hard back cover, so a turned page lands on the left (content page c = book index 2c); the
+  spread is wider than the screen with the right page in full and the left page peeking in; turning back curls too.
+  The pack's white glare is back in front of the card (it sat behind the faces once the metal edge moved them forward);
+  the peel's bend is spread more evenly from the finger (`7.5 · u^0.6` per slice).
 
 ## 13. V2 backlog (running list)
 

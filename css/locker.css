@@ -248,7 +248,7 @@ html.rm .lk-slot.lkf-prismatic, html.rm .lk-mini.lkf-prismatic, html.rm .x-pearl
 /* reveal: the card springs to its place, the glare fades, then the finish's own moment (Andrew, Nov 24) */
 .pk.reveal .pk-card { z-index: 3; opacity: 1; transform: none; transition: transform 800ms cubic-bezier(.25,1.25,.4,1); }
 .pk.reveal .pk-white { animation: pk-white 700ms ease-out; } @keyframes pk-white { 15% { opacity: 1; } 100% { opacity: 0; } }
-.pk-glare { position: absolute; inset: 0; border-radius: inherit; background: radial-gradient(circle at 50% 38%, #fff 0%, rgba(255,255,255,.94) 100%); opacity: 0; pointer-events: none; transform: translateZ(1px); }
+.pk-glare { position: absolute; inset: 0; border-radius: inherit; background: radial-gradient(circle at 50% 38%, #fff 0%, rgba(255,255,255,.94) 100%); opacity: 0; pointer-events: none; transform: translateZ(4px); } /* in front of the faces (1.75px since the metal edge) */
 .pk-sweep { display: none; }
 .pk.reveal .pk-glare { animation: pk-glare 700ms 80ms ease-out both; }
 @keyframes pk-glare { from { opacity: 1; } to { opacity: 0; } }
@@ -353,8 +353,12 @@ html.rm .lk-slot.lkf-prismatic, html.rm .lk-mini.lkf-prismatic, html.rm .x-pearl
 .lk-t-passport { padding-bottom: calc(var(--space-4) + var(--sab, 0px)); }
 .pp { display: flex; flex-direction: column; align-items: center; gap: var(--space-3); }
 .pp-cap-row { color: var(--text-muted); text-align: center; }
-.pp-host { width: min(100%, calc((var(--app-h, 100svh) - 250px) / 1.44)); min-width: min(100%, 280px); --pp-faint: rgba(244,245,247,.36); --pp-line: rgba(255,255,255,.1); --pp-bg: #15171b; color: #f4f5f7; -webkit-user-select: none; user-select: none; }
-.pp-flip .pg { background: var(--pp-bg); overflow: hidden; border-radius: 4px 12px 12px 4px; }
+.pp { overflow: hidden; margin: 0 calc(-1 * var(--gutter, 16px)); align-items: stretch; }
+.pp-cap-row { align-self: center; }
+.pp-host { flex: none; --pp-faint: rgba(244,245,247,.36); --pp-line: rgba(255,255,255,.1); --pp-bg: #15171b; color: #f4f5f7; -webkit-user-select: none; user-select: none; }
+.pp-flip .pg { background: var(--pp-bg); overflow: hidden; }
+.pp-blank { background: repeating-radial-gradient(circle at 90% 110%, transparent 0 15px, rgba(255,255,255,.022) 15px 16px), var(--pp-bg); box-shadow: inset -8px 0 10px -6px rgba(0,0,0,.5); }
+.bk-backcover { background: linear-gradient(135deg, #0f1830, #1b2a4a); }
 .pp-flip .pg > .pp-page, .pp-flip .pg > .bk-cover { height: 100%; }
 /* StPageFlip's own stylesheet (js/vendor/page-flip.js, MIT), as shipped */
 .stf__parent {

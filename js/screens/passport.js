@@ -164,30 +164,44 @@ export const bookBusy = () => walking;
  * survives the render loop. Tap the right side or swipe to turn; a stamp or a showcase card opens its card.
  */
 let book = null; // { key, wrap, pf, names }
+// A real booklet (Andrew, Nov 25): two-page spreads. Every content page has a plain back, so a turned page lands on the
+// left as its blank back; there's a hard front and back cover. Content page c sits at book index 2c (0 = the cover).
+const bookIndex = (c) => (c > 0 ? 2 * c : 0);
+const contentIndex = (i) => (i + 1) >> 1;
 export function mountBook(content, ui, cards, opts, key) {
   const host = content.querySelector('.pp-host');
   if (!host) return;
   const cap = content.querySelector('.pp-cap-row');
-  const caps = () => { if (cap && book) cap.textContent = caption(book.names.map((name) => ({ name })), ui.pg); };
-  if (!(book && book.key === key)) {
+  const caps = () => { if (cap && book) cap.textContent = caption(book.names.map((name) => ({ name })), Math.min(ui.pg, book.names.length - 1)); };
+  // Size: the right-hand page fills the screen less a strip on the left, where the page before it peeks in.
+  const W = document.documentElement.clientWidth, H = window.innerHeight;
+  const P = Math.round(Math.max(220, Math.min(W - 60, (H - 250) / 1.44, 460))), PH = Math.round(P * 1.44);
+  const sized = `${P}x${PH}`;
+  if (!(book && book.key === key && book.sized === sized)) {
     try { book?.pf.destroy(); } catch { /* gone */ }
     const pages = bookPages(cards, opts);
+    const blank = '<div class="pg pg-back"><div class="pp-page pp-blank"></div></div>';
+    const html = pages.map((p, i) => `<div class="pg"${i === 0 ? ' data-density="hard"' : ''}>${p.html}</div>${blank}`).join('')
+      + '<div class="pg" data-density="hard"><div class="bk-cover bk-backcover"></div></div>';
     const wrap = document.createElement('div');
     wrap.className = 'pp-book';
-    wrap.innerHTML = `<div class="pp-flip">${pages.map((p, i) => `<div class="pg"${i === 0 ? ' data-density="hard"' : ''}>${p.html}</div>`).join('')}</div>`;
+    wrap.innerHTML = `<div class="pp-flip">${html}</div>`;
     host.appendChild(wrap);
     const reduce = document.documentElement.classList.contains('rm');
     const pf = new PageFlip(wrap.querySelector('.pp-flip'), {
-      width: 340, height: 490, size: 'stretch', minWidth: 220, maxWidth: 460, minHeight: 317, maxHeight: 663,
-      usePortrait: true, showCover: false, drawShadow: true, maxShadowOpacity: 0.55, flippingTime: reduce ? 150 : 900,
-      mobileScrollSupport: false, swipeDistance: 30, startPage: ui.pg || 0, clickEventForward: true,
+      width: P, height: PH, size: 'fixed', usePortrait: false, showCover: true, autoSize: true,
+      drawShadow: true, maxShadowOpacity: 0.55, flippingTime: reduce ? 150 : 900,
+      mobileScrollSupport: false, swipeDistance: 30, startPage: bookIndex(ui.pg || 0), clickEventForward: true,
     });
     pf.loadFromHTML(wrap.querySelectorAll('.pp-flip > .pg'));
-    book = { key, wrap, pf, names: pages.map((p) => p.name) };
-    pf.on('flip', (e) => { ui.pg = Number(e.data) || 0; caps(); if (book.onFlip) book.onFlip(); });
+    book = { key, sized, wrap, pf, names: pages.map((p) => p.name) };
+    pf.on('flip', (e) => { ui.pg = Math.min(book.names.length - 1, contentIndex(Number(e.data) || 0)); caps(); if (book.onFlip) book.onFlip(); });
   } else if (book.wrap.parentNode !== host) {
     host.appendChild(book.wrap);
   }
+  // The spread is 2P wide; place it so the right page ends at the right gutter and the left page peeks in.
+  host.style.width = `${2 * P}px`;
+  host.style.marginLeft = `${W - 16 - 2 * P}px`;
   caps();
   // Walk to a page (after "See in passport"): from the cover, one page turn at a time, then the new stamp thumps.
   if (ui.walkTo != null) {

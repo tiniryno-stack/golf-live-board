@@ -137,7 +137,7 @@ export function startPack(root, { reduced = false, onTear = () => {}, tilt = () 
     topw.style.transform = p > 0.001 ? `translateY(${(-p * 4).toFixed(2)}%)` : '';
     segs.forEach((el, k) => {
       const at = (k + 1) / SEG, u = p > 0.001 ? Math.max(0, (at - (1 - p)) / p) : 0;
-      el.style.transform = u ? `rotate(${(sgn * 11 * u ** 1.5).toFixed(2)}deg)` : '';
+      el.style.transform = u ? `rotate(${(sgn * 7.5 * u ** 0.6).toFixed(2)}deg)` : '';
     });
     if (slit) { slit.style.left = dir < 0 ? `${(1 - p) * 100}%` : '0%'; slit.style.width = `${p * 100}%`; }
     if (cue) { cue.style.left = `${dir < 0 ? 3 : Math.max(3, p * 100)}%`; cue.style.right = `${dir < 0 ? Math.max(3, p * 100) : 3}%`; }
