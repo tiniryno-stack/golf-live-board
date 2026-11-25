@@ -124,7 +124,8 @@ export function allRounds(rounds, now) {
  * }
  */
 export function homeModel({ rounds = [], now = Date.now(), personId = null, locker = null, crews = null, crewNames = {}, meName = '', ios = false, standalone = false } = {}) {
-  const brandNew = !rounds.length;
+  // A phone with no rounds stored but a known person with cards (new browser, sync still running) is not brand new.
+  const brandNew = !rounds.length && !(personId && locker?.cards?.length);
   const { coming, live } = roundGroups(rounds, now);
   const crew = crewModel(crews);
   const addHome = !!ios && !standalone;

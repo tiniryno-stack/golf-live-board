@@ -337,9 +337,10 @@ export const owner = {
  * Added to Recent rounds in date order, newest first. Returns how many were added.
  */
 export let lastSynced = [];
-export async function syncMyRounds() {
+export async function syncMyRounds(fallbackIds = []) {
   const o = owner.get();
-  const ids = o ? [o.personId] : people.all();
+  let ids = o ? [o.personId] : people.all();
+  if (!ids.length) ids = fallbackIds.filter(Boolean); // 037: the preview copy acts as Andrew on a browser with no rounds
   if (!ids.length) return 0;
   const found = new Map();
   for (const personId of ids) {
