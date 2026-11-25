@@ -1112,6 +1112,10 @@ Still open: nothing blocking. Design direction (section 9) is final.
   band between the card and the buttons (no overlap) and are pounded on (`pk-stamp`: big and blurred → slam → settle,
   620 ms apart) with a screen jolt and a buzz where phones can (`thud()` in passport.js); See in passport holds this
   card's new stamps off the page until the book is open there, then lands them the same way.
+  **Prismatic at rest (final, Nov 25, picked on the shimmer-options page):** option B's colour drift (±.55, 3.6 s) plus
+  "water light": two seamless soft caustic tiles (`img/prism-water-1/2.png`, made once from sums of whole-number sine
+  waves, softness baked in with a wrapping box blur, no live blur) streaming in different directions forever at 4%
+  (`.x-water`). The lava pools and the glint are gone.
 
 ## 13. V2 backlog (running list)
 
