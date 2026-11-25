@@ -167,10 +167,10 @@ html.rm .x-prism { display: none; }
   --m-ink: hsl(calc(230 + (var(--sx, 0) + var(--drift, 0)) * 150) 95% 82%); }
 .lkf-prismatic .x-slick { background-position: calc(50% + (var(--sx, 0) + var(--drift, 0)) * 50%) 0; }
 /* lava-lamp pearl pools: three soft blobs rolling around under the ink at different speeds */
-.x-pool { position: absolute; width: 70%; aspect-ratio: 1; border-radius: 50%; filter: blur(4cqw); mix-blend-mode: screen; opacity: .5; pointer-events: none; }
+.x-pool { position: absolute; width: 90%; aspect-ratio: 1; border-radius: 50%; filter: blur(12cqw); mix-blend-mode: screen; opacity: .22; pointer-events: none; } /* soft glows, not dots (Andrew, Nov 25) */
 .x-pool.p1 { background: hsl(330 70% 86%); left: -15%; top: -30%; animation: x-pool1 5s ease-in-out infinite alternate; }
 .x-pool.p2 { background: hsl(188 62% 84%); right: -20%; bottom: -40%; animation: x-pool2 4s ease-in-out infinite alternate; }
-.x-pool.p3 { background: hsl(268 60% 86%); left: 30%; top: 10%; width: 50%; animation: x-pool3 6s ease-in-out infinite alternate; }
+.x-pool.p3 { background: hsl(268 60% 86%); left: 25%; top: 5%; width: 70%; animation: x-pool3 6s ease-in-out infinite alternate; }
 @keyframes x-pool1 { to { transform: translate(55%, 40%) scale(1.2); } }
 @keyframes x-pool2 { to { transform: translate(-60%, -35%) scale(.85); } }
 @keyframes x-pool3 { to { transform: translate(-40%, 30%) scale(1.3); } }
