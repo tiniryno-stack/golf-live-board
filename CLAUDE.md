@@ -56,7 +56,12 @@ player + scenes `js/screens/todaysgame.js` (`tg-*` CSS at the end of styles.css)
 keep `brief.js`. Opens on its own once per phone on the first Enter of an open round (`autoBrief` in app.js). UI copy says
 **set**, not stretch. 4-player 2v2 picks its team score again (`settings.pairTeamScore` in Setup only). ARCHITECTURE.md 13a.
 
-## Returning players (Nov 24, branch `claude/busy-fermi-v729sd`, not merged)
+## Building Home (037)? Read `docs/design/features/037-home/SPEC.md` first
+
+Approved by Andrew Nov 25 (`prototype.html` in that folder, seven situations). Not built yet. Home becomes: your latest
+card on top (crew name on it), how that round finished, one crew block, pinned buttons that turn into the live round.
+
+## Returning players (Nov 24, live on `main` since b047ea2 with 036)
 
 Round links open in Safari; on a phone that has the app, Safari now says **Open Golf Board** (sheet `open-app`) instead
 of claiming the spot (`identity.appHandoff`, RPC `person_has_app`). Home re-syncs your rounds on every return, your name
