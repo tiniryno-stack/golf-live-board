@@ -161,16 +161,25 @@ html.rm .x-prism { display: none; }
 /* prismatic at rest (Andrew, Nov 25): it keeps shimmering with the phone flat on a table. A faint pearl haze drifts
    across (transform only), and the ink and bands shift a few degrees on their own (--drift, added to the tilt). */
 @property --drift { syntax: '<number>'; inherits: true; initial-value: 0; }
-.lk-slot.lkf-prismatic, .lk-mini.lkf-prismatic { animation: x-drift 6s ease-in-out infinite alternate; }
-@keyframes x-drift { from { --drift: -.3; } to { --drift: .3; } }
+.lk-slot.lkf-prismatic, .lk-mini.lkf-prismatic { animation: x-drift 2.8s ease-in-out infinite alternate; }
+@keyframes x-drift { from { --drift: -.7; } to { --drift: .7; } } /* option H (Andrew, Nov 25): stronger + faster */
 .lkf-prismatic { --m-base: linear-gradient(120deg, hsl(calc(230 + (var(--sx, 0) + var(--drift, 0)) * 150) 90% 60% / .2), transparent 62%), linear-gradient(135deg, #1a1b24 0%, #33344a 50%, #1a1b24 100%);
   --m-ink: hsl(calc(230 + (var(--sx, 0) + var(--drift, 0)) * 150) 95% 82%); }
 .lkf-prismatic .x-slick { background-position: calc(50% + (var(--sx, 0) + var(--drift, 0)) * 50%) 0; }
-.x-pearl { position: absolute; inset: -40%; pointer-events: none; mix-blend-mode: screen; opacity: .34;
-  background: radial-gradient(40% 30% at 30% 40%, hsl(330 70% 86%), transparent 70%), radial-gradient(35% 28% at 68% 58%, hsl(188 62% 84%), transparent 70%), radial-gradient(30% 25% at 50% 30%, hsl(268 60% 86%), transparent 70%);
-  animation: x-pearl 8s ease-in-out infinite alternate; }
-@keyframes x-pearl { from { transform: translate(-12%, -5%) rotate(-7deg); } to { transform: translate(12%, 5%) rotate(7deg); } }
-html.rm .lk-slot.lkf-prismatic, html.rm .lk-mini.lkf-prismatic, html.rm .x-pearl { animation: none; }
+/* lava-lamp pearl pools: three soft blobs rolling around under the ink at different speeds */
+.x-pool { position: absolute; width: 70%; aspect-ratio: 1; border-radius: 50%; filter: blur(4cqw); mix-blend-mode: screen; opacity: .5; pointer-events: none; }
+.x-pool.p1 { background: hsl(330 70% 86%); left: -15%; top: -30%; animation: x-pool1 5s ease-in-out infinite alternate; }
+.x-pool.p2 { background: hsl(188 62% 84%); right: -20%; bottom: -40%; animation: x-pool2 4s ease-in-out infinite alternate; }
+.x-pool.p3 { background: hsl(268 60% 86%); left: 30%; top: 10%; width: 50%; animation: x-pool3 6s ease-in-out infinite alternate; }
+@keyframes x-pool1 { to { transform: translate(55%, 40%) scale(1.2); } }
+@keyframes x-pool2 { to { transform: translate(-60%, -35%) scale(.85); } }
+@keyframes x-pool3 { to { transform: translate(-40%, 30%) scale(1.3); } }
+/* a soft glint of light rolling across every few seconds */
+.x-glint { position: absolute; inset: -20% -80%; pointer-events: none; mix-blend-mode: screen;
+  background: linear-gradient(105deg, transparent 40%, hsl(330 70% 90% / .08) 45%, rgba(255,255,255,.2) 50%, hsl(188 62% 88% / .09) 55%, transparent 60%);
+  animation: x-glint 5.2s cubic-bezier(.45,0,.35,1) infinite; }
+@keyframes x-glint { 0% { transform: translateX(-38%); } 70%, 100% { transform: translateX(38%); } }
+html.rm .lk-slot.lkf-prismatic, html.rm .lk-mini.lkf-prismatic, html.rm .x-pool, html.rm .x-glint { animation: none; }
 /* 036 back (§2.3): people left, numbers right */
 .cb { position: relative; height: 100%; box-sizing: border-box; padding: 4.4cqw 4.6cqw; display: flex; gap: 4.4cqw; color: var(--m-ink); text-shadow: var(--m-emboss); }
 .cb-col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1.7cqw; }

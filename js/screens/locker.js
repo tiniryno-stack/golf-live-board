@@ -143,7 +143,7 @@ function nine(c, from) {
     ${sc.map((s, i) => `<span class="x-mk x-mk-${kind(s, par[i])}">${s}</span>`).join('')}<span class="x-t">${tot(sc)}</span></div>`;
 }
 /** Finish layers (§2.2): prismatic = oil slick + flash (the ink shifts in CSS); gold/silver/bronze = metal bands. */
-const layers = (c) => (c.fin === 'prismatic' ? '<i class="x-pearl"></i><i class="x-slick"></i><i class="x-prism"></i>'
+const layers = (c) => (c.fin === 'prismatic' ? '<i class="x-pool p1"></i><i class="x-pool p2"></i><i class="x-pool p3"></i><i class="x-slick"></i><i class="x-glint"></i><i class="x-prism"></i>'
   : ['gold', 'silver', 'bronze'].includes(c.fin) ? '<i class="x-mslick"></i>' : '');
 
 export function frontHtml(c) {
