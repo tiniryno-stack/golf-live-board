@@ -176,23 +176,62 @@ h1{font-size:32px;line-height:36px;font-weight:800;letter-spacing:-1px;margin:4p
 @media (prefers-reduced-motion:reduce){.phone .scr *,.f-prismatic::after{animation:none!important}}
 .stage{grid-template-columns:repeat(auto-fit,minmax(330px,393px))}
 @media (max-width:1099px){.stage{grid-template-columns:minmax(0,393px)}}
+/* prototype 4: tunable member card + round-on styles */
+.id.mid{margin-top:var(--ctop,12px);gap:var(--cgap,14px);flex-wrap:wrap}
+.id.mid .gc{width:var(--cw,200px);padding:var(--cpad,12px) calc(var(--cpad,12px) + 2px)}
+.id.mid .m{flex:1 1 120px;min-width:0;gap:2px}
+@media (max-width:1099px){.bar{position:static}}
+.id.mid + .lbl.k,.id.mid + .yours + .lbl.k{margin-top:var(--cbot,20px)}
+.bigc .id.mid .gc .big{font-size:64px;line-height:64px;letter-spacing:-2px}
+.bigc .id.mid .gc .crs{font-size:17px;line-height:22px}
+.bigc .id.mid .gc .dt,.bigc .id.mid .gc .g1 span:last-child{display:block}
+.tune{background:var(--surface-1);border-radius:18px;padding:14px 16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px 20px;max-width:820px}
+.tune .hd{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.tune .hd b{font-size:15px;font-weight:700}
+.tune label{display:flex;flex-direction:column;gap:2px;font-size:13px;line-height:18px;color:var(--text-muted)}
+.tune label span{display:flex;justify-content:space-between}
+.tune label b{font-family:var(--font-mono);color:var(--text);font-weight:600}
+.tune input[type=range]{width:100%;accent-color:var(--you);min-height:30px;margin:0}
+.tune .read{grid-column:1/-1;font-family:var(--font-mono);font-size:12px;letter-spacing:.5px;color:var(--text-muted);user-select:all}
+.lslim{display:flex;align-items:center;gap:10px;min-height:48px;padding:0 14px;border-radius:999px;background:var(--tint-you);border:1.5px solid var(--you);margin-top:8px}
+.lslim .dot{width:8px;height:8px;border-radius:50%;background:var(--you);flex:none}
+.lslim .lbl{color:var(--you-text);flex:none}
+.lslim b{flex:1;min-width:0;font-size:15px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dock{margin-top:auto;padding-top:20px}
+.dock .live{flex-direction:row;align-items:center;gap:12px;border-radius:18px;padding:10px 10px 10px 16px}
+.dock .live .m{flex:1;min-width:0;display:flex;flex-direction:column}
+.dock .live .m b{font-size:17px;line-height:22px;font-weight:800}
+.dock .live .btn{min-height:48px;padding:0 16px;border-radius:14px;background:var(--button);color:var(--on-button);font-size:15px;flex:none}
+.yours{margin-top:4px}
 </style>
 
 <div class="wrap">
   <header>
-    <div class="lbl">037 · Home · prototype 3</div>
-    <h1>Card first and Member card</h1>
-    <p class="intro">Six takes on the two you picked, all opening with Deal the card. 1 and 4 are the ones from last time so you can compare. Number 6 mixes them with motion: the card deals in big, then tucks up into the corner. Hit Replay to watch any of them again.</p>
+    <div class="lbl">037 · Home · prototype 4</div>
+    <h1>Tune the card, try the round</h1>
+    <p class="intro">Just 3 and 5 now. The sliders move number 5’s top card while you watch; when it feels right, tell me or screenshot the numbers under them. The Round row shows five ways a live round can sit on Home. The live round is an example.</p>
   </header>
 
   <div class="bar">
     <div class="ctl" id="ctl-dir"><span class="lbl">Home</span><div class="seg" data-k="dir">
-      <button data-v="1">1</button><button data-v="2">2</button><button data-v="3">3</button><button data-v="4">4</button><button data-v="5">5</button><button data-v="6">6</button></div></div>
+      <button data-v="5">5 · Member card</button><button data-v="3">3 · Crew on the card</button></div></div>
     <div class="ctl"><span class="lbl">Day</span><div class="seg" data-k="day">
       <button data-v="today">Today</button><button data-v="pack">Pack ready</button><button data-v="round">Round on</button></div></div>
+    <div class="ctl"><span class="lbl">Round</span><div class="seg" data-k="rs" style="overflow-x:auto">
+      <button data-v="top">On top</button><button data-v="slim">Thin bar</button><button data-v="swap">Takes over</button><button data-v="slot">Next round</button><button data-v="dock">Bottom</button></div></div>
     <div class="ctl"><span class="lbl">Open</span><div class="seg" data-k="land">
       <button data-v="deal">Deal</button><button data-v="deal slow">Slow deal</button><button data-v="deal snap">Quick deal</button></div>
       <button class="replay" id="replay">Replay</button></div>
+  </div>
+
+  <div class="tune" id="tune">
+    <div class="hd"><b>Number 5’s top card</b><button class="replay" id="reset">Reset</button></div>
+    <label><span>Card size <b id="o-cw"></b></span><input type="range" id="t-cw" min="150" max="330" step="10"></label>
+    <label><span>Space above <b id="o-ctop"></b></span><input type="range" id="t-ctop" min="0" max="32" step="4"></label>
+    <label><span>Space below <b id="o-cbot"></b></span><input type="range" id="t-cbot" min="8" max="40" step="4"></label>
+    <label><span>Gap to the text <b id="o-cgap"></b></span><input type="range" id="t-cgap" min="8" max="24" step="2"></label>
+    <label><span>Padding inside the card <b id="o-cpad"></b></span><input type="range" id="t-cpad" min="8" max="20" step="2"></label>
+    <div class="read" id="read"></div>
   </div>
 
   <div class="stage" id="stage"></div>
@@ -208,8 +247,9 @@ const R = [
   { day:'Fri, Oct 16', sd:'Oct 16', course:'Twin Creeks', score:97, fin:'silver', fn:'Silver', note:'Chucks Bday' },
 ];
 const LAST = [['1','Andrew',87,1],['2','Justin',91],['T3','Sean',94],['T3','Mitchell',94],['5','Baker',108]];
-const S = { dir:'1', day:'today', land:'deal', tab:'you' };
-try { Object.assign(S, JSON.parse(localStorage.getItem('h037p3') || '{}')); } catch {}
+const S = { dir:'5', day:'today', land:'deal', rs:'top', cw:200, ctop:12, cbot:20, cgap:14, cpad:12 };
+const DEF = { cw:200, ctop:12, cbot:20, cgap:14, cpad:12 };
+try { Object.assign(S, JSON.parse(localStorage.getItem('h037p4') || '{}')); } catch {}
 
 const chev = '<span class="chev"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>';
 const sun = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6L17 7M7 17l-1.4 1.4"/></svg>';
@@ -233,37 +273,44 @@ const crewRow = `<div class="row" style="border-bottom:0"><span class="m"><span 
 const crewBtns = `<div class="two" style="margin-top:12px"><button class="btn sm">Standings</button><button class="btn sm">Invite</button></div>`;
 const lastK = `<div class="lbl k">Last time out · Twin Creeks · Nov 20</div>`;
 
+const slim = () => `<div class="lslim"><span class="dot"></span><span class="lbl">Live · 7</span><b>Up 2 · Twin Creeks</b>${chev}</div>`;
+const dock = () => `<div class="dock"><div class="live"><span class="dot"></span><span class="m"><span class="lbl" style="color:var(--you-text)">Live · hole 7</span><b>You’re up 2</b></span><button class="btn">Back to hole 7</button></div></div>`;
+const yours = (d) => `<div class="list yours"><div class="row" style="border-bottom:0"><span class="th f-${d === 'pack' ? 'pack' : 'prismatic'}"></span><span class="m"><span class="n">Your cards</span><span class="s">5 scorecards · 3 courses · low 87</span></span>${chev}</div></div>`;
+// rs = how a live round shows: top | slim | swap | slot | dock (only when the day is "Round on")
+const parts = (d) => { const on = d === 'round', rs = on ? S.rs : '';
+  return { on, rs, above: rs === 'top' ? `<div style="margin-top:8px">${live()}</div>` : rs === 'slim' ? slim() : '',
+    next: on ? (rs === 'slot' ? `<div class="lbl k">Playing now</div>${live()}` : '') : `<div class="lbl k">Next round</div>${next(d)}`,
+    foot: rs === 'dock' ? dock() : foot() }; };
 const V = {
-  1: { name:'Card first', sub:'same as last time', notes:['Card stack, numbers, Locker and Passport tiles, then the crew.','Top three only from last time out.'],
-    html: (d) => `${bar()}${d === 'round' ? `<div style="margin-top:8px">${live()}</div>` : ''}${fan(d)}${stats}${tiles(d)}
-      <div class="lbl k">Founders Crew${d === 'round' ? '' : ' · next round'}</div>${d === 'round' ? '' : next(d)}${lastK}${lb(3)}<div class="list">${crewRow}</div>${foot()}` },
-  2: { name:'Card first, lighter', sub:'no tiles', notes:['The Locker and Passport tiles are gone: tap the card for your Locker, your avatar for your Passport.','That pulls the crew up the page, with room for everyone from last time out.'],
-    html: (d) => `${bar()}${d === 'round' ? `<div style="margin-top:8px">${live()}</div>` : ''}${fan(d)}${stats}
-      ${d === 'round' ? '' : `<div class="lbl k" style="margin-top:4px">Founders Crew · next round</div>${next(d)}`}${lastK}${lb(5)}${crewBtns}${foot()}` },
-  3: { name:'Crew on the card', sub:'big card, crew name printed on it', notes:['Number 4’s idea at number 1’s size: the big card carries the crew’s name.','One card, no stack behind it, then the clubhouse.'],
-    html: (d) => `${bar()}${d === 'round' ? `<div style="margin-top:8px">${live()}</div>` : ''}<div class="hero" style="margin-top:12px">${d === 'pack' ? pack() : card(R[0], '', 'Founders Crew · Andrew')}</div>${stats}
-      ${d === 'round' ? '' : `<div class="lbl k" style="margin-top:4px">Next round</div>${next(d)}`}${lastK}${lb(5)}${crewBtns}${foot()}` },
-  4: { name:'Member card', sub:'same as last time', notes:['Small card and your numbers as the header; the clubhouse fills the page.','Fits on one screen.'],
-    html: (d) => `${bar()}<div class="id hero">${d === 'pack' ? pack() : card(R[0])}<span class="m"><span class="lbl">Founders Crew</span><b>${d === 'pack' ? '1 pack ready' : 'Low 87 · Prismatic'}</b><span>5 scorecards · 3 courses</span><span>Locker and Passport ›</span></span></div>
-      <div class="lbl k">Next round</div>${next(d)}${lastK}${lb(5)}${crewBtns}${foot()}` },
-  5: { name:'Member card, bigger', sub:'the card gets more room', notes:['Same layout as 4 with a bigger card, so the finish shows.','Still fits on one screen.'],
-    html: (d) => `${bar()}<div class="id hero mid">${d === 'pack' ? pack() : card(R[0])}<span class="m"><span class="lbl">Founders Crew</span><b>${d === 'pack' ? '1 pack ready' : 'Low 87 · Prismatic'}</b><span>5 scorecards · 3 courses</span><span>Locker and Passport ›</span></span></div>
-      <div class="lbl k">Next round</div>${next(d)}${lastK}${lb(5)}${crewBtns}${foot()}` },
-  6: { name:'Deal and tuck', sub:'opens like 1, rests like 4', cls:'tuck', notes:['The card deals in full size, holds for a beat, then tucks into the corner and the clubhouse rises.','You get the big card moment every time you open, and the whole crew on one screen after.','About 2 seconds end to end. I can make it quicker, or only play it when something is new.'],
-    html: (d) => `${bar()}<div class="id hero">${d === 'pack' ? pack() : card(R[0])}<span class="m"><span class="lbl">Founders Crew</span><b>${d === 'pack' ? '1 pack ready' : 'Low 87 · Prismatic'}</b><span>5 scorecards · 3 courses</span><span>Locker and Passport ›</span></span></div>
-      <div class="lbl k">Next round</div>${next(d)}${lastK}${lb(5)}${crewBtns}${foot()}` },
+  5: { name:'Member card', sub:'tune the top card with the sliders', notes:['Top: the round sits above everything, like today.','Thin bar: one green line; Home stays put.','Takes over: the round becomes the top of Home and your card drops to a row.','Next round: the round fills the crew’s Next round slot.','Bottom: the round replaces Join / New round at your thumb.'],
+    html: (d) => { const p = parts(d); return `${bar()}${p.above}${p.rs === 'swap' ? `<div style="margin-top:12px">${live()}</div>${yours(d)}`
+      : `<div class="id hero mid">${d === 'pack' ? pack() : card(R[0])}<span class="m"><span class="lbl">Founders Crew</span><b>${d === 'pack' ? '1 pack ready' : 'Low 87 · Prismatic'}</b><span>5 scorecards · 3 courses</span><span>Locker and Passport ›</span></span></div>`}
+      ${p.next}${lastK}${lb(5)}${crewBtns}${p.foot}`; } },
+  3: { name:'Crew on the card', sub:'big card, crew name printed on it', notes:['Same five round styles on the big-card Home.','With On top, the card gets pushed half off the first screen; Thin bar and Bottom keep it in view.'],
+    html: (d) => { const p = parts(d); return `${bar()}${p.above}${p.rs === 'swap' ? `<div style="margin-top:12px">${live()}</div>${yours(d)}`
+      : `<div class="hero" style="margin-top:12px">${d === 'pack' ? pack() : card(R[0], '', 'Founders Crew · Andrew')}</div>${stats}`}
+      ${p.next}${lastK}${lb(5)}${crewBtns}${p.foot}`; } },
 };
 
 const stage = document.getElementById('stage');
+function tune() {
+  for (const k of Object.keys(DEF)) { stage.style.setProperty('--' + k, S[k] + 'px'); document.getElementById('t-' + k).value = S[k]; document.getElementById('o-' + k).textContent = S[k]; }
+  stage.classList.toggle('bigc', S.cw >= 250);
+  document.getElementById('read').textContent = `card ${S.cw} · above ${S.ctop} · below ${S.cbot} · gap ${S.cgap} · padding ${S.cpad}`;
+  try { localStorage.setItem('h037p4', JSON.stringify(S)); } catch {}
+}
+for (const k of Object.keys(DEF)) document.getElementById('t-' + k).addEventListener('input', (e) => { S[k] = +e.target.value; tune(); });
+document.getElementById('reset').addEventListener('click', () => { Object.assign(S, DEF); tune(); });
+tune();
 function draw() {
   stage.innerHTML = Object.entries(V).map(([k, v]) => `<section class="col${k === S.dir ? ' on' : ''}"><h2>${k} · ${v.name} <span>${v.sub}</span></h2>
     <div class="phone ${S.land} ${v.cls || ''}"><div class="scr">${v.html(S.day)}</div></div><ul class="notes">${v.notes.map((n) => `<li>${n}</li>`).join('')}</ul></section>`).join('');
   document.querySelectorAll('.bar .seg').forEach((g) => g.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(S[g.dataset.k] === b.dataset.v))));
-  try { localStorage.setItem('h037p3', JSON.stringify(S)); } catch {}
+  try { localStorage.setItem('h037p4', JSON.stringify(S)); } catch {}
 }
 document.querySelectorAll('.bar .seg').forEach((g) => g.addEventListener('click', (e) => {
   const b = e.target.closest('button'); if (!b) return;
-  S[g.dataset.k] = b.dataset.v; draw();
+  S[g.dataset.k] = b.dataset.v; if (g.dataset.k === 'rs') S.day = 'round'; draw();
 }));
 stage.addEventListener('click', (e) => { const b = e.target.closest('[data-tab]'); if (b) { S.tab = b.dataset.tab; draw(); } });
 document.getElementById('replay').addEventListener('click', draw);
