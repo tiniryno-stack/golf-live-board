@@ -1,6 +1,6 @@
 # 037 · Home: your card, then the clubhouse
 
-Status: approved by Andrew Nov 25, 2026 (prototype 5). Not built yet.
+Status: built in dd787bd (branch `claude/037-home`). Approved by Andrew Nov 25, 2026 (prototype 5).
 
 Changes Home (`js/screens/home.js`, live on `main` at b047ea2) and the two Home entries of 035 / 036
 (`homeLocker()` in `js/screens/locker.js`) and of 006 (`homeCrew()` in `js/screens/crew.js`). Those feature folders are
