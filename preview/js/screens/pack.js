@@ -111,10 +111,34 @@ export function startPack(root, { reduced = false, onTear = () => {}, tilt = () 
   // p = how far the cut has run. The strip stays one piece, hinged at its far (uncut) end; the end you started from
   // lifts with your finger. It scrubs both ways (Andrew, Nov 25, "like the Pokémon TCG app"): slide back and it uncuts,
   // let go early and it settles shut. Only the strip, the slit and the cue are touched, so a frame stays cheap.
+  // The curl (Andrew, Nov 25: "peel up", not a stiff slate): the strip is a chain of SEG slices nested from the
+  // hinge (the far, uncut end) toward the end you started from. Slices past your finger bend a little more each, so
+  // the cut part curls up off the pack while the rest stays flat. Built on the first touch, for that side.
+  const SEG = 10;
+  let chainFor = 0, segs = [];
+  const pattern = [...topw.querySelectorAll('.top > .pat, .top > .p-brushed2')].map((el) => el.outerHTML).join('');
+  const buildChain = () => {
+    if (chainFor === dir) return;
+    chainFor = dir;
+    const right = dir >= 0; // cutting from the left: hinge on the right
+    let html = '';
+    for (let k = SEG - 1; k >= 0; k--) {
+      const col = right ? SEG - 1 - k : k; // which slice of the strip this is, counted from the left
+      const pos = k === 0 ? (right ? 'right:0;' : 'left:0;') + `width:${100 / SEG}%;` : (right ? 'right:100%;' : 'left:100%;') + 'width:100%;';
+      html = `<div class="seg" style="${pos}transform-origin:${right ? 'right' : 'left'} bottom"><div class="sk"><div class="top" style="left:${-col * 100}%;right:auto;width:${SEG * 100}%">${pattern}</div></div>${html}</div>`;
+    }
+    topw.innerHTML = html;
+    segs = [];
+    for (let el = topw.querySelector('.seg'); el; el = el.querySelector(':scope > .seg')) segs.push(el);
+  };
   const paint = () => {
     const sgn = dir < 0 ? -1 : 1;
-    topw.style.transformOrigin = `${dir < 0 ? '0%' : '100%'} 100%`;
-    topw.style.transform = p > 0.001 ? `translateY(${(-p * 12).toFixed(2)}%) rotate(${(sgn * p * 9).toFixed(2)}deg)` : '';
+    if (dir) buildChain();
+    topw.style.transform = p > 0.001 ? `translateY(${(-p * 4).toFixed(2)}%)` : '';
+    segs.forEach((el, k) => {
+      const at = (k + 1) / SEG, u = p > 0.001 ? Math.max(0, (at - (1 - p)) / p) : 0;
+      el.style.transform = u ? `rotate(${(sgn * 11 * u ** 1.5).toFixed(2)}deg)` : '';
+    });
     if (slit) { slit.style.left = dir < 0 ? `${(1 - p) * 100}%` : '0%'; slit.style.width = `${p * 100}%`; }
     if (cue) { cue.style.left = `${dir < 0 ? 3 : Math.max(3, p * 100)}%`; cue.style.right = `${dir < 0 ? Math.max(3, p * 100) : 3}%`; }
     const j = mode === 'hold' ? p * p * 4 : 0;
@@ -158,7 +182,7 @@ export function startPack(root, { reduced = false, onTear = () => {}, tilt = () 
   const follow = () => {
     scrub = 0;
     if (stopped || done) return;
-    p += (goal - p) * 0.5;
+    p += (goal - p) * 0.28; // eased: the peel trails your finger a little
     if (Math.abs(goal - p) < 0.002) p = goal;
     paint();
     if (goal > 0.94 && p > 0.9) { finish(); return; }
@@ -209,6 +233,8 @@ export function startPack(root, { reduced = false, onTear = () => {}, tilt = () 
   };
   const key = (e) => { if ((e.key === 'Enter' || e.key === ' ') && !done) { e.preventDefault(); dir = dir || 1; finish(); } };
   const menu = (e) => e.preventDefault();
+  // Safari's back-swipe starts at the screen edge: a touch on the pack never starts it (Andrew, Nov 25).
+  pk.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
   pk.addEventListener('pointerdown', down);
   pk.addEventListener('pointermove', move);
   ['pointerup', 'pointercancel', 'lostpointercapture'].forEach((ev) => pk.addEventListener(ev, up));

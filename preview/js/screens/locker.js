@@ -193,10 +193,12 @@ export function backHtml(c) {
 const label = (c) => `${c.course}, ${shortDay(c.day)}, ${c.gross}. ${FINISHES[c.fin].name} card.`;
 
 /** One card in its slot: tilt → flip → front / back. `extra` = more classes on the slot. */
+/** The card's metal edge (Andrew, Nov 25: "like a credit card"): thin layers stacked between the two faces. */
+const EDGE = Array.from({ length: 7 }, (_, k) => `<i class="lk-edge" style="--z:${k - 3}"></i>`).join('');
 export function slotHtml(c, { i = 0, flipped = false, extra = '', act = 'lk-card' } = {}) {
   return `<div class="lk-slot x-land lkf-${c.fin}${extra}" data-i="${i}" data-key="${esc(c.key)}"${act ? ` data-act="${act}"` : ''}>
     <div class="lk-tilt" role="button" tabindex="0" aria-label="${esc(label(c))} Tap to flip it.">
-      <div class="lk-flip${flipped ? ' on' : ''}"><div class="lk-face lk-front">${frontHtml(c)}</div><div class="lk-face lk-back">${backHtml(c)}</div></div>
+      <div class="lk-flip${flipped ? ' on' : ''}">${EDGE}<div class="lk-face lk-front">${frontHtml(c)}</div><div class="lk-face lk-back">${backHtml(c)}</div></div>
       <i class="pk-glare"></i><i class="pk-sweep"></i>
     </div></div>`;
 }
@@ -317,7 +319,7 @@ function onOri(e) {
   if (!gy.on) {
     gy.on = true;
     document.querySelectorAll('.lk-tiltbtn').forEach((b) => { b.hidden = true; });
-    document.querySelectorAll('.lk-hint').forEach((b) => { b.hidden = false; b.textContent = 'Tilt your phone · tap to flip'; });
+
   }
 }
 function listenTilt() {
@@ -427,9 +429,10 @@ function oneView(app, opened, readOnly) {
   return `<div class="lk-one">
     <div class="lk-stage"><div class="lk-track">${slots}</div></div>
     <div class="lk-cap" aria-live="polite"></div>
-    <div class="lk-foot"><span class="ts-label lk-pos"></span>
-      <span class="lk-mid"><span class="ts-small lk-soft lk-hint">${gy.on || gy.asked ? 'Tilt your phone · tap to flip' : 'Tap to flip · swipe for more'}</span></span>
-      ${readOnly ? '<span></span>' : `<span class="lk-acts"><button class="icon-btn" data-act="lk-share" aria-label="Share this card">${icon('share', 20)}</button><button class="btn small" data-act="lk-rip">${icon('redo', 18)} Rip again</button></span>`}</div>
+    <div class="lk-foot">
+      <span class="ts-small lk-soft lk-hint">${db.local.get('glb.lockerFlipped') ? '' : 'Tap to flip'}</span>
+      <span class="ts-label lk-pos"></span>
+      <span class="lk-acts">${readOnly ? '' : `<button class="icon-btn" data-act="lk-share" aria-label="Share this card">${icon('share', 20)}</button>`}</span></div>
   </div>`;
 }
 
@@ -590,6 +593,7 @@ export const lockerSheets = {
       <p class="ts-small lk-soft"><b>The card.</b> Your whole scorecard is on the front. Tap it to flip: who you played with and the round in numbers. Tilt your phone and the metal moves.</p>
       <p class="ts-small lk-soft"><b>Passport.</b> The first time you finish 18 at a course, its stamp goes in your passport. Milestones (first birdie, broke 90, a new lowest round) get a stamp too. Tap a friend’s name to see theirs.</p>
       <button class="btn block" data-act="sheet-close" style="margin-top:12px">Done</button>
+      ${app.route?.name === 'locker' && !isView(app) && tabOf(app) === 'cards' && openedOf(lockerOf(app, ownerId())?.cards).length ? `<button class="btn ghost block" data-act="lk-rip" style="margin-top:8px">${icon('redo', 18)} Rip this card again</button>` : ''}
       ${PREVIEW ? `<button class="btn ghost block" data-act="lk-practice" style="margin-top:8px">${app.lockers?.[lockerPerson()]?.practice ? 'Preview: put my cards back' : 'Preview: reseal my packs to test (nothing is saved)'}</button>` : ''}`;
   },
 };
@@ -646,7 +650,10 @@ export default {
   mount(content, app) {
     car.track = null;
     if (app.route.mode === 'admin') return;
-    if (tabOf(app) === 'passport') mountBook(content, app.ui.pp);
+    if (tabOf(app) === 'passport') {
+      const L = lockerOf(app, shownId(app));
+      if (L?.cards?.length) mountBook(content, app.ui.pp, L.cards, { frontHtml, readOnly: isView(app) }, `${shownId(app)}|${isView(app)}|${L.cards.map((c) => `${c.key}${c.opened ? 1 : 0}`).join(',')}`);
+    }
     else if (app.ui.lk?.view === 'one') mountCarousel(content, app);
   },
   actions: {
@@ -684,6 +691,7 @@ export default {
       if (i !== car.active) { scrollToIdx(i, true); return; }
       const f = el.querySelector('.lk-flip');
       const on = !f.classList.contains('on');
+      if (!db.local.get('glb.lockerFlipped')) { db.local.set('glb.lockerFlipped', true); document.querySelectorAll('.lk-hint').forEach((h) => { h.textContent = ''; }); }
       f.classList.toggle('on', on);
       app.ui.lk.flip = on ? el.dataset.key : null;
     },
@@ -713,6 +721,7 @@ export default {
       if (card) openPack(app, card);
     },
     'lk-rip': (el, ev, app) => {
+      app.closeSheet?.();
       const card = openedOf(lockerOf(app, shownId(app))?.cards)[car.active];
       if (card) openPack(app, card, { replay: true });
     },
