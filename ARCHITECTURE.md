@@ -1087,7 +1087,15 @@ Still open: nothing blocking. Design direction (section 9) is final.
   the reveal ladder replaces the rays and sparks: prismatic = two pearl rings + a pearl wash + a pop (soft pink / lilac /
   aqua / warm gold, no rainbow bands), gold = two gold rings + a gold haze + a pop, silver = one ring + a faint haze + a
   glint, bronze = one faint ring, standard / rookie just land. Tilt: iPhone asks once; later page loads re-ask silently on
-  the first tap. Preview copy only: "Test as Andrew" on Home (`glb.previewAs`) and practice packs (nothing saved).
+  the first tap. Preview copy only: it acts as Andrew (`glb.previewAs` overrides) and the ⓘ sheet can reseal his packs
+  (practice: nothing saved).
+  **Nov 25 with Andrew:** the tear scrubs both ways and settles shut if you let go early (only the strip, slit and cue
+  are touched per frame); the result screen drops "Add to locker" (it's saved at the tear): "Saved to your locker · N new
+  stamps", then Open next pack · N left, or Done, plus Share / See in passport; See in passport opens the book on the
+  cover and turns page by page to the new stamp, which thumps (`app.ui.pp.walkTo/hit`, redraws held via `bookBusy()`);
+  no Turn on tilt button (the first tap asks; `.pill` was overriding `hidden`, so the old button never went away);
+  tilt is inverted (the card keeps facing you) and 20% stronger; the carousel shows its neighbours, dots and a one-time
+  nudge (`glb.lockerPeek`); prismatic drifts on its own when still (`@property --drift`, a faint pearl haze).
 
 ## 13. V2 backlog (running list)
 

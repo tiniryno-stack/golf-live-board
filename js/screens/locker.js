@@ -10,7 +10,7 @@
 import * as db from '../db.js';
 import * as fx from './toasts.js';
 import { chromePack } from './pack.js';
-import { landsFor, bookHtml, mountBook, pageOf } from './passport.js';
+import { landsFor, bookHtml, mountBook, pageOf, bookBusy } from './passport.js';
 import { passportOf } from '../stamps.js';
 import { esc, icon, reducedMotion } from '../ui.js';
 import {
@@ -91,8 +91,8 @@ function practiceRow(app, L) {
     : `<div class="lk-practice ts-small"><span>Preview · reseal your ${L.cards.length} cards here to test opening them (nothing is saved)</span><button class="pill" data-act="lk-practice">Reseal</button></div>`;
 }
 export function lockerPerson() {
-  const pv = PREVIEW && db.local.get('glb.previewAs');
-  if (pv) return pv; // the preview's "test as" wins over whoever this browser was before
+  // The preview copy acts as Andrew in any browser, so it feels like the real app without a setup step.
+  if (PREVIEW) return db.local.get('glb.previewAs') || LOCKER_ADMINS[0];
   const o = db.owner.get()?.personId;
   if (o) return o;
   const ppl = db.people.all();
@@ -143,7 +143,7 @@ function nine(c, from) {
     ${sc.map((s, i) => `<span class="x-mk x-mk-${kind(s, par[i])}">${s}</span>`).join('')}<span class="x-t">${tot(sc)}</span></div>`;
 }
 /** Finish layers (§2.2): prismatic = oil slick + flash (the ink shifts in CSS); gold/silver/bronze = metal bands. */
-const layers = (c) => (c.fin === 'prismatic' ? '<i class="x-slick"></i><i class="x-prism"></i>'
+const layers = (c) => (c.fin === 'prismatic' ? '<i class="x-pearl"></i><i class="x-slick"></i><i class="x-prism"></i>'
   : ['gold', 'silver', 'bronze'].includes(c.fin) ? '<i class="x-mslick"></i>' : '');
 
 export function frontHtml(c) {
@@ -281,7 +281,8 @@ function setActive(app, i) {
   const cap = root?.querySelector('.lk-cap');
   if (cap) cap.innerHTML = captionHtml(c);
   const pos = root?.querySelector('.lk-pos');
-  if (pos) pos.textContent = `${i + 1} of ${list.length}`;
+  // Dots say "there's more, swipe" (Andrew, Nov 25); past 9 cards, a count instead.
+  if (pos) pos.innerHTML = list.length > 9 ? `${i + 1} of ${list.length}` : list.length > 1 ? `<span class="lk-dots" aria-label="Card ${i + 1} of ${list.length}">${list.map((_, k) => `<i${k === i ? ' class="on"' : ''}></i>`).join('')}</span>` : '';
 }
 function tick(ts) {
   car.raf = 0;
@@ -289,8 +290,9 @@ function tick(ts) {
   car.raf = requestAnimationFrame(tick);
   const rm = reducedMotion();
   const idle = !rm && !ptr.on && !gy.on ? Math.sin(ts / 1900) * 7 : 0;
-  const tx = rm ? 0 : (ptr.on ? ptr.x * 13 : 0) + gy.y * 18 + idle;
-  const ty = rm ? 0 : (ptr.on ? -ptr.y * 10 : 0) - gy.x * 14;
+  // Inverse tilt (Andrew, Nov 25): the card leans against the phone's tilt so it keeps facing you, 20% stronger.
+  const tx = rm ? 0 : (ptr.on ? ptr.x * 13 : 0) - gy.y * 21.6 + idle;
+  const ty = rm ? 0 : (ptr.on ? -ptr.y * 10 : 0) + gy.x * 16.8;
   sm.x += (tx - sm.x) * 0.12;
   sm.y += (ty - sm.y) * 0.12;
   const sl = car.track.scrollLeft;
@@ -300,7 +302,7 @@ function tick(ts) {
     if (a < bd) { bd = a; best = i; }
     if (a > 1.6) { put(car.slots[i], 0, o > 0 ? -24 : 24, 0.9); continue; }
     const act = a < 0.5;
-    put(car.slots[i], act ? sm.y : 0, (rm ? 0 : -o * 18) + (act ? sm.x * (1 - a * 2) : 0), 1 - Math.min(1, a) * 0.1);
+    put(car.slots[i], act ? sm.y : 0, (rm ? 0 : -o * 12) + (act ? sm.x * (1 - a * 2) : 0), 1 - Math.min(1, a) * 0.06);
   }
   if (best !== car.active) setActive(A, best);
 }
@@ -345,10 +347,16 @@ function windowOnce() {
   const D = window.DeviceOrientationEvent;
   if (!hasTilt() || !D) return;
   if (typeof D.requestPermission !== 'function') { listenTilt(); return; }
-  if (db.local.get('glb.lockerTilt')) {
+  {
+    // No button (Andrew, Nov 25): the first tap on the Locker asks iPhone once (its own prompt); later page loads
+    // ask again silently on the first tap. A no is remembered and never asked again.
+    if (db.local.get('glb.lockerTilt') === 'no') return;
     gy.asked = true;
     const again = () => {
-      D.requestPermission().then((r) => { if (r === 'granted') { listenTilt(); off2(); } }).catch(() => {});
+      D.requestPermission().then((r) => {
+        if (r === 'granted') { db.local.set('glb.lockerTilt', true); listenTilt(); } else db.local.set('glb.lockerTilt', 'no');
+        off2();
+      }).catch(() => {});
     };
     const off2 = () => { window.removeEventListener('touchend', again, true); window.removeEventListener('click', again, true); };
     window.addEventListener('touchend', again, true);
@@ -376,6 +384,12 @@ function mountCarousel(content, app) {
   scrollToIdx(i, false);
   setActive(app, i);
   track.addEventListener('scroll', () => { car.until = Date.now() + 160; settleLater(); }, { passive: true });
+  // Once per phone: a small nudge toward the next card, so it's clear the cards swipe.
+  if (list.length > 1 && !db.local.get('glb.lockerPeek') && !reducedMotion()) {
+    db.local.set('glb.lockerPeek', true);
+    setTimeout(() => { if (track.isConnected) track.scrollBy({ left: Math.min(90, car.step * 0.3), behavior: 'smooth' }); }, 700);
+    setTimeout(() => { if (track.isConnected) scrollToIdx(car.active, true); }, 1300);
+  }
   track.addEventListener('touchstart', () => { car.touching = true; }, { passive: true });
   const onPtr = (e) => {
     const s = e.target.closest?.('.lk-slot');
@@ -410,12 +424,11 @@ function oneView(app, opened, readOnly) {
   const land = lk.land && Date.now() - lk.landAt < 900 ? lk.land : null;
   const slots = opened.map((c, i) => slotHtml(c, { i, flipped: lk.flip === c.key, extra: land === c.key ? ' land' : '' })).join('');
   // The button only until this phone has said yes once (glb.lockerTilt); after that the re-ask is silent (windowOnce).
-  const tilt = hasTilt() && !gy.on && !gy.asked && !db.local.get('glb.lockerTilt') && typeof window.DeviceOrientationEvent?.requestPermission === 'function';
   return `<div class="lk-one">
     <div class="lk-stage"><div class="lk-track">${slots}</div></div>
     <div class="lk-cap" aria-live="polite"></div>
     <div class="lk-foot"><span class="ts-label lk-pos"></span>
-      <span class="lk-mid"><button class="pill lk-tiltbtn" data-act="lk-tilt"${tilt ? '' : ' hidden'}>Turn on tilt</button><span class="ts-small lk-soft lk-hint"${tilt ? ' hidden' : ''}>${gy.on || gy.asked ? 'Tilt your phone · tap to flip' : 'Tap the card to flip it'}</span></span>
+      <span class="lk-mid"><span class="ts-small lk-soft lk-hint">${gy.on || gy.asked ? 'Tilt your phone · tap to flip' : 'Tap to flip · swipe for more'}</span></span>
       ${readOnly ? '<span></span>' : `<span class="lk-acts"><button class="icon-btn" data-act="lk-share" aria-label="Share this card">${icon('share', 20)}</button><button class="btn small" data-act="lk-rip">${icon('redo', 18)} Rip again</button></span>`}</div>
   </div>`;
 }
@@ -456,7 +469,7 @@ function lockerBody(app) {
   const head = `${who ? `<div class="ts-label lk-k">${esc(who)} · view only</div>` : ''}
     <div class="lk-head"><h1 class="ts-title">${readOnly ? esc(`${who.split(' ')[0] || 'Their'}’s locker`) : 'Locker'}</h1>
       ${packs.length && !readOnly ? `<button class="pill lk-ppill" data-act="lk-view" data-v="${lk.view === 'packs' && tab === 'cards' ? 'one' : 'packs'}" aria-pressed="${lk.view === 'packs' && tab === 'cards'}">${icon('pack', 18)} Packs · ${packs.length}</button>` : ''}</div>
-    ${readOnly ? '' : practiceRow(app, L)}${tabs}`;
+    ${tabs}`;
   if (tab === 'passport') {
     return `<div class="plain lk lk-t-passport">${head}${bookHtml(cards, app.ui.pp, { frontHtml, readOnly })}</div>`;
   }
@@ -531,7 +544,7 @@ function homeSub(opened) {
 export function homeLocker(app) {
   try {
     const pid = lockerPerson();
-    if (PREVIEW && !db.local.get('glb.previewAs')) {
+    if (false) { // 036 rev: the preview no longer shows a test card (it acts as Andrew)
       return { packs: `<button class="lk-ready" data-act="lk-testas"><span class="lk-rtext"><span class="ts-label lk-soft">Preview only</span>
         <span class="ts-row">Test the locker as Andrew Duong</span><span class="ts-small lk-soft">Shows your Locker and Passport in this browser. Tap once; it’s remembered here.</span></span>
         <span class="hr-chev">${icon('fwd', 20)}</span></button>`, row: '' };
@@ -576,7 +589,8 @@ export const lockerSheets = {
       <p class="ts-small lk-soft"><b>Your normal.</b> Your last 20 rounds, leaving out the worst fifth, averaged. A bad streak never makes prismatic easier.</p>
       <p class="ts-small lk-soft"><b>The card.</b> Your whole scorecard is on the front. Tap it to flip: who you played with and the round in numbers. Tilt your phone and the metal moves.</p>
       <p class="ts-small lk-soft"><b>Passport.</b> The first time you finish 18 at a course, its stamp goes in your passport. Milestones (first birdie, broke 90, a new lowest round) get a stamp too. Tap a friend’s name to see theirs.</p>
-      <button class="btn block" data-act="sheet-close" style="margin-top:12px">Done</button>`;
+      <button class="btn block" data-act="sheet-close" style="margin-top:12px">Done</button>
+      ${PREVIEW ? `<button class="btn ghost block" data-act="lk-practice" style="margin-top:8px">${app.lockers?.[lockerPerson()]?.practice ? 'Preview: put my cards back' : 'Preview: reseal my packs to test (nothing is saved)'}</button>` : ''}`;
   },
 };
 
@@ -619,6 +633,7 @@ export default {
     return `${adm}<button class="icon-btn" data-act="lk-how" aria-label="How cards work">${icon('info')}</button>`;
   },
   keepContent() {
+    if (bookBusy()) return true; // the passport is turning itself to the new stamp
     const held = !!car.track?.isConnected && (car.touching || Date.now() < car.until);
     if (held) car.missed = true;
     return held;
@@ -647,6 +662,7 @@ export default {
       if (!PREVIEW || !L?.cards) return;
       if (L.practice) { L.cards = L.real; L.real = null; L.practice = false; }
       else { L.real = L.cards; L.cards = L.cards.map((c) => ({ ...c, opened: false, openedAt: null })); L.practice = true; Object.assign(app.ui.lk, { tab: 'cards', view: 'packs' }); }
+      app.closeSheet?.();
       app.render();
     },
     'lk-testas': (el, ev, app) => {
@@ -746,7 +762,10 @@ export default {
       packCtx = null;
       const L = ctx && lockerOf(app, ctx.personId);
       ensureUi(app).tab = 'passport';
-      app.ui.pp.pg = L?.cards ? pageOf(L.cards.filter((c) => c.opened), ctx.page, { frontHtml }) : 1;
+      // Open on the cover, then turn the pages one by one to the new stamp (Andrew, Nov 25), so it's clearly in the book.
+      app.ui.pp.pg = 0;
+      app.ui.pp.walkTo = L?.cards ? pageOf(L.cards.filter((c) => c.opened), ctx.page, { frontHtml }) : 1;
+      app.ui.pp.hit = ctx.key;
       if (app.route.name === 'locker' && app.route.mode === 'mine') app.render();
       else app.go('#/locker');
     },

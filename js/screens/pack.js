@@ -61,7 +61,6 @@ export function packHtml(o) {
   const rings = Array.from({ length: p.rings || 0 }, (_, i) => `<i class="pk-ring${p.faint ? ' faint' : ''}" style="--rd:${i * 380}ms"></i>`).join('');
   const vars = p.mc ? ` style="--mc:${p.mc};--mc2:${p.mc2}${p.wash ? `;--wp:${p.wash}` : ''}"` : '';
   const lands = (o.lands || []).join('');
-  const add = o.replay ? 'Back to locker' : 'Add to locker';
   return `<div class="pk lkf-${esc(o.fin)}${p.pop ? ' pop' : ''}${p.glint ? ' glint' : ''}" data-fin="${esc(o.fin)}"${vars} role="dialog" aria-modal="true" aria-label="Open your pack">${ROUGH}
     <i class="pk-screen" aria-hidden="true"></i>
     <div class="pk-top">
@@ -83,9 +82,10 @@ export function packHtml(o) {
       <div class="pk-hint"><div class="ts-row">${o.replay ? 'Swipe across the top to rip it again' : 'Swipe across the top'}</div><div class="ts-small pk-soft">${esc(o.hint)}</div></div>
       <div class="pk-res">
         <div class="pk-line"><b>${esc(o.title)}${o.grade ? ` · ${esc(o.grade)}` : ''}</b> · You shot ${esc(o.shot)}</div>
-        <button class="btn primary big block" data-act="lk-pack-add">${add}</button>
+        <div class="pk-saved ts-small">${o.replay ? 'Already in your locker' : (o.lands || []).length ? `Saved to your locker · ${(o.lands || []).length === 1 ? 'a new stamp' : `${(o.lands || []).length} new stamps`} in your passport` : 'Saved to your locker'}</div>
+        ${o.left ? `<button class="btn primary big block" data-act="lk-pack-next">Open next pack · ${o.left} left</button>`
+          : `<button class="btn primary big block" data-act="lk-pack-add">Done</button>`}
         <div class="pk-two"><button class="btn big" data-act="lk-pack-share">${icon('share', 18)} Share</button><button class="btn big" data-act="lk-pack-pp">See in passport</button></div>
-        ${o.left ? `<button class="btn ghost block" data-act="lk-pack-next">Open next pack · ${o.left} left</button>` : ''}
       </div>
     </div>
   </div>`;
@@ -105,16 +105,18 @@ export function startPack(root, { reduced = false, onTear = () => {}, tilt = () 
   const timers = [];
   let stopped = false, p = 0, dir = 0, mode = null, held = false, done = false, holdRaf = 0, last = 0, swayRaf = 0;
   const later = (ms, fn) => timers.push(setTimeout(() => { if (!stopped) fn(); }, ms));
-  const set = (k, v) => bp.style.setProperty(k, v);
+  const topw = bp.querySelector('.topw'), slit = bp.querySelector('.slit'), cue = bp.querySelector('.cue');
+  let goal = 0, scrub = 0, back = 0;
 
-  // p = how far the cut has run. The strip stays one piece (Andrew, Nov 24): it's hinged at the far, uncut end and
-  // the end you started from lifts as you go, with a dark gap opening under it. Positive angle = the left end rises.
+  // p = how far the cut has run. The strip stays one piece, hinged at its far (uncut) end; the end you started from
+  // lifts with your finger. It scrubs both ways (Andrew, Nov 25, "like the Pokémon TCG app"): slide back and it uncuts,
+  // let go early and it settles shut. Only the strip, the slit and the cue are touched, so a frame stays cheap.
   const paint = () => {
     const sgn = dir < 0 ? -1 : 1;
-    set('--ox', dir < 0 ? '0%' : '100%'); set('--fx', sgn);
-    set('--ang', `${(sgn * p * 9).toFixed(2)}deg`); set('--lift', `${(-p * 12).toFixed(1)}%`);
-    set('--ta', dir < 0 ? `${(1 - p) * 100}%` : '0%'); set('--tw', `${p * 100}%`);
-    set('--ca', `${dir < 0 ? 3 : Math.max(3, p * 100)}%`); set('--cb', `${dir < 0 ? Math.max(3, p * 100) : 3}%`);
+    topw.style.transformOrigin = `${dir < 0 ? '0%' : '100%'} 100%`;
+    topw.style.transform = p > 0.001 ? `translateY(${(-p * 12).toFixed(2)}%) rotate(${(sgn * p * 9).toFixed(2)}deg)` : '';
+    if (slit) { slit.style.left = dir < 0 ? `${(1 - p) * 100}%` : '0%'; slit.style.width = `${p * 100}%`; }
+    if (cue) { cue.style.left = `${dir < 0 ? 3 : Math.max(3, p * 100)}%`; cue.style.right = `${dir < 0 ? Math.max(3, p * 100) : 3}%`; }
     const j = mode === 'hold' ? p * p * 4 : 0;
     shk.style.transform = j ? `translate(${((Math.random() - 0.5) * j).toFixed(2)}px, ${((Math.random() - 0.5) * j).toFixed(2)}px)` : '';
   };
@@ -122,7 +124,9 @@ export function startPack(root, { reduced = false, onTear = () => {}, tilt = () 
     if (done) return;
     done = true;
     p = 1;
-    paint();
+    cancelAnimationFrame(scrub); cancelAnimationFrame(back);
+    bp.style.setProperty('--fx', dir < 0 ? -1 : 1);
+    topw.style.transform = ''; // the fly-off (.pk.sep) takes it from here
     shk.style.transform = '';
     if (reduced) {
       root.classList.add('sep', 'waiting', 'reveal', 'done');
@@ -150,6 +154,25 @@ export function startPack(root, { reduced = false, onTear = () => {}, tilt = () 
       later(at + T.lands + lands.length * T.step + T.done, () => root.classList.add('done'));
     });
   };
+  // The strip follows the finger with a little easing, so it glides instead of jumping between touch events.
+  const follow = () => {
+    scrub = 0;
+    if (stopped || done) return;
+    p += (goal - p) * 0.5;
+    if (Math.abs(goal - p) < 0.002) p = goal;
+    paint();
+    if (goal > 0.94 && p > 0.9) { finish(); return; }
+    if (p !== goal) scrub = requestAnimationFrame(follow);
+  };
+  // Let go before the end: it settles shut, and the next swipe can start from either side.
+  const settle = () => {
+    back = 0;
+    if (stopped || done || held) return;
+    p *= 0.8;
+    if (p < 0.004) { p = 0; dir = 0; root.classList.remove('tearing'); }
+    paint();
+    if (p > 0) back = requestAnimationFrame(settle);
+  };
 
   const holdTick = (ts) => {
     holdRaf = 0;
@@ -165,21 +188,25 @@ export function startPack(root, { reduced = false, onTear = () => {}, tilt = () 
     e.preventDefault();
     if (reduced) { dir = 1; finish(); return; }
     try { pk.setPointerCapture(e.pointerId); } catch { /* not capturable */ }
-    const r = pk.getBoundingClientRect(), fy = (e.clientY - r.top) / r.height;
-    mode = fy < 0.36 ? 'swipe' : 'hold';
+    cancelAnimationFrame(back);
+    const r = pk.getBoundingClientRect(), fy = (e.clientY - r.top) / r.height, fx = (e.clientX - r.left) / r.width;
+    mode = fy < 0.45 ? 'swipe' : 'hold';
     held = true;
     root.classList.add('tearing');
-    if (!dir) dir = mode === 'swipe' && (e.clientX - r.left) / r.width > 0.5 ? -1 : 1;
+    if (!dir || p < 0.01) dir = mode === 'swipe' && fx > 0.5 ? -1 : 1;
     if (mode === 'hold' && !holdRaf) { last = 0; holdRaf = requestAnimationFrame(holdTick); }
   };
   const move = (e) => {
     if (!held || mode !== 'swipe' || done) return;
     const r = pk.getBoundingClientRect(), fx = (e.clientX - r.left) / r.width;
-    const q = Math.max(0, Math.min(1, dir < 0 ? 1 - fx : fx));
-    if (q > p) { p = q; paint(); }
-    if (p > 0.94) finish();
+    goal = Math.max(0, Math.min(1, dir < 0 ? 1 - fx : fx));
+    if (!scrub) scrub = requestAnimationFrame(follow);
   };
-  const up = () => { held = false; };
+  const up = () => {
+    held = false;
+    if (done) return;
+    if (mode === 'swipe') { goal = 0; cancelAnimationFrame(scrub); scrub = 0; if (!back) back = requestAnimationFrame(settle); }
+  };
   const key = (e) => { if ((e.key === 'Enter' || e.key === ' ') && !done) { e.preventDefault(); dir = dir || 1; finish(); } };
   const menu = (e) => e.preventDefault();
   pk.addEventListener('pointerdown', down);
@@ -194,7 +221,9 @@ export function startPack(root, { reduced = false, onTear = () => {}, tilt = () 
     swayRaf = 0;
     if (stopped || !root.isConnected) return;
     const g = tilt();
-    const tx = reduced ? 0 : g ? g.y : Math.sin(ts / 1900) * 0.85, ty = reduced ? 0 : g ? g.x : Math.cos(ts / 2600) * 0.5;
+    // Inverse tilt (Andrew, Nov 25): the card leans against the phone's tilt so it keeps facing you; 20% stronger.
+    const tx = reduced ? 0 : g ? -g.y * 1.2 : Math.sin(ts / 1900) * 0.85, ty = reduced ? 0 : g ? -g.x * 1.2 : Math.cos(ts / 2600) * 0.5;
+    if (held && !done) { swayRaf = requestAnimationFrame(sway); return; }
     const nx = cx + (tx - cx) * 0.16;
     cy += (ty - cy) * 0.16;
     mv = reduced ? 0 : Math.max(mv * 0.93, Math.min(1, Math.abs(nx - cx) * 130));
@@ -215,6 +244,7 @@ export function startPack(root, { reduced = false, onTear = () => {}, tilt = () 
       timers.forEach(clearTimeout);
       if (holdRaf) cancelAnimationFrame(holdRaf);
       if (swayRaf) cancelAnimationFrame(swayRaf);
+      cancelAnimationFrame(scrub); cancelAnimationFrame(back);
     },
   };
 }
