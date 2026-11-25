@@ -1096,6 +1096,13 @@ Still open: nothing blocking. Design direction (section 9) is final.
   no Turn on tilt button (the first tap asks; `.pill` was overriding `hidden`, so the old button never went away);
   tilt is inverted (the card keeps facing you) and 20% stronger; the carousel shows its neighbours, dots and a one-time
   nudge (`glb.lockerPeek`); prismatic drifts on its own when still (`@property --drift`, a faint pearl haze).
+  **Nov 25, second pass:** the strip curls as it peels (a chain of 10 nested slices from the hinge; the slices past the
+  finger bend more each; eased behind the finger); a touch on the pack never starts Safari's back-swipe (touchstart
+  preventDefault + a spare same-address history entry); cards have a metal edge (7 layers between the faces); the
+  carousel footer = Tap to flip (until the first flip, `glb.lockerFlipped`) · dots · share, and Rip this card again moved
+  to the ⓘ sheet; prismatic's resting drift is stronger; the Passport is StPageFlip (`js/vendor/page-flip.js`, MIT,
+  vendored, its CSS in locker.css): real page curls that follow the finger, a hard cover, built once and re-attached on
+  redraw; 6 course stamps a page in loose spots (`SPOTS`), milestones 6 a page.
 
 ## 13. V2 backlog (running list)
 

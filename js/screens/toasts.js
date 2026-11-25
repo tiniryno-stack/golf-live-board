@@ -302,6 +302,9 @@ export function showPack(o) {
   const root = $('overlay');
   root.innerHTML = packHtml(o);
   root.classList.add('open');
+  // A spare history entry at the same address: if Safari's back-swipe fires anyway, it uses this up and the round /
+  // Locker underneath stays put (036 rev, Nov 25).
+  try { history.pushState({ glbPack: 1 }, '', location.href); } catch { /* no history */ }
   pack = { player: startPack(root.querySelector('.pk'), o) };
 }
 

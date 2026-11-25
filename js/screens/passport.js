@@ -8,6 +8,7 @@
 // (never app.render()), and the book's pointer listeners are added once per mount.
 
 import { esc } from '../ui.js';
+import { PageFlip } from '../vendor/page-flip.js';
 import { stampFor, courseStampSvg, stampDate, passportOf, goalsOf } from '../stamps.js';
 import { openedOf, shortDay, longDay, FINISHES } from '../locker.js';
 
@@ -111,31 +112,38 @@ export function bookPages(cards, { frontHtml, readOnly = false } = {}) {
       <div class="pp-mrz">${mrz(h, shown, pp.courses.length, cards)}</div></div>`,
   });
 
-  // Courses: 4 stamps a page, crooked and overlapping (positions from the slug hash), then "Your next course".
-  const items = pp.courses.map((c) => `<button class="pp-c" data-act="pp-card" data-v="${esc(c.firstCardKey)}" style="--dx:${(hash(c.key) % 9) - 4}px;--dy:${(hash(`${c.key}y`) % 11) - 5}px">
-      ${courseStampHtml(c)}<span class="pp-cap"><b>${plural(c.visits, 'visit')}</b> · best ${c.best}</span></button>`);
-  items.push('<div class="pp-ghost">Your next course</div>');
-  for (let i = 0; i < items.length; i += 4) {
-    pages.push({ name: 'Courses', html: `<div class="pp-page"><div class="pp-k"><span>Courses</span><span>${pp.courses.length} played</span></div><div class="pp-courses">${items.slice(i, i + 4).join('')}</div></div>` });
+  // Courses: 6 a page, scattered like a real passport (Andrew, Nov 25): six loose spots, each nudged and turned by
+  // the course's own hash so a stamp never moves, slightly overlapping; then "Your next course" in the next spot.
+  const spot = (i, key) => {
+    const [l, t, w] = SPOTS[i % 6], h = hash(key || i);
+    return `left:${l + (h % 5) - 2}%;top:${t + ((h >> 3) % 5) - 2}%;width:${w}%`;
+  };
+  const items = pp.courses.map((c) => ({ key: c.key, html: `<button class="pp-c" data-act="pp-card" data-v="${esc(c.firstCardKey)}" style="%SPOT%">
+      ${courseStampHtml(c)}<span class="pp-cap"><b>${plural(c.visits, 'visit')}</b> · best ${c.best}</span></button>` }));
+  items.push({ key: 'next', html: '<div class="pp-ghost" style="%SPOT%"><span>Your next course</span></div>' });
+  for (let i = 0; i < items.length; i += 6) {
+    const page = items.slice(i, i + 6).map((it, k) => it.html.replace('%SPOT%', spot(k, it.key))).join('');
+    pages.push({ name: 'Courses', html: `<div class="pp-page"><div class="pp-k"><span>Courses</span><span>${pp.courses.length} played</span></div><div class="pp-courses">${page}</div></div>` });
   }
   // Milestones: earned (oldest first, newest at the bottom), then the goals still open as dashed outlines.
   const miles = pp.milestones.map((m) => rubberHtml(m, { act: 'pp-card' })).concat(goalsOf(pp, shown).map(ghostHtml));
-  for (let i = 0; i < Math.max(1, miles.length); i += 8) {
-    pages.push({ name: 'Milestones', html: `<div class="pp-page"><div class="pp-k"><span>Milestones</span><span>${pp.milestones.length} earned</span></div><div class="pp-miles">${miles.slice(i, i + 8).join('')}</div></div>` });
+  for (let i = 0; i < Math.max(1, miles.length); i += 6) {
+    pages.push({ name: 'Milestones', html: `<div class="pp-page"><div class="pp-k"><span>Milestones</span><span>${pp.milestones.length} earned</span></div><div class="pp-miles">${miles.slice(i, i + 6).join('')}</div></div>` });
   }
   return pages;
 }
 
+/** Six loose spots on a courses page: [left %, top %, width %] of the stamp area. */
+const SPOTS = [[0, 0, 50], [50, 6, 48], [5, 35, 46], [50, 39, 50], [1, 69, 48], [51, 71, 46]];
+
 const caption = (pages, i) => (i === 0 ? 'Cover · tap to open' : `${pages[i].name} · page ${i} of ${pages.length - 1}`);
 
-/** The book's markup. ui = app.ui.pp ({ pg }). */
+/** The book's place on the screen. The book itself is built once in mountBook and kept across redraws. */
 export function bookHtml(cards, ui, opts) {
   const pages = bookPages(cards, opts);
   ui.pg = Math.max(0, Math.min(pages.length - 1, ui.pg || 0));
-  return `<div class="pp">
-    <div class="book" data-names="${esc(JSON.stringify(pages.map((p) => p.name)))}">${pages.map((p, i) => `<div class="pg${i < ui.pg ? ' turned' : ''}" style="z-index:${pages.length - i}">${p.html}</div>`).join('')}</div>
-    <div class="pp-cap-row ts-label" aria-live="polite">${esc(caption(pages, ui.pg))}</div>
-  </div>`;
+  return `<div class="pp"><div class="pp-host"></div>
+    <div class="pp-cap-row ts-label" aria-live="polite">${esc(caption(pages, ui.pg))}</div></div>`;
 }
 
 /** The page of the book a passport entry is on: 'courses' / 'milestones' → the first such page. */
@@ -149,51 +157,55 @@ let walking = false;
 /** True while the book is turning itself to a page: the Locker holds redraws until it's done. */
 export const bookBusy = () => walking;
 
-/** Wire the page turns: tap the right 60 % = next, the left 40 % = back; a swipe over 30 px turns too. */
-export function mountBook(content, ui) {
-  const bk = content.querySelector('.book');
-  if (!bk) return;
-  const pgs = [...bk.querySelectorAll('.pg')];
-  let names = [];
-  try { names = JSON.parse(bk.dataset.names || '[]'); } catch { /* none */ }
+/**
+ * The book (Andrew, Nov 25: "a physical page peeling", not a slide transition): StPageFlip (js/vendor/page-flip.js,
+ * MIT) draws real page curls that follow the finger, one page at a time on a phone; the cover is a hard page. It's
+ * built once per person + set of cards and the same element is put back after every redraw, so a turn in progress
+ * survives the render loop. Tap the right side or swipe to turn; a stamp or a showcase card opens its card.
+ */
+let book = null; // { key, wrap, pf, names }
+export function mountBook(content, ui, cards, opts, key) {
+  const host = content.querySelector('.pp-host');
+  if (!host) return;
   const cap = content.querySelector('.pp-cap-row');
-  const show = () => {
-    pgs.forEach((p, i) => p.classList.toggle('turned', i < ui.pg));
-    if (cap) cap.textContent = caption(names.map((name) => ({ name })), ui.pg);
-  };
-  const turn = (d) => { ui.pg = Math.max(0, Math.min(pgs.length - 1, ui.pg + d)); show(); };
-  let x0 = null, y0 = 0;
-  bk.addEventListener('pointerdown', (e) => { x0 = e.clientX; y0 = e.clientY; });
-  bk.addEventListener('pointerup', (e) => {
-    if (x0 == null) return;
-    const dx = e.clientX - x0, dy = e.clientY - y0;
-    x0 = null;
-    if (Math.abs(dx) > 30 && Math.abs(dx) > Math.abs(dy)) { turn(dx < 0 ? 1 : -1); return; }
-    if (Math.abs(dy) > 30) return; // a scroll, not a tap
-    if (e.target.closest('[data-act]') && ui.pg > 0) return; // a stamp or a card: its own action
-    const r = bk.getBoundingClientRect();
-    turn(e.clientX - r.left > r.width * 0.4 ? 1 : -1);
-  });
-  bk.addEventListener('pointercancel', () => { x0 = null; });
-  // Walk to a page (after "See in passport"): from the cover, one page turn at a time, then the new stamp thumps.
-  if (ui.walkTo != null && !bk.dataset.walking) {
-    const to = Math.min(pgs.length - 1, ui.walkTo), hit = ui.hit;
-    ui.walkTo = null; ui.hit = null;
-    bk.dataset.walking = '1';
-    walking = true;
+  const caps = () => { if (cap && book) cap.textContent = caption(book.names.map((name) => ({ name })), ui.pg); };
+  if (!(book && book.key === key)) {
+    try { book?.pf.destroy(); } catch { /* gone */ }
+    const pages = bookPages(cards, opts);
+    const wrap = document.createElement('div');
+    wrap.className = 'pp-book';
+    wrap.innerHTML = `<div class="pp-flip">${pages.map((p, i) => `<div class="pg"${i === 0 ? ' data-density="hard"' : ''}>${p.html}</div>`).join('')}</div>`;
+    host.appendChild(wrap);
     const reduce = document.documentElement.classList.contains('rm');
-    const step = () => {
-      if (!bk.isConnected) { walking = false; return; }
-      if (ui.pg >= to) {
-        delete bk.dataset.walking;
-        setTimeout(() => { walking = false; }, 800);
-        if (hit) pgs[ui.pg]?.querySelectorAll(`[data-v="${CSS.escape(hit)}"]`).forEach((el) => { el.classList.remove('pp-hit'); void el.offsetWidth; el.classList.add('pp-hit'); });
-        return;
-      }
-      turn(1);
-      setTimeout(step, reduce ? 0 : 520);
+    const pf = new PageFlip(wrap.querySelector('.pp-flip'), {
+      width: 340, height: 490, size: 'stretch', minWidth: 220, maxWidth: 460, minHeight: 317, maxHeight: 663,
+      usePortrait: true, showCover: false, drawShadow: true, maxShadowOpacity: 0.55, flippingTime: reduce ? 150 : 900,
+      mobileScrollSupport: false, swipeDistance: 30, startPage: ui.pg || 0, clickEventForward: true,
+    });
+    pf.loadFromHTML(wrap.querySelectorAll('.pp-flip > .pg'));
+    book = { key, wrap, pf, names: pages.map((p) => p.name) };
+    pf.on('flip', (e) => { ui.pg = Number(e.data) || 0; caps(); if (book.onFlip) book.onFlip(); });
+  } else if (book.wrap.parentNode !== host) {
+    host.appendChild(book.wrap);
+  }
+  caps();
+  // Walk to a page (after "See in passport"): from the cover, one page turn at a time, then the new stamp thumps.
+  if (ui.walkTo != null) {
+    const to = Math.min(book.names.length - 1, ui.walkTo), hit = ui.hit, pf = book.pf;
+    ui.walkTo = null; ui.hit = null;
+    walking = true;
+    const done = () => {
+      book.onFlip = null;
+      setTimeout(() => { walking = false; }, 300);
+      if (!hit) return;
+      book.wrap.querySelectorAll(`[data-v="${CSS.escape(hit)}"]`).forEach((el) => { el.classList.remove('pp-hit'); void el.offsetWidth; el.classList.add('pp-hit'); });
     };
-    setTimeout(step, reduce ? 0 : 450);
+    const next = () => { if (ui.pg >= to) done(); else setTimeout(() => pf.flipNext('top'), 120); };
+    book.onFlip = next;
+    if ((ui.pg || 0) !== 0) pf.turnToPage(0);
+    ui.pg = 0;
+    caps();
+    setTimeout(() => { if (to > 0) pf.flipNext('top'); else done(); }, 500);
   }
 }
 
