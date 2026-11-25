@@ -1108,6 +1108,10 @@ Still open: nothing blocking. Design direction (section 9) is final.
   spread is wider than the screen with the right page in full and the left page peeking in; turning back curls too.
   The pack's white glare is back in front of the card (it sat behind the faces once the metal edge moved them forward);
   the peel's bend is spread more evenly from the finger (`7.5 · u^0.6` per slice).
+  **Nov 25, fourth pass:** the page you read is centred (the left page peeks in); the reveal's stamps have their own
+  band between the card and the buttons (no overlap) and are pounded on (`pk-stamp`: big and blurred → slam → settle,
+  620 ms apart) with a screen jolt and a buzz where phones can (`thud()` in passport.js); See in passport holds this
+  card's new stamps off the page until the book is open there, then lands them the same way.
 
 ## 13. V2 backlog (running list)
 
