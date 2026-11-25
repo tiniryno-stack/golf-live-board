@@ -1116,6 +1116,8 @@ Still open: nothing blocking. Design direction (section 9) is final.
   "water light": two seamless soft caustic tiles (`img/prism-water-1/2.png`, made once from sums of whole-number sine
   waves, softness baked in with a wrapping box blur, no live blur) streaming in different directions forever at 4%
   (`.x-water`). The lava pools and the glint are gone.
+  **Tuned by Andrew in the card playground (Nov 25):** hue swing 245° (was 150), ink saturation 20% (was 95, so the ink
+  reads pearl-white with a hint of colour), body glow 36%, sheen 67%, tilt response 1.8×, water light 4.5%.
 
 ## 13. V2 backlog (running list)
 
