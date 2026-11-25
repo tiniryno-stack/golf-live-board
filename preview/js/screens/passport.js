@@ -145,6 +145,10 @@ export function pageOf(cards, what, opts) {
   return i < 0 ? 1 : i;
 }
 
+let walking = false;
+/** True while the book is turning itself to a page: the Locker holds redraws until it's done. */
+export const bookBusy = () => walking;
+
 /** Wire the page turns: tap the right 60 % = next, the left 40 % = back; a swipe over 30 px turns too. */
 export function mountBook(content, ui) {
   const bk = content.querySelector('.book');
@@ -171,6 +175,26 @@ export function mountBook(content, ui) {
     turn(e.clientX - r.left > r.width * 0.4 ? 1 : -1);
   });
   bk.addEventListener('pointercancel', () => { x0 = null; });
+  // Walk to a page (after "See in passport"): from the cover, one page turn at a time, then the new stamp thumps.
+  if (ui.walkTo != null && !bk.dataset.walking) {
+    const to = Math.min(pgs.length - 1, ui.walkTo), hit = ui.hit;
+    ui.walkTo = null; ui.hit = null;
+    bk.dataset.walking = '1';
+    walking = true;
+    const reduce = document.documentElement.classList.contains('rm');
+    const step = () => {
+      if (!bk.isConnected) { walking = false; return; }
+      if (ui.pg >= to) {
+        delete bk.dataset.walking;
+        setTimeout(() => { walking = false; }, 800);
+        if (hit) pgs[ui.pg]?.querySelectorAll(`[data-v="${CSS.escape(hit)}"]`).forEach((el) => { el.classList.remove('pp-hit'); void el.offsetWidth; el.classList.add('pp-hit'); });
+        return;
+      }
+      turn(1);
+      setTimeout(step, reduce ? 0 : 520);
+    };
+    setTimeout(step, reduce ? 0 : 450);
+  }
 }
 
 // ───────────────────────────────────────────── profile links (§4.3)
