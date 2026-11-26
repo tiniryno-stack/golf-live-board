@@ -1,7 +1,7 @@
 # 037 · Home, second pass: the plan (draft 5, Nov 26)
 
-Status: **approved by Andrew Nov 26, 2026** from `prototype-v2.html` ("I'm cool to ship this"), after passing the panel
-in round 4 (9 / 9 / 9 / 9). Not built yet. **§0 holds his picks and the four fixes found at true size; where §0 and a
+Status: built in 6f64489 (branch `claude/037-home-v2`). **Approved by Andrew Nov 26, 2026** from `prototype-v2.html`
+("I'm cool to ship this"), after passing the panel in round 4 (9 / 9 / 9 / 9). **§0 holds his picks and the four fixes found at true size; where §0 and a
 later section disagree, §0 wins.** The target is `prototype-v2.html` in this folder (31 true-size frames). Replaces the Home in `SPEC.md` (built
 on this branch, on the preview) if Andrew approves a prototype made from it.
 Panel so far (`panel/round-N.md` on `claude/037-panel`): draft 1 → 5 / 4 / 5 / 4; draft 3 → 6 / 6 / 7 / 7; draft 4 → 8 / 8 / 8 / 8; draft 5 → 9 / 9 / 9 / 9.

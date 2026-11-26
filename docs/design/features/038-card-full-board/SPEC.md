@@ -1,6 +1,6 @@
 # 038 · "Full board" on the card back
 
-Status: approved by Andrew Nov 26, 2026 with 037's second pass. Not built yet.
+Status: built in 6f64489 (branch `claude/037-home-v2`). Approved by Andrew Nov 26, 2026 with 037's second pass.
 
 Changes 036 (`docs/design/features/036-card-designs/`, live on `main`): one addition to the card back. 036 is not
 edited; everything else about the card stays as it is.
