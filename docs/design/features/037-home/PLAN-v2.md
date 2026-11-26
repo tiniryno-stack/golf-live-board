@@ -1,8 +1,8 @@
 # 037 · Home, second pass: the plan (draft 5, Nov 26)
 
-Status: **draft 5, for the panel's round 4.** Not approved by Andrew, not built. Replaces the Home in `SPEC.md` (built
+Status: **passed the panel in round 4 (9 / 9 / 9 / 9), with its ten cleanups applied.** Not approved by Andrew, not built. Replaces the Home in `SPEC.md` (built
 on this branch, on the preview) if Andrew approves a prototype made from it.
-Panel so far (`panel/round-N.md` on `claude/037-panel`): draft 1 → 5 / 4 / 5 / 4; draft 3 → 6 / 6 / 7 / 7; draft 4 → 8 / 8 / 8 / 8.
+Panel so far (`panel/round-N.md` on `claude/037-panel`): draft 1 → 5 / 4 / 5 / 4; draft 3 → 6 / 6 / 7 / 7; draft 4 → 8 / 8 / 8 / 8; draft 5 → 9 / 9 / 9 / 9.
 §16 maps round 2's ten changes; §17 lists round 3's eight paste-ready edits, all applied.
 
 ## 1. Why a second pass
@@ -16,7 +16,7 @@ still needs to hit visually"; mock-ups on a real phone screen; onboarding for ne
 
 | Reference | What it actually does | What this plan takes |
 |---|---|---|
-| **Fuse** home (`fuse-01`) | A small grey kicker over one hero value. The grey part is the *less important part of the same value* ("$10**.04**"). | §5: every headline's **bright half carries the fact**; the grey half is only its qualifier and can be dropped. |
+| **Fuse** home (`fuse-01`) | A small grey kicker over one hero value. The grey part is the *less important part of the same value* ("$10**.04**"). | §5: every headline's **bright half carries the fact**; the grey half only qualifies it. Safari uses each rung's written short form (§5), never a bare bright half. |
 | **Fuse** empty home (`fuse-02`) | Same layout with zeroes + one sentence + one button where the missing thing would be. | §6.4: the zero-card Home keeps the layout; the join field sits under the card. |
 | **Wallet** stack (`wallet-01`) | Edges are about 50 pt tall and each is identifiable from its own art and logo. | §6.1: edges are 48 px and carry the course name on the card's finish. |
 | **Wallet** nudges (`wallet-02`, `-03`) | A nudge is a full dismissible card *above* the stack; the stack starts lower. | §4.2: the nudge is its own strip above the stack, not an edge. |
@@ -80,8 +80,8 @@ One 48 px strip in `--surface-2`, its own object (not an edge), **directly under
 so the headline stays on the object it captions: text left, ✕ right, the whole strip a 48 px target. At most one, never while a round is live:
 
 1. **Add to Home Screen** (iPhone Safari, first): "Add Golf Board to your Home Screen" (`home-add`).
-2. **What's new** (`whatsNew()`; skipped for anyone whose first round is after the release): "New · Your card is on
-   Home". Tap (`home-news-open`) opens a small **sheet** with the release's lines and **Got it** (`home-news`). A sheet
+2. **What's new** (`whatsNew()`; skipped for anyone whose first round is after the release): "New · Cards, packs and a
+   Passport" (it names what isn't on screen, not the screen it sits on). Tap (`home-news-open`) opens a small **sheet** with the release's lines and **Got it** (`home-news`). A sheet
    the user opens collides with nothing: Home is only tappable when no sheet, pack overlay or hand-off is up, and
    `checkVersion` already waits while a sheet is open. It also keeps the fit, since nothing expands in the page.
 
@@ -102,7 +102,7 @@ with no `|` is all bright and is never cut. No action ever goes in a grey half.
 |---|---|---|---|---|---|
 | 1 | a round is live | `ON THE COURSE` | "`<gameName>` \| at `<course>`." | "`<gameName>`." | — (the bar) |
 | 2 | the front pass: your spot was given away | `NEEDS YOU · SAT` | "Sean has your spot." | same | the round |
-| 3 | the front pass was called off | `CALLED OFF` | "Saturday is off." | same | — (Text host on the pass) |
+| 3 | the front pass was called off | `SATURDAY` | "`<Host>` called it off." (the first word of `homeCard.host`) | "`<Host>` cancelled." | — (Text host on the pass) |
 | 4 | *(cut, see below)* | | | | |
 | 5 | a pass is due within 48 h | `NEXT ROUND` | "Riding with Sean." · not on its roster (watcher, organizer not playing): "8 players in." | same; a long first name still fits ("Riding with Chris.") | — (the pass) |
 | 6 | a pack is waiting | `NEW PACK` | the sealed round's **game result, never strokes**: "Won \| with Sean." / "2nd of 5." / "Low round \| of 5." | "Won." / "2nd of 5." / "Low round." | — (the pack) |
@@ -187,9 +187,9 @@ The card's 7:5 box on `--surface-1`, 1 px `--glass-line` border, `--shadow-card`
   ("Riding with" is the headline's on rung 5, so it is not here.)
 - **Tear line:** dashed `--line`, a half-circle notch each side with `--radius-md`.
 - **Under the tear, the buttons**, which stop the pass's own tap (`stopPropagation`): **Open** and **Share link** on every
-  coming pass (two 48 px buttons; the link is harmless since joining still needs approval, and the pass is Home's
-  growth door), a new `home-share` action (`navigator.share` with the round link, copy as the fallback); called off / removed: **Text Justin** (`home-text`, as today).
-- Data: `homeCard` additionally returns `startTime`, `course`, `game` (the round's game name from its settings),
+  coming pass (two 48 px buttons; it is the link the host already texts: an unclaimed name can be picked by anyone who has
+  it, a taken one needs Ask to join, exactly as today; and the pass is Home's growth door), a new `home-share` action (`navigator.share` with the round link, copy as the fallback); called off / removed: **Text Justin** (`home-text`, as today).
+- Data: `homeCard` additionally returns `startTime`, `course`, `game` (`gameName(compute(event, []))`, see §5),
   `players`, `onRoster` — a pure change. Fix the hard-coded "Team Ryder Cup" wording in both places
   (`lobby.js` `homeCard`, `home.js:47`).
 - No "6 of 8 in" count (it needs `lobby_counts`; keeps Home off the joining path). The roster size is enough.
@@ -268,7 +268,7 @@ No new screens and no typed-name step (a person only exists through a roster or 
 |---|---|---|---|---|---|
 | Normal day, 5 cards | 8, 9 or 10 | latest scorecard | 1 / 2 cards | crew row | buttons |
 | One card | 8–10 | it | 0 | crew row | buttons |
-| Zero cards, person known | 5, 7 or 11 | member card (or a pass) | 0 | join field (or crew row) | New round only when the join field shows |
+| Zero cards, person known | 5, 7 or 11 | member card (or a pass) | 0 | join field (also under a pass; crew row instead when in a crew with rounds) | New round only when the join field shows |
 | Brand-new phone | 12 | blank card | 0 | join field | New round only |
 | Pack waiting | 6 | pack | 0 / 2 cards | crew row | buttons |
 | Several packs | 6 (newest) | newest pack + count pip | 0 / 2 | crew row | buttons |
@@ -279,12 +279,12 @@ No new screens and no typed-name step (a person only exists through a roster or 
 | Removed | 2 | per §6; that pass shows `SPOT GIVEN` + Text host | per §6 | crew row | buttons |
 | Called off | 3 | per §6; that pass greyed, gone the day after | per §6 | crew row | buttons |
 | On the roster, not opened here | 5 or 7 | the pass (Open) | per §6 | crew row | buttons |
-| Watching a coming round (not on its roster) | 7 or by date, sentence "8 players \| in." | the pass | per §6 | crew row | buttons |
-| Organizer, not playing | 5 / 7 with "8 players \| in." | pass with Open + Share link | per §6 | crew row | buttons |
+| Watching a coming round (not on its roster) | 7 or by date, sentence "8 players in." | the pass | per §6 | crew row | buttons |
+| Organizer, not playing | 5 / 7 with "8 players in." | pass with Open + Share link | per §6 | crew row | buttons |
 | Organizer the night before | 5 | their pass, Open + Share link | 1 / 2 | crew row | buttons |
 | Same person, second device | as normal: nothing on Home depends on which device claimed a round | | | | |
 | Round live | 1 | unchanged | 0 / 2 | hidden | live bar + two buttons |
-| Nudge showing | any | measured fit | 0 / 1 | per row | buttons |
+| Nudge showing | any | measured fit | 0 / 2 | per row | buttons |
 | Locker loading | from `glb.recent` | a 258 box in the plain card's finish, no text | 0 | per crew data | buttons |
 | Locker failed / offline, had cards (`glb.seen.homeCards`) | from `glb.recent` | the same box: "Your cards load with signal." | 0 | name only | buttons |
 | Locker failed, never had cards | from `glb.recent` | member or blank card | 0 | per row | buttons |
@@ -301,7 +301,7 @@ front.
 twice. Reduced motion: no deal, no fade. `topKey` kinds: `card:CODE`, `pack:CODE`, `pass:CODE`, `member`, `blank`.
 
 **Type:** the front object's number is the only `number-xl`-scale thing; headline `ts-title`; kickers, edges and
-badges `ts-label`; the crew place and the pass's day in the existing mono 32. **Light theme:** only the front object
+badges `ts-label`; the crew place and the pass's day in mono 32/36/700, −1px, `--text`. **Light theme:** only the front object
 has `--shadow-float`; edges get a 1 px line in their own `--m-edge`; pass and crew row use `--shadow-card`.
 **Standalone:** the foot sits inside the home line's safe area as today.
 
@@ -321,7 +321,7 @@ the pass's buttons 48, the crew row 64. Pressed state: `scale(.97)` (the design 
 | Two-tone headline | no | `ts-title` with `--text` / `--text-muted` | Fuse |
 | Crew row, doors row | no | `.home-row`; `.btn.ghost` text buttons | — |
 
-Cut along the way: tiles, a separate Home face, "Since", the Passport tile, the ‹ › switcher, a What's new sheet, the
+Cut along the way: tiles, a separate Home face, "Since", the Passport tile, the ‹ › switcher, a What's new sheet that opens by itself, the
 "N in" count, "Nothing on the books.", the plain card's Start a round button.
 
 ### 13.1 Craft checklist, mapped to tokens (no new tokens)
@@ -368,7 +368,8 @@ step after the plan passes.
    cards, so the plain card and your first card will look alike (arguably a feature: it grows into the real thing).
 8. No name step for new phones.
 9. Both pinned buttons stay.
-10. **Share link on every coming pass**, not only the organizer's.
+10. **Share link on every coming pass**, not only the organizer's. It is the link the host already texts (an unclaimed
+    name can be picked by anyone who has it); a growth bet. Organizer-only is the safe alternative.
 11. No "added you" headline for a round you haven't opened yet (the pass with Open does that job).
 
 ## 16. Round 2's ten changes
