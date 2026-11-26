@@ -1,9 +1,9 @@
-# 037 · Home, second pass: the plan (draft 4, Nov 26)
+# 037 · Home, second pass: the plan (draft 5, Nov 26)
 
-Status: **draft 4, for the panel's round 3.** Not approved by Andrew, not built. Replaces the Home in `SPEC.md` (built
+Status: **draft 5, for the panel's round 4.** Not approved by Andrew, not built. Replaces the Home in `SPEC.md` (built
 on this branch, on the preview) if Andrew approves a prototype made from it.
-Panel so far (`panel/round-N.md` on `claude/037-panel`): draft 1 → 5 / 4 / 5 / 4; draft 3 → 6 / 6 / 7 / 7.
-§16 maps round 2's ten required changes to where they are answered.
+Panel so far (`panel/round-N.md` on `claude/037-panel`): draft 1 → 5 / 4 / 5 / 4; draft 3 → 6 / 6 / 7 / 7; draft 4 → 8 / 8 / 8 / 8.
+§16 maps round 2's ten changes; §17 lists round 3's eight paste-ready edits, all applied.
 
 ## 1. Why a second pass
 
@@ -34,14 +34,17 @@ lists, tables or detail. No element repeats a fact another element on the screen
 | # | Block | Height | What it is |
 |---|---|---|---|
 | 1 | Top bar | 52 | unchanged: avatar → Passport, name → `home-me`, theme |
-| 2 | Headline | 8 + 76 (one line) / 112 (two) | kicker 16, gap 8, sentence 36 per line, 16 below |
-| 3 | Nudge strip | 48 + 8, only when there is one | §4.2 |
+| 2 | Nudge strip | 48 + 8, only when there is one | §4.2: directly under the top bar |
+| 3 | Headline | 8 + 76 (one line) / 112 (two) | kicker 16, gap 8, sentence 36 per line, 16 below |
 | 4 | The stack | edges 48 each + front 258 (264 at 402 wide; pack 266) | §6 |
 | 5 | Crew row | 12 + 64, or absent | §7 |
-| 6 | Doors row | 48 | at most two text doors (§8) |
+| 6 | Doors row | 48 | at most two text doors (§8); hidden while the nudge shows |
 | 7 | Pinned foot | 88 Safari / 96 app; live 160 / 168 | §8 |
 
-`.home` has no bottom padding of its own; the foot is pinned (`.nr-foot`, already sticky).
+`.home` sets `padding-bottom: 0`: it renders inside `.plain`, whose 32 px bottom padding (styles.css:170) would
+otherwise sit under the pinned foot. This is a one-line CSS change in the 037 block. The measured fit never takes a
+pass below 336 wide (240 high, its content's height). If a pass can't get that, edges drop to 0 first, then the doors
+row hides.
 
 ### 4.1 The budget (R4)
 
@@ -51,30 +54,36 @@ The rules, in the order they give way:
 1. **The front object is a measured fit**, done in `mount` the way `enter.mount` measures the pads: its width is
    `min(content width, leftover × 7 / 5)`, never under 300. Nothing else on the screen changes size.
 2. **Edges yield first.** App: up to 2. Safari: 1, and 0 when a pack is in front, a nudge is showing or a round is live.
-3. **Safari headlines are one line.** Each sentence is written so its bright half fits alone (≤ 20 characters at title
-   32 / 800); if the whole sentence doesn't fit one measured line, **the grey half is dropped**. Two lines only in the app.
-4. While a round is live the crew row is hidden.
+3. **Safari headlines are one line.** Each rung has a written Safari form (§5), a complete sentence of ≤ 20 characters
+   at title 32 / 800, chosen when the two-tone sentence doesn't fit one measured line. Two lines only in the app.
+4. **The doors row is hidden while the nudge shows** (All rounds is empty for a new friend, and Add to Home Screen is
+   already in the nudge).
+5. While a round is live the crew row is hidden.
 
 | Situation | 659 | 681 (402 wide) | 852 app (793) |
 |---|---|---|---|
 | Normal day | 52+84+48+258+76+48+88 = **654** (1 edge) | 660 | 52+120+96+258+76+48+96 = **746** (2 edges) |
-| Pack in front | 52+84+266+76+48+88 = **614** (0 edges) | 614 | 754 |
+| Pack in front | 52+84+266+76+48+88 = **614** (0 edges) | 621 | 754 |
 | Pass in front + pack edge | 654 | 660 | 746 |
-| Nudge showing | 52+84+56+258+76+48+88 = 662 → front fits to 357 wide (255 high) = **659** | 668 | 802 → 1 edge: **754** |
+| Nudge showing (no doors row) | 52+56+84+258+76+88 = **614** (0 edges) | 620 | 52+56+120+96+258+76+96 = **754** |
+| Zero cards + pass + nudge (a new friend in Safari) | 52+56+84+258+92+88 = **630** (doors row hidden) | 636 | 674 |
 | Round live | 52+84+258+48+160 = **602** (0 edges, no crew row) | 608 | 52+120+96+258+48+168 = **742** |
-| Zero cards | 52+84+258+76 (join field in the crew slot)+48+88 = **606** | 612 | 650 |
+| Zero cards | 52+84+258+92 (join field in the crew slot)+48+88 = **622** | 628 | 666 |
 | No crew | 52+84+48+258+76 (Start a crew row)+48+88 = 654 | 660 | 746 |
 
-Every row fits. The tightest (normal day and nudge at 659) rely on rule 1; the fit test gets all of these as scenes.
+Every row fits; the tightest is the normal day at 659 (5 px spare, with rule 1 behind it). The fit test gets all of
+these as scenes.
 
 ### 4.2 The nudge strip
 
-One 48 px strip in `--surface-2` **above the stack with an 8 px gap** (not overlapping it, not drawn as an edge): text
-left, ✕ right, the whole strip a 48 px target. At most one, never while a round is live:
+One 48 px strip in `--surface-2`, its own object (not an edge), **directly under the top bar and above the headline**,
+so the headline stays on the object it captions: text left, ✕ right, the whole strip a 48 px target. At most one, never while a round is live:
 
 1. **Add to Home Screen** (iPhone Safari, first): "Add Golf Board to your Home Screen" (`home-add`).
 2. **What's new** (`whatsNew()`; skipped for anyone whose first round is after the release): "New · Your card is on
-   Home". Tap expands in place to the release's lines + **Got it** (`home-news-open` / `home-news`).
+   Home". Tap (`home-news-open`) opens a small **sheet** with the release's lines and **Got it** (`home-news`). A sheet
+   the user opens collides with nothing: Home is only tappable when no sheet, pack overlay or hand-off is up, and
+   `checkVersion` already waits while a sheet is open. It also keeps the fit, since nothing expands in the page.
 
 ✕ stores `glb.seen.homeNudge.<id>` (a `glb.seen.*` key, so it moves with the Add to Home Screen link). After its ✕,
 Add to Home Screen is the doors row's second door, so the move link is never lost.
@@ -85,20 +94,32 @@ Kicker (`ts-label`) + one sentence (`ts-title`, `text-wrap: balance`). **The bri
 grey half (`--text-muted`) only qualifies it** (shown as `bright | grey`). Pure function, first match wins. **No rung
 says anything the object under it, the crew row or the bar shows.**
 
-| # | When | Kicker | Sentence | Tap |
-|---|---|---|---|---|
-| 1 | a round is live | `ON THE COURSE` | game + course: "Rider Cup \| at Twin Creeks." | — (the bar is the door) |
-| 2 | your spot in a coming round was given away | `NEEDS YOU` | "Your spot \| went to Sean." | the round |
-| 3 | a coming round was called off | `CALLED OFF` | "Saturday \| is off." | — (the pass has Text host) |
-| 4 | a coming round is waiting for you to open it | `NEEDS YOU` | "Open \| Saturday's round." | the round |
-| 5 | a pass is due within 48 h | `NEXT ROUND` | "Riding \| with Sean." (cart known) / "8 players \| in." | — (the pass is the door) |
-| 6 | a pack is waiting | `NEW PACK` | the sealed round's **game result, never strokes**: "Won \| with Sean." / "2nd \| of 5." | — (the pack is the door) |
-| 7 | a round is coming up (≤ 14 days) | `NEXT ROUND` | "9 days \| out." | — |
-| 8 | your last finished round was ≤ 7 days ago | `LAST OUT` | its result: "Won \| with Sean." / "3rd \| of 8." / "Low round \| of 5." / "12th \| of 16." | — |
-| 9 | you're ranked in a crew season | the crew's name | the leader, which the crew row doesn't show: "Sean \| is 1st." / "You \| lead." | Standings |
-| 10 | you have an older finished round | `LAST OUT · 3 WEEKS AGO` | its result, as rung 8 | — |
-| 11 | rounds, none finished | `GOLF BOARD` | "No finished \| rounds yet." | — |
-| 12 | no rounds on this phone | `GOLF BOARD` | "Your group's \| live scores." | — |
+Each rung has a written Safari form: a complete sentence of ≤ 20 characters at title 32 / 800, chosen when the two-tone
+sentence doesn't fit one measured line. A bright half is never shown alone unless it is a complete sentence. A sentence
+with no `|` is all bright and is never cut. No action ever goes in a grey half.
+
+| # | When | Kicker | App (two-tone) | Safari | Tap |
+|---|---|---|---|---|---|
+| 1 | a round is live | `ON THE COURSE` | "`<gameName>` \| at `<course>`." | "`<gameName>`." | — (the bar) |
+| 2 | the front pass: your spot was given away | `NEEDS YOU · SAT` | "Sean has your spot." | same | the round |
+| 3 | the front pass was called off | `CALLED OFF` | "Saturday is off." | same | — (Text host on the pass) |
+| 4 | *(cut, see below)* | | | | |
+| 5 | a pass is due within 48 h | `NEXT ROUND` | "Riding with Sean." · not on its roster (watcher, organizer not playing): "8 players in." | same; a long first name still fits ("Riding with Chris.") | — (the pass) |
+| 6 | a pack is waiting | `NEW PACK` | the sealed round's **game result, never strokes**: "Won \| with Sean." / "2nd of 5." / "Low round \| of 5." | "Won." / "2nd of 5." / "Low round." | — (the pack) |
+| 7 | a round is coming up (≤ 14 days) | `NEXT ROUND` | "9 days out." · not on its roster: "8 players in." | same | — |
+| 8 | your last finished round was ≤ 7 days ago | `LAST OUT` | as rung 6; "12th of 16." | as rung 6 | — |
+| 9 | you're ranked in a crew season | the crew's name | "Sean leads." · when you lead: "Sean is next." | same | Standings |
+| 10 | you have an older finished round | `LAST OUT · 3 WEEKS AGO` | as rung 6 | as rung 6 | — |
+| 11 | rounds, none finished | `GOLF BOARD` | "No rounds finished." | same | — |
+| 12 | no rounds on this phone | `GOLF BOARD` | "Live scores \| for your group." | "Live scores." | — |
+
+`<gameName>` is the real output of `gameName(compute(event, []))`, computed in `homeCard` (2v2, Stroke play, Team Ryder
+Cup…, `playfor.js`), not a hand-written name. Rung 2 says "has", not "took": the host gave the spot away, not Sean.
+
+**Rung 4 is cut.** A round you're on the roster of but haven't opened on this phone needs no rung: its pass is in the
+stack with **Open**. Home can't tell an unopened round from one claimed on your other device (synced entries,
+`db.js:356`), or a taken spot from a watched round, so it says nothing it can't know. (The Golfer's alternative, a
+`YOU'RE IN` "Justin added you." moment, is in `panel/round-3.md` if Andrew wants it.)
 
 Where each fact comes from:
 
@@ -106,19 +127,17 @@ Where each fact comes from:
   (rank, field size, unit names). Team Ryder Cup uses the cup line ("Jordans won \| 6½–5½."). Fallback when the locker
   row is missing: `recent.result.line` with any score stripped; if nothing is left, fall to the next rung.
   Never "net 87" or any stroke total on rung 6: that would spoil the pack.
-- **Rung 4** fires only when all of these hold: the owner's personId is on that round's roster (`homeCard` returns a new
-  `onRoster`, same lookup as its `me`), this phone has no claim in it, the entry is **not** a synced one
-  (`recent.synced`, i.e. this phone opened it itself), and this phone is not the host (`glb.admin.CODE`). Never for a
-  round you're only watching and never for a round you joined on another device.
-- **Rungs 2 and 3** sort before "due within 48 h", so a removed or called-off round never reads "you tee off".
-  The removed sentence lives in the headline only; its pass shows a badge and **Text Justin**.
+- **Rungs 2 and 3 apply only to the front pass** (the round §6 puts in front). A removed or called-off round further
+  out shows only on its own pass (badge + Text host) and never takes the headline from a nearer round or a pack.
+  Either way it never reads "you tee off".
 - **Rung 5** carries "Riding with Sean", so the pass's 2×2 does not (§6.2). It never repeats the pass's TODAY /
   TOMORROW badge.
-- **Rung 9** is from `seasonRecordTable` (the top row's name). "3 back" is not offered: standings are a win rate.
+- **Rung 9** is from `seasonRecordTable` (the top row's name, or the second row's when you lead). "3 back" is not
+  offered: standings are a win rate.
 
 Exact text for Andrew's real days. **Fri Nov 20, evening** (pack waiting; a 5-player scorecard round he led):
 `NEW PACK` "Low round \| of 5." **Sat Nov 21** (opened): `LAST OUT` "Low round \| of 5." **Mon Nov 30** (nothing
-coming, 10 days on): `FOUNDERS CREW` "Sean \| is 1st." (whoever really leads), crew row showing his own place.
+coming, 10 days on): `FOUNDERS CREW` "Sean leads." (whoever really does), crew row showing his own place.
 
 ## 6. The stack
 
@@ -138,6 +157,7 @@ the tap target: no hidden hit areas. The strip is **Home-only** (the 036 front's
 - **Pack edge:** the foil, "1 PACK TO OPEN". Never a course result or score.
 - **Pass edge:** the day and time ("SAT 8:40") and the course.
 
+The edge strip is drawn (the finish's `.lk-mat` + its own label row), never a clipped `frontHtml`.
 The prototype also draws the Golfer's alternative (a 32 px strip with its hit area extended to 48) so Andrew can pick.
 
 **Every visible object opens itself.** There is no "tap elsewhere" target.
@@ -159,20 +179,21 @@ stack holds the real object, there is one face to maintain, and its gross is the
 
 The card's 7:5 box on `--surface-1`, 1 px `--glass-line` border, `--shadow-card`.
 
-- **Top:** the day and time in the mono 32 / 36 number style (`.lc-pts`): "SAT 8:40", or "SAT DEC 5" with no time.
+- **Top:** the day and time in **mono 32/36/700, −1px, `--text`** (`.lc-pts` is green, so not that class): "SAT 8:40", or "SAT DEC 5" with no time.
   `number-xl` would overflow the box.
-- **Badge** (top right): `TODAY` / `TOMORROW` when due within 48 h, **inverted** (`--button` on `--on-button`);
+- **Badge** (top right): `TODAY` / `TOMORROW` when due within 48 h, **inverted** (fill `--button`, text `--on-button`);
   `CALLED OFF` and `SPOT GIVEN` on `--surface-3`. **Never green** (green is the live bar's and your cart's).
 - **2×2** of `ts-small` grey labels over mono values: Course · Game · Tee time ("Times soon") · Host.
   ("Riding with" is the headline's on rung 5, so it is not here.)
 - **Tear line:** dashed `--line`, a half-circle notch each side with `--radius-md`.
-- **Under the tear, the buttons**, which stop the pass's own tap (`stopPropagation`): **Open**; the organizer
-  (`glb.admin.CODE`) also gets **Share link**, a new `home-share` action (`navigator.share` with the round link, copy
-  as the fallback); called off / removed: **Text Justin** (`home-text`, as today).
+- **Under the tear, the buttons**, which stop the pass's own tap (`stopPropagation`): **Open** and **Share link** on every
+  coming pass (two 48 px buttons; the link is harmless since joining still needs approval, and the pass is Home's
+  growth door), a new `home-share` action (`navigator.share` with the round link, copy as the fallback); called off / removed: **Text Justin** (`home-text`, as today).
 - Data: `homeCard` additionally returns `startTime`, `course`, `game` (the round's game name from its settings),
   `players`, `onRoster` — a pure change. Fix the hard-coded "Team Ryder Cup" wording in both places
   (`lobby.js` `homeCard`, `home.js:47`).
 - No "6 of 8 in" count (it needs `lobby_counts`; keeps Home off the joining path). The roster size is enough.
+- Old `recent.lobby` entries missing the new fields fall back to `recent.course` / `played_on`; empty cells hide.
 - A pass leaves Home the day after its date (today's `coming` filter), so a called-off pass never goes stale.
 - A friend with a round coming and no scorecard sees **the pass in front**: their first Home hits.
 
@@ -185,17 +206,19 @@ Standard card would look like a scraped one).
   = crew (left out with none) · `FIRST ROUND NOV 2026`, counting only rounds played **as that person** (their personId on
   the roster), else `NO ROUNDS YET`.
 - **Blank card** (no person): top line = the mark + `GOLF BOARD`; middle = "Your card prints after your first round."
+- Light theme: the plain card gets `--shadow-float` plus a 1 px `--line` outline (paper on a light page needs an edge).
 
 ### 6.4 Zero cards: one sentence, one action (Fuse's empty home)
 
 In the crew row's slot, for both plain cards: the **join code field + Join** (`codeField`, `home-join`). It is the
 action a new friend actually has; "Start a round" is already the pinned New round. If they're in a crew with rounds,
 the crew row shows instead and Join with code stays in the foot.
+**Whenever the join field is on the page, the foot is New round only.**
 
 ## 7. Under the stack: the crew row
 
 One 64 px `.home-row` with a `--glass-line` border: crew name (`ts-label`) over "Standings"; on the right your place
-in the mono 32 style; chevron. → `#/season/<id>`. **The only visible door to Standings, so it shows on rung 9 too**
+in mono 32/36/700, −1px, `--text`; chevron. → `#/season/<id>`. **The only visible door to Standings, so it shows on rung 9 too**
 (the headline names the leader, the row shows your place: no repeat).
 
 - Ranked: "2nd". Not yet ranked: "1 of 3 rounds" (`MIN_ROUNDS`). Crew still loading: the stored name, the number
@@ -205,13 +228,13 @@ in the mono 32 style; chevron. → `#/season/<id>`. **The only visible door to S
 - Two crews: the row shows the current crew (`db.crews.current()`).
 
 **Standings takes over the crew's controls, built in this feature** (`js/screens/season.js`): the crew switcher
-(`crew-pick`, the same `.seg`) when you're in two or more, **Invite** (`crew-invite`), **⋯** (`crew-settings`) and
+(`crew-pick`, the same `.seg`, which here also routes to `#/season/<newId>`) when you're in two or more, **Invite** (`crew-invite`), **⋯** (`crew-settings`) and
 **Name your crew** when it's unnamed. Without that, moving them off Home would silently drop two-crew switching.
 Tests: one in `tests/home037.test.mjs` for the row's states, one for Standings' header model.
 
 ## 8. Doors row and foot (R6)
 
-**Doors row:** at most two text doors, each a 48 px target: **All rounds** (`#/rounds`), and **Add to Home Screen**
+**Doors row** (hidden while the nudge shows): at most two text doors, each a 48 px target: **All rounds** (`#/rounds`), and **Add to Home Screen**
 (iPhone Safari, once its nudge has been dismissed; `home-add`).
 
 **Foot, normal:** Join with code (`home-joinsheet`) + New round, pinned.
@@ -245,7 +268,7 @@ No new screens and no typed-name step (a person only exists through a roster or 
 |---|---|---|---|---|---|
 | Normal day, 5 cards | 8, 9 or 10 | latest scorecard | 1 / 2 cards | crew row | buttons |
 | One card | 8–10 | it | 0 | crew row | buttons |
-| Zero cards, person known | 5, 7 or 11 | member card (or a pass) | 0 | join field (or crew row) | buttons |
+| Zero cards, person known | 5, 7 or 11 | member card (or a pass) | 0 | join field (or crew row) | New round only when the join field shows |
 | Brand-new phone | 12 | blank card | 0 | join field | New round only |
 | Pack waiting | 6 | pack | 0 / 2 cards | crew row | buttons |
 | Several packs | 6 (newest) | newest pack + count pip | 0 / 2 | crew row | buttons |
@@ -255,19 +278,23 @@ No new screens and no typed-name step (a person only exists through a roster or 
 | Several passes | 5 or 7 | soonest | next pass first | crew row | buttons |
 | Removed | 2 | per §6; that pass shows `SPOT GIVEN` + Text host | per §6 | crew row | buttons |
 | Called off | 3 | per §6; that pass greyed, gone the day after | per §6 | crew row | buttons |
-| On the roster, not opened here | 4 | the pass | per §6 | crew row | buttons |
+| On the roster, not opened here | 5 or 7 | the pass (Open) | per §6 | crew row | buttons |
 | Watching a coming round (not on its roster) | 7 or by date, sentence "8 players \| in." | the pass | per §6 | crew row | buttons |
 | Organizer, not playing | 5 / 7 with "8 players \| in." | pass with Open + Share link | per §6 | crew row | buttons |
 | Organizer the night before | 5 | their pass, Open + Share link | 1 / 2 | crew row | buttons |
-| Same person, second device | never rung 4 (entries are synced); otherwise as normal | | | | |
+| Same person, second device | as normal: nothing on Home depends on which device claimed a round | | | | |
 | Round live | 1 | unchanged | 0 / 2 | hidden | live bar + two buttons |
 | Nudge showing | any | measured fit | 0 / 1 | per row | buttons |
 | Locker loading | from `glb.recent` | a 258 box in the plain card's finish, no text | 0 | per crew data | buttons |
-| Locker failed / offline, had cards (`glb.seen.homeTop` is a card or pack) | from `glb.recent` | the same box: "Your cards load with signal." | 0 | name only | buttons |
+| Locker failed / offline, had cards (`glb.seen.homeCards`) | from `glb.recent` | the same box: "Your cards load with signal." | 0 | name only | buttons |
 | Locker failed, never had cards | from `glb.recent` | member or blank card | 0 | per row | buttons |
 | No crew | any | any | any | Start a crew row | any |
 | Two crews | any | any | any | current crew; switch on Standings | any |
 | Long names | cards and rows truncate with an ellipsis; a headline only ever holds first names | | | | |
+
+"Had cards" is `glb.seen.homeCards`, set true whenever the locker loads with any card (a `glb.seen.*` key, so it moves
+with the move link), not `glb.seen.homeTop`, which holds the last front object and reads `pass:CODE` when a pass is in
+front.
 
 **No reflow, one deal.** The front slot is its fitted height from the first paint and the foot never moves. The deal
 (0.7 s) waits for the locker or 1.5 s, whichever is first; a late locker cross-fades into the same box. It never plays
@@ -307,20 +334,25 @@ kickers uppercase mono (the system's `.label`), sentences in sentence case.
 
 ### 13.2 To update when built
 
-`tests/home037.test.mjs` (ladder incl. rung 4's four conditions, stack order, edges per size, crew slot, nudge order);
+`tests/home037.test.mjs` (ladder with both forms per rung, stack order, edges per size, crew slot, nudge order);
 a Standings header test; `tests/smoke037.mjs` (the `hm-news` and `.lb-home` selectors, check 3, the What's new text);
 the smoke Add to Home Screen checks (`home-add` stays on Home, in the nudge or the doors row); the screen map;
-`RELEASES` copy; `glb.seen.homeNudge.*` in CLAUDE.md's key list; `SPEC.md` gets a line pointing here. No database
+`RELEASES` copy; `glb.seen.homeNudge.*` and `glb.seen.homeCards` in CLAUDE.md's key list; `tests/lobby025.test.mjs:179-187`
+(`homeCard` gains fields; the not-on-roster wording); `tests/returning037.test.mjs:29-30` (What's new skips anyone
+whose first round is after the release); folder 038's own SPEC plus a test that the card back's link doesn't flip the
+card; `SPEC.md` gets a line pointing here. No database
 change; nothing on the joining, score sync, queue or engine paths. **Run `smoke037` before merging** (Home drives the
 returning-player flow).
 
 ## 14. The prototype (R9), built next as an artifact
 
 Every frame is a **true-size phone**: 393 × 852 with the status bar and home line drawn, dark and light, each with its
-tap map. Plus 393 × 659 Safari frames for: normal day, pack, nudge showing, rung 4.
+tap map. Plus 393 × 659 Safari frames for: normal day, pack, a pass in front at the fit, zero cards + pass + nudge, round live
+(the sunlight case; friends mostly use Safari), offline with cards. One 402 × 681 frame.
 Frames: brand-new phone · member card · a friend with a pass and no card · one card · normal day · pack · pass ≤ 48 h +
-pack · round live · organizer the night before · rung 9 (dull week) · locker loading · offline with cards · the card
-back with Full board · Standings with the crew controls. **Both edge versions** (48 px strip; 32 px strip with a 48 px
+pack · round live · organizer the night before · rung 9 (dull week) · locker loading · offline with cards · removed pass · called-off pass · a
+watcher's pass ("8 players in.") · a long first name on rung 5 · the plain card in light theme · the What's new
+sheet · the card back with Full board · Standings with the crew controls. **Both edge versions** (48 px strip; 32 px strip with a 48 px
 hit area) side by side for Andrew to pick. R9 can only be scored on this list until the frames exist: they are the
 step after the plan passes.
 
@@ -332,9 +364,12 @@ step after the plan passes.
 4. **Invite, crew settings and the crew switch move to Standings** (extra work on that screen, included).
 5. **"Full board" on the card back ships alongside** as folder 038 (it touches the finished 036 card).
 6. Edges: **48 px strips with the course name**, or the thinner strip. The prototype shows both.
-7. The no-card card is **paper** (`lkf-rookie`), not Standard.
+7. The no-card card is **paper** (`lkf-rookie`), not Standard. Rookie is also the finish of your first three real
+   cards, so the plain card and your first card will look alike (arguably a feature: it grows into the real thing).
 8. No name step for new phones.
 9. Both pinned buttons stay.
+10. **Share link on every coming pass**, not only the organizer's.
+11. No "added you" headline for a round you haven't opened yet (the pass with Open does that job).
 
 ## 16. Round 2's ten changes
 
@@ -350,3 +385,19 @@ step after the plan passes.
 | 8 | Nudge is its own strip, Add to Home Screen first, `glb.seen.*`, two doors | §4.2, §8 |
 | 9 | Plain card on the 036 grid in `lkf-rookie`, join field, first round as that person | §6.3, §6.4 |
 | 10 | Offline-with-cards box, four new state rows, paperwork, frames, smoke | §11, §13.2, §14 |
+
+## 17. Round 3's eight edits (all applied as written)
+
+| # | Edit | Where |
+|---|---|---|
+| 1 | `.home { padding-bottom: 0 }` stated as a change; the pass's 336 × 240 floor | §4 |
+| 2 | 402 pack row 621, join field 92, the new-friend row, doors row hidden with the nudge | §4.1 |
+| 3 | Rung 4 cut | §5, §11, §13.2, §14 |
+| 4 | Rungs 2 and 3 only for the front pass | §5 |
+| 5 | One copy table with a written Safari form; real game names; "Sean is next." | §5 |
+| 6 | Mono 32/36/700 in `--text`; badge fill `--button`, text `--on-button` | §6.2, §7 |
+| 7 | Nudge under the top bar; New round only with the join field; `glb.seen.homeCards`; old lobby entries; drawn edge strip; plain card in light theme; `crew-pick` routes | §4.2, §6, §7, §11 |
+| 8 | Paperwork and frame additions | §13.2, §14 |
+
+Settled by the author: **What's new opens a sheet on tap** (3 of 4; reason in §4.2). **Share link on every coming pass**
+(3 of 4; listed for Andrew in §15).
