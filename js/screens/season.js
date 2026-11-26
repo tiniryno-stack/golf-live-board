@@ -5,7 +5,7 @@
 
 import * as db from '../db.js';
 import { esc, icon } from '../ui.js';
-import { shortDate, nextSeasonLabel, placeLabel, seasonRecordTable, seasonBests, recordLabel, pctLabel, ordinal, MIN_ROUNDS, standingsHeader } from '../seasons.js';
+import { shortDate, nextSeasonLabel, placeLabel, seasonRecordTable, seasonBests, recordLabel, pctLabel, ordinal, MIN_ROUNDS, standingsHeader, upTarget } from '../seasons.js';
 import { loadCrew, crewSeasons } from './crew.js';
 import { ppName } from './passport.js';
 
@@ -15,7 +15,16 @@ const shortName = (r) => {
   const [first, ...rest] = full.split(' ');
   return rest.length ? `${first} ${rest.join(' ')[0]}.` : first;
 };
-const crewOf = (app) => app.route.crew || db.crews.current()?.id || db.recent.all().find((r) => r.crew_id)?.crew_id || null;
+// db.crews.current() already covers crews known only from Recent rounds, and leaves out crews this phone left.
+const crewOf = (app) => app.route.crew || db.crews.current()?.id || null;
+
+/** An unnamed crew's hint for the switcher: the name of its latest round this phone knows. */
+function crewHint(app, id) {
+  const r = db.recent.all().filter((x) => x.crew_id === id).sort((a, b) => String(b.played_on || '').localeCompare(String(a.played_on || '')))[0];
+  if (r?.name) return r.name;
+  const ev = (app.crews?.[id]?.rounds || []).map((x) => x.event).sort((a, b) => String(b.played_on || '').localeCompare(String(a.played_on || '')))[0];
+  return ev?.name || null;
+}
 
 function datesLine(s) {
   const end = s.end ? (() => { const d = new Date(`${s.end}T12:00:00`); d.setDate(d.getDate() - 1); return d.toLocaleDateString('en-CA'); })() : null;
@@ -94,7 +103,10 @@ function pastView(app, id, data) {
 
 /** 037 v2 §7: the crew's controls, moved here from Home: the switcher (2+ crews), Invite, Name your crew. */
 function controls(app, id) {
-  const list = db.crews.visible().map((x) => ({ id: x.id, name: app.crews?.[x.id]?.info?.name || x.name || null }));
+  const list = db.crews.visible().map((x) => {
+    const nm = app.crews?.[x.id]?.info?.name || x.name || null;
+    return { id: x.id, name: nm, hint: nm ? null : crewHint(app, x.id) };
+  });
   const name = app.crews?.[id]?.info?.name ?? db.crews.get(id)?.name ?? null;
   const h = standingsHeader({ list, id, name });
   const sw = h.switcher
@@ -131,14 +143,33 @@ export const seasonSheets = {
 export default {
   enter(app) {
     const id = crewOf(app);
+    if (app.season?.crew !== id) app.ui.seasonMe = false; // your season card doesn't follow you into another crew
     app.season = { crew: id };
+    // The crew on screen is the crew Home shows next (Back, a reload or a shared link included), unless this phone left it.
+    if (id && id !== db.crews.current()?.id && db.crews.visible().some((c) => c.id === id)) db.crews.select(id);
     if (id) loadCrew(app, id, { force: true });
   },
   topBack(app) {
     const id = app.season?.crew;
     const sub = app.route.view;
-    const back = sub ? `#/season/${esc(id)}` : '#/';
-    return `<button class="back" data-act="go" data-v="${back}">${icon('back', 22)}<span>${sub === 'past' ? 'Standings' : sub ? 'Seasons' : 'Home'}</span></button>`;
+    return `<button class="back" data-act="season-up" data-v="${esc(upTarget(id, sub))}">${icon('back', 22)}<span>${sub === 'past' ? 'Standings' : sub ? 'Seasons' : 'Home'}</span></button>`;
+  },
+  /** The switcher scrolls sideways with 4+ crews: keep it where it was across redraws, and show the crew you picked. */
+  mount(root, app) {
+    const sw = root.querySelector('.crew-switch.scroll');
+    if (!sw) return;
+    const id = app.season?.crew;
+    const keep = app.ui.stSwitch;
+    if (keep && keep.crew === id) sw.scrollLeft = keep.x;
+    else {
+      const on = sw.querySelector('[aria-pressed="true"]');
+      if (on) {
+        const a = sw.getBoundingClientRect(), b = on.getBoundingClientRect();
+        sw.scrollLeft = Math.max(0, sw.scrollLeft + (b.left - a.left) - (a.width - b.width) / 2);
+      }
+    }
+    app.ui.stSwitch = { crew: id, x: sw.scrollLeft };
+    sw.addEventListener('scroll', () => { app.ui.stSwitch = { crew: id, x: sw.scrollLeft }; }, { passive: true });
   },
   topRight(app) {
     const id = app.season?.crew;
@@ -167,6 +198,7 @@ export default {
       ${body}</div>`;
   },
   actions: {
+    'season-up': (el, ev, app) => app.up(el.dataset.v),
     'season-retry': (el, ev, app) => {
       loadCrew(app, app.season.crew, { force: true });
       app.render();

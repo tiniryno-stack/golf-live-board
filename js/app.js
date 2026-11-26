@@ -27,6 +27,7 @@ import { initLoader, showLoader, updateLoader, loaderReady, hideLoaderNow } from
 import { joinPlan, appHandoff } from './identity.js';
 import { lobbyState, lobbyView as pickLobbyView, spotGiven, clock12, wallClock, parseTime, hasHandicaps, revealCtx } from './lobby.js';
 import lobbyScreen from './screens/lobby.js';
+import * as nav from './nav.js';
 
 const SCREENS = { home, rounds: roundsScreen, setup, season, enter, matches, board, card, host, crew, locker };
 const TABS = [
@@ -74,6 +75,19 @@ app.go = (hash) => {
   if (location.hash === hash) route();
   else location.hash = hash;
 };
+// Standings fixes (Nov 26): in-app history, so "up" buttons and in-place switches don't pile up entries.
+let navStack = [], navReplacing = false;
+const hashNow = () => location.hash || '#/';
+/** Swap the current entry for `hash` (a crew switch, or "up" to a screen that isn't the one behind). */
+app.replace = (hash) => {
+  if (hashNow() === hash) { route(); return; }
+  navReplacing = true;
+  location.replace(`${location.pathname}${location.search}${hash}`);
+};
+/** Up to `target`: step back when it's the screen just behind, else replace this entry with it. */
+app.up = (target) => (nav.upPlan(navStack, target) === 'back' ? history.back() : app.replace(target));
+/** The in-app screen just behind this one (null after a reload or on the first screen). */
+app.prevHash = () => nav.previous(navStack);
 app.tabHash = (tab) => `#/e/${app.code}/${tab}`;
 app.myPlayer = () => (app.me && app.snapshot ? app.snapshot.playerById.get(app.me) || null : null);
 app.myName = () => app.myPlayer()?.name || null;
@@ -1357,6 +1371,8 @@ function parseHash() {
 
 function route() {
   const prev = app.route;
+  navStack = nav.track(navStack, hashNow(), navReplacing);
+  navReplacing = false;
   app.route = parseHash();
   fx.closeOverlay();
   fx.clearCoach();

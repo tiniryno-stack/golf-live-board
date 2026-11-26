@@ -1579,7 +1579,10 @@ details.fold summary::-webkit-details-marker { display: none; }
 .st-row.unranked .st-name, .st-row.unranked .st-rec, .st-row.unranked .st-pts { color: var(--text-muted); }
 .st-cut { display: flex; align-items: center; gap: var(--space-3); min-height: 36px; padding: 0 var(--space-4); color: var(--text-muted); border-bottom: 1px solid var(--line); }
 .st-cut::before, .st-cut::after { content: ''; flex: 1; border-top: 1.5px dashed var(--line); }
+/* Standings fixes (Nov 26): "Start a new season" sits under the table; only Your season pins (two pinned bars overlapped). */
+.season-screen .st-main .nr-foot { position: static; background: none; padding-bottom: 0; }
 .st-me:not(.open) { position: sticky; bottom: calc(var(--space-4) + env(safe-area-inset-bottom, 0px)); margin-top: var(--space-6); }
+.st-me:not(.open) > .g-row { background: var(--bg); border-radius: var(--radius-xl); } /* the dimmed peek pins over the table: rows must not show through */
 .st-peek { width: 100%; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: var(--space-3); padding: var(--space-3) var(--space-4); border-radius: var(--radius-xl); background: var(--surface-1); box-shadow: var(--shadow-card); text-align: left; }
 .st-peek .ts-label { grid-column: 1 / -1; }
 .st-peek b { font-size: 17px; line-height: 22px; display: inline-flex; gap: var(--space-2); align-items: baseline; }

@@ -286,7 +286,9 @@ export default {
   topBack(app) {
     const m = app.route.mode;
     if (m === 'which' || m === 'join') return '<div class="spacer"></div>';
-    return `<button class="back" data-act="go" data-v="#/">${icon('back', 22)}<span>Home</span></button>`;
+    // Name your crew on Standings (or Rename in its ⋯ sheet) comes back to Standings.
+    const st = m === 'rename' && String(app.prevHash?.() || '').startsWith('#/season/');
+    return `<button class="back" data-act="crew-up">${icon('back', 22)}<span>${st ? 'Standings' : 'Home'}</span></button>`;
   },
   render(app) {
     const m = app.route.mode;
@@ -295,11 +297,16 @@ export default {
     return startView(app);
   },
   actions: {
+    'crew-up': (el, ev, app) => {
+      const prev = app.prevHash?.();
+      app.up(app.route.mode === 'rename' && String(prev || '').startsWith('#/season/') ? prev : '#/');
+    },
     'crew-pick': (el, ev, app) => {
       db.crews.select(el.dataset.v);
       loadCrew(app, el.dataset.v);
       // 037 v2 §7: the switcher lives on Standings now; picking a crew there opens that crew's standings.
-      if (app.route?.name === 'season') { app.season = { crew: el.dataset.v }; app.go(`#/season/${el.dataset.v}`); return; }
+      // Standings fixes (Nov 26): in place, so Back leaves Standings instead of walking through every crew you looked at.
+      if (app.route?.name === 'season') { app.replace(`#/season/${el.dataset.v}`); return; }
       app.render();
     },
     'crew-invite': (el, ev, app) => shareInvite(app, el.dataset.v),
@@ -333,7 +340,8 @@ export default {
           (app.crews[r.id] ||= { id: r.id }).info = res.crew;
           db.crews.put({ id: r.id, name: res.crew.name });
           app.toast({ title: 'Crew renamed' });
-          app.go('#/');
+          const prev = app.prevHash?.();
+          app.up(String(prev || '').startsWith('#/season/') ? prev : '#/'); // back where Rename was opened
         } else {
           // The phone's person from its most recent crew, so the new crew knows who started it.
           const me = db.crews.visible().find((c) => c.me)?.me || null;
@@ -457,7 +465,18 @@ export default {
       const name = app.crews?.[id]?.info?.name || 'this crew';
       app.openSheet('confirm', {
         title: `Leave ${name}?`, body: 'It comes off this phone. Your past rounds stay with the crew, and an invite link brings you back.', ok: 'Leave',
-        onOk: () => { db.crews.leave(id); app.toast({ title: `You left ${name}` }); app.render(); },
+        onOk: () => {
+          db.crews.leave(id);
+          app.toast({ title: `You left ${name}` });
+          // On that crew's Standings: show the next crew's (or Home), never the one you just left.
+          if (app.route?.name === 'season' && app.season?.crew === id) {
+            const next = db.crews.current();
+            app.season = null;
+            app.replace(next ? `#/season/${next.id}` : '#/');
+            return;
+          }
+          app.render();
+        },
       });
     },
   },

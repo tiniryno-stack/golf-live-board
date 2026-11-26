@@ -216,14 +216,34 @@ export function seasonBests(row) {
 /** "1st", "3rd" */
 export const ordinal = (n) => `${n}${['th', 'st', 'nd', 'rd'][(n % 100 >= 11 && n % 100 <= 13) || n % 10 > 3 ? 0 : n % 10]}`;
 
+/** Standings fixes (Nov 26): where each Standings view's ‹ goes. One season → the Seasons list → Standings → Home. */
+export function upTarget(id, view) {
+  if (!view || !id) return '#/';
+  return view === 'past' ? `#/season/${id}` : `#/season/${id}/past`;
+}
+
+/**
+ * Standings fixes (Nov 26) · the switcher's labels: a crew's name; an unnamed crew goes by its hint (its latest round's
+ * name, so three one-off crews aren't three "Your crew"s), else "Your crew". Labels that still clash get 2, 3… .
+ */
+export function switcherLabels(list = []) {
+  const base = list.map((c) => c.name || c.hint || 'Your crew');
+  const seen = new Map();
+  return base.map((b) => {
+    const n = (seen.get(b) || 0) + 1;
+    seen.set(b, n);
+    return n === 1 ? b : `${b} ${n}`;
+  });
+}
+
 /**
  * 037 v2 §7 · Standings' header, now that the crew's controls live there (pure): the crew switcher when this phone is
  * in two or more crews (the current one pressed), Invite, and Name your crew while it has no name.
- * list = [{ id, name }] (this phone's crews), id = the crew on screen, name = its name (null = unnamed).
+ * list = [{ id, name, hint? }] (this phone's crews), id = the crew on screen, name = its name (null = unnamed).
  */
 export function standingsHeader({ list = [], id = null, name = null } = {}) {
   return {
-    switcher: list.length > 1 ? list.map((c) => ({ id: c.id, name: c.name || 'Your crew', on: c.id === id })) : null,
+    switcher: list.length > 1 ? switcherLabels(list).map((label, i) => ({ id: list[i].id, name: label, on: list[i].id === id })) : null,
     invite: !!id,
     nameCrew: !!id && !name,
   };

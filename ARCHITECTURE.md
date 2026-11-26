@@ -1198,6 +1198,17 @@ Still open: nothing blocking. Design direction (section 9) is final.
   skip), `smoke037` (24 checks: passes in the stack, the nudge + sheet, Add to Home Screen nudge → door). `RELEASES`
   entry `2026-11-26` "Cards, packs and a Passport" (replaces the first pass's unreleased `2026-11-25`). Styles: the
   `/* 037 Home */` block at the end of styles.css; card / pack / edge / plain-card bits in locker.css.
+- **Standings fixes (Nov 26, branch `claude/standings-fixes`).** After Andrew found Standings "a little buggy":
+  `js/nav.js` (pure) mirrors this tab's hash history (`track`, `upPlan`, `previous`); app.js `app.replace(hash)` (swap the
+  entry), `app.up(target)` (history.back() when the target is the screen behind, else replace), `app.prevHash()`.
+  A crew switch on Standings replaces (Back leaves Standings instead of walking every crew); each ‹ goes one level up
+  (`seasons.upTarget`: one season → Seasons → Standings → Home; it used to send one season to Standings and push new
+  entries); Name your crew / Rename returns to Standings when opened there; leaving the crew on screen moves to the next
+  crew's Standings. Opening `#/season/<id>` selects that crew (`db.crews.select`), so Home follows what you last viewed;
+  your season card closes when the crew changes. The 4+ crew switcher keeps its scroll across redraws and brings the
+  picked crew into view (`mount`). Unnamed crews are labelled by their latest round's name (`seasons.switcherLabels`,
+  clashes numbered) instead of three "Your crew"s. "Start a new season" no longer pins (it overlapped the pinned Your
+  season bar on a long table), and the dimmed Your season peek has an opaque backing. Test `tests/standings-nav.test.mjs`.
 
 ## 13. V2 backlog (running list)
 
