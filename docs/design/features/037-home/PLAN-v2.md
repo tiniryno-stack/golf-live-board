@@ -1,9 +1,32 @@
 # 037 · Home, second pass: the plan (draft 5, Nov 26)
 
-Status: **passed the panel in round 4 (9 / 9 / 9 / 9), with its ten cleanups applied.** Not approved by Andrew, not built. Replaces the Home in `SPEC.md` (built
+Status: **approved by Andrew Nov 26, 2026** from `prototype-v2.html` ("I'm cool to ship this"), after passing the panel
+in round 4 (9 / 9 / 9 / 9). Not built yet. **§0 holds his picks and the four fixes found at true size; where §0 and a
+later section disagree, §0 wins.** The target is `prototype-v2.html` in this folder (31 true-size frames). Replaces the Home in `SPEC.md` (built
 on this branch, on the preview) if Andrew approves a prototype made from it.
 Panel so far (`panel/round-N.md` on `claude/037-panel`): draft 1 → 5 / 4 / 5 / 4; draft 3 → 6 / 6 / 7 / 7; draft 4 → 8 / 8 / 8 / 8; draft 5 → 9 / 9 / 9 / 9.
 §16 maps round 2's ten changes; §17 lists round 3's eight paste-ready edits, all applied.
+
+## 0. Andrew's picks and the true-size fixes (Nov 26) — these override the sections below
+
+**His picks**
+- **Edges are the thin version:** a 32 px strip (finish art + course name, no score), with its tap area extended to
+  48 px (the extra 16 comes from the gap above the strip). This replaces "48 px visible" in §6.1, §4 and §12.
+- **Headlines:** fine for now as written in §5. He doesn't love the result line after a round (the score is already on
+  the card) and wants to see alternatives later, so keep every sentence in one copy table in the pure model, easy to
+  change without touching layout.
+- All other §15 defaults stand (nobody objected): bar-only live round, a pass within 48 h in front of a pack, crew
+  controls on Standings, 038 alongside, paper plain card, no name step, both pinned buttons, Share link on every coming
+  pass, no "added you" headline.
+
+**Fixes found when the prototype was drawn at true size**
+1. **The home screen app has spare height.** With 32 px edges the app shows **up to 3 edges**; Safari stays at 1
+   (0 with a pack in front, a nudge or a live round). Any space still left goes between the stack and the crew row.
+2. **The member card's name is too small.** Set it in `ts-title` (32 / 36), not the course-name size.
+3. **Long game names are cut off on the pass** ("Partner “Rider” Cup"). The pass's lower block is: Game on its own
+   full-width row, then Course · Tee time · Host.
+4. **Long first names break rung 5 in Safari.** When "Riding with <name>." doesn't fit one measured line, use the
+   roster form "8 players in." instead. Never a two-line headline in Safari.
 
 ## 1. Why a second pass
 

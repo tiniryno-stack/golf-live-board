@@ -1,5 +1,8 @@
 # 037 · Home: your card, then the clubhouse
 
+> **Superseded for Home's layout by `PLAN-v2.md` (approved Nov 26, target `prototype-v2.html`).** This file is the first
+> pass, built on this branch; its `#/rounds` screen, opening-motion rules and model structure carry over.
+
 Status: built in dd787bd (branch `claude/037-home`). Approved by Andrew Nov 25, 2026 (prototype 5).
 
 Changes Home (`js/screens/home.js`, live on `main` at b047ea2) and the two Home entries of 035 / 036
