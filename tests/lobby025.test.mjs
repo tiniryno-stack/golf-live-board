@@ -185,6 +185,13 @@ test('myLobby, lobbyView and Home\'s cards', () => {
   assert.equal(L.homeCard(drafted({ stage: 'off' }), { pid: 'p1', personId: 'person-andrew' }, wed).kind, 'off');
   assert.equal(L.homeCard(lobbyEvent(), { pid: 'p1' }, at('2026-11-09T18:00:00Z')), null, 'gone after the date');
   assert.equal(L.homeCard(ev, { pid: 'p1' }, at('2026-11-07T14:00:00Z')), null, 'open: the normal Playing now card');
+  // 037 v2 · the pass's fields (pure): start time, course, the real game name, roster size, on the roster, cart mate.
+  const card = L.homeCard(ev, { personId: baker.personId }, wed);
+  assert.deepEqual([card.startTime, card.game, card.players, card.onRoster, card.mate, typeof card.startsAt], ['8:00', 'Team Ryder Cup', ev.roster.players.length, true, 'Mitch', 'number']);
+  assert.equal(card.course, ev.course?.shortName || ev.course?.name || '');
+  const watch = L.homeCard(ev, { personId: 'person-nobody' }, wed);
+  assert.deepEqual([watch.onRoster, watch.mate, watch.line], [false, null, `Team Ryder Cup · ${ev.roster.players.length} players`], 'not on the roster: the game’s real name, no hard-coded wording');
+  assert.equal(L.homeCard(subbed, { pid: 'p10', personId: 'person-baker' }, wed).sub, 'Kyle');
 });
 
 test('writers: start times (late on the day opens at once), moving the start, open early, off and back, Run it back', () => {

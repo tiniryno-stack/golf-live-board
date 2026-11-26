@@ -1,25 +1,30 @@
-// home.js — Home (designspec §6b): your name, the round you're playing now as one green-outlined
-// card ("Back to hole 11"), recent rounds as plain rows with how it went, then Join with code
-// (secondary) + New round (primary) at the bottom. First time: the "No rounds yet" empty state with
-// a code field. Season standings sits at the top (Oct 22), Recent rounds at the bottom. Run it back
-// lives in a round's ⋯ menu. Everything here comes from this phone (glb.recent), no network.
+// home.js — Home, 037 second pass "the wallet" (docs/design/features/037-home/PLAN-v2.md; its §0 wins): a nudge strip,
+// the headline (kicker + one two-tone sentence), the stack (one front object — a pass, a pack, your latest card or the
+// plain card — with edge strips behind it), the crew row (or Start a crew / the join field), the doors row, and the
+// pinned foot (Join with code + New round, or the live bar). What to draw comes from the pure js/homeview.js (every
+// word in its COPY / WORDS); this file turns it into markup, measures the fit in mount (headline form, edges, front
+// width, doors) and plays the one deal (data-t0 + ui.syncMotion). #/rounds = All rounds.
 
 import { gameName } from '../playfor.js';
-import { esc, icon, prettyDate, initials, empty } from '../ui.js';
+import { esc, icon, prettyDate, initials, empty, syncMotion, reducedMotion, copyText } from '../ui.js';
 import { recent, normCode, STANDALONE, moveLink, syncMyRounds, pruneGoneRounds, local, refreshLobbies, owner, clock } from '../db.js';
 import { lobbyState, homeCard } from '../lobby.js';
-import { homeCrew } from './crew.js';
-import { homeLocker, startHomeLocker, lockerName } from './locker.js';
+import { homeCrewData, crewNames } from './crew.js';
+import { homeLockerData, homeLockerState, startHomeLocker, lockerName, frontHtml, lockerPerson, MARK } from './locker.js';
+import { chromePack } from './pack.js';
+import { homeModel, allRounds, topKey, fitWidth, WORDS } from '../homeview.js';
+import { finName } from '../locker.js';
 import { whatsNew } from '../whatsnew.js';
 import { fmtPts, fmtToPar, playerLeaderboard } from '../scoring.js';
 
 /** iPhone or iPad in Safari (iPadOS says it's a Mac, but has touch). Tests set `__GLB_IOS`. */
+/** Preview copy only (…/preview/): Home acts as the locker's preview person, so a browser with no rounds still fills in. */
+const PREVIEW = typeof location !== 'undefined' && /\/preview\//.test(location.pathname);
 const isIOS = () => {
   if (typeof globalThis.__GLB_IOS === 'boolean') return globalThis.__GLB_IOS;
   return /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 };
 
-const LIVE_FOR = 12 * 3600 * 1000; // a round last seen live more than 12 h ago isn't "playing now"
 const ordinal = (n) => `${n}${['th', 'st', 'nd', 'rd'][(n % 100 >= 11 && n % 100 <= 13) || n % 10 > 3 ? 0 : n % 10]}`;
 
 let draftCode = '';
@@ -41,7 +46,7 @@ export function roundSummary(app) {
     const o = owner.get();
     const me = app.myPlayer();
     const card = homeCard(app.event, { pid: app.me || recent.all().find((r) => r.code === app.code)?.lobbyPid || null, personId: o?.personId || me?.personId || null }, app.now ? app.now() : Date.now());
-    return { game: 'Team Ryder Cup', myName: me ? me.firstName || me.name : null, done: false, ...(card ? { lobby: card } : {}), ...(app.me ? { lobbyPid: app.me } : {}) };
+    return { game: gameLabel(snap), myName: me ? me.firstName || me.name : null, done: false, ...(card ? { lobby: card } : {}), ...(app.me ? { lobbyPid: app.me } : {}) };
   }
   const me = app.myPlayer();
   const out = { game: gameLabel(snap), myName: me ? me.firstName || me.name : null, done: !!(snap.roundComplete || app.isFinal()) };
@@ -104,8 +109,7 @@ export function roundSummary(app) {
   return out;
 }
 
-/** Home's top bar, left side: your name from the newest round you joined (nothing on a new phone). */
-/** Your name at the top (Nov 24: a button → who this phone is, with a one-tap fix). The owner's name first. */
+/** Home's top bar, left side: your name (Nov 24: a button → who this phone is, with a one-tap fix). The owner's name first. */
 function header(rounds) {
   const name = owner.get()?.name || (owner.get() ? '' : rounds.find((r) => r.myName)?.myName) || lockerName();
   if (!name) {
@@ -116,44 +120,131 @@ function header(rounds) {
     <button class="hm-name" data-act="home-me" aria-label="You’re ${esc(name)}. Not you?">${esc(name)}</button></div>`;
 }
 
-/** Nov 24 · the one-time What's new card (js/whatsnew.js): a plain card, Home only, so never over a sheet or Enter. */
-function newsCard(hasRounds) {
-  const w = whatsNew({ seen: local.get('glb.seen.whatsnew'), hasRounds });
-  if (w.markSeen) local.set('glb.seen.whatsnew', w.markSeen);
-  if (!w.show) return '';
-  return `<div class="card lb-card lb-home" role="status">
-      <span class="lbl">What’s new</span>
-      <b class="lb-name">${esc(w.show.title)}</b>
-      ${w.show.lines.map((l) => `<span class="soft lb-line">${esc(l)}</span>`).join('')}
-      <button class="btn block lb-cbtn" data-act="home-news" data-v="${esc(w.show.id)}">Got it</button>
-    </div>`;
+const chev = (n = 20) => `<span class="hr-chev">${icon('fwd', n)}</span>`;
+
+// ───────────────────────────────────────────── 037 v2 blocks (PLAN-v2 §4–§8; every word comes from homeview's COPY / WORDS)
+
+/** §4.2 · the nudge strip: text (the whole strip taps) + ✕. */
+function nudgeHtml(n) {
+  if (!n) return '';
+  const body = n.kind === 'add'
+    ? `<button class="hm-ng" data-act="home-add"><span class="ellipsis">${esc(WORDS.addNudge)}</span></button>`
+    : `<button class="hm-ng" data-act="home-news-open" data-v="${esc(n.id)}" aria-label="What’s new: ${esc(n.title)}"><span class="ellipsis"><b>New</b> · <span class="hm-ngt">${esc(n.title)}</span></span></button>`;
+  return `<div class="hm-nudge" role="status">${body}
+      <button class="icon-btn hm-ngx" data-act="home-nudge-x" data-v="${n.kind === 'add' ? 'add' : `news:${esc(n.id)}`}" aria-label="Dismiss">${icon('close', 20)}</button></div>`;
 }
 
-function liveCard(r) {
-  const L = r.live;
-  return `<div class="ts-label home-k">Playing now</div>
-    <div class="live-card">
-      <div class="lc-top"><span class="lc-dot"></span><span class="ts-label lc-live">Live${L.hole ? ` · hole ${L.hole}` : ''}</span><span class="ts-label lc-code">${esc(r.code)}</span></div>
-      <div class="lc-mid"><span class="lc-text"><span class="lc-name">${esc([r.course, r.game].filter(Boolean).join(' · ') || r.name)}</span>
-        ${L.line ? `<span class="lc-line">${esc(L.line)}</span>` : ''}</span>
-        ${L.points ? `<span class="lc-pts">${esc(L.points)}</span>` : ''}</div>
-      <button class="btn block" data-act="go" data-v="#/e/${esc(r.code)}">Back to ${L.hole ? `hole ${L.hole}` : 'the round'}</button>
-    </div>`;
+/** One headline form: the bright half (the fact) + the grey half (only qualifies it). */
+const formHtml = (f) => `${esc(f.b)}${f.g ? `<span class="hm-g">${esc(f.g)}</span>` : ''}`;
+/** §5 · kicker + sentence. mount() picks the first form that fits (two lines in the app, one in Safari). */
+function headlineHtml(h) {
+  const forms = [...h.app, ...h.safari];
+  const tap = h.tap ? ` data-act="go" data-v="${esc(h.tap)}" role="button" tabindex="0"` : '';
+  return `<div class="hm-hl${h.tap ? ' tap' : ''}"${tap}><span class="ts-label hm-k ellipsis">${esc(h.kicker)}</span>
+      <h2 class="ts-title hm-h" data-forms="${esc(JSON.stringify(forms))}">${formHtml(forms[0])}</h2></div>`;
 }
 
-/** 025 · Coming up (9 / 10 / 11): a lobby round before scoring opens. A plain card (never the green live card);
- *  its button is secondary (New round stays Home's primary). */
-function comingCard(r) {
-  const c = r.lobby;
-  const off = c.kind === 'off';
-  return `<div class="card lb-card lb-home">
-      <span class="lbl${off ? ' lb-offk' : ''}">${off ? '<span class="lb-dot" aria-hidden="true"></span>Called off · was ' : ''}${esc(c.when)}${off ? '' : ` · ${esc(r.course || '')}`}</span>
-      <b class="lb-name">${esc(r.name)}</b>
-      <span class="soft lb-line">${esc(c.line)}</span>
-      ${c.kind === 'coming'
-        ? `<button class="btn block lb-cbtn" data-act="go" data-v="#/e/${esc(r.code)}">Open</button>`
-        : `<button class="btn block lb-cbtn" data-act="home-text" data-v="${esc(c.host)}" data-r="${esc(r.name)}">Text ${esc(c.host)}</button>`}
-    </div>`;
+/** The plain card face (036 grid, lkf-rookie paper): member / blank / loading box / offline box. */
+function plainHtml(f) {
+  const face = (inner) => `<div class="lk-mini lkf-rookie hm-front hm-plain" aria-hidden="${f.kind === 'loading'}"><span class="lk-face lk-front"><div class="lk-mat">${inner}</div></span></div>`;
+  if (f.kind === 'loading') return face('');
+  if (f.kind === 'offline') return face(`<div class="hm-pmsg ts-small">${esc(WORDS.offline)}</div>`);
+  if (f.kind === 'member') {
+    return face(`<div class="x-l1"><div class="x-top"><span class="lk-brand">${MARK}${esc(WORDS.member)}</span></div>
+      <b class="ts-title hm-pname ellipsis">${esc(f.name)}</b>
+      <div class="x-bot"><span class="ellipsis">${esc(f.crew || '')}</span><span>${esc(f.line)}</span></div></div>`);
+  }
+  return face(`<div class="x-l1"><div class="x-top"><span class="lk-brand">${MARK}Golf Board</span></div>
+      <b class="ts-row hm-pblank">${esc(WORDS.blank)}</b><div class="x-bot"></div></div>`);
+}
+
+/** §6.2 · the pass: day + badge, Game on its own row, then Course · Tee time · Host, the tear, the buttons. */
+function passHtml(p) {
+  const off = p.kind === 'off' || p.kind === 'removed';
+  const cell = (k, v, cls = '') => (v ? `<div class="hp-c${cls}"><span class="ts-small">${k}</span><b class="ellipsis">${esc(v)}</b></div>` : '');
+  const badge = p.badge ? `<span class="ts-label hp-bdg${p.kind === 'coming' ? ' inv' : ''}">${esc(p.badge)}</span>` : '';
+  const btns = off
+    ? `<div class="hp-btns one"><button class="btn" data-act="home-text" data-v="${esc(p.host || 'the host')}" data-r="${esc(p.name)}">Text ${esc(p.host || 'the host')}</button></div>`
+    : `<div class="hp-btns"><button class="btn primary" data-act="go" data-v="#/e/${esc(p.code)}">Open</button>
+        <button class="btn" data-act="home-share" data-v="${esc(p.code)}" data-r="${esc(p.name)}">Share link</button></div>`;
+  return `<div class="hm-pass hm-front${p.kind === 'off' ? ' off' : ''}" data-act="go" data-v="#/e/${esc(p.code)}" role="button" tabindex="0"
+      aria-label="${esc([p.name, p.day, p.course].filter(Boolean).join(', '))}">
+      <div class="hp-top"><b class="hp-day">${esc(p.day)}</b>${badge}</div>
+      <div class="hp-info">${cell('Game', p.game, ' hp-game')}<div class="hp-row">${cell('Course', p.course)}${cell('Tee time', p.time || 'Times soon')}${cell('Host', p.host)}</div></div>
+      <i class="hp-tear" aria-hidden="true"></i>${btns}</div>`;
+}
+
+/** §6 · the front object. */
+function frontHtml2(f) {
+  if (f.kind === 'card') {
+    const c = f.card;
+    return `<button class="lk-mini lkf-${esc(c.fin)} hm-front hm-card" data-act="home-card" data-v="${esc(c.key)}" aria-label="Your latest card: ${esc(c.course)}, ${esc(prettyDate(c.day))}, ${c.gross}. Open it in your locker.">
+        <span class="lk-face lk-front">${frontHtml(c, { crewLine: f.crewLine })}</span></button>`;
+  }
+  if (f.kind === 'pack') {
+    const c = f.card;
+    return `<button class="hm-front hm-pack" data-act="lk-home-packs" aria-label="Open your scorecard pack: ${esc(c.course)}, ${esc(prettyDate(c.day))}">
+        <span class="hm-packart" aria-hidden="true">${chromePack()}${f.count > 1 ? `<b class="lk-pip">${f.count}</b>` : ''}</span></button>`;
+  }
+  if (f.kind === 'pass') return passHtml(f.pass);
+  return plainHtml(f);
+}
+
+/** §6.1 · an edge: a 32 px strip of the object behind (its own art + label row), tap area 48. Never a score. */
+function edgeHtml(e) {
+  if (e.kind === 'card') {
+    const c = e.card;
+    return `<button class="hm-edge lkf-${esc(c.fin)}" data-act="home-card" data-v="${esc(c.key)}" aria-label="${esc(c.course)}, ${esc(prettyDate(c.day))}">
+        <span class="lk-mat" aria-hidden="true"><i class="lk-sheen"></i></span><span class="hm-el"><span class="ts-label ellipsis">${esc(c.course)}</span><span class="ts-label hm-ef">${esc(finName(c))}</span></span></button>`;
+  }
+  if (e.kind === 'pack') {
+    return `<button class="hm-edge hm-epack chrome" data-act="lk-home-packs" aria-label="${e.count} ${e.count === 1 ? 'pack' : 'packs'} to open">
+        <span class="hm-epk" aria-hidden="true">${chromePack()}</span><span class="hm-el"><span class="ts-label">${e.count} ${e.count === 1 ? 'pack' : 'packs'} to open</span><span class="ts-label hm-ef">Series 1</span></span></button>`;
+  }
+  const p = e.pass;
+  return `<button class="hm-edge hm-epass${p.kind === 'off' ? ' off' : ''}" data-act="go" data-v="#/e/${esc(p.code)}" aria-label="${esc([p.name, p.day].filter(Boolean).join(', '))}">
+      <span class="hm-el"><b class="hp-eday">${esc(p.day)}</b><span class="ts-label ellipsis">${esc(p.course)}</span></span></button>`;
+}
+
+/** §7 · the crew row, Start a crew, or §6.4's join field. */
+function slotHtml2(s) {
+  if (!s) return '';
+  if (s.kind === 'join') return `<div class="hm-join">${codeField()}</div>`;
+  if (s.kind === 'start') {
+    return `<button class="hm-crew" data-act="go" data-v="#/crew/start"><span class="hc-m"><span class="ts-label ellipsis">${esc(WORDS.noCrew)}</span><b class="ts-row">${esc(WORDS.startCrew)}</b></span>${chev()}</button>`;
+  }
+  const place = s.place ? `<b class="hc-pl">${esc(s.place)}</b>` : s.sub ? `<span class="ts-small hc-sub">${esc(s.sub)}</span>` : '';
+  return `<button class="hm-crew" data-act="go" data-v="#/season/${esc(s.id)}" aria-label="${esc(s.name)} standings${s.place ? `, you’re ${esc(s.place)}` : ''}">
+      <span class="hc-m"><span class="ts-label ellipsis">${esc(s.name)}</span><b class="ts-row">${esc(WORDS.standings)}</b></span>${place}${chev()}</button>`;
+}
+
+/** §8 · the doors row: All rounds, Add to Home Screen (after its nudge was dismissed). */
+function doorsHtml(d) {
+  const b = [d.allRounds ? `<button class="hm-door" data-act="go" data-v="#/rounds">All rounds${icon('fwd', 18)}</button>` : '',
+    d.addHome ? `<button class="hm-door" data-act="home-add">Add to Home Screen${icon('fwd', 18)}</button>` : ''].filter(Boolean);
+  return b.length ? `<div class="hm-doors">${b.join('')}</div>` : '';
+}
+
+/** §8 · the pinned foot: Join with code + New round; New round only; or the live bar (the only glow on Home). */
+function footHtml(f, rounds) {
+  const plus = icon('plus', 20);
+  if (f.kind === 'new') return `<button class="btn primary big block" data-act="go" data-v="#/setup">${plus} New round</button>`;
+  if (f.kind === 'live') {
+    const r = rounds.find((x) => x.code === f.code);
+    const line = f.line || [r?.course, r?.game].filter(Boolean).join(' · ') || r?.name || '';
+    return `<div class="hm-live">
+        <span class="hm-lm"><span class="ts-label hm-lk"><span class="lc-dot" aria-hidden="true"></span>Live${f.hole ? ` · hole ${f.hole}` : ''}</span><b class="hm-ll ellipsis">${esc(line)}</b></span>
+        <button class="btn primary small hm-lbtn" data-act="go" data-v="#/e/${esc(f.code)}">Back to ${f.hole ? `hole ${f.hole}` : 'the round'}</button>
+      </div>
+      <div class="home-two hm-two">
+        <button class="btn" data-act="home-joinsheet">Join with code</button>
+        <button class="btn primary" data-act="go" data-v="#/setup">${plus} New round</button>
+      </div>`;
+  }
+  return `<div class="home-two">
+        <button class="btn big" data-act="home-joinsheet">Join with code</button>
+        <button class="btn primary big" data-act="go" data-v="#/setup">${plus} New round</button>
+      </div>`;
 }
 
 function roundRow(r) {
@@ -173,62 +264,136 @@ function codeField() {
     </div>`;
 }
 
-// The Home header: the mark (feature 020, L2 lockup: ring centered on the capitals, 10px gap).
-const TITLE = `<h1 class="ts-title home-title"><span class="home-mark" aria-hidden="true"><img class="mk-dark" src="img/mark-dark.svg" alt="" width="30" height="30"><img class="mk-light" src="img/mark-light.svg" alt="" width="30" height="30"></span>Golf Live Board</h1>`;
 // Nov 24: Home looks for your rounds every time it shows up again (not once per page load): a home screen app resumed
 // from the background now finds the round its owner was just added to. At most once a minute; a return resets it.
 let syncedAt = 0;
-export function homeReturn() { syncedAt = 0; }
+
+// §11 · the opening, kept steady under the render loop with data-t0 + ui.syncMotion (mount). One deal per page load
+// (0.7 s), which waits for the locker or 1.5 s, whichever is first; a late locker cross-fades into the same box; a
+// return to Home fades. Reduced motion: none of it.
+const DEAL_MS = 1100, FADE_MS = 400, WAIT_MS = 1500;
+let visits = 0, opening = null, dealAt = 0, topShown, xfadeAt = 0, waitTimer = 0;
+export function homeReturn() {
+  syncedAt = 0;
+  if (visits) opening = { kind: 'fade', t0: Date.now() };
+}
+function arrive() {
+  visits += 1;
+  opening = { kind: visits === 1 ? 'deal' : 'fade', t0: Date.now() };
+}
+/** This render's motion: { page, stack, front } attribute snippets, '' once over or under reduced motion. */
+function motion(key, loading) {
+  const now = Date.now();
+  if (!dealAt && opening?.kind === 'deal' && (!loading || now - opening.t0 > WAIT_MS)) dealAt = now;
+  if (key !== topShown) {
+    if (topShown !== undefined && dealAt && now !== dealAt) xfadeAt = now; // the locker arrived late, or the front changed
+    topShown = key;
+    if (key) local.set('glb.seen.homeTop', key);
+  }
+  if (reducedMotion()) return { page: '', stack: '', front: '' };
+  const fade = opening?.kind === 'fade' && now - opening.t0 < FADE_MS;
+  return {
+    page: fade ? ` hm-fade" data-t0="${opening.t0}` : '',
+    stack: dealAt && now - dealAt < DEAL_MS ? ` hm-deal" data-t0="${dealAt}` : loading && !dealAt ? ' hm-wait' : '',
+    front: xfadeAt && now - xfadeAt < FADE_MS ? ` hm-xfade" data-t0="${xfadeAt}` : '',
+  };
+}
+
+/** #/rounds · All rounds (037 §5): what Home's Recent rounds list used to show, on its own screen. */
+export const roundsScreen = {
+  render() {
+    const list = allRounds(recent.all(), Date.now());
+    return `<div class="plain home-rounds">
+        <h1 class="ts-title hm-rh">Rounds</h1>
+        ${list.length ? `<div class="home-list">${list.map(roundRow).join('')}</div>`
+          : empty({ icon: 'flag', headline: 'No rounds yet', help: 'Start one and text the code to your group, or join a round a friend started.' })}
+      </div>`;
+  },
+};
+
+// §4.1 · the measured fit, done in mount the way enter.mount measures the pads: the headline's form, then edges
+// yield, then the front shrinks (never under 300 wide, a pass 336), then the doors row hides.
+function fitHome(content) {
+  const home = content.querySelector('.home');
+  if (!home) return;
+  const app = STANDALONE;
+  const h = home.querySelector('.hm-h');
+  if (h?.dataset.forms) {
+    let forms = [];
+    try { forms = JSON.parse(h.dataset.forms); } catch { /* keep what's drawn */ }
+    const max = app ? 2 : 1;
+    for (let i = 0; i < forms.length; i++) {
+      h.innerHTML = formHtml(forms[i]);
+      if (i === forms.length - 1 || Math.round(h.offsetHeight / 36) <= max) break;
+    }
+  }
+  const avail = content.clientHeight;
+  if (!avail) return;
+  const need = () => { home.style.minHeight = '0px'; const n = home.offsetHeight; home.style.minHeight = ''; return n; };
+  let over = need() - avail;
+  const edges = [...home.querySelectorAll('.hm-edge')]; // farthest first
+  while (over > 0 && edges.length) { edges.shift().style.display = 'none'; over = need() - avail; }
+  const stack = home.querySelector('.hm-stack');
+  const fr = home.querySelector('.hm-front');
+  if (over > 0 && stack && fr) {
+    const w = fr.offsetWidth, ht = fr.offsetHeight;
+    if (w && ht) {
+      const nw = fitWidth(stack.parentElement.clientWidth, ht - over, { min: fr.classList.contains('hm-pass') ? 336 : 300, ratio: w / ht });
+      stack.style.setProperty('--hm-w', `${nw}px`);
+      over = need() - avail;
+    }
+  }
+  if (over > 0) { const d = home.querySelector('.hm-doors'); if (d) d.style.display = 'none'; }
+}
 
 export default {
   topLeft: () => header(recent.all()),
+  enter() { arrive(); },
 
   render(app) {
     // Once per open: pull in your rounds this phone has never seen (new phone / home screen app).
     if (Date.now() - syncedAt > 60000) {
       syncedAt = Date.now();
       app.checkVersion?.(); // and a newer version, now that nothing is at stake (app.js decides)
-      syncMyRounds().then((n) => { if (n) app.render(); }).catch(() => { /* offline: next open */ });
+      syncMyRounds(PREVIEW ? [lockerPerson()] : []).then((n) => { if (n) app.render(); }).catch(() => { /* offline: next open */ });
       pruneGoneRounds().then((n) => { if (n) app.render(); }).catch(() => { /* offline: next open */ }); // deleted rounds leave Recent
       refreshLobbies(clock.now()).then((n) => { if (n) app.render(); }).catch(() => { /* offline: next open */ }); // 025
     }
-    startHomeLocker(app); // 035: this phone's locker, once per page load. Any failure = no entries.
-    const lk = homeLocker(app);
+    if (!visits) arrive();
+    startHomeLocker(app); // 035: this phone's locker, once per page load. Any failure = Home still complete.
     const rounds = recent.all();
-    const now = Date.now();
-    const yesterday = new Date(now - 86400000).toISOString().slice(0, 10);
-    const coming = rounds.filter((r) => r.lobby && (!r.played_on || r.played_on >= yesterday));
-    const live = rounds.find((r) => !r.lobby && r.live && !r.done && now - (r.seen || r.at || 0) < LIVE_FOR) || null;
-    const rest = rounds.filter((r) => r !== live && !coming.includes(r));
-    const season = homeCrew(app); // crew card / switcher / Start a crew (feature 006)
-    const extras = `${lk.row}${!STANDALONE && isIOS() ? `<button class="home-row" data-act="home-add">
-          <span class="hr-ico">${icon('phone', 22)}</span>
-          <span class="hr-main"><span class="hr-name">Add to Home Screen</span><span class="hr-sub">Opens like an app, no Safari bars. Your rounds come with it.</span></span>
-          <span class="hr-chev">${icon('fwd', 20)}</span></button>` : ''}
-`;
-    if (!rounds.length) {
-      newsCard(false); // a brand-new phone: nothing is news, mark it seen
-      return `<div class="plain home">
-        ${TITLE}
-        ${empty({ icon: 'flag', headline: 'No rounds yet', help: 'Start one and text the code to your group, or join a round a friend started.' })}
-        <div class="home-join">${codeField()}</div>
-        ${lk.packs}${season}<div class="home-list">${extras}</div>
-        <div class="nr-foot home-foot"><button class="btn primary big block" data-act="go" data-v="#/setup">${icon('plus', 20)} New round</button></div>
-      </div>`;
-    }
-    return `<div class="plain home">
-      ${TITLE}
-      ${newsCard(true)}
-      ${live ? liveCard(live) : ''}
-      ${coming.length ? `<div class="ts-label home-k">Coming up</div>${coming.map(comingCard).join('')}` : ''}
-      ${lk.packs}${season}
-      ${extras.trim() ? `<div class="home-list">${extras}</div>` : ''}
-      ${rest.length ? `<div class="ts-label home-k">Recent rounds</div><div class="home-list">${rest.map(roundRow).join('')}</div>` : ''}
-      <div class="nr-foot home-foot"><div class="home-two">
-        <button class="btn big" data-act="home-joinsheet">Join with code</button>
-        <button class="btn primary big" data-act="go" data-v="#/setup">${icon('plus', 20)} New round</button>
-      </div></div>
+    const lk = homeLockerData(app);
+    const state = homeLockerState(app);
+    if (lk?.cards?.length) local.set('glb.seen.homeCards', true); // §11: "had cards" (moves with the move link)
+    const firstRound = rounds.map((r) => r.played_on).filter(Boolean).sort()[0] || null;
+    const w = whatsNew({ seen: local.get('glb.seen.whatsnew'), hasRounds: rounds.length > 0, firstRound });
+    if (w.markSeen) local.set('glb.seen.whatsnew', w.markSeen);
+    const o = owner.get();
+    const m = homeModel({
+      rounds, now: Date.now(), personId: lk?.personId || lockerPerson() || null, locker: lk, lockerState: state,
+      hadCards: !!local.get('glb.seen.homeCards'),
+      crews: homeCrewData(app), crewNames: crewNames(app), meName: (o?.name || '').split(' ')[0], meFull: o?.name || lockerName(),
+      ios: isIOS(), standalone: STANDALONE,
+      seen: { add: !!local.get('glb.seen.homeNudge.add') || !!local.get('glb.hasApp') }, news: w.show,
+    });
+    const mo = motion(topKey(m.front), m.front.kind === 'loading');
+    // The deal waits for the locker at most 1.5 s: make sure a render comes then, even with nothing else happening.
+    if (mo.stack === ' hm-wait' && !waitTimer) waitTimer = setTimeout(() => { waitTimer = 0; app.render(); }, WAIT_MS + 50);
+    const edges = m.edges.slice(0, m.edgeMax).reverse(); // farthest first: the nearest edge sits right behind the front
+    return `<div class="plain home hm2${STANDALONE ? ' hm-app' : ''}${mo.page}">
+      ${nudgeHtml(m.nudge)}
+      ${headlineHtml(m.headline)}
+      <div class="hm-stack${mo.stack}">${edges.map((e, i) => `<div class="hm-ei" style="--i:${i}">${edgeHtml(e)}</div>`).join('')}
+        <div class="hm-fi${mo.front}" style="--i:${edges.length}">${frontHtml2(m.front)}</div></div>
+      <div class="hm-fill"></div>
+      ${slotHtml2(m.slot)}
+      ${doorsHtml(m.doors)}
+      <div class="nr-foot home-foot${m.foot.kind === 'live' ? ' hm-livefoot' : ''}">${footHtml(m.foot, rounds)}</div>
     </div>`;
+  },
+  mount(content) {
+    try { fitHome(content); } catch { /* Home as drawn */ }
+    syncMotion(content);
   },
   actions: {
     'home-code': (el) => {
@@ -242,9 +407,35 @@ export default {
       app.openSheet('homescreen', {});
     },
     'home-joinsheet': (el, ev, app) => app.openSheet('join', {}),
-    'home-news': (el, ev, app) => { local.set('glb.seen.whatsnew', el.dataset.v); app.render(); },
+    // §4.2: What's new opens a small sheet on tap (never by itself); Got it / ✕ marks the release seen.
+    'home-news-open': (el, ev, app) => app.openSheet('home-news', { id: el.dataset.v }),
+    'home-news': (el, ev, app) => { local.set('glb.seen.whatsnew', el.dataset.v); app.closeSheet?.(); app.render(); },
+    'home-nudge-x': (el, ev, app) => {
+      const v = el.dataset.v || '';
+      if (v.startsWith('news:')) local.set('glb.seen.whatsnew', v.slice(5));
+      else local.set(`glb.seen.homeNudge.${v}`, true); // after its ✕, Add to Home Screen is a door (§8)
+      app.render();
+    },
+    // §6.1: a scorecard (front or edge) opens that card in the Locker.
+    'home-card': (el, ev, app) => {
+      app.ui.lk ||= { view: 'one', key: null, flip: null, land: null, landAt: 0, person: null, tab: 'cards' };
+      Object.assign(app.ui.lk, { view: 'one', key: el.dataset.v, flip: null, tab: 'cards', person: lockerPerson() });
+      app.go('#/locker');
+    },
+    // §6.2: Share link on every coming pass: the round's link, the one the host already texts (nothing else).
+    'home-share': async (el, ev, app) => {
+      ev?.stopPropagation?.();
+      const url = `${location.origin}${location.pathname}#/e/${el.dataset.v}`;
+      const name = el.dataset.r || 'Our round';
+      try {
+        if (navigator.share) { await navigator.share({ title: name, text: `${name} on Golf Board`, url }); return; }
+      } catch { return; /* share sheet dismissed */ }
+      const copied = await copyText(url);
+      app.toast({ title: copied ? 'Round link copied' : 'Round link', sub: copied ? 'Paste it in the group text.' : url });
+    },
     'home-me': (el, ev, app) => { app.ui.homePeople = null; app.openSheet('home-me', {}); },
     'home-text': async (el, ev, app) => {
+      ev?.stopPropagation?.();
       const text = `Hi ${el.dataset.v}, about ${el.dataset.r}: `;
       if (navigator.share) { try { await navigator.share({ text }); } catch { /* cancelled */ } return; }
       app.toast({ title: `Text ${el.dataset.v} from your messages`, sub: 'There’s no number in Golf Board.' });

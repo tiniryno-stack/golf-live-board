@@ -1,5 +1,4 @@
-// crew.js — crews, feature 006-crew-home-invite: the crew card on Home (normal / unnamed / no crew /
-// switcher), Start or rename a crew, Join from an invite link (and the dead-link error), "Which one are
+// crew.js — crews, feature 006-crew-home-invite: Home's crew data (037 draws the block in home.js), Start or rename a crew, Join from an invite link (and the dead-link error), "Which one are
 // you?", and the Crew settings sheet. Data: db.crews (this phone's crews), api.crewInfo / crewByInvite …
 // A phone is in a crew by knowing its id; crew_claims says which person it is (one phone per person).
 
@@ -50,47 +49,49 @@ const myPerson = (app, id) => app.crews?.[id]?.info?.me || db.crews.get(id)?.me 
 
 // ───────────────────────────────────────────── Home: crew card
 
-/** Home's crew section: switcher (2+ crews), the card for the selected crew, or Start a crew. */
-export function homeCrew(app) {
-  const list = db.crews.visible();
-  if (!list.length) {
-    return `<div class="crew-card crew-none">
-        <div class="cc-name">Play with the same people?</div>
-        <p class="cc-meta">Start a crew: one link for the group, everyone’s rounds and standings in one place.</p>
-        <button class="btn primary big block" data-act="go" data-v="#/crew/start">${icon('plus', 20)} Start a crew</button>
-      </div>`;
+/**
+ * 037 v2 §7: what Home's crew row needs (homeview.crewSlot draws the rules): this phone's crews, the selected one's
+ * name, and its season line ("Fall · you’re 2nd") or round count. Starts loading the crew. Never throws.
+ */
+export function homeCrewData(app) {
+  try {
+    const list = db.crews.visible();
+    if (!list.length) return { list: [] };
+    const cur = db.crews.current() || list[0];
+    const c = app.crews?.[cur.id];
+    if (!c) loadCrew(app, cur.id);
+    const info = c?.info;
+    let seasonLine = '', rounds = null, standing = null;
+    const ss = crewSeasons(app, cur.id);
+    if (ss?.current) {
+      rounds = ss.current.rounds?.length || 0;
+      if (rounds) {
+        const t = seasonRecordTable(ss.current, myPerson(app, cur.id));
+        if (t.me?.ranked) seasonLine = `${ss.current.name} · you’re ${placeLabel(t.me)}`;
+        // 037 v2: the crew row's place and rung 9's leader ("Sean leads." / "Sean is next." when you lead).
+        const ranked = t.rows.filter((r) => r.ranked);
+        const first = (r) => String(r?.name || '').split(' ')[0] || null;
+        const iLead = !!(t.me?.ranked && t.me.rank === 1);
+        standing = {
+          place: t.me?.ranked ? placeLabel(t.me) : null, myRounds: t.me ? t.me.rounds : 0, iLead,
+          leader: first(ranked[0]), next: iLead ? first(ranked.find((r) => !r.me)) : null,
+        };
+      }
+    } else if (info) rounds = info.rounds;
+    return {
+      list: list.map((x) => ({ id: x.id, name: app.crews?.[x.id]?.info?.name || x.name || null })),
+      currentId: cur.id, name: info?.name ?? cur.name ?? null, seasonLine, rounds, standing,
+    };
+  } catch {
+    return { list: [] };
   }
-  const cur = db.crews.current();
-  const c = app.crews?.[cur.id];
-  if (!c) loadCrew(app, cur.id);
-  const info = c?.info;
-  const name = info?.name ?? cur.name;
-  const label = list.length > 1 ? `Your crews · ${list.length}` : 'Your crew';
-  const switcher = list.length > 1
-    ? `<div class="crew-switch${list.length >= 4 ? ' scroll' : ''}"><div class="seg" role="group">${list
-      .map((x) => `<button data-act="crew-pick" data-v="${esc(x.id)}" aria-pressed="${x.id === cur.id}"><span class="ellipsis">${esc(app.crews?.[x.id]?.info?.name || x.name || 'Your crew')}</span></button>`)
-      .join('')}</div></div>`
-    : '';
-  const meta = info ? `${info.players} player${info.players === 1 ? '' : 's'} · ${info.rounds} round${info.rounds === 1 ? '' : 's'}` : c?.error ? 'No signal' : '…';
-  let line = '';
-  const ss = crewSeasons(app, cur.id);
-  if (ss?.current?.rounds?.length) {
-    const t = seasonRecordTable(ss.current, myPerson(app, cur.id));
-    if (t.me?.ranked) line = `${ss.current.name} · you’re ${placeLabel(t.me)}`;
-    else if (t.rows.length) line = ss.current.name;
-  }
-  const actions = name
-    ? `<button class="btn cc-btn" data-act="go" data-v="#/season/${esc(cur.id)}">${icon('board', 20)} Standings</button>`
-    : `<button class="btn primary cc-btn" data-act="go" data-v="#/crew/rename/${esc(cur.id)}">Name your crew</button>`;
-  return `<div class="ts-label home-k">${esc(label)}</div>${switcher}
-    <div class="crew-card">
-      <div class="cc-top"><div class="cc-name${name ? '' : ' unnamed'} ellipsis">${esc(name || 'Your crew')}</div>
-        <button class="icon-btn cc-more" data-act="crew-settings" data-v="${esc(cur.id)}" aria-label="Crew settings">${icon('more')}</button></div>
-      <div class="cc-meta">${esc(meta)}</div>
-      ${line ? `<div class="ts-label cc-line">${esc(line)}</div>` : ''}
-      <div class="cc-actions">${actions}
-        <button class="btn cc-btn" data-act="crew-invite" data-v="${esc(cur.id)}">${icon('share', 20)} Invite</button></div>
-    </div>`;
+}
+
+/** Crew names this phone knows, by id (Home's "crew on the card"). */
+export function crewNames(app) {
+  const out = {};
+  try { for (const x of db.crews.all()) { const n = app.crews?.[x.id]?.info?.name || x.name; if (n) out[x.id] = n; } } catch { /* none */ }
+  return out;
 }
 
 async function shareInvite(app, id) {
@@ -297,6 +298,8 @@ export default {
     'crew-pick': (el, ev, app) => {
       db.crews.select(el.dataset.v);
       loadCrew(app, el.dataset.v);
+      // 037 v2 §7: the switcher lives on Standings now; picking a crew there opens that crew's standings.
+      if (app.route?.name === 'season') { app.season = { crew: el.dataset.v }; app.go(`#/season/${el.dataset.v}`); return; }
       app.render();
     },
     'crew-invite': (el, ev, app) => shareInvite(app, el.dataset.v),

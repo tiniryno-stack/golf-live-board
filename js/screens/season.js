@@ -5,7 +5,7 @@
 
 import * as db from '../db.js';
 import { esc, icon } from '../ui.js';
-import { shortDate, nextSeasonLabel, placeLabel, seasonRecordTable, seasonBests, recordLabel, pctLabel, ordinal, MIN_ROUNDS } from '../seasons.js';
+import { shortDate, nextSeasonLabel, placeLabel, seasonRecordTable, seasonBests, recordLabel, pctLabel, ordinal, MIN_ROUNDS, standingsHeader } from '../seasons.js';
 import { loadCrew, crewSeasons } from './crew.js';
 import { ppName } from './passport.js';
 
@@ -92,6 +92,20 @@ function pastView(app, id, data) {
   return `<div class="season-list">${rows}</div>`;
 }
 
+/** 037 v2 §7: the crew's controls, moved here from Home: the switcher (2+ crews), Invite, Name your crew. */
+function controls(app, id) {
+  const list = db.crews.visible().map((x) => ({ id: x.id, name: app.crews?.[x.id]?.info?.name || x.name || null }));
+  const name = app.crews?.[id]?.info?.name ?? db.crews.get(id)?.name ?? null;
+  const h = standingsHeader({ list, id, name });
+  const sw = h.switcher
+    ? `<div class="crew-switch${h.switcher.length >= 4 ? ' scroll' : ''}"><div class="seg" role="group" aria-label="Your crews">${h.switcher
+      .map((x) => `<button data-act="crew-pick" data-v="${esc(x.id)}" aria-pressed="${x.on}"><span class="ellipsis">${esc(x.name)}</span></button>`).join('')}</div></div>`
+    : '';
+  return `<div class="st-ctl">${sw}<div class="st-acts">
+      <button class="pill st-invite" data-act="crew-invite" data-v="${esc(id)}">Invite</button>
+      ${h.nameCrew ? `<button class="pill" data-act="go" data-v="#/crew/rename/${esc(id)}">Name your crew</button>` : ''}</div></div>`;
+}
+
 export const seasonSheets = {
   seasonNew(app, { id, name, starts = 'today', date = '' }, head) {
     const data = crewSeasons(app, id);
@@ -149,6 +163,7 @@ export default {
     return `<div class="plain season-screen">
       <div class="ts-label crew-k">${esc(name)}</div>
       <h1 class="ts-title crew-h">${app.route.view === 'past' ? 'Seasons' : 'Standings'}</h1>
+      ${id && !app.route.view ? controls(app, id) : ''}
       ${body}</div>`;
   },
   actions: {

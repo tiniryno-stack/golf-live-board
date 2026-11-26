@@ -337,9 +337,10 @@ export const owner = {
  * Added to Recent rounds in date order, newest first. Returns how many were added.
  */
 export let lastSynced = [];
-export async function syncMyRounds() {
+export async function syncMyRounds(fallbackIds = []) {
   const o = owner.get();
-  const ids = o ? [o.personId] : people.all();
+  let ids = o ? [o.personId] : people.all();
+  if (!ids.length) ids = fallbackIds.filter(Boolean); // 037: the preview copy acts as Andrew on a browser with no rounds
   if (!ids.length) return 0;
   const found = new Map();
   for (const personId of ids) {
@@ -476,7 +477,7 @@ export async function fetchCrewRounds(crewId) {
  */
 export async function fetchPersonRounds(personId) {
   if (!personId) return [];
-  const events = (await select(sb().from('events').select('id,code,name,played_on,created_at,finalized_at,course,roster,settings')
+  const events = (await select(sb().from('events').select('id,code,name,played_on,created_at,finalized_at,course,roster,settings,crew_id')
     .contains('roster', { players: [{ personId }] }))) || [];
   const keep = events.filter((e) => String(e.settings?.practice) !== 'true');
   // 036 §6.1: the card back lists everyone who finished, so fetch each round's whole score set (≤ 16 × 18 rows),

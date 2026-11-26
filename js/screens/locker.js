@@ -5,7 +5,7 @@
 // Stable under the render loop: mount() runs after every redraw, so the carousel's position comes back from
 // app.ui.lk, the tilt loop stops itself once its track is gone, window listeners are added once, a flip and the
 // caption are changed in the DOM (never app.render()), and keepContent holds redraws while a finger is on it.
-// Home's two entries (homeLocker) render nothing at all if anything about the locker failed.
+// Home reads this phone's locker through homeLockerData (037): null if anything about the locker failed.
 
 import * as db from '../db.js';
 import * as fx from './toasts.js';
@@ -15,6 +15,7 @@ import { passportOf } from '../stamps.js';
 import { esc, icon, reducedMotion } from '../ui.js';
 import {
   buildLocker, packsOf, openedOf, FINISHES, isAdmin, LOCKER_ADMINS, shortDay, longDay, toParLabel, finName, adminTotals, backRows,
+  BOARD_ACT, boardChip,
 } from '../locker.js';
 
 const STALE = 2 * 60 * 1000;
@@ -44,6 +45,7 @@ export async function loadLocker(app, personId, { force = false } = {}) {
     const [rows, opens] = await Promise.all([db.fetchPersonRounds(personId), db.fetchCardOpens(personId)]);
     const pending = db.lockerPending.all().filter((x) => x.personId === personId).map((x) => x.code);
     L.cards = buildLocker(rows, personId, { today: today(), opens, pending: [...pending, ...L.local] });
+    L.rows = rows; // 037: Home's "How it finished" reads the same rounds (never a second fetch)
     L.error = null;
     L.at = Date.now();
   } catch {
@@ -146,7 +148,9 @@ function nine(c, from) {
 const layers = (c) => (c.fin === 'prismatic' ? '<i class="x-water w1"></i><i class="x-water w2"></i><i class="x-slick"></i><i class="x-prism"></i>'
   : ['gold', 'silver', 'bronze'].includes(c.fin) ? '<i class="x-mslick"></i>' : '');
 
-export function frontHtml(c) {
+/** `crewLine` (037, Home only): "FOUNDERS CREW · ANDREW" in the bottom line, in the card's own ink. The Locker,
+ *  passport and share image call it without one, so the card itself never changes. */
+export function frontHtml(c, { crewLine = '' } = {}) {
   const fin = c.fin === 'standard' ? '' : finName(c);
   return `<div class="lk-mat"><i class="lk-sheen"></i>${layers(c)}<div class="x-l1">
     <div class="x-top"><span class="lk-brand">${MARK}Golf Live Board</span><span class="x-fin">${esc(fin)}</span></div>
@@ -154,7 +158,7 @@ export function frontHtml(c) {
       <div class="x-sub">${toParLabel(c.toPar)} · ${esc(longDay(c.day))}</div>
       <div class="x-stamps">${c.stamps.slice(0, 2).map((s) => `<span class="lk-st">${esc(s)}</span>`).join('')}</div></div></div>
     <div class="x-sc">${nine(c, 0)}${nine(c, 9)}</div>
-    <div class="x-bot"><b>${esc(c.name)}</b><span>${c.crew ? 'With the crew' : 'Solo'}</span><span>No. ${c.n}</span></div>
+    <div class="x-bot">${crewLine ? `<b class="x-crewline">${esc(crewLine)}</b>` : `<b>${esc(c.name)}</b><span>${c.crew ? 'With the crew' : 'Solo'}</span>`}<span>No. ${c.n}</span></div>
   </div></div>`;
 }
 
@@ -174,7 +178,8 @@ function peopleHtml(c) {
   return `<div class="cb-col cb-sm"><div class="cb-k cb-before">${g.length} played · ${esc(shortDay(c.day))}</div>
     ${rows.map((p) => (p.gap ? '<div class="cb-dots">···</div>' : plRow(p, true))).join('')}${tail}</div>`;
 }
-export function backHtml(c) {
+/** 038: `board` draws the Full board chip (everywhere a card back is shown, not on the pack overlay's card). */
+export function backHtml(c, { board = false } = {}) {
   const k = c.stats.count;
   const g = c.group || [];
   const me = g.find((x) => x.me);
@@ -187,6 +192,7 @@ export function backHtml(c) {
     <div class="cb-col sb"><div><div class="cb-k">${esc(finName(c))}${c.grade ? ` · ${c.grade}` : ''}</div>${line ? `<div class="cb-line">${esc(line)}</div>` : ''}</div>
       <div class="cb-tiles">${tile(k.eagles + k.birdies, 'Birdies+')}${tile(k.pars, 'Pars')}${tile(k.bogeys, 'Bogeys')}${tile(k.doubles, 'Doubles+')}</div>
       <div class="cb-types">${types}<span><i>Front · back</i>${c.stats.front} · ${c.stats.back}</span></div></div>
+    ${board ? boardChip(c, icon('fwd', 14)) : ''}
   </div></div>`;
 }
 
@@ -198,7 +204,7 @@ const EDGE = Array.from({ length: 7 }, (_, k) => `<i class="lk-edge" style="--z:
 export function slotHtml(c, { i = 0, flipped = false, extra = '', act = 'lk-card' } = {}) {
   return `<div class="lk-slot x-land lkf-${c.fin}${extra}" data-i="${i}" data-key="${esc(c.key)}"${act ? ` data-act="${act}"` : ''}>
     <div class="lk-tilt" role="button" tabindex="0" aria-label="${esc(label(c))} Tap to flip it.">
-      <div class="lk-flip${flipped ? ' on' : ''}">${EDGE}<div class="lk-face lk-front">${frontHtml(c)}</div><div class="lk-face lk-back">${backHtml(c)}</div></div>
+      <div class="lk-flip${flipped ? ' on' : ''}">${EDGE}<div class="lk-face lk-front">${frontHtml(c)}</div><div class="lk-face lk-back">${backHtml(c, { board: !!act })}</div></div>
       <i class="pk-glare"></i><i class="pk-sweep"></i>
     </div></div>`;
 }
@@ -526,7 +532,7 @@ async function loadAdmin(app) {
   app.render();
 }
 
-// ───────────────────────────────────────────── Home (§7.1): the packs card + the Locker row
+// ───────────────────────────────────────────── Home (037 §3.1–3.2: the top + the locker caption, drawn by home.js)
 
 /** Home's avatar name when this browser has no rounds of its own but knows its locker person (the preview in Safari). */
 export function lockerName() {
@@ -536,41 +542,38 @@ export function lockerName() {
   } catch { return ''; }
 }
 
-/** 036 §4.1: "5 scorecards · 3 courses · 4 milestones". */
+/** 036 §4.1: "5 scorecards · 3 courses · 4 milestones" (opened cards, newest first). */
 function homeSub(opened) {
   const pp = passportOf([...opened].reverse());
   return [plural(opened.length, 'scorecard'), plural(pp.courses.length, 'course'), pp.milestones.length ? plural(pp.milestones.length, 'milestone') : '']
     .filter(Boolean).join(' · ');
 }
 
-/** { packs, row } HTML for Home; both '' unless this phone's person has a card or pack. Never throws. */
-export function homeLocker(app) {
+/**
+ * 037 §3.1: what Home needs from this phone's locker: { personId, cards, rows, sub }, or null while it hasn't
+ * loaded, failed, or there is no person (Home then draws without its top, caption and result). Never throws.
+ */
+export function homeLockerData(app) {
   try {
     const pid = lockerPerson();
-    if (false) { // 036 rev: the preview no longer shows a test card (it acts as Andrew)
-      return { packs: `<button class="lk-ready" data-act="lk-testas"><span class="lk-rtext"><span class="ts-label lk-soft">Preview only</span>
-        <span class="ts-row">Test the locker as Andrew Duong</span><span class="ts-small lk-soft">Shows your Locker and Passport in this browser. Tap once; it’s remembered here.</span></span>
-        <span class="hr-chev">${icon('fwd', 20)}</span></button>`, row: '' };
-    }
     const L = pid ? app.lockers?.[pid] : null;
-    if (!L?.cards?.length) return { packs: '', row: '' };
-    const packs = packsOf(L.cards), opened = openedOf(L.cards);
-    const newest = packs[packs.length - 1];
-    const card = packs.length ? `<button class="lk-ready" data-act="lk-home-packs">
-        <span class="lk-rpack" aria-hidden="true">${chromePack()}<b class="lk-pip">${packs.length}</b></span>
-        <span class="lk-rtext"><span class="ts-label lk-soft">${plural(packs.length, 'pack')} ready</span><span class="ts-row">Open your scorecard${packs.length === 1 ? '' : 's'}</span>
-          <span class="ts-small lk-soft ellipsis">${esc(newest.course)} · ${esc(shortDay(newest.day))}</span></span>
-        <span class="hr-chev">${icon('fwd', 20)}</span></button>` : '';
-    const fan = opened.length
-      ? opened.slice(0, 3).reverse().map((c) => `<i class="lkf-${c.fin}"></i>`).join('')
-      : '<i class="lk-fan-pack"></i>';
-    const row = `<button class="home-row" data-act="go" data-v="#/locker">
-        <span class="lk-fan" aria-hidden="true">${fan}</span>
-        <span class="hr-main"><span class="hr-name">Locker</span><span class="hr-sub">${opened.length ? homeSub(opened) : `${plural(packs.length, 'pack')} to open`}</span></span>
-        <span class="hr-chev">${icon('fwd', 20)}</span></button>`;
-    return { packs: card, row };
+    if (!L || !Array.isArray(L.cards)) return null; // 037 v2: cards from an earlier load stay when a refresh fails
+    return { personId: pid, cards: L.cards, rows: L.rows || [], sub: homeSub(openedOf(L.cards)) };
   } catch {
-    return { packs: '', row: '' };
+    return null;
+  }
+}
+
+/** 037 v2 §11: where this phone's locker is: 'none' (no person), 'loading', 'failed' (no cards to show) or 'ready'. */
+export function homeLockerState(app) {
+  try {
+    const pid = lockerPerson();
+    if (!pid) return 'none';
+    const L = app.lockers?.[pid];
+    if (L && Array.isArray(L.cards)) return 'ready';
+    return L?.error ? 'failed' : 'loading';
+  } catch {
+    return 'failed';
   }
 }
 
@@ -678,6 +681,8 @@ export default {
       startHomeLocker(app);
       app.render();
     },
+    // 038: the card back's Full board chip. Its own action (dispatch finds the chip first), so the card never flips.
+    [BOARD_ACT]: (el, ev, app) => { ev?.stopPropagation?.(); app.go(el.dataset.v); },
     'lk-back': (el, ev, app) => { if (history.length > 1) history.back(); else app.go('#/'); },
     'lk-view': (el, ev, app) => {
       app.ui.lk.tab = 'cards';

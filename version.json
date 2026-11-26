@@ -1,5 +1,5 @@
 {
- "v": "20261125065630",
+ "v": "20261126183802",
  "files": [
   "css/locker.css",
   "css/styles.css",
@@ -16,6 +16,7 @@
   "js/geoload.js",
   "js/gps.js",
   "js/headlines.js",
+  "js/homeview.js",
   "js/identity.js",
   "js/loader.js",
   "js/lobby.js",
