@@ -215,3 +215,16 @@ export function seasonBests(row) {
 
 /** "1st", "3rd" */
 export const ordinal = (n) => `${n}${['th', 'st', 'nd', 'rd'][(n % 100 >= 11 && n % 100 <= 13) || n % 10 > 3 ? 0 : n % 10]}`;
+
+/**
+ * 037 v2 §7 · Standings' header, now that the crew's controls live there (pure): the crew switcher when this phone is
+ * in two or more crews (the current one pressed), Invite, and Name your crew while it has no name.
+ * list = [{ id, name }] (this phone's crews), id = the crew on screen, name = its name (null = unnamed).
+ */
+export function standingsHeader({ list = [], id = null, name = null } = {}) {
+  return {
+    switcher: list.length > 1 ? list.map((c) => ({ id: c.id, name: c.name || 'Your crew', on: c.id === id })) : null,
+    invite: !!id,
+    nameCrew: !!id && !name,
+  };
+}

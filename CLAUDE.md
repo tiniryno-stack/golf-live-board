@@ -56,21 +56,27 @@ player + scenes `js/screens/todaysgame.js` (`tg-*` CSS at the end of styles.css)
 keep `brief.js`. Opens on its own once per phone on the first Enter of an open round (`autoBrief` in app.js). UI copy says
 **set**, not stretch. 4-player 2v2 picks its team score again (`settings.pairTeamScore` in Setup only). ARCHITECTURE.md 13a.
 
-## Building Home (037)? Read `docs/design/features/037-home/SPEC.md` first
+## Building Home (037)? Read `docs/design/features/037-home/PLAN-v2.md` first (its §0 wins)
 
-Approved by Andrew Nov 25 (`prototype.html` in that folder, seven situations). **Built on branch `claude/037-home`**
-(not on `main` yet). Home = your latest card on top (crew name on it), how that round finished, one crew block, pinned
-buttons that turn into the live round. Pure model `js/homeview.js` (`homeModel`), test `tests/home037.test.mjs`; screen
-`js/screens/home.js` (+ `#/rounds` = All rounds, `roundsScreen`); data from `locker.homeLockerData` / `crew.homeCrewData`;
-`/* 037 Home */` at the end of styles.css. Opening motion uses `data-t0` + `ui.syncMotion`; seen key `glb.seen.homeTop`.
-ARCHITECTURE.md 13a "037 · Home".
+Second pass "the wallet", approved by Andrew Nov 26 (`prototype-v2.html`, 31 true-size frames). **Built on branch
+`claude/037-home-v2`** (not on `main` yet; replaces the first pass in `SPEC.md`). Home = nudge strip · headline (kicker +
+one two-tone sentence) · the stack (one front object: a pass ≤ 48 h → pack → later pass → latest card → plain
+`lkf-rookie` card; drawn 32 px edges behind it, 3 in the app / 1 in Safari) · crew row (or Start a crew / the join field)
+· doors row · pinned foot (or the live bar). Pure model `js/homeview.js` (`homeModel`, `ladder`, `passOf`, `crewSlot`,
+`topKey`, `fitWidth`); **every headline word is in its `COPY` table** (app + Safari form per rung; Andrew wants to try
+other wordings: change them there, not in layout). Screen `js/screens/home.js` (`fitHome` in `mount` = the measured fit;
+`#/rounds` = All rounds); pass data from `lobby.homeCard`; crew row from `crew.homeCrewData().standing`; Standings
+(`season.js`) has the crew switcher / Invite / Name your crew (`seasons.standingsHeader`). 038: Full board chip on the
+card back (`locker.boardChip`, action `lk-board`). Tests `tests/home037.test.mjs`, `npm run test:smoke037`. Styles: the
+`/* 037 Home */` block at the end of styles.css + card / pack / edge bits in locker.css. ARCHITECTURE.md 13a "037 · Home,
+second pass".
 
 ## Returning players (Nov 24, live on `main` since b047ea2 with 036)
 
 Round links open in Safari; on a phone that has the app, Safari now says **Open Golf Board** (sheet `open-app`) instead
 of claiming the spot (`identity.appHandoff`, RPC `person_has_app`). Home re-syncs your rounds on every return, your name
-at the top fixes who this phone is (`home-me`), `npm run test:smoke037` (20 checks) drives it all, and `js/whatsnew.js` holds the one-time **What's new** card: **add a
-`RELEASES` entry when a release is worth telling friends about** (036 next). ARCHITECTURE.md 13a has the details.
+at the top fixes who this phone is (`home-me`), `npm run test:smoke037` (24 checks) drives it all, and `js/whatsnew.js` holds the one-time **What's new** nudge: **add a
+`RELEASES` entry when a release is worth telling friends about** (036 + the new Home = `2026-11-26`). ARCHITECTURE.md 13a has the details.
 
 ## What it is / where things stand
 
@@ -355,7 +361,10 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
   `glb.queue.CODE`, `glb.seen.CODE`, `glb.alert.CODE.H`, `glb.switch.CODE.H`, `glb.brief.CODE`,
   `glb.who.CODE`, `glb.cardOpen.CODE`, `glb.coach.{tile5,oppcart3,prov2,pad1}` (031: `pad3`, `quiet1`, `matches1`, `board1`), `glb.setupDraft`,
   `glb.theme`, `glb.people`, `glb.crews`, `glb.crew`, (035) `glb.lockerPending` (packs ripped offline), `glb.lockerTilt`
-  (iPhone granted phone tilt; neither moves with Add to Home Screen), (024) `glb.owner` (`{ personId, name }` = the one person this
+  (iPhone granted phone tilt; neither moves with Add to Home Screen), (037 v2) `glb.seen.homeNudge.add` (the Add to Home
+  Screen nudge was dismissed: it is a door after that), `glb.seen.homeCards` (the locker once loaded with cards: offline
+  Home shows "Your cards load with signal." instead of the plain card), `glb.seen.homeTop` (the last front object:
+  `card:` / `pack:` / `pass:CODE`, `member`, `blank`), (024) `glb.owner` (`{ personId, name }` = the one person this
   device belongs to; `{ personId: null }` = cleared by "I'm not X"), `glb.hasApp` (Add to Home Screen was tapped).
   (025) `glb.seen.CODE.open` (Scoring is open shown once), `glb.seen.CODE.hcp` (= the player id the handicap reveal was shown to; `.welcome` is no longer read), `glb.seen.CODE.here` (chose to stay in Safari: Can't add it / Join in Safari for now), `glb.inapp.CODE` (= the player id
   `mark_in_app` was sent for; not moved), `glb.lobbyhost.CODE` (`{ teamsShared, told }`, the organizer's one-time

@@ -1,12 +1,14 @@
 // smoke037.mjs — returning players (Nov 24) on iPhone-size phones against the mock: a round link in Safari on a phone
 // that has Golf Board says Open Golf Board and leaves the spot free; Stay in Safari still joins; the home screen app
 // finds a round it was just added to (on open and on return), auto-joins its owner and marks in_app; your name on
-// Home fixes who this phone is; What's new shows once. Run: node tests/smoke037.mjs (PW_CHROMIUM=<path> if needed).
+// Home fixes who this phone is; What's new shows once (037 v2: a nudge strip that opens a sheet; coming rounds are
+// passes in Home's stack). Run: node tests/smoke037.mjs (PW_CHROMIUM=<path> if needed).
 
 import { chromium } from 'playwright';
 import { createBackend, attach, serve } from './mock-supabase.mjs';
 import { COURSES } from '../js/courses.js';
 import { wallDate, addMinutes, wallClock } from '../js/lobby.js';
+import { RELEASES } from '../js/whatsnew.js';
 
 const srv = await serve();
 const be = createBackend();
@@ -106,15 +108,19 @@ be.tables.claims.push({ event_id: OLD.ev.id, player_id: 'p2', device_id: '000000
   } });
   await open(a, '');
   await a.page.waitForTimeout(800);
-  let t = await text(a);
-  const coming = () => a.page.evaluate(() => [...document.querySelectorAll('.lb-home:not([role=status])')].map((el) => el.innerText.replace(/\s+/g, ' ')).join(' | '));
-  ok((await coming()).includes('Tuesday nine'), `Home found the round Sean was added to, under Coming up (${await coming()})`);
-  ok(/What’s new/i.test(t) && /Round links find your app/.test(t), 'What’s new shows on a phone that used the app before');
+    // 037 v2: a coming round is a pass in Home's stack (front or edge); its name is on the pass's label.
+  const coming = () => a.page.evaluate(() => [...document.querySelectorAll('.hm-pass, .hm-epass')].map((el) => el.getAttribute('aria-label')).join(' | '));
+  ok((await coming()).includes('Tuesday nine'), `Home found the round Sean was added to, as a pass (${await coming()})`);
+  const nudge = () => a.page.evaluate(() => document.querySelector('.hm-nudge')?.innerText.replace(/\s+/g, ' ') || '');
+  ok(/Cards, packs and a Passport/.test(await nudge()), `What’s new shows (the nudge strip) on a phone that used the app before (${await nudge()})`);
   const top = await a.page.evaluate(() => document.querySelector('[data-act="home-me"]')?.innerText || '');
   ok(/Sean Smith/.test(top), `your name at the top is a button (${top})`);
+  await a.page.click('[data-act="home-news-open"]');
+  await a.page.waitForTimeout(500);
+  ok(/Cards, packs and a Passport/.test(await sheet(a)) && /Got it/.test(await sheet(a)), 'a tap opens the What’s new sheet');
   await a.page.click('[data-act="home-news"]');
-  await a.page.waitForTimeout(300);
-  ok(!/What’s new/i.test(await text(a)), 'Got it → gone');
+  await a.page.waitForTimeout(400);
+  ok(!(await nudge()), 'Got it → gone');
   // Andrew makes another round while the app sits in the background; Sean comes back to it.
   await a.page.evaluate(() => { window.__vis = 'hidden'; Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => window.__vis }); document.dispatchEvent(new Event('visibilitychange')); });
   const R2 = mk('Thursday twilight');
@@ -130,7 +136,7 @@ be.tables.claims.push({ event_id: OLD.ev.id, player_id: 'p2', device_id: '000000
   ok(c?.in_app === true, 'and marked the claim in_app (Safari can now tell he has the app)');
   // Reload Home: What's new stays seen.
   await open(a, '');
-  ok(!/What’s new/i.test(await text(a)), 'What’s new never comes back after Got it');
+  ok(!(await nudge()), 'What’s new never comes back after Got it');
   // Wrong person? Your name → Who are you? → pick Jake.
   await a.page.click('[data-act="home-me"]');
   await a.page.waitForTimeout(900);
@@ -154,10 +160,23 @@ be.tables.claims.push({ event_id: OLD.ev.id, player_id: 'p2', device_id: '000000
 {
   const n = await phone('New phone', { standalone: true });
   await open(n, '');
-  ok(!/What’s new/i.test(await text(n)), 'a brand-new phone sees no What’s new');
+  ok(!/Cards, packs and a Passport/.test(await text(n)), 'a brand-new phone sees no What’s new');
   ok((await n.page.evaluate(() => JSON.parse(localStorage.getItem('glb.seen.whatsnew')))) != null, 'and it is marked seen');
   errors.push(...n.page.errors);
   await n.ctx.close();
+}
+
+// ── 5 · iPhone Safari, used before: Add to Home Screen is Home's nudge first; after its ✕ it is a door (037 v2 §4.2, §8).
+{
+  const f = await phone('Friend · Safari', { seed: { 'glb.recent': [{ code: OLD.code, name: OLD.ev.name, at: 1 }], 'glb.seen.whatsnew': RELEASES[0].id } });
+  await open(f, '');
+  ok(!!(await f.page.$('.hm-nudge [data-act="home-add"]')), 'Safari on iPhone: Add to Home Screen is the nudge');
+  await f.page.click('[data-act="home-nudge-x"]');
+  await f.page.waitForTimeout(400);
+  ok(!(await f.page.$('.hm-nudge')) && !!(await f.page.$('.hm-doors [data-act="home-add"]')), 'after its ✕: no nudge, Add to Home Screen is in the doors row');
+  ok((await f.page.evaluate(() => JSON.parse(localStorage.getItem('glb.seen.homeNudge.add')))) === true, 'and the ✕ is remembered (glb.seen.homeNudge.add)');
+  errors.push(...f.page.errors);
+  await f.ctx.close();
 }
 
 ok(!errors.length, `no page errors${errors.length ? `: ${errors.slice(0, 3).join(' | ')}` : ''}`);

@@ -2840,51 +2840,85 @@ html.light .gs-seg, [data-theme="light"] .gs-seg { background: var(--bg); }
 }
 .tg-lb.tight .tg-lbr { height: 40px; }
 
-/* ───────────────────────────────────────────── 037 Home (docs/design/features/037-home/SPEC.md)
-   One page: the top (card / pack / empty outline), the locker caption, Coming up, How it finished, the crew block,
-   end rows, and the pinned bar. Reuses .home-row, .home-list, .home-k, .empty-box, .pill, .seg, .btn, .nr-foot.
-   New patterns (§8): the deal (hm-deal / hm-rise), the live bar (the only glow on Home), the empty outline at the
-   card's aspect ratio. Pack + card sizing live in css/locker.css. */
-.home > :first-child { margin-top: var(--space-2); }
-.hm-news { border-radius: var(--radius-xl); background: var(--surface-1); }
-.hm-nl { display: flex; align-items: center; gap: var(--space-3); width: 100%; min-height: var(--tap-min); padding: 0 var(--space-3) 0 var(--space-4); text-align: left; }
-.hm-nk { color: var(--text-muted); flex: none; }
-.hm-nt { flex: 1; min-width: 0; font-size: 15px; line-height: 20px; font-weight: 600; }
-.hm-nc { transition: transform var(--motion-grow, 300ms) var(--ease-grow); }
-.hm-news.open .hm-nc { transform: rotate(90deg); }
-.hm-nb { display: flex; flex-direction: column; gap: 2px; padding: 0 var(--space-4) var(--space-4); }
-.hm-nb .lb-cbtn { margin-top: var(--space-3); }
-.hm-hero { margin-top: var(--space-3); }
-.hm-news + .hm-hero { margin-top: var(--space-4); }
-.hm-top { display: block; width: 100%; }
-.hm-empty .empty-box { aspect-ratio: 7 / 5; justify-content: center; }
-.hm-cap { border-bottom: 0; }
-.hm-fin { background: var(--surface-1); border-radius: var(--radius-xl); padding: 0 var(--space-4); }
-.hm-fr { display: flex; align-items: center; gap: var(--space-3); min-height: var(--tap-min); border-bottom: 1px solid var(--line); }
-.hm-fr:has(+ .hm-gap) { border-bottom: 0; }
-.hm-gap { height: var(--space-2); border-bottom: 1px dashed var(--line); }
-.hm-pos { width: 28px; flex: none; color: var(--text-muted); }
-.hm-fn { flex: 1; min-width: 0; font-size: 17px; line-height: 22px; font-weight: 600; }
-.hm-fr .hr-v { font-family: var(--font-mono); font-size: 17px; font-weight: 700; flex: none; font-variant-numeric: tabular-nums; }
-.hm-fr.me .hm-fn, .hm-fr.me .hr-v { color: var(--cart-you-text); }
-.hm-more { min-height: var(--tap-min); padding: 0; border-bottom: 0; }
-.hm-kk { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin: var(--space-5) 0 var(--space-2); color: var(--text-muted); }
-.hm-kact { display: flex; align-items: center; gap: var(--space-1); flex: none; color: var(--text); }
-.hm-crew + .home-list, .hm-b > .hm-ends { margin-top: var(--space-3); }
-.hm-b:has(> .hm-crew:only-child) { margin-top: var(--space-4); }
-.hm-live { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4); border-radius: var(--radius-xl);
+/* ───────────────────────────────────────────── 037 Home, second pass "the wallet" (docs/design/features/037-home/PLAN-v2.md)
+   Nudge strip · headline (kicker + one two-tone ts-title sentence) · the stack (edge strips behind one front object)
+   · crew row / join field · doors row · pinned foot. Reuses .btn, .home-two, .nr-foot, .icon-btn, the 036 card and
+   pack. New patterns (PLAN-v2 §13): the stack with edge strips, the pass, the nudge strip. Card / pack / edge art in
+   css/locker.css. Every size below is an existing token or the plan's measured numbers (32 px edges, 64 px crew row). */
+.home.hm2 { padding-bottom: 0; } /* §4: it renders inside .plain, whose 32 px bottom padding would sit under the foot */
+.hm-nudge { flex: none; display: flex; align-items: center; height: var(--tap-min); margin: 0 0 var(--space-2); border-radius: var(--radius-xl); background: var(--surface-2); }
+.hm-ng { flex: 1; min-width: 0; height: 100%; display: flex; align-items: center; padding-left: var(--space-4); text-align: left; font-size: 15px; line-height: 20px; font-weight: 600; }
+.hm-ngt { color: var(--text-muted); }
+.hm-ngx { flex: none; color: var(--text-muted); background: none; }
+.hm-ng:active, .hm-crew:active, .hm-edge:active, .hm-door:active { transform: scale(.97); }
+/* §5 the headline: kicker 16, gap 8, sentence 36 per line, 16 below */
+.hm-hl { flex: none; padding: var(--space-2) 0 var(--space-4); }
+.hm-hl.tap { cursor: pointer; }
+.hm-k { display: block; color: var(--text-muted); }
+.hm-h { margin: var(--space-2) 0 0; color: var(--text); text-wrap: balance; }
+.hm-g { color: var(--text-muted); }
+/* §6 the stack: edges (32 px visible, 48 tall under the next one), then the front. --hm-w = the measured fit. */
+.hm-stack { flex: none; display: flex; flex-direction: column; width: var(--hm-w, 100%); max-width: 100%; margin: 0 auto; }
+.hm-ei { position: relative; height: 32px; }
+.hm-fi { position: relative; }
+.hm-fill { flex: 1 1 0; min-height: 0; } /* §0 fix 1: spare height goes between the stack and the crew row */
+/* §6.2 the pass */
+.hm-pass { position: relative; aspect-ratio: 7 / 5; display: flex; flex-direction: column; justify-content: space-between; gap: var(--space-2); width: 100%;
+  padding: var(--space-4); background: var(--surface-1); border: 1px solid var(--glass-line); border-radius: var(--radius-lg); box-shadow: var(--shadow-card); overflow: hidden; text-align: left; cursor: pointer; }
+[data-theme="light"] .hm-pass { box-shadow: var(--shadow-float); }
+.hp-top { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-2); }
+.hp-day { font-family: var(--font-mono); font-size: 32px; line-height: 36px; font-weight: 700; letter-spacing: -1px; color: var(--text); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.hp-bdg { flex: none; height: 24px; margin-top: 6px; padding: 0 var(--space-2); border-radius: var(--radius-sm); display: inline-flex; align-items: center; background: var(--surface-3); color: var(--text); }
+[data-theme="light"] .hp-bdg { background: var(--surface-2); }
+.hp-bdg.inv { background: var(--button); color: var(--on-button); }
+.hp-info { display: flex; flex-direction: column; gap: var(--space-2); }
+.hp-row { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: var(--space-3); }
+.hp-c { min-width: 0; display: flex; flex-direction: column; }
+.hp-c > span { color: var(--text-muted); }
+.hp-c > b { font-family: var(--font-mono); font-size: 15px; line-height: 20px; font-weight: 600; }
+.hm-pass.off .hp-day, .hm-pass.off .hp-c > b { color: var(--text-muted); text-decoration: line-through; text-decoration-thickness: 1.5px; }
+.hp-tear { display: block; position: relative; flex: none; margin: 0 calc(-1 * var(--space-4)); border-top: 1.5px dashed var(--line); }
+.hp-tear::before, .hp-tear::after { content: ""; position: absolute; top: -12px; width: 24px; height: 24px; border-radius: var(--radius-md); background: var(--bg); box-shadow: inset 0 0 0 1px var(--glass-line); }
+.hp-tear::before { left: -12px; } .hp-tear::after { right: -12px; }
+.hp-btns { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
+.hp-btns.one { grid-template-columns: 1fr; }
+.hp-btns .btn { min-height: var(--tap-min); border-radius: var(--radius-lg); font-size: 15px; line-height: 20px; }
+.hm-epass .hp-eday { font-family: var(--font-mono); font-size: 15px; line-height: 20px; font-weight: 700; font-variant-numeric: tabular-nums; flex: none; }
+/* §7 the crew row (12 + 64) and §6.4 the join field in its slot */
+.hm-crew { flex: none; display: flex; align-items: center; gap: var(--space-3); width: 100%; height: 64px; margin-top: var(--space-3); padding: 0 var(--space-3) 0 var(--space-4);
+  border: 1px solid var(--glass-line); border-radius: var(--radius-xl); background: var(--surface-1); box-shadow: var(--shadow-card); text-align: left; }
+.hc-m { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.hc-m .ts-label { color: var(--text-muted); }
+.hc-pl { flex: none; font-family: var(--font-mono); font-size: 32px; line-height: 36px; font-weight: 700; letter-spacing: -1px; color: var(--text); font-variant-numeric: tabular-nums; }
+.hc-sub { flex: none; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.hm-crew .hr-chev { color: var(--text-muted); display: inline-flex; flex: none; }
+.hm-join { flex: none; margin-top: var(--space-3); }
+/* §8 doors (48) and the foot */
+.hm-doors { flex: none; display: flex; justify-content: space-between; gap: var(--space-2); }
+.hm-door { min-height: var(--tap-min); display: inline-flex; align-items: center; gap: 2px; padding: 0 var(--space-1); font-size: 15px; line-height: 20px; font-weight: 600; color: var(--text-muted); }
+.hm-crew + .hm-doors, .hm-join + .hm-doors { margin-top: var(--space-1); }
+.hm-live { display: flex; align-items: center; gap: var(--space-3); min-height: 84px; padding: var(--space-2) var(--space-3) var(--space-2) var(--space-4); border-radius: var(--radius-xl);
   background: linear-gradient(var(--tint-you), var(--tint-you)), var(--bg); box-shadow: inset 0 0 0 1.5px var(--cart-you), var(--glow-you); }
 .hm-live .lc-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--cart-you); flex: none; }
-.hm-lm { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.hm-lk { color: var(--cart-you-text); }
-.hm-ll { font-size: 17px; line-height: 22px; font-weight: 800; }
-.hm-lbtn { flex: none; }
+.hm-lm { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.hm-lk { color: var(--cart-you-text); display: flex; align-items: center; gap: 6px; }
+.hm-ll { font-size: 15px; line-height: 20px; font-weight: 600; }
+.hm-lbtn { flex: none; border-radius: var(--radius-lg); }
+.hm-two { margin-top: var(--space-2); }
+.hm-two .btn { min-height: var(--tap-min); border-radius: var(--radius-lg); font-size: 15px; line-height: 20px; }
 .hm-rh { margin: var(--space-2) 0 var(--space-4); }
-/* §6 · the opening: deal on a fresh open (the top drops in, the rest rises, the bar last); a quick fade coming back. */
-@keyframes hm-deal { from { opacity: 0; transform: translateY(-40px) rotate(-5deg) scale(1.06); } }
-@keyframes hm-rise { from { opacity: 0; transform: translateY(14px); } }
+/* What's new sheet (§4.2) */
+.hn-k { color: var(--text-muted); }
+.hn-t { margin: var(--space-2) 0 var(--space-3); }
+.hn-lines { margin: 0 0 var(--space-5); padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--space-3); color: var(--text-muted); }
+.hn-lines li:first-child { color: var(--text); font-weight: 600; }
+/* Standings takes the crew's controls (§7) */
+.st-ctl { margin: 0 0 var(--space-3); }
+.st-acts { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+/* §11 the one deal (0.7 s, staggered, --ease-grow), the wait for the locker, the late cross-fade, the return fade */
+@keyframes hm-deal { from { opacity: 0; transform: translateY(56px) scale(.96); } }
 @keyframes hm-fade { from { opacity: 0; } }
-.hm-hero.hm-deal { animation: hm-deal 700ms var(--ease-grow) both; }
-.hm-rise { animation: hm-rise 500ms var(--ease-grow) var(--hm-d, 0ms) both; }
-.home.hm-fade { animation: hm-fade 220ms ease both; }
-@media (prefers-reduced-motion: reduce) { .hm-hero.hm-deal, .hm-rise, .home.hm-fade { animation: none; } }
+.hm-stack.hm-deal > * { animation: hm-deal 520ms var(--ease-grow) both; animation-delay: calc(var(--i, 0) * 60ms); }
+.hm-stack.hm-wait { opacity: 0; }
+.hm-fi.hm-xfade, .home.hm-fade { animation: hm-fade 400ms ease both; }
+@media (prefers-reduced-motion: reduce) { .hm-stack.hm-deal > *, .hm-fi.hm-xfade, .home.hm-fade { animation: none; } .hm-stack.hm-wait { opacity: 1; } }

@@ -1158,6 +1158,47 @@ Still open: nothing blocking. Design direction (section 9) is final.
   resume = 220 ms fade. `data-t0` + `ui.syncMotion` in `mount`, nothing under reduced motion. Styles: `/* 037 Home */`
   at the end of styles.css + the pack / card bits at the end of locker.css. `RELEASES` entry `2026-11-25`.
 
+- **037 · Home, second pass "the wallet" (Nov 26, brief `docs/design/features/037-home/PLAN-v2.md`, its §0 wins; branch
+  `claude/037-home-v2`).** Replaces the first pass above. No DB, sync, join, queue or engine change. Home answers "what's
+  my golf right now?" with status + doors only: **nudge strip** (48 px, `--surface-2`, under the top bar; never while
+  live): Add to Home Screen first (iPhone Safari; ✕ → `glb.seen.homeNudge.add`, then it is a door), else What's new
+  ("New · <title>", tap `home-news-open` → sheet `home-news` with the release's lines + Got it `home-news`; ✕ marks the
+  release seen in `glb.seen.whatsnew`; skipped for anyone whose first round is after the release). **Headline**: kicker
+  (`ts-label`) + one two-tone `ts-title` sentence (bright `--text` = the fact, grey `--text-muted` qualifies it) from the
+  ladder in `homeview.ladder` (live · spot given · called off · pass ≤ 48 h "Riding with Sean." / "8 players in." · new
+  pack · ≤ 14 days "9 days out." · last out ≤ 7 days · crew leader (taps to Standings) · older · none finished · none);
+  results are the game's ("Low round of 5.", "Won with Sean.", "12th of 16.", "Jordans won 6½–5½."), never strokes.
+  **Every word is in `homeview.COPY` / `WORDS`** (app form + Safari form per rung); `mount` shows the first form that
+  fits two lines in the app / one line in Safari. **The stack**: one front object (first match: a pass due within 48 h
+  → the newest pack → a later pass → your latest card (real 036 front + crew line; tap `home-card` = that card in the
+  Locker) → the plain card in `lkf-rookie` paper: member (name in `ts-title`, crew · "First round Nov 2026") or blank;
+  `loading` box while the locker loads, "Your cards load with signal." when it failed and `glb.seen.homeCards` says it had
+  cards). Edges behind it (another pass → the pack → older cards), each a drawn 32 px strip (finish `.lk-mat` / chrome
+  foil / pass surface + label row, never a score), 48 tall under the next object; up to 3 in the app, 1 in Safari, 0 in
+  Safari with a pack in front, a nudge or a live round. **The pass** (new pattern): 7:5 on `--surface-1`, mono day "SAT
+  8:40" + badge (TODAY / TOMORROW inverted; CALLED OFF / SPOT GIVEN on `--surface-3`), Game on its own row, then Course ·
+  Tee time · Host, a dashed tear with notches, **Open** + **Share link** (`home-share`: `navigator.share` of the round
+  link, copy as the fallback) or **Text <host>** (`home-text`). Data from `lobby.homeCard` (now also `startTime`,
+  `startsAt`, `course`, `game` = `gameName(compute(event, []))`, `players`, `onRoster`, `mate`, `sub`; the hard-coded
+  "Team Ryder Cup" wording is gone from it and from `home.roundSummary`). **Crew row** (64 px, `--glass-line`): crew name
+  over Standings, your place in mono 32 ("2nd", or "1 of 3 rounds") → `#/season/<id>`; Start a crew with no crew; hidden
+  while live or when the crew has no rounds; with zero cards and no crew rounds the slot is the **join field** and the
+  foot is New round only. **Doors row**: All rounds (`#/rounds`), Add to Home Screen after its nudge; hidden while the
+  nudge shows. **Foot**: Join with code + New round, or the live bar + two 48 px half buttons. Spare height goes between
+  the stack and the crew row (§0). **Measured fit** in `mount` (`fitHome`): headline form → edges drop (farthest first) →
+  the front narrows (`homeview.fitWidth`: min(content, leftover × 7/5), never under 300, a pass 336) → the doors row
+  hides. **Motion**: one deal per page load (stack staggered, waits for the locker or 1.5 s), a late locker cross-fades,
+  a return fades; `data-t0` + `ui.syncMotion`; `glb.seen.homeTop` = `card:` / `pack:` / `pass:CODE`, `member`, `blank`.
+  **Standings** takes the crew's controls (`seasons.standingsHeader`): the `crew-pick` `.seg` (2+ crews; on Standings it
+  routes to `#/season/<id>`), **Invite** (`crew-invite`), **Name your crew** while unnamed; ⋯ (`crew-settings`) stays top
+  right. **038 · Full board on the card back:** `locker.boardChip` / `boardHref` (`#/e/CODE`), action `lk-board` (its own,
+  so the card's `lk-card` flip never fires), drawn on every Locker / passport card back, not on the pack overlay's card or
+  the share image; styles at the end of locker.css. Tests: `tests/home037.test.mjs` (ladder both forms, stack, edges per
+  size, crew slot, nudge order, Standings header, 038 chip), `lobby025` (homeCard fields), `returning037` (What's new
+  skip), `smoke037` (24 checks: passes in the stack, the nudge + sheet, Add to Home Screen nudge → door). `RELEASES`
+  entry `2026-11-26` "Cards, packs and a Passport" (replaces the first pass's unreleased `2026-11-25`). Styles: the
+  `/* 037 Home */` block at the end of styles.css; card / pack / edge / plain-card bits in locker.css.
+
 ## 13. V2 backlog (running list)
 
 - **Carryovers (skins-style):** a tied point rolls onto the next hole instead of halving, so the next hole can be worth 3–4 points. Open design question: does an unresolved carry die at the end of a 6-hole rotation, or roll into the next opponent?

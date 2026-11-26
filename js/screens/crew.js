@@ -50,7 +50,7 @@ const myPerson = (app, id) => app.crews?.[id]?.info?.me || db.crews.get(id)?.me 
 // ───────────────────────────────────────────── Home: crew card
 
 /**
- * 037 §3.4: what Home's crew block needs (homeview.crewModel draws the rules): this phone's crews, the selected one's
+ * 037 v2 §7: what Home's crew row needs (homeview.crewSlot draws the rules): this phone's crews, the selected one's
  * name, and its season line ("Fall · you’re 2nd") or round count. Starts loading the crew. Never throws.
  */
 export function homeCrewData(app) {
@@ -61,18 +61,26 @@ export function homeCrewData(app) {
     const c = app.crews?.[cur.id];
     if (!c) loadCrew(app, cur.id);
     const info = c?.info;
-    let seasonLine = '', rounds = null;
+    let seasonLine = '', rounds = null, standing = null;
     const ss = crewSeasons(app, cur.id);
     if (ss?.current) {
       rounds = ss.current.rounds?.length || 0;
       if (rounds) {
         const t = seasonRecordTable(ss.current, myPerson(app, cur.id));
         if (t.me?.ranked) seasonLine = `${ss.current.name} · you’re ${placeLabel(t.me)}`;
+        // 037 v2: the crew row's place and rung 9's leader ("Sean leads." / "Sean is next." when you lead).
+        const ranked = t.rows.filter((r) => r.ranked);
+        const first = (r) => String(r?.name || '').split(' ')[0] || null;
+        const iLead = !!(t.me?.ranked && t.me.rank === 1);
+        standing = {
+          place: t.me?.ranked ? placeLabel(t.me) : null, myRounds: t.me ? t.me.rounds : 0, iLead,
+          leader: first(ranked[0]), next: iLead ? first(ranked.find((r) => !r.me)) : null,
+        };
       }
     } else if (info) rounds = info.rounds;
     return {
       list: list.map((x) => ({ id: x.id, name: app.crews?.[x.id]?.info?.name || x.name || null })),
-      currentId: cur.id, name: info?.name ?? cur.name ?? null, seasonLine, rounds,
+      currentId: cur.id, name: info?.name ?? cur.name ?? null, seasonLine, rounds, standing,
     };
   } catch {
     return { list: [] };
@@ -290,6 +298,8 @@ export default {
     'crew-pick': (el, ev, app) => {
       db.crews.select(el.dataset.v);
       loadCrew(app, el.dataset.v);
+      // 037 v2 §7: the switcher lives on Standings now; picking a crew there opens that crew's standings.
+      if (app.route?.name === 'season') { app.season = { crew: el.dataset.v }; app.go(`#/season/${el.dataset.v}`); return; }
       app.render();
     },
     'crew-invite': (el, ev, app) => shareInvite(app, el.dataset.v),

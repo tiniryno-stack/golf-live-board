@@ -479,9 +479,44 @@ html.rm .pk .pk-wash, html.rm .pk .pk-screen, html.rm .pk .pk-white, html.rm .pk
 html.rm .pk-lands > * { opacity: 1; }
 html.rm .lk-flip { transition-duration: 150ms; }
 
-/* ── 037 Home: the top is the real card or the real chrome pack, full width ── */
+/* ── 037 Home: the front is the real card, the real chrome pack, or the plain card (lkf-rookie paper), full width ── */
 .hm-card { box-shadow: none; }
+.hm-pack { display: block; width: 100%; }
 .hm-packart { position: relative; display: block; width: 100%; aspect-ratio: 8.4 / 6.2; container-type: inline-size; filter: drop-shadow(0 6px 12px var(--lk-shadow)); }
 .hm-packart > .bp { position: absolute; inset: 0; }
-.hm-pack:active .hm-packart, .hm-card:active { transform: scale(.98); }
+.hm-pack:active .hm-packart, .hm-card:active { transform: scale(.97); }
 .x-crewline { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+/* 037 v2 §6.3: the plain card on the 036 grid. Name in ts-title (§0 fix 2). Light theme: float shadow + a 1 px line. */
+.hm-plain .hm-pname { color: var(--m-ink); }
+.hm-plain .hm-pblank { color: var(--m-ink); }
+.hm-plain .x-bot { min-height: 2.4cqw; }
+.hm-pmsg { position: absolute; inset: 0; display: grid; place-items: center; color: var(--m-soft); }
+[data-theme="light"] .hm-plain .lk-mat { box-shadow: var(--shadow-float), 0 0 0 1px var(--line); }
+[data-theme="light"] .hm-fi > .hm-card .lk-mat { box-shadow: var(--shadow-float); }
+/* 037 v2 §6.1 (§0): an edge = a 32 px strip of the object behind, drawn from its own art (the finish's .lk-mat, the
+   chrome foil, the pass's surface) + a label row: course + finish, "1 pack to open", or day + course. Never a score.
+   The element is 48 tall (the next object covers its lower 16); the top edge's tap area runs 16 px up into the gap. */
+.hm-edge { position: absolute; left: 0; right: 0; top: 0; height: var(--tap-min); display: block; padding: 0; text-align: left; container-type: inline-size; }
+.hm-ei:first-child .hm-edge::before { content: ""; position: absolute; left: 0; right: 0; top: -16px; height: 16px; }
+.hm-edge .lk-mat { border-radius: 4cqw 4cqw 0 0; box-shadow: none; }
+.hm-el { position: absolute; left: 0; right: 0; top: 0; height: 32px; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
+  padding: 0 var(--space-4); color: var(--m-ink); text-shadow: var(--m-emboss); }
+.hm-el > .ellipsis { min-width: 0; }
+.hm-ef { flex: none; color: var(--m-soft); }
+[data-theme="light"] .hm-edge:not(.hm-epass) .lk-mat, [data-theme="light"] .hm-epk { box-shadow: inset 0 0 0 1px var(--m-edge, var(--line)); }
+.hm-epk { position: absolute; inset: 0; overflow: hidden; border-radius: 4cqw 4cqw 0 0; }
+.hm-epk > .bp { position: absolute; left: 0; right: 0; top: -12cqw; height: 73.8cqw; }
+.hm-epack .hm-el { color: var(--ink); --m-soft: color-mix(in srgb, var(--ink) 62%, transparent); text-shadow: none; }
+.hm-epass { background: var(--surface-1); border: 1px solid var(--glass-line); border-bottom: 0; border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
+.hm-epass .hm-el { color: var(--text); text-shadow: none; }
+.hm-epass .hm-el .ts-label { color: var(--text-muted); }
+.hm-epass.off .hp-eday { color: var(--text-muted); text-decoration: line-through; }
+
+/* ───────────────────────────────────────────── 038 · Full board on the card back (docs/design/features/038-card-full-board)
+   A chip bottom-left in the card's own ink, ts-label type, drawn 36 px with a 48 px tap area (::after). */
+.cb-board { position: absolute; z-index: 3; left: 4.6cqw; bottom: 4.4cqw; height: 36px; padding: 0 var(--space-2) 0 var(--space-3); border-radius: var(--radius-pill);
+  display: inline-flex; align-items: center; gap: 2px; color: var(--m-ink); text-shadow: none; background: color-mix(in srgb, var(--m-ink) 14%, transparent); }
+.cb-board::after { content: ""; position: absolute; inset: -6px 0; }
+.cb-board:active { transform: scale(.97); }
+.cb:has(> .cb-board) > .cb-col:first-child { padding-bottom: 44px; }
+.hm-epk .bp-face, .hm-epk .topw { display: none; }

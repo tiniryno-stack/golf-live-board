@@ -15,6 +15,7 @@ import { passportOf } from '../stamps.js';
 import { esc, icon, reducedMotion } from '../ui.js';
 import {
   buildLocker, packsOf, openedOf, FINISHES, isAdmin, LOCKER_ADMINS, shortDay, longDay, toParLabel, finName, adminTotals, backRows,
+  BOARD_ACT, boardChip,
 } from '../locker.js';
 
 const STALE = 2 * 60 * 1000;
@@ -177,7 +178,8 @@ function peopleHtml(c) {
   return `<div class="cb-col cb-sm"><div class="cb-k cb-before">${g.length} played · ${esc(shortDay(c.day))}</div>
     ${rows.map((p) => (p.gap ? '<div class="cb-dots">···</div>' : plRow(p, true))).join('')}${tail}</div>`;
 }
-export function backHtml(c) {
+/** 038: `board` draws the Full board chip (everywhere a card back is shown, not on the pack overlay's card). */
+export function backHtml(c, { board = false } = {}) {
   const k = c.stats.count;
   const g = c.group || [];
   const me = g.find((x) => x.me);
@@ -190,6 +192,7 @@ export function backHtml(c) {
     <div class="cb-col sb"><div><div class="cb-k">${esc(finName(c))}${c.grade ? ` · ${c.grade}` : ''}</div>${line ? `<div class="cb-line">${esc(line)}</div>` : ''}</div>
       <div class="cb-tiles">${tile(k.eagles + k.birdies, 'Birdies+')}${tile(k.pars, 'Pars')}${tile(k.bogeys, 'Bogeys')}${tile(k.doubles, 'Doubles+')}</div>
       <div class="cb-types">${types}<span><i>Front · back</i>${c.stats.front} · ${c.stats.back}</span></div></div>
+    ${board ? boardChip(c, icon('fwd', 14)) : ''}
   </div></div>`;
 }
 
@@ -201,7 +204,7 @@ const EDGE = Array.from({ length: 7 }, (_, k) => `<i class="lk-edge" style="--z:
 export function slotHtml(c, { i = 0, flipped = false, extra = '', act = 'lk-card' } = {}) {
   return `<div class="lk-slot x-land lkf-${c.fin}${extra}" data-i="${i}" data-key="${esc(c.key)}"${act ? ` data-act="${act}"` : ''}>
     <div class="lk-tilt" role="button" tabindex="0" aria-label="${esc(label(c))} Tap to flip it.">
-      <div class="lk-flip${flipped ? ' on' : ''}">${EDGE}<div class="lk-face lk-front">${frontHtml(c)}</div><div class="lk-face lk-back">${backHtml(c)}</div></div>
+      <div class="lk-flip${flipped ? ' on' : ''}">${EDGE}<div class="lk-face lk-front">${frontHtml(c)}</div><div class="lk-face lk-back">${backHtml(c, { board: !!act })}</div></div>
       <i class="pk-glare"></i><i class="pk-sweep"></i>
     </div></div>`;
 }
@@ -554,10 +557,23 @@ export function homeLockerData(app) {
   try {
     const pid = lockerPerson();
     const L = pid ? app.lockers?.[pid] : null;
-    if (!L || !Array.isArray(L.cards) || L.error) return null;
+    if (!L || !Array.isArray(L.cards)) return null; // 037 v2: cards from an earlier load stay when a refresh fails
     return { personId: pid, cards: L.cards, rows: L.rows || [], sub: homeSub(openedOf(L.cards)) };
   } catch {
     return null;
+  }
+}
+
+/** 037 v2 §11: where this phone's locker is: 'none' (no person), 'loading', 'failed' (no cards to show) or 'ready'. */
+export function homeLockerState(app) {
+  try {
+    const pid = lockerPerson();
+    if (!pid) return 'none';
+    const L = app.lockers?.[pid];
+    if (L && Array.isArray(L.cards)) return 'ready';
+    return L?.error ? 'failed' : 'loading';
+  } catch {
+    return 'failed';
   }
 }
 
@@ -665,6 +681,8 @@ export default {
       startHomeLocker(app);
       app.render();
     },
+    // 038: the card back's Full board chip. Its own action (dispatch finds the chip first), so the card never flips.
+    [BOARD_ACT]: (el, ev, app) => { ev?.stopPropagation?.(); app.go(el.dataset.v); },
     'lk-back': (el, ev, app) => { if (history.length > 1) history.back(); else app.go('#/'); },
     'lk-view': (el, ev, app) => {
       app.ui.lk.tab = 'cards';

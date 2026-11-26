@@ -19,6 +19,7 @@ import { fullName } from '../names.js';
 import { whoGroups, phonePeople } from '../identity.js';
 import { lobbySheets } from './hostlobby.js';
 import { lockerSheets } from './locker.js';
+import { RELEASES } from '../whatsnew.js';
 
 let lastHtml = '';
 let closeTimer = null;
@@ -272,6 +273,14 @@ const BODIES = {
   seasonNew: (app, props) => seasonSheets.seasonNew(app, props, head),
   lockerHow: (app, props) => lockerSheets.lockerHow(app, props, head), // 035
   teamName: (app, props) => teamNameSheet(app, props, head),
+
+  /** 037 v2 §4.2 · Home → the What's new strip: the release's lines + Got it (opens only on a tap). */
+  'home-news'(app, { id } = {}) {
+    const r = RELEASES.find((x) => x.id === id) || RELEASES[0];
+    return `<div class="hn"><div class="ts-label hn-k">New in Golf Board</div><h2 class="ts-title hn-t">${esc(r.title)}</h2>
+      <ul class="hn-lines">${r.lines.map((l) => `<li>${esc(l)}</li>`).join('')}</ul>
+      <button class="btn primary big block" data-act="home-news" data-v="${esc(r.id)}">Got it</button></div>`;
+  },
 
   /** Home → Join with code. */
   join() {

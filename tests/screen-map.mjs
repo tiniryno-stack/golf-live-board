@@ -316,8 +316,8 @@ const TABS = [['enter', 'Enter', 'js/screens/enter.js'], ['matches', 'Matches', 
   for (const x of [r, rf, c6, ry, sc]) await go(page, tab(x.code, 'board'));
   const HM = { area: 'home' };
   await cap(page, 'home-rounds', { ...HM, title: 'Home · with rounds + crew', how: 'Home after playing', file: 'js/screens/home.js' }, () => go(page, '#/'));
-  await cap(page, 'home-rounds-2', { ...HM, title: 'Home · scrolled', how: 'Home → scroll down', file: 'js/screens/home.js' }, () => page.evaluate(() => { const c = document.getElementById('content'); c.scrollTop = c.scrollHeight; }));
-  await cap(page, 'crew-settings', { ...HM, title: 'Crew settings', how: 'Home → crew card → ⚙', file: 'js/screens/crew.js · crewSettings' }, async () => { await go(page, '#/'); await sheet(page, 'crewSettings', { id: crew }); });
+  await cap(page, 'home-rounds-2', { ...HM, title: 'Home · bottom', how: 'Home → the crew row, doors and foot', file: 'js/screens/home.js' }, () => page.evaluate(() => { const c = document.getElementById('content'); c.scrollTop = c.scrollHeight; }));
+  await cap(page, 'crew-settings', { ...HM, title: 'Crew settings', how: 'Home → crew row → Standings → ⋯', file: 'js/screens/crew.js · crewSettings' }, async () => { await go(page, '#/'); await sheet(page, 'crewSettings', { id: crew }); });
   await closeSheet(page);
   await cap(page, 'crew-new-player', { ...HM, title: 'I’m new (crew)', how: 'Crew invite → I’m new', file: 'js/screens/crew.js · crewNew' }, () => sheet(page, 'crewNew', { id: crew }));
   await closeSheet(page);
@@ -325,7 +325,7 @@ const TABS = [['enter', 'Enter', 'js/screens/enter.js'], ['matches', 'Matches', 
   await cap(page, 'season-2', { area: 'season', title: 'Season · scrolled', how: 'Season → scroll', file: 'js/screens/season.js' }, () => page.evaluate(() => { const c = document.getElementById('content'); c.scrollTop = c.scrollHeight; }));
   await cap(page, 'season-past', { area: 'season', title: 'Past seasons', how: 'Season → Seasons', file: 'js/screens/season.js' }, () => go(page, `#/season/${crew}/past`));
   await cap(page, 'crew-which', { area: 'home', title: 'Which one are you? (crew)', how: 'Crew invite link → pick yourself', file: 'js/screens/crew.js' }, () => go(page, `#/crew/which/${crew}`));
-  await cap(page, 'crew-rename', { area: 'home', title: 'Name your crew', how: 'Crew card → Name your crew', file: 'js/screens/crew.js' }, () => go(page, `#/crew/rename/${crew}`));
+  await cap(page, 'crew-rename', { area: 'home', title: 'Name your crew', how: 'Standings → Name your crew', file: 'js/screens/crew.js' }, () => go(page, `#/crew/rename/${crew}`));
   await go(page, `#/season/${crew}`);
   await cap(page, 'season-new', { area: 'season', title: 'New season', how: 'Season → New season (crew owner)', file: 'js/screens/season.js · seasonNew' }, () => sheet(page, 'seasonNew', { id: crew }));
   await ctx.close();

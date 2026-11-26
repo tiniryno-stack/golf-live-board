@@ -10,7 +10,8 @@
 //         'off'    called off (prevStage = what Bring it back restores)
 //   open = stage 'ready' and (openedEarly or now ≥ opensAt). The server's gate (_lobby_gate) decides the same.
 
-import { normalizeSettings, groupIndex, ryderMatchupsAt, holeAt, holesLabel, ryderSetup } from './scoring.js';
+import { normalizeSettings, groupIndex, ryderMatchupsAt, holeAt, holesLabel, ryderSetup, compute } from './scoring.js';
+import { gameName } from './playfor.js';
 
 export const STAGES = ['lobby', 'carts', 'teams', 'ready', 'off'];
 export const OPEN_BEFORE_MIN = 30;
@@ -334,16 +335,26 @@ export function spotGiven(event, { pid, personId }) {
 export function homeCard(event, { pid = null, personId = null } = {}, nowMs = Date.now()) {
   const st = lobbyState(event, nowMs);
   if (!st || st.open || st.past) return null;
-  const base = { date: st.date, when: shortDate(st.date), host: st.hostName, hostLine: hostLine(st) };
-  const sub = spotGiven(event, { pid, personId });
-  if (sub) return { ...base, kind: 'removed', line: `${st.hostName} gave your spot to ${sub}.` };
-  if (st.stage === 'off') return { ...base, kind: 'off', line: `${st.hostName} called this off. Rain check?` };
   const players = event.roster?.players || [];
   const me = players.find((p) => (personId && p.personId === personId) || p.id === pid) || null;
+  // 037 v2 · the pass: what it prints (pure; old entries without these fall back to recent.course / played_on).
+  let game = '';
+  try { game = gameName(compute(event, [])); } catch { game = ''; }
   const mine = me ? myLobby(event, me.id) : null;
+  const groupTee = me && me.groupId ? normalizeSettings(event.settings).teeTimes[groupIndex(me.groupId)] || '' : '';
+  const tee = mine?.tee || clock12(st.stage === 'ready' && groupTee ? groupTee : st.startTime);
+  const startsAt = startAtFor(st.date, st.startTime, st.tz);
+  const base = {
+    date: st.date, when: shortDate(st.date), host: st.hostName, hostLine: hostLine(st),
+    startTime: tee || '', startsAt: startsAt ?? null, course: event.course?.shortName || event.course?.name || '',
+    game, players: players.length, onRoster: !!me, mate: me ? myCart(event, me.id)?.mate || null : null,
+  };
+  const sub = spotGiven(event, { pid, personId });
+  if (sub) return { ...base, kind: 'removed', sub, line: `${st.hostName} gave your spot to ${sub}.` };
+  if (st.stage === 'off') return { ...base, kind: 'off', line: `${st.hostName} called this off. Rain check?` };
   let line;
   const cart = me && st.stage === 'carts' ? myCart(event, me.id) : null;
-  if (!me) line = `Team Ryder Cup · ${players.length} players`;
+  if (!me) line = `${game || 'Round'} · ${players.length} players`;
   else if (cart?.mate) line = `Riding with ${cart.mate} · teams after ${st.hostName}’s draft`;
   else if (st.stage === 'lobby' || st.stage === 'carts') line = `Teams after ${st.hostName}’s draft`;
   else if (st.stage === 'teams' || !mine?.tee) line = `You’re on ${mine?.side?.name || 'a team'} · start times not set yet`;

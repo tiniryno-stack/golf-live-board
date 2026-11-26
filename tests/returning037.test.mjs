@@ -31,4 +31,9 @@ test('Returning players: Safari sends you to the app, Home finds who you are, Wh
   assert.deepEqual(whatsNew({ seen: null, hasRounds: false }), { show: null, markSeen: id });
   assert.deepEqual(whatsNew({ seen: id, hasRounds: true }), { show: null, markSeen: null });
   assert.equal(whatsNew({ seen: 'older', hasRounds: true }).show.id, id);
+  // 037 v2: skipped for anyone whose first round is after the release (it was never new to them).
+  assert.deepEqual(whatsNew({ seen: null, hasRounds: true, firstRound: '2026-12-01' }), { show: null, markSeen: id });
+  assert.equal(whatsNew({ seen: null, hasRounds: true, firstRound: '2026-11-07' }).show.id, id);
+  assert.equal(RELEASES[0].title, 'Cards, packs and a Passport');
+  assert.ok(RELEASES[0].lines.length >= 2 && RELEASES[0].lines.length <= 3);
 });

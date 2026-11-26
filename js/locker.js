@@ -213,3 +213,15 @@ export function adminTotals(people) {
   const list = people || [];
   return { people: list.length, packs: sum(list.map((p) => Number(p.rounds) || 0)), opened: sum(list.map((p) => Number(p.opened) || 0)) };
 }
+
+// ───────────────────────────────────────────── 038 · "Full board" on the card back
+
+/** The action the chip carries: its own, so the app's dispatch (closest [data-act]) never reaches the card's lk-card flip. */
+export const BOARD_ACT = 'lk-board';
+/** Where the chip goes: the card's round (a finished round opens on its Board). */
+export const boardHref = (c) => { const code = String(c?.code || '').replace(/[^A-Za-z0-9]/g, ''); return code ? `#/e/${code}` : null; };
+/** The chip's markup (bottom-left of the back, the card's own ink). `chev` = the chevron icon's SVG. */
+export function boardChip(c, chev = '') {
+  const href = boardHref(c);
+  return href ? `<button class="cb-board ts-label" data-act="${BOARD_ACT}" data-v="${href}" aria-label="Full board for this round">Full board${chev}</button>` : '';
+}
