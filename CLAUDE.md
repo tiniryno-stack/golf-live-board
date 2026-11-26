@@ -58,8 +58,8 @@ keep `brief.js`. Opens on its own once per phone on the first Enter of an open r
 
 ## Building Home (037)? Read `docs/design/features/037-home/PLAN-v2.md` first (its §0 wins)
 
-Second pass "the wallet", approved by Andrew Nov 26 (`prototype-v2.html`, 31 true-size frames). **Built on branch
-`claude/037-home-v2`** (not on `main` yet; replaces the first pass in `SPEC.md`). Home = nudge strip · headline (kicker +
+Second pass "the wallet", approved by Andrew Nov 26 (`prototype-v2.html`, 31 true-size frames). **Live on `main` since Nov 26
+(c8afb61)**, with 038; replaces the first pass in `SPEC.md`. Home = nudge strip · headline (kicker +
 one two-tone sentence) · the stack (one front object: a pass ≤ 48 h → pack → later pass → latest card → plain
 `lkf-rookie` card; drawn 32 px edges behind it, 3 in the app / 1 in Safari) · crew row (or Start a crew / the join field)
 · doors row · pinned foot (or the live bar). Pure model `js/homeview.js` (`homeModel`, `ladder`, `passOf`, `crewSlot`,
