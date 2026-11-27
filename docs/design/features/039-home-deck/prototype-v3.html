@@ -581,6 +581,22 @@ body{margin:0}
 .wct .h{opacity:.8}
 
 /* ═══════ 039 v3: Rounds = the wallet ═══════ */
+/* cards behind the front one are flat: no 3D edge layers or depth, so nothing peeks out above the edge strip */
+.wc:not(.front) .lk-slot{perspective:none}
+.wc:not(.front) .lk-edge{display:none}
+.wc:not(.front) .lk-face.lk-front{transform:none}
+/* behind cards: the plain finish covers the whole card (label on top), so there is no seam where a strip would end */
+.wl .wel{inset:0;height:auto;border-radius:4cqw}
+.wl .wel .lk-mat{border-radius:4cqw}
+.wl .wel.pa{border-bottom:1px solid var(--glass-line);border-radius:16px}
+.wl .wel.pk{border-radius:4cqw}
+.wps .bdg.lvb{display:inline-flex;gap:6px}
+.wps .bdg.lvb::before,.lvd::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--cart-you);display:inline-block;flex:none}
+.lvd{display:inline-flex;align-items:center;gap:8px}
+.wps .lvl{font-size:15px;line-height:20px;color:var(--text-muted)}
+.lvr2{display:flex}
+.lvr2 .sm{position:relative;height:36px;padding:0 10px 0 14px;border-radius:999px;background:var(--surface-2);font-size:15px;font-weight:600;display:inline-flex;align-items:center;gap:2px}
+.lvr2 .sm::after{content:"";position:absolute;inset:-6px 0}
 .dock.t3 .tab-hl{width:calc((100% - 12px) / 3)}
 .wct.hm{justify-content:space-between;height:48px;margin-top:0}
 .wct .go{min-height:48px;display:flex;align-items:center;gap:2px;font-size:15px;font-weight:600;color:var(--text);margin-right:-4px}
@@ -1434,11 +1450,11 @@ function roundItems(f) {
   return out;
 }
 function face3(it) {
-  if (it.k === 'live') return `<div class="wps wlv"><div class="p1"><span class="lvk ts-label">Live · hole 7</span></div><div class="cg">Twin Creeks · Partner “Rider” Cup</div><div class="lvl">You and Sean are up 2 · thru 6</div><div class="tear"></div><div class="bt one"><button class="pri"${tap('Back into the round · Enter, hole 7', 'hole')}>Back to hole 7</button></div></div>`;
+  if (it.k === 'live') return `<div class="wps"><div class="p1"><span class="day">HOLE 7</span><span class="bdg ts-label lvb">Live</span></div><div class="cg">Twin Creeks · Partner “Rider” Cup</div><div class="lvl">You and Sean are up 2 · thru 6</div><div class="tear"></div><div class="lvr2"><button class="sm"${tap('Back into the round · Enter, hole 7', 'hole', null, ' data-hit="48"')}>Back to hole 7${I.chev}</button></div></div>`;
   return faceHtml(it);
 }
 function edge3(it) {
-  if (it.k === 'live') return `<span class="wel lv"><span class="el"><span class="ts-label">Live · hole 7</span><span class="ts-label fn">Up 2 · thru 6</span></span></span>`;
+  if (it.k === 'live') return `<span class="wel pa"><span class="el"><b class="lvd">HOLE 7</b><span class="ts-label fn">Live · Twin Creeks</span></span></span>`;
   return edgeHtml(it);
 }
 function walletHtml(f, ctx) {
@@ -1481,7 +1497,7 @@ function listHtml(f) {
 function tlStrip(it, i) {
   if (it.k === 'card') { const c = it.c; return `<button class="strip lkf-${c.fin}"${tap(`Open this card: ${c.course}, ${shortDay(c.day)}`, 'tx', i)}><span class="lk-mat"><i class="lk-sheen"></i>${c.fin === 'prismatic' ? '<i class="x-slick"></i>' : MS.includes(c.fin) ? '<i class="x-mslick"></i>' : ''}</span><span class="sl"><span class="c">${esc(c.course)}</span><span class="rt"><span class="ts-label d">${esc(shortDay(c.day))}</span><span class="mk">${c.gross}</span></span></span></button>`; }
   if (it.k === 'pass') return `<button class="strip spa"${tap('Open the pass', 'tx', i)}><span class="sl"><span class="c">${esc(it.p.course)}</span><span class="rt"><span class="ts-label d">${esc(it.p.day)}</span></span></span></button>`;
-  if (it.k === 'live') return `<button class="strip slv"${tap('Open the live round', 'tx', i)}><span class="sl"><span class="c">Live · hole 7</span><span class="rt"><span class="ts-label d">Up 2</span></span></span></button>`;
+  if (it.k === 'live') return `<button class="strip spa"${tap('Open the live round', 'tx', i)}><span class="sl"><span class="c lvd">Twin Creeks</span><span class="rt"><span class="ts-label d">Live · hole 7</span></span></span></button>`;
   if (it.k === 'pack') return `<button class="strip pk"${tap('Open the pack', 'tx', i)}><i class="pat p-fine" style="inset:0;position:absolute"></i><span class="sl"><span class="c">1 card to open</span><span class="rt"><span class="ts-label d">Nov 20</span></span></span></button>`;
   return '';
 }
