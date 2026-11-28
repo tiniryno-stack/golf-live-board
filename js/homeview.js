@@ -100,6 +100,13 @@ export const WORDS = {
   liveNow: 'Live now',
   onTheTee: 'On the tee',
   count: (i, n) => (n > 1 ? `${i} of ${n}` : ''),
+  allRounds: 'All rounds',
+  standings: 'Standings',
+  leads: (n) => (n ? `${n} leads` : 'Standings'),
+  isSecond: (n) => `${n} is 2nd`,
+  youLead: 'You lead',
+  yourPlace: (p) => `You’re ${p}`,
+  unranked: (n) => `${n} of 3 rounds`,
 };
 const ago = (days) => (days < 14 ? '1 week ago' : days < 60 ? `${Math.round(days / 7)} weeks ago` : `${Math.round(days / 30)} months ago`);
 const dateKick = (iso) => { const wd = weekday(iso).slice(0, 3); return wd ? `${wd} ${shortDay(iso)}` : ''; };
@@ -318,9 +325,29 @@ export function homeModel({
     ? walletItems({ next, packs, opened, member, state: state === 'none' ? 'ready' : state, hadCards, crewLine })
     : (next ? [{ kind: 'next', key: `next:${next.code}`, n: next }] : []);
 
-  const headline = ladder({ live, passes, newestPack: packs.length ? packs[packs.length - 1] : null, opened, rounds, crews, today, locker, rowOf, personId, meName });
+  const headlineArgs = { live, passes, newestPack: packs.length ? packs[packs.length - 1] : null, opened, rounds, crews, today, locker, rowOf, personId, meName };
+  const headline = ladder(headlineArgs);
   const liveStrip = live ? { code: live.code, hole: live.live?.hole || null, line: live.live?.line || [live.course, live.game].filter(Boolean).join(' · ') } : null;
-  return { brandNew, nudge, headline, items, join: !items.length, live: liveStrip };
+  const hasCards = items.some((it) => it.kind === 'card' || it.kind === 'pack');
+  const sleeve = hasCards ? { crew: sleeveCrew(crews, headline) } : null;
+  return { brandNew, nudge, headline, items, join: !items.length, live: liveStrip, sleeve };
+}
+
+/**
+ * 039 sleeve · the crew standing under the wallet (PLAN §7.4): when the headline already gives your place, the leader
+ * (or the runner-up when you lead); otherwise your place. null with no crew. → { id, name, line }
+ */
+export function sleeveCrew(crews, headline) {
+  if (!crews?.list?.length) return null;
+  const s = crews.standing || {};
+  const id = crews.currentId || crews.list[0].id;
+  const name = crews.name || 'Your crew';
+  let line;
+  if (headline?.rung === 'crew' && s.place) line = s.iLead ? (s.next ? WORDS.isSecond(s.next) : WORDS.youLead) : WORDS.leads(s.leader);
+  else if (s.place) line = WORDS.yourPlace(s.place);
+  else if (s.myRounds != null && crews.rounds) line = WORDS.unranked(s.myRounds);
+  else line = WORDS.standings;
+  return { id, name, line };
 }
 
 /** The result of the round behind a card (locker row through the engine), else its stored result line. */
@@ -375,22 +402,26 @@ export function topKey(item) {
 // ───────────────────────────────────────────── the wallet's geometry (pure part of the physics, SPEC §1)
 
 export const EDGE = 48; // px of each card behind the front that peeks above it
-export const EDGES = { app: 2, safari: 1 };
+export const EDGES = { app: 4, safari: 2 }; // 039 sleeve pass: as many as fit, up to these
+export const MIN_FRONT = 240; // the front card never shrinks below this before an edge drops
+export const TUCK = 20; // px of the front card that sit inside the sleeve
 export const STEP = 170; // px of drag = one card back in time
 
 /**
- * The wallet's fit for a box `Wc` wide with `Hc` px to spare: the front card's size and how many edges show.
- * Front = full width at 7:5, shrinking to fit; edges drop (app 2 → 0, Safari 1 → 0) before it goes under 200 tall.
- * → { K, CW, CH, need } (need = the wallet's own height: it's only as tall as it needs).
+ * The wallet's fit for a box `Wc` wide with `Hc` px to spare above the sleeve (039 sleeve pass): the front card full
+ * width at 7:5 (shrinking to fit, never under MIN_FRONT before an edge drops), as many 48 px edges as fit (app ≤ 4,
+ * Safari ≤ 2). The front's bottom TUCK px sit inside the sleeve. → { K, CW, CH, need } (need = the wallet's height:
+ * 8 above the top edge + the edges + the card; the sleeve takes whatever height is left, down to the dock).
  */
 export function walletFit(Wc, Hc, n, { app = false } = {}) {
   let K = Math.max(0, Math.min(n - 1, app ? EDGES.app : EDGES.safari));
   const full = Math.round(Wc / 1.4);
   let CH;
-  for (;;) { CH = Math.min(full, Hc - 24 - K * EDGE); if (CH >= 200 || K === 0) break; K--; }
-  CH = Math.max(120, CH);
+  for (;;) { CH = Math.min(full, Hc - 8 - K * EDGE); if (CH >= MIN_FRONT || K === 0) break; K--; }
+  CH = Math.max(140, CH);
   const CW = Math.min(Wc, Math.round(CH * 1.4));
-  return { K, CW, CH: Math.round(CW / 1.4), need: 24 + Math.round(CW / 1.4) + K * EDGE };
+  const ch = Math.round(CW / 1.4);
+  return { K, CW, CH: ch, need: 8 + ch + K * EDGE };
 }
 
 /** One card's pose at depth d (0 = front, >0 behind, <0 pulled into the pocket below). Ported from prototype-v7. */
@@ -401,7 +432,7 @@ export function poseOne(d, { K, CH, yF }) {
     const dd = Math.min(d, K);
     y = yF - dd * EDGE - Math.max(0, d - K) * 10;
     o = d <= K ? 1 : clamp(1 - (d - K) * 2.5, 0, 1);
-    z = 50 - Math.round(d * 10); lab = clamp((d - 0.2) * 3, 0, 1);
+    z = 50 - Math.round(d * 10); lab = clamp((d - 0.7) / 0.3, 0, 1); // the real face shows as soon as it moves forward
   } else {
     const t = -d; z = 60;
     y = yF + t * (CH + 16); s = 1 - t * 0.04;

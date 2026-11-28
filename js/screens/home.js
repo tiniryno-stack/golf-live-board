@@ -14,7 +14,7 @@ import { matchState } from '../riderview.js';
 import { homeCrewData, crewNames } from './crew.js';
 import { homeLockerData, homeLockerState, startHomeLocker, lockerName, frontHtml, backHtml, lockerPerson, MARK, EDGE as CARD_EDGE } from './locker.js';
 import { chromePack } from './pack.js';
-import { homeModel, topKey, walletFit, poseOne, rubber, settleTo, STEP, WORDS } from '../homeview.js';
+import { homeModel, topKey, walletFit, poseOne, rubber, settleTo, STEP, TUCK, WORDS } from '../homeview.js';
 import { shortDay } from '../locker.js';
 import { whatsNew } from '../whatsnew.js';
 import { fmtPts, fmtToPar, playerLeaderboard } from '../scoring.js';
@@ -237,11 +237,21 @@ function plateHtml(it) {
   return `<span class="wel lkf-rookie" aria-hidden="true"><span class="lk-mat"></span>${el(it.kind === 'member' ? WORDS.member : '', '')}</span>`;
 }
 
-function walletHtml(items) {
+function walletHtml(items, sleeve) {
   if (!items.length) return '';
-  return `<div class="hm-wallet wl" data-n="${items.length}" aria-label="Your wallet: the next round in front, your cards behind. Drag down to go back; tap a card to flip it.">${items
+  return `<div class="hm-wallet wl${sleeve ? ' tuck' : ''}" data-n="${items.length}" aria-label="Your wallet: the next round in front, your cards behind. Drag down to go back; tap a card to flip it.">${items
     .map((it, i) => `<div class="wc" data-i="${i}" data-key="${esc(it.key)}"><div class="wci">${faceHtml(it)}${plateHtml(it)}</div></div>`).join('')}</div>
-    <div class="wct"><span class="ts-label n"></span></div>`;
+    ${sleeve ? sleeveHtml(sleeve) : '<div class="wct"><span class="ts-label n"></span></div>'}`;
+}
+
+/** 039 sleeve: under the front card (its bottom tucked in), down to the dock: N of M, then the crew standing → Crew,
+ *  All rounds → Rounds' list. The scroll pocket clips at its lip. */
+function sleeveHtml(sl) {
+  const c = sl.crew;
+  const crew = c ? `<button class="hm-screw" data-act="go" data-v="#/season" aria-label="${esc(c.name)} standings: ${esc(c.line)}">
+      <span class="ts-label ellipsis">${esc(c.name)}</span><b class="ts-row ellipsis">${esc(c.line)}</b></button>` : '<span class="spacer"></span>';
+  return `<div class="hm-sleeve"><span class="ts-label n"></span><div class="hm-srow">${crew}
+      <button class="hm-sall" data-act="go" data-v="#/rounds">${esc(WORDS.allRounds)}${icon('fwd', 18)}</button></div></div>`;
 }
 
 function codeField() {
@@ -264,16 +274,16 @@ const now = () => (typeof performance !== 'undefined' ? performance.now() : Date
 
 function geo(wl) {
   const n = wl.querySelectorAll('.wc').length;
-  const home = wl.closest('.home');
   wl.style.height = '';
   wl.classList.remove('sized');
-  const Wc = wl.clientWidth, spare = wl.clientHeight;
+  // 039 sleeve pass: the wallet takes the spare height above the sleeve (the sleeve at its smallest), then sizes to
+  // what it needs; the sleeve grows into the rest, down to the dock, so nothing under the cards is empty.
+  const tuck = wl.classList.contains('tuck') ? TUCK : 0;
+  const Wc = wl.clientWidth, spare = wl.clientHeight + tuck;
   const f = walletFit(Wc, spare, n, { app: STANDALONE });
-  // SPEC §1: the wallet is only as tall as it needs; spare height goes to the bottom, never above the cards.
   wl.classList.add('sized');
   wl.style.height = `${f.need}px`;
-  home?.style.setProperty('--wl-h', `${f.need}px`);
-  return { n, Wc, Hc: f.need, K: f.K, CW: f.CW, CH: f.CH, x0: (Wc - f.CW) / 2, yF: f.need - 16 - f.CH };
+  return { n, Wc, Hc: f.need, K: f.K, CW: f.CW, CH: f.CH, x0: (Wc - f.CW) / 2, yF: f.need - f.CH };
 }
 
 function pose() {
@@ -291,7 +301,7 @@ function pose() {
   });
   const fi = Math.max(0, Math.min(g.n - 1, Math.round(W.p)));
   W.frontKey = W.keys[fi] || null;
-  const ct = wl.nextElementSibling?.querySelector('.n');
+  const ct = wl.parentElement?.querySelector('.hm-sleeve .n, .wct .n');
   if (ct) ct.textContent = WORDS.count(fi + 1, g.n);
 }
 
@@ -437,7 +447,7 @@ export default {
     return `<div class="plain home hm39${STANDALONE ? ' hm-app' : ''}">
       ${nudgeHtml(m.nudge)}
       ${headlineHtml(m.headline)}
-      ${m.join ? `<div class="hm-join">${codeField()}</div>` : walletHtml(m.items)}
+      ${m.join ? `<div class="hm-join">${codeField()}</div>` : walletHtml(m.items, m.sleeve)}
     </div>`;
   },
   mount(content, app) {

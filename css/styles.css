@@ -2899,3 +2899,19 @@ html.light .gs-seg, [data-theme="light"] .gs-seg { background: var(--bg); }
 .lk-ldot { width: 10px; height: 10px; margin: 0 16px; border-radius: 50%; background: var(--cart-you); flex: none; }
 .lk-day { flex: none; width: 88px; font-size: 15px; line-height: 20px; font-weight: 700; white-space: nowrap; }
 .lk-addhome { margin-bottom: var(--space-1); }
+/* 039 sleeve pass: the sleeve under the wallet (the front card's bottom 20 px tucked in; the scroll pocket clips at its
+   lip), growing down to the dock: N of M, then the crew standing (→ Crew) and All rounds (→ Rounds' list). */
+.hm-sleeve { position: relative; z-index: 1; flex: 1 1 auto; min-height: 88px; margin: -20px calc(-1 * var(--gutter)) 0; padding: var(--space-2) var(--gutter) 0;
+  display: flex; flex-direction: column; background: var(--surface-1); border-top: 1px solid var(--glass-line);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0; box-shadow: 0 -8px 24px -8px var(--lk-shadow); }
+.hm-sleeve .n { align-self: center; height: 16px; color: var(--text-muted); }
+.hm-srow { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); min-height: 64px; }
+.hm-screw { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; min-height: var(--tap-min); justify-content: center; text-align: left; background: none; border: 0; padding: 0; color: inherit; }
+.hm-screw .ts-label { color: var(--text-muted); max-width: 100%; }
+.hm-screw b { max-width: 100%; }
+.hm-sall { flex: none; display: inline-flex; align-items: center; gap: 2px; min-height: var(--tap-min); padding: 0 var(--space-1); font-size: 15px; line-height: 20px; font-weight: 600; color: var(--text); background: none; border: 0; }
+.hm-screw:active, .hm-sall:active { transform: scale(.97); }
+.has-hub .home.hm39 { height: calc(100% + 110px + var(--sab)); } /* the sleeve runs on under the glass dock to the screen's edge */
+.has-hub.has-live .home.hm39 { height: calc(100% + 182px + var(--sab)); }
+.has-hub .hm-sleeve { min-height: calc(88px + 110px + var(--sab)); }
+.has-hub.has-live .hm-sleeve { min-height: calc(88px + 182px + var(--sab)); }

@@ -1239,6 +1239,14 @@ Still open: nothing blocking. Design direction (section 9) is final.
   (wallet order, A3 fields, tee sheet, isHub + dock rebuild, fit + physics, set A ladder, results), `smoke037` (33 checks
   incl. the wallet, dock, + sheet, Rounds tab, ‹ Home). `RELEASES` `2026-11-28` "A new Home: your rounds as a wallet".
   Styles: `/* 039 */` blocks at the end of styles.css (dock, Home, list) and locker.css (wallet, card A3).
+- **039 · sleeve pass (Nov 28, after Andrew's first look: "too empty", the drag "harshly cuts off the cards").** The wallet
+  takes the spare height: `walletFit` shows as many 48 px edges as fit (app ≤ 4, Safari ≤ 2), the front stays ≥ 240 tall
+  (`MIN_FRONT`) before an edge drops. Under it, **the sleeve** (`.hm-sleeve`, `--surface-1`, 1 px `--glass-line` top,
+  `--radius-xl` top corners, a soft upward shadow) holds the front card's bottom 20 px (`TUCK`); the scroll pocket clips
+  at its lip (`.wl.tuck`), and it runs on under the glass dock to the screen's edge. In it: "N of M", the crew standing
+  (`homeview.sleeveCrew`, PLAN §7.4: the leader / runner-up when the headline already gives your place, else your place;
+  → Crew) and **All rounds ›** (→ Rounds' list). No crew: All rounds only; no cards: no sleeve. Plates behind the front
+  fade out from d = 1 to 0.7 (`poseOne`), so a card coming forward shows its real face early.
 
 ## 13. V2 backlog (running list)
 

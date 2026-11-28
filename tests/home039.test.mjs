@@ -4,7 +4,7 @@
 // the tee sheet (lobby.teeSheet); Standings' header and 038's Full board chip (kept from 037's test).
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { homeModel, ladder, passOf, resultOf, resultSentence, finishUnits, lineResult, topKey, COPY, GAME_PHRASE, GAME_SHORT, allRounds, nextFields, walletItems, walletFit, poseOne, settleTo, rubber, EDGES } from '../js/homeview.js';
+import { homeModel, ladder, passOf, resultOf, resultSentence, finishUnits, lineResult, topKey, COPY, GAME_PHRASE, GAME_SHORT, allRounds, nextFields, walletItems, walletFit, poseOne, settleTo, rubber, EDGES, sleeveCrew } from '../js/homeview.js';
 import { isHub, hubTab, dockSet, needsRebuild, HUB_TABS } from '../js/hub.js';
 import { teeSheet } from '../js/lobby.js';
 import { buildLocker, boardChip, boardHref, BOARD_ACT } from '../js/locker.js';
@@ -130,19 +130,30 @@ test('§4 isHub + the dock: Home · Rounds · Crew are hub roots; a round has it
   assert.equal(needsRebuild('round', 'hub'), true, 'round → hub rebuilds the dock');
 });
 
-test('§1 the wallet fit + physics: full width at 7:5, 2 edges in the app / 1 in Safari, edges drop before 200 tall', () => {
-  assert.deepEqual(walletFit(361, 600, 5, { app: true }), { K: 2, CW: 361, CH: 258, need: 24 + 258 + 96 });
-  assert.deepEqual(walletFit(361, 600, 5, { app: false }).K, 1);
+test('§1 the wallet fit + physics (sleeve pass): all spare height, up to 4 edges in the app / 2 in Safari, front ≥ 240', () => {
+  assert.deepEqual(walletFit(361, 520, 5, { app: true }), { K: 4, CW: 361, CH: 258, need: 8 + 258 + 4 * 48 });
+  assert.equal(walletFit(361, 520, 5, { app: false }).K, 2);
   assert.equal(walletFit(361, 600, 1, { app: true }).K, 0, 'one item: no edges');
-  const tight = walletFit(361, 300, 5, { app: true });
-  assert.ok(tight.K < 2 && tight.CH >= 200, `edges drop first (${JSON.stringify(tight)})`);
-  assert.deepEqual(EDGES, { app: 2, safari: 1 });
+  const tight = walletFit(361, 380, 5, { app: true });
+  assert.ok(tight.K < 4 && tight.CH >= 240, `edges drop before the front goes under 240 (${JSON.stringify(tight)})`);
+  assert.deepEqual(EDGES, { app: 4, safari: 2 });
   const g = { K: 2, CH: 258, yF: 104 };
   assert.deepEqual(poseOne(0, g), { y: 104, s: 1, o: 1, z: 50, lab: 0 });
   assert.equal(poseOne(1, g).y, 104 - 48); assert.equal(poseOne(1, g).lab, 1, 'behind = the flat plate');
+  assert.equal(poseOne(0.6, g).lab, 0, 'coming forward: the real face shows early');
   assert.ok(poseOne(-1, g).y > 104 + 258, 'pulled down = into the pocket');
   assert.equal(settleTo(0.4, 0, 5), 0); assert.equal(settleTo(0.4, 1, 5), 2, 'a fling carries on'); assert.equal(settleTo(3.9, 5, 5), 4);
   assert.ok(rubber(-1, 5) > -1 && rubber(5, 5) < 5, 'rubber band at both ends');
+});
+
+test('sleeve: the crew standing (leader when the headline has your place), All rounds; no cards → no sleeve', () => {
+  const C = { ...CREWS };
+  assert.deepEqual(sleeveCrew(C, { rung: 'crew' }), { id: 'crew-1', name: 'Founders Crew', line: 'Sean leads' });
+  assert.equal(sleeveCrew(C, { rung: 'recent' }).line, 'You’re 2nd');
+  assert.equal(sleeveCrew({ ...C, standing: { place: '1st', iLead: true, next: 'Sean' } }, { rung: 'crew' }).line, 'Sean is 2nd');
+  assert.equal(sleeveCrew(null, {}), null);
+  assert.ok(homeModel({ ...base, rounds: [], locker: locker(['ev1', 'ev2']) }).sleeve, 'cards → a sleeve');
+  assert.equal(homeModel({ ...base, rounds: [], locker: { cards: [], rows: [] } }).sleeve, null, 'member card only → none');
 });
 
 test('PLAN §4 set A: the ladder in plain full sentences (one copy table)', () => {

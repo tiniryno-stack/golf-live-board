@@ -500,7 +500,8 @@ html.rm .lk-flip { transition-duration: 150ms; }
    home.js (walletFit); each .wc is posed there (translate / scale / opacity / z). Cards behind the front are flat
    finish plates (.wel over the whole card: no 3D edge layers, no perspective, so no seam line), crossfading to the
    full face as they come forward. Sizes inside the cards are the 036 card's own cqw scale. */
-.wl { position: relative; flex: 1 1 0; min-height: 0; width: 100%; touch-action: none; -webkit-user-select: none; user-select: none; clip-path: inset(-400px -40px 0 -40px); }
+.wl { position: relative; flex: 1000 1 0; min-height: 0; width: 100%; touch-action: none; -webkit-user-select: none; user-select: none; clip-path: inset(-400px -40px 0 -40px); }
+.wl.tuck { clip-path: inset(-400px -40px 20px -40px); } /* the pocket = the sleeve's lip (TUCK px of the front sit inside it) */
 .wl.sized { flex: none; }
 .wc { position: absolute; left: 0; top: 0; transform-origin: 50% 100%; will-change: transform; }
 .wci { position: relative; width: 100%; height: 100%; }
