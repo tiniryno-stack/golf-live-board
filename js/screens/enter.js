@@ -584,7 +584,9 @@ function ryderEnterView(app, h, { gcard, carts, locked, ahead, pos, limitPos, la
 
   // 023 §3: left-aligned header "Hole 11  Par 3", then ◀ ▶ ⋯ (round menu; organizer's first menu item
   // is Fix hole N). The team header drops Hcp and the course name; strokes show per player.
-  const head = `<div class="ce-head">
+  // 039: with the GPS card up the top bar hides, so ‹ Home sits at the left of the hole header instead.
+  const topHidden = !!app.myPlayer() && (!app.isFinal() || app.finalUnlocked()) && !!cardState(app, currentHole(app));
+  const head = `<div class="ce-head">${topHidden ? `<button class="ce-home" data-act="go" data-v="#/" aria-label="Home">${icon('back', 20)}<span>Home</span></button>` : ''}
       <button class="ce-hole" data-act="hole-grid" aria-label="Hole ${h}: all holes"><span class="ce-hn">Hole ${h}</span><span class="ce-hp">Par ${par}</span></button>
       <div class="ce-nav">
         <button class="ce-ib" data-act="hole-prev" aria-label="Previous hole"${pos <= 1 ? ' disabled' : ''}>${icon('back')}</button>

@@ -12,7 +12,8 @@ import * as fx from './toasts.js';
 import { chromePack } from './pack.js';
 import { landsFor, bookHtml, mountBook, pageOf, bookBusy } from './passport.js';
 import { passportOf } from '../stamps.js';
-import { esc, icon, reducedMotion } from '../ui.js';
+import { esc, icon, reducedMotion, prettyDate } from '../ui.js';
+import { roundGroups } from '../homeview.js';
 import {
   buildLocker, packsOf, openedOf, FINISHES, isAdmin, LOCKER_ADMINS, shortDay, longDay, toParLabel, finName, adminTotals, backRows,
   BOARD_ACT, boardChip,
@@ -200,7 +201,7 @@ const label = (c) => `${c.course}, ${shortDay(c.day)}, ${c.gross}. ${FINISHES[c.
 
 /** One card in its slot: tilt → flip → front / back. `extra` = more classes on the slot. */
 /** The card's metal edge (Andrew, Nov 25: "like a credit card"): thin layers stacked between the two faces. */
-const EDGE = Array.from({ length: 7 }, (_, k) => `<i class="lk-edge" style="--z:${k - 3}"></i>`).join('');
+export const EDGE = Array.from({ length: 7 }, (_, k) => `<i class="lk-edge" style="--z:${k - 3}"></i>`).join('');
 export function slotHtml(c, { i = 0, flipped = false, extra = '', act = 'lk-card' } = {}) {
   return `<div class="lk-slot x-land lkf-${c.fin}${extra}" data-i="${i}" data-key="${esc(c.key)}"${act ? ` data-act="${act}"` : ''}>
     <div class="lk-tilt" role="button" tabindex="0" aria-label="${esc(label(c))} Tap to flip it.">
@@ -446,6 +447,61 @@ function allView(opened) {
   return `<div class="lk-all">${opened.map((c, i) => `<button class="lk-mini lkf-${c.fin}" data-act="lk-pick" data-v="${esc(c.key)}" style="--sx:${((((i * 37) % 9) / 9) - 0.5).toFixed(2)}" aria-label="${esc(label(c))}"><span class="lk-face lk-front">${frontHtml(c)}</span></button>`).join('')}</div>`;
 }
 
+// ───────────────────────────────────────────── 039 · Rounds' list: every round by month
+
+const LONGMON = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const monthOf = (day) => { const [y, m] = String(day || '').split('-').map(Number); return m ? `${LONGMON[m - 1]} ${y}` : ''; };
+const isIOS = () => {
+  if (typeof globalThis.__GLB_IOS === 'boolean') return globalThis.__GLB_IOS;
+  return typeof navigator !== 'undefined' && (/iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1));
+};
+/** PLAN §7.2: after the nudge's ✕, Add to Home Screen is a row at the top of Rounds (iPhone Safari only). */
+function addHomeRow() {
+  if (!isIOS() || db.STANDALONE || !(db.local.get('glb.seen.homeNudge.add') || db.local.get('glb.hasApp'))) return '';
+  return `<button class="home-row lk-addhome" data-act="home-add"><span class="hr-main"><span class="hr-name">Add to Home Screen</span><span class="hr-sub">Golf Board as an app, with your rounds</span></span><span class="hr-chev">${icon('fwd', 20)}</span></button>`;
+}
+const row = ({ act, v, lead = '', name, sub = '', right = '' }) => `<button class="home-row" data-act="${act}" data-v="${esc(v)}">${lead}
+    <span class="hr-main"><span class="hr-name">${esc(name)}</span>${sub ? `<span class="hr-sub">${esc(sub)}</span>` : ''}</span>${right || `<span class="hr-chev">${icon('fwd', 20)}</span>`}</button>`;
+/**
+ * SPEC §1 · the list: the coming / live round on top ("Now"), then your cards and sealed packs by month (a finish
+ * swatch + gross; tap → that card in the gallery), then "Other rounds" (watched, practice: they make no card).
+ */
+export function listView(cards = []) {
+  const rounds = db.recent.all();
+  const { coming, live } = roundGroups(rounds, Date.now());
+  const now = [
+    ...(live ? [row({ act: 'go', v: `#/e/${live.code}`, lead: '<span class="lk-ldot" aria-hidden="true"></span>', name: `${live.course || live.name} · live`, sub: [live.live?.hole ? `Hole ${live.live.hole}` : '', live.live?.line].filter(Boolean).join(' · ') })] : []),
+    ...coming.map((r) => row({ act: 'go', v: `#/e/${r.code}`, lead: `<span class="lk-day mono">${esc(prettyDate(r.lobby?.date || r.played_on) || '')}</span>`, name: r.lobby?.course || r.course || r.name, sub: [r.lobby?.startTime, r.lobby?.game || r.game, r.lobby?.kind === 'off' ? 'Called off' : ''].filter(Boolean).join(' · ') })),
+  ];
+  const mine = [...cards].sort((a, b) => String(b.day).localeCompare(String(a.day)));
+  let mo = '', body = '';
+  for (const c of mine) {
+    const m = monthOf(c.day);
+    if (m !== mo) { body += `${mo ? '</div>' : ''}<div class="ts-label lk-sec">${esc(m)}</div><div class="home-list">`; mo = m; }
+    body += c.opened
+      ? row({ act: 'lk-pick', v: c.key, lead: `<span class="lk-sw lkf-${esc(c.fin)}" aria-hidden="true"></span>`, name: c.course, sub: `${shortDay(c.day)} · ${finName(c)}`, right: `<span class="hr-v">${c.gross}</span>` })
+      : row({ act: 'lk-home-packs', v: c.key, lead: '<span class="lk-sw lk-swpk" aria-hidden="true"></span>', name: c.course, sub: `${shortDay(c.day)} · card to open`, right: '<span class="ts-label lk-soft">Sealed</span>' });
+  }
+  if (mo) body += '</div>';
+  const codes = new Set(mine.map((c) => c.code));
+  const other = rounds.filter((r) => !r.lobby && r !== live && !coming.includes(r) && !codes.has(r.code))
+    .map((r) => row({ act: 'go', v: `#/e/${r.code}`, lead: '<span class="lk-sw lk-swnone" aria-hidden="true"></span>', name: r.course || r.name, sub: [prettyDate(r.played_on), r.practice ? 'Practice round' : r.myName ? r.result?.line || r.game : 'Watched'].filter(Boolean).join(' · ') }));
+  if (!now.length && !body && !other.length) return '<p class="ts-body lk-soft lk-gap">Your rounds show here after you play. Every 18 you finish becomes a card.</p>';
+  return `<div class="lk-list">${now.length ? `<div class="ts-label lk-sec">Now</div><div class="home-list">${now.join('')}</div>` : ''}
+    ${body || '<p class="ts-small lk-soft lk-gap">Every 18 you finish becomes a card here.</p>'}
+    ${other.length ? `<div class="ts-label lk-sec">Other rounds</div><div class="home-list">${other.join('')}</div>` : ''}</div>`;
+}
+
+/** 039: the Rounds tab's head: title, the gallery ↔ list icons, the Packs pill, Rounds | Passport. */
+function roundsHead(app, { packs = 0, tab = 'cards', view = 'one', icons = true } = {}) {
+  const segBtn = (v, ic, lbl) => `<button data-act="lk-view" data-v="${v}" aria-pressed="${tab === 'cards' && view === v}" aria-label="${lbl}">${icon(ic, 22)}</button>`;
+  const tabBtn = (v, lbl) => `<button data-act="lk-tab" data-v="${v}" aria-pressed="${tab === v}">${lbl}</button>`;
+  return `<div class="lk-head"><h1 class="ts-title">Rounds</h1>
+      ${packs ? `<button class="pill lk-ppill" data-act="lk-view" data-v="${view === 'packs' && tab === 'cards' ? 'one' : 'packs'}" aria-pressed="${view === 'packs' && tab === 'cards'}">${icon('pack', 18)} ${packs}</button>` : ''}
+      ${icons && tab === 'cards' ? `<div class="seg lk-seg" role="group" aria-label="View">${segBtn('one', 'cardone', 'Gallery: one card at a time')}${segBtn('list', 'board', 'List: every round')}</div>` : ''}</div>
+    <div class="seg lk-tabs" role="group" aria-label="Rounds">${tabBtn('cards', 'Rounds')}${tabBtn('passport', 'Passport')}</div>`;
+}
+
 const isView = (app) => app.route.mode === 'view' && app.route.person !== ownerId();
 const tabOf = (app) => app.ui.lk.tab || 'cards';
 
@@ -453,11 +509,18 @@ function lockerBody(app) {
   const id = shownId(app);
   const readOnly = isView(app);
   if (!id) {
-    return `<div class="plain lk"><h1 class="ts-title">Locker</h1>
-      <p class="ts-body lk-soft lk-gap">Open a round and pick your name once. Your scorecards show up here after that.</p>
+    // 039: Rounds still lists this phone's rounds before it knows who you are.
+    return `<div class="plain lk lk-t-cards lk-v-list">${addHomeRow()}${roundsHead(app, { icons: false })}${listView([])}
+      <p class="ts-small lk-soft lk-gap">Open a round and pick your name once. Your scorecards show up here after that.</p>
       ${PREVIEW ? `<button class="btn block" data-act="lk-testas">Preview · test as ${esc('Andrew Duong')}</button>` : ''}</div>`;
   }
   const L = lockerOf(app, id);
+  if (!L?.cards && !readOnly && (app.ui.lk.view === 'list' || db.recent.all().length)) {
+    const err = L?.error && !L.loading;
+    return `<div class="plain lk lk-t-cards lk-v-list">${addHomeRow()}${roundsHead(app, { icons: false })}
+      ${err ? '<p class="ts-small lk-soft lk-gap">No signal: your cards need a connection.</p><button class="btn block" data-act="lk-retry">Try again</button>' : '<p class="meta lk-gap">Opening your cards…</p>'}
+      ${listView([])}</div>`;
+  }
   if (!L?.cards) {
     const err = L?.error && !L.loading;
     return `<div class="plain lk"><h1 class="ts-title">${readOnly ? 'Passport' : 'Locker'}</h1>
@@ -467,6 +530,7 @@ function lockerBody(app) {
   const cards = L.cards;
   const opened = openedOf(cards), packs = packsOf(cards);
   const lk = app.ui.lk;
+  if (!cards.length && !readOnly) return `<div class="plain lk lk-t-cards lk-v-list">${addHomeRow()}${roundsHead(app, { icons: false })}${listView([])}</div>`;
   if (!cards.length) {
     return `<div class="plain lk"><h1 class="ts-title">${readOnly ? 'Passport' : 'Locker'}</h1>
       <p class="ts-body lk-soft lk-gap">${readOnly ? 'No finished rounds yet.' : 'Finish 18 holes and your scorecard arrives here as a pack.'}</p></div>`;
@@ -479,6 +543,16 @@ function lockerBody(app) {
     <div class="lk-head"><h1 class="ts-title">${readOnly ? esc(`${who.split(' ')[0] || 'Their'}’s locker`) : 'Locker'}</h1>
       ${packs.length && !readOnly ? `<button class="pill lk-ppill" data-act="lk-view" data-v="${lk.view === 'packs' && tab === 'cards' ? 'one' : 'packs'}" aria-pressed="${lk.view === 'packs' && tab === 'cards'}">${icon('pack', 18)} Packs · ${packs.length}</button>` : ''}</div>
     ${tabs}`;
+  if (!readOnly) {
+    // 039 · Rounds: gallery (the 036 carousel) ↔ list, the Packs pill, Rounds | Passport.
+    if (lk.view === 'all') lk.view = 'one';
+    if (lk.view === 'packs' && !packs.length) lk.view = 'one';
+    if (lk.view === 'one' && !opened.length) lk.view = packs.length ? 'packs' : 'list';
+    const rh = `${addHomeRow()}${roundsHead(app, { packs: packs.length, tab, view: lk.view, icons: opened.length > 0 })}`;
+    if (tab === 'passport') return `<div class="plain lk lk-t-passport">${rh}${bookHtml(cards, app.ui.pp, { frontHtml, readOnly })}</div>`;
+    const body = lk.view === 'packs' ? packsView(app, L, false) : lk.view === 'list' ? listView(cards) : oneView(app, opened, false);
+    return `<div class="plain lk lk-t-cards lk-v-${lk.view}">${rh}${body}</div>`;
+  }
   if (tab === 'passport') {
     return `<div class="plain lk lk-t-passport">${head}${bookHtml(cards, app.ui.pp, { frontHtml, readOnly })}</div>`;
   }
@@ -621,6 +695,7 @@ export default {
     const id = shownId(app);
     if (lk.person !== id) { lk.person = id; lk.key = null; lk.flip = null; app.ui.pp.pg = app.route.tab === 'passport' ? 1 : 0; if (app.route.mode === 'view') lk.view = 'one'; }
     if (app.route.tab) { lk.tab = app.route.tab; app.ui.pp.pg = 1; } // #/passport opens the book on the holder page
+    if (app.route.view) { lk.tab = 'cards'; lk.view = app.route.view; history.replaceState(null, '', '#/locker'); } // 039: #/rounds → the list
     if (/^#\/locker\/p\//.test(location.hash)) history.replaceState(null, '', `#/passport/${encodeURIComponent(id)}`); // 035 link → 036
     if (app.route.mode === 'admin') loadAdmin(app);
     else if (id) loadLocker(app, id);
@@ -629,7 +704,7 @@ export default {
     if (content) content.scrollTop = 0;
   },
   topBack(app) {
-    if (app.route.mode === 'admin') return `<button class="back" data-act="go" data-v="#/locker">${icon('back', 22)}<span>Locker</span></button>`;
+    if (app.route.mode === 'admin') return `<button class="back" data-act="go" data-v="#/locker">${icon('back', 22)}<span>Rounds</span></button>`;
     if (isView(app)) return `<button class="back" data-act="lk-back">${icon('back', 22)}<span>Back</span></button>`;
     return '';
   },

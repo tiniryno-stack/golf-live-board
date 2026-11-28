@@ -10,7 +10,8 @@ import { replayHeadlines, latestMoment } from './headlines.js';
 import { esc, icon, initials, roundLink, copyText, growMeasure, growPlay } from './ui.js';
 import * as fx from './screens/toasts.js';
 import * as sheets from './screens/sheets.js';
-import home, { homeReturn, roundsScreen } from './screens/home.js';
+import home, { homeReturn, model as homeModelFor } from './screens/home.js';
+import { HUB_TABS, hubTab, isHub, dockSet, needsRebuild } from './hub.js';
 import setup from './screens/setup.js';
 import season from './screens/season.js';
 import enter from './screens/enter.js';
@@ -28,7 +29,7 @@ import { joinPlan, appHandoff } from './identity.js';
 import { lobbyState, lobbyView as pickLobbyView, spotGiven, clock12, wallClock, parseTime, hasHandicaps, revealCtx } from './lobby.js';
 import lobbyScreen from './screens/lobby.js';
 
-const SCREENS = { home, rounds: roundsScreen, setup, season, enter, matches, board, card, host, crew, locker };
+const SCREENS = { home, setup, season, enter, matches, board, card, host, crew, locker };
 const TABS = [
   ['enter', 'Enter', 'enter'],
   ['matches', 'Matches', 'matches'],
@@ -1278,7 +1279,7 @@ let hiddenAt = 0, versionCheck = 0;
 // a friend sitting on Home gets the new version too. A round or Setup still waits for a return after 5 minutes away.
 async function checkVersion() {
   const mine = window.__glbVersion;
-  const onHome = app.route.name === 'home';
+  const onHome = isHub(app.route); // 039: every hub tab counts as Home
   if (!mine || (!hiddenAt && !onHome) || Date.now() - versionCheck < 30000) return;
   versionCheck = Date.now();
   let info = null;
@@ -1292,7 +1293,7 @@ async function checkVersion() {
   const typing = a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName);
   const inRound = app.route.round || app.route.name === 'setup';
   const busy = typing || app.sheet || $('overlay')?.classList.contains('open') || db.queue.any()
-    || (inRound && (!hiddenAt || away < 5 * 60 * 1000)) || (app.route.name !== 'home' && !hiddenAt);
+    || (inRound && (!hiddenAt || away < 5 * 60 * 1000)) || (!isHub(app.route) && !hiddenAt);
   if (!busy) location.reload();
 }
 app.checkVersion = checkVersion;
@@ -1311,8 +1312,8 @@ async function newRoundToast() {
 async function onReturn() {
   homeReturn(); // Nov 24: Home looks for new rounds again (a resumed home screen app finds the one it was added to)
   checkVersion();
-  if (db.STANDALONE && app.route.name !== 'home') newRoundToast();
-  if (app.route.name === 'home') render(); // Home redraws → looks for your rounds now
+  if (db.STANDALONE && !isHub(app.route)) newRoundToast();
+  if (isHub(app.route)) render(); // Home (any hub tab) redraws → looks for your rounds now
   if (!app.event) return;
   db.flush();
   if (channel && !channel.isLive()) channel.reconnect();
@@ -1326,7 +1327,7 @@ function parseHash() {
   const parts = location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
   if (!parts.length) return { name: 'home' };
   if (parts[0] === 'setup') return { name: 'setup', from: parts[1] ? db.normCode(parts[1]) : null };
-  if (parts[0] === 'rounds') return { name: 'rounds' }; // 037 §5: All rounds
+  if (parts[0] === 'rounds') return { name: 'locker', mode: 'mine', view: 'list' }; // 039: 037's All rounds = Rounds' list
   if (parts[0] === 'season') return { name: 'season', crew: parts[1] || null, view: parts[2] || null };
   // 035 Scorecard locker: #/locker · #/locker/admin · #/locker/p/<personId> (since 036: their passport)
   if (parts[0] === 'locker') {
@@ -1410,8 +1411,13 @@ function draw(opts) {
   appEl.classList.toggle('no-top', hideTop);
   $('topbar').innerHTML = hideTop ? '' : renderTopbar(screen, inRound);
   if (screen !== SCREENS.enter) gps.stop();
-  renderTabbar($('tabbar'), inRound && ready && !inLobby);
-  appEl.classList.toggle('has-tabbar', inRound && ready && !inLobby);
+  // 039: a round keeps its own four-tab bar; Home · Rounds · Crew get the hub dock (+ the live strip while you play).
+  const set = dockSet(r, { ready, inLobby });
+  const liveStrip = set === 'hub' ? hubLive() : null;
+  renderTabbar($('tabbar'), set, liveStrip);
+  appEl.classList.toggle('has-tabbar', !!set);
+  appEl.classList.toggle('has-hub', set === 'hub');
+  appEl.classList.toggle('has-live', !!liveStrip);
 
   const active = document.activeElement;
   const typing = active && content.contains(active) && /^(INPUT|TEXTAREA|SELECT)$/.test(active.tagName);
@@ -1504,9 +1510,10 @@ function renderTopbar(screen, inRound) {
   if (!inRound) {
     const custom = screen.topBack?.(app); // e.g. Setup: back to the previous step
     const home = app.route.name === 'home';
+    // 039: the hub's tab roots (Rounds, Crew) have no back button: the dock is the way around.
     const back = home
       ? screen.topLeft?.(app) || '<div class="spacer"></div>' // Home: your name
-      : custom || `<button class="back" data-act="go" data-v="#/">${icon('back', 22)}<span>Home</span></button>`;
+      : custom || (isHub(app.route) ? '<div class="spacer"></div>' : `<button class="back" data-act="go" data-v="#/">${icon('back', 22)}<span>Home</span></button>`);
     // Light/dark lives on Home and in the round's ⋯ menu; Setup's top right shows its progress bars.
     return `${back}${home ? themeBtn : screen.topRight?.(app) || ''}`;
   }
@@ -1517,24 +1524,33 @@ function renderTopbar(screen, inRound) {
       ? `<button class="name-chip" data-act="name-chip" aria-label="You are ${esc(p.name)}"><span class="avatar">${esc(initials(p.name))}</span><span class="ellipsis">${esc(p.name)}</span></button>`
       : `<button class="name-chip watching" data-act="name-chip"><span class="avatar">${icon('user', 16)}</span><span>Watching</span></button>`
     : '';
-  // No back button inside a round: leaving is deliberate, through the ⋯ menu (or your name).
+  // 039: ‹ Home before the name pill on every round tab (no confirm: scores are queued, the live strip brings you back).
+  const homeBtn = `<button class="back rd-home" data-act="go" data-v="#/" aria-label="Home">${icon('back', 22)}<span>Home</span></button>`;
   const menuBtn = app.event ? `<button class="icon-btn" data-act="round-menu" aria-label="Round menu">${icon('more')}</button>` : '';
   // Board: share sits top right, as in the design.
   const share = app.event && app.route.tab === 'board' ? `<button class="icon-btn" data-act="board-share" aria-label="Share the round">${icon('share')}</button>` : '';
-  return `${chip}<div class="round-title ellipsis">${esc(name)}</div>${share}${menuBtn}`;
+  return `${homeBtn}${chip}<div class="round-title ellipsis">${esc(name)}</div>${share}${menuBtn}`;
 }
 
 /** Floating glass tab bar (feature 001-tab-bar): icons only, four equal tabs, one highlight that
- *  slides to the active tab. Built once, then updated in place so the slide can animate (the render
- *  loop redraws constantly). The screen title says where you are. */
-function renderTabbar(el, show) {
-  if (!show) { if (el.innerHTML) el.innerHTML = ''; return; }
-  if (!el.querySelector('.tab')) {
-    el.innerHTML = `<div class="dock"><i class="tab-hl" aria-hidden="true"></i>${TABS.map(([id, label, ic]) =>
-      `<button class="tab" data-act="tab" data-v="${id}" aria-label="${label}">${icon(ic, 22)}${id === 'enter' ? '<i class="tab-dot" hidden></i>' : ''}</button>`).join('')}</div>`;
+ *  slides to the active tab. Built once per set, then updated in place so the slide can animate (the render
+ *  loop redraws constantly). The screen title says where you are.
+ *  039: `set` 'round' = that bar; 'hub' = Home · Rounds · Crew with a small label each, the + circle beside the dock,
+ *  and (while a round is live) the green strip docked above it. Crossing hub ↔ round rebuilds it (data-set). */
+function renderTabbar(el, set, live = null) {
+  if (!set) { if (el.innerHTML) { el.innerHTML = ''; delete el.dataset.set; } return; }
+  if (needsRebuild(el.dataset.set, set) || !el.querySelector('.tab')) {
+    el.dataset.set = set;
+    el.innerHTML = set === 'hub'
+      ? `<div class="hub-live"></div><div class="hub-row"><div class="dock hub-dock" data-set="hub"><i class="tab-hl" aria-hidden="true"></i>${HUB_TABS.map(([id, label, ic]) =>
+        `<button class="tab" data-act="hub-tab" data-v="${id}" aria-label="${label}">${icon(ic, 22)}<span class="ts-small tab-l">${label}</span></button>`).join('')}</div>
+        <button class="hub-plus" data-act="hub-plus" aria-label="New round or join with a code">${icon('plus', 24)}</button></div>`
+      : `<div class="dock" data-set="round"><i class="tab-hl" aria-hidden="true"></i>${TABS.map(([id, label, ic]) =>
+        `<button class="tab" data-act="tab" data-v="${id}" aria-label="${label}">${icon(ic, 22)}${id === 'enter' ? '<i class="tab-dot" hidden></i>' : ''}</button>`).join('')}</div>`;
   }
-  const tab = app.route.tab;
-  const i = TABS.findIndex(([id]) => id === tab);
+  const tabs = set === 'hub' ? HUB_TABS : TABS;
+  const tab = set === 'hub' ? hubTab(app.route) : app.route.tab;
+  const i = tabs.findIndex(([id]) => id === tab);
   for (const b of el.querySelectorAll('.tab')) {
     if (b.dataset.v === tab) b.setAttribute('aria-current', 'page');
     else b.removeAttribute('aria-current');
@@ -1542,10 +1558,24 @@ function renderTabbar(el, show) {
   const hl = el.querySelector('.tab-hl');
   hl.hidden = i < 0; // Host: no tab is active
   if (i >= 0) hl.style.transform = `translateX(${i * 100}%)`;
+  if (set === 'hub') {
+    // PLAN §7.3: the live strip, like a music app's mini player. Redrawn only when what it says changes.
+    const box = el.querySelector('.hub-live');
+    const html = live ? `<div class="hm-live">
+        <span class="hm-lm"><span class="ts-label hm-lk"><span class="lc-dot" aria-hidden="true"></span>Live${live.hole ? ` · hole ${live.hole}` : ''}</span><b class="hm-ll ellipsis">${esc(live.line || '')}</b></span>
+        <button class="btn primary small hm-lbtn" data-act="go" data-v="#/e/${esc(live.code)}">Back to ${live.hole ? `hole ${live.hole}` : 'the round'}</button></div>` : '';
+    if (box.dataset.h !== html) { box.dataset.h = html; box.innerHTML = html; }
+    return;
+  }
   // Enter dot: your group's current hole is still missing scores (neutral, never green or red).
   const dot = el.querySelector('.tab-dot');
   const waiting = !!(app.me && app.snapshot && !app.isFinal() && tab !== 'enter' && nextHoleFor(app.snapshot, app.me) != null);
   if (dot && dot.hidden === waiting) dot.hidden = !waiting;
+}
+
+/** The live strip's facts on the hub tabs (from Home's model: the same rule as Home's live round). */
+function hubLive() {
+  try { return homeModelFor(app).live; } catch { return null; }
 }
 
 function renderSyncChip() {
@@ -1604,6 +1634,21 @@ const actions = app.actions;
 Object.assign(actions, {
   go: (el) => app.go(el.dataset.v),
   tab: (el) => app.go(app.tabHash(el.dataset.v)),
+  // 039: the hub dock (its own action, so a round's 'tab' never lands here).
+  'hub-tab': (el) => {
+    const t = HUB_TABS.find(([id]) => id === el.dataset.v);
+    if (!t) return;
+    if (t[0] === 'rounds') { app.ui.lk ||= { view: 'one', key: null, flip: null, land: null, landAt: 0, person: null, tab: 'cards' }; app.ui.lk.tab = 'cards'; }
+    if (hubTab(app.route) === t[0] && t[0] !== 'rounds') { $('content').scrollTop = 0; return; }
+    app.go(t[3]);
+  },
+  // SPEC §1: + → one sheet, New round on top, then the code field, focused right here in the tap (iOS raises the
+  // keyboard only from a tap handler, never after the slide-in).
+  'hub-plus': () => {
+    app.openSheet('plus', {});
+    const f = document.getElementById('join-code');
+    try { f?.focus({ preventScroll: true }); } catch { f?.focus(); }
+  },
   theme: () => {
     const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
     document.documentElement.dataset.theme = next;

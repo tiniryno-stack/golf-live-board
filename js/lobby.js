@@ -11,7 +11,7 @@
 //   open = stage 'ready' and (openedEarly or now ≥ opensAt). The server's gate (_lobby_gate) decides the same.
 
 import { normalizeSettings, groupIndex, ryderMatchupsAt, holeAt, holesLabel, ryderSetup, compute } from './scoring.js';
-import { gameName } from './playfor.js';
+import { gameName, playFor } from './playfor.js';
 
 export const STAGES = ['lobby', 'carts', 'teams', 'ready', 'off'];
 export const OPEN_BEFORE_MIN = 30;
@@ -338,8 +338,8 @@ export function homeCard(event, { pid = null, personId = null } = {}, nowMs = Da
   const players = event.roster?.players || [];
   const me = players.find((p) => (personId && p.personId === personId) || p.id === pid) || null;
   // 037 v2 · the pass: what it prints (pure; old entries without these fall back to recent.course / played_on).
-  let game = '';
-  try { game = gameName(compute(event, [])); } catch { game = ''; }
+  let game = '', pk = null;
+  try { const snap = compute(event, []); game = gameName(snap); pk = playFor(snap); } catch { game = ''; }
   const mine = me ? myLobby(event, me.id) : null;
   const groupTee = me && me.groupId ? normalizeSettings(event.settings).teeTimes[groupIndex(me.groupId)] || '' : '';
   const tee = mine?.tee || clock12(st.stage === 'ready' && groupTee ? groupTee : st.startTime);
@@ -348,6 +348,9 @@ export function homeCard(event, { pid = null, personId = null } = {}, nowMs = Da
     date: st.date, when: shortDate(st.date), host: st.hostName, hostLine: hostLine(st),
     startTime: tee || '', startsAt: startsAt ?? null, course: event.course?.shortName || event.course?.name || '',
     game, players: players.length, onRoster: !!me, mate: me ? myCart(event, me.id)?.mate || null : null,
+    // 039 · the next-round card: playFor key, your cart, who you're out with (no partners), the tee sheet on its back.
+    pk, cart: me ? myCart(event, me.id)?.id || null : null, with: me ? groupMates(event, me.id) : null,
+    sheet: teeSheet(event, me?.id || null),
   };
   const sub = spotGiven(event, { pid, personId });
   if (sub) return { ...base, kind: 'removed', sub, line: `${st.hostName} gave your spot to ${sub}.` };
@@ -593,6 +596,52 @@ export function cartOrder(roster) {
   const out = teams.flatMap((t) => players.filter((p) => p.teamId === t.id).map((p) => p.id));
   for (const p of players) if (!out.includes(p.id)) out.push(p.id); // never lose anyone
   return out;
+}
+
+/** 039: the first name of who's in your tee time, "Sean +2" (games without partners), or null. */
+export function groupMates(event, pid) {
+  const players = event?.roster?.players || [];
+  const p = players.find((x) => x.id === pid);
+  if (!p?.groupId) return null;
+  const others = players.filter((x) => x.groupId === p.groupId && x.id !== p.id);
+  if (!others.length) return null;
+  return `${firstName(others[0])}${others.length > 1 ? ` +${others.length - 1}` : ''}`;
+}
+
+/**
+ * 039 · the tee sheet on the back of the next-round card: every tee time, then its carts (partners drawn: one row per
+ * cart, "Andrew · Sean") or its players (names only). Your row is `me`. Long rosters stop at `max` rows (+ more).
+ * → { groups: [{ time, label, rows: [{ id, names, me }] }], more, small }
+ */
+export function teeSheet(event, pid = null, { max = 14 } = {}) {
+  const roster = event?.roster || {};
+  const players = roster.players || [];
+  if (!players.length) return { groups: [], more: 0, small: false };
+  const settings = normalizeSettings(event.settings);
+  const teams = new Set((roster.teams || []).map((t) => t.id));
+  const paired = players.some((p) => p.teamId && teams.has(p.teamId));
+  const gids = [...new Set(players.map((p) => p.groupId || 'g1'))].sort((a, b) => groupIndex(a) - groupIndex(b));
+  const groups = gids.map((gid) => {
+    const i = groupIndex(gid);
+    const ps = players.filter((p) => (p.groupId || 'g1') === gid);
+    const rows = [];
+    if (paired) {
+      const seen = new Set();
+      for (const p of ps) {
+        const tid = p.teamId && teams.has(p.teamId) ? p.teamId : null;
+        if (tid && seen.has(tid)) continue;
+        if (tid) seen.add(tid);
+        const mates = tid ? ps.filter((x) => x.teamId === tid) : [p];
+        rows.push({ id: tid || '', names: mates.map(firstName).join(' · '), me: mates.some((x) => x.id === pid) });
+      }
+    } else for (const p of ps) rows.push({ id: '', names: firstName(p), me: p.id === pid });
+    const t = settings.teeTimes[i] || '';
+    return { time: clock12(t) || '', label: `${['1st', '2nd', '3rd'][i] || `${i + 1}th`} tee time`, rows };
+  });
+  let left = max, more = 0;
+  for (const g of groups) { if (g.rows.length > left) { more += g.rows.length - Math.max(0, left); g.rows = g.rows.slice(0, Math.max(0, left)); } left -= g.rows.length; }
+  const total = groups.reduce((n, g) => n + g.rows.length, 0);
+  return { groups: groups.filter((g) => g.rows.length), more, small: total + groups.length > 9 };
 }
 
 /** This player's cart at any stage with carts: { id, names: 'Baker + Mitch' (you first), mate }. */

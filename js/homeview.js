@@ -1,29 +1,24 @@
-// homeview.js — PURE. 037 Home, second pass "the wallet" (docs/design/features/037-home/PLAN-v2.md, §0 wins):
-// what Home draws from what this phone knows. home.js renders it and measures the fit; nothing here touches the DOM,
-// storage or the network.
+// homeview.js — PURE. 039 Home is the wallet (docs/design/features/039-home-deck/SPEC.md; PLAN.md §4 set A for the
+// headline): what Home draws from what this phone knows. home.js renders it and runs the wallet's physics; nothing
+// here touches the DOM, storage or the network.
 //
 // homeModel(input) → {
 //   brandNew,
-//   nudge   §4.2: { kind: 'add' } | { kind: 'news', id, title, lines } | null
-//   headline §5: { rung, kicker, app: [form], safari: [form], tap } — form = { b: bright, g: grey }; home.js shows the
-//           first app form that fits (two lines in the app, one in Safari), then the Safari forms, the last one always.
-//   front   §6: { kind: 'card', card, crewLine } | { kind: 'pack', card, count } | { kind: 'pass', pass }
-//               | { kind: 'member', name, line } | { kind: 'blank' } | { kind: 'loading' } | { kind: 'offline' }
-//   edges   §6.1: [{ kind: 'pass', pass } | { kind: 'pack', card, count } | { kind: 'card', card }], nearest first
-//   edgeMax §0.1: how many edges this size may show (the measured fit in home.js can drop more)
-//   slot    §7 / §6.4: { kind: 'crew', id, name, place, sub } | { kind: 'start' } | { kind: 'join' } | null
-//   doors   §8: { allRounds: bool, addHome: bool }
-//   foot    §8: { kind: 'buttons' } | { kind: 'new' } | { kind: 'live', code, hole, line }
+//   nudge    { kind: 'add' } | { kind: 'news', id, title, lines } | null   (037 v2 §4.2, unchanged)
+//   headline { rung, kicker, text, tap }   one plain full sentence (PLAN §4 set A), every word in COPY below
+//   items    the wallet, front to back: the next-round card → the newest sealed pack → your cards, newest first;
+//            zero cards + a person = the paper member card. Each { kind, key, … } (see walletItems).
+//   join     true = no wallet: the join field sits in its place (no person, nothing to show)
+//   live     the live round for the strip above the dock: { code, hole, line } | null
 // }
 //
-// Every sentence Home says is in COPY below (Andrew wants to try other wordings: change them there, not in layout).
+// Every sentence Home says is in COPY / WORDS below (Andrew wants to try other wordings: change them there).
 
 import { compute, fmtPts } from './scoring.js';
 import { roundFinish } from './seasons.js';
 
 export const LIVE_FOR = 12 * 3600 * 1000; // a round last seen live more than 12 h ago isn't "playing now"
-export const SOON = 48 * 3600 * 1000; // §6: a pass due within 48 h goes in front of a pack
-export const EDGES = { app: 3, safari: 1 }; // §0 fix 1
+export const SOON = 48 * 3600 * 1000; // a round due within 48 h says TODAY / TOMORROW and gets the "soon" headline
 const DAY = 86400000;
 const FINISH_CACHE = new WeakMap(); // { event, scores } row → { personId, fu }
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -38,60 +33,78 @@ const andList = (a) => (a.length <= 1 ? a.join('') : `${a.slice(0, -1).join(', '
 /** "YYYY-MM-DD" of `now` on this phone (the caller's clock); tests pass `today`. */
 export const localDay = (now) => { const d = new Date(now); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 
-// ───────────────────────────────────────────── §5 · the copy table (every word Home's headline says)
+// ───────────────────────────────────────────── the copy table (every word Home says)
 
-const F = (b, g = '') => ({ b, g });
-/** A finished round's result as headline forms (rungs 6, 8, 10). Never strokes. */
-function resultForms(r) {
-  if (!r) return null;
+/** PLAN §4: game words in sentences, keyed on playFor (never a gameName label in a sentence). */
+export const GAME_PHRASE = {
+  ryder: 'the Team Ryder Cup', alone: 'for points, everyone on their own', stroke: 'stroke play', partners: 'a 2v2 match',
+  oneMatch: 'a match', cart: 'the Rider Cup', legacy: 'the match',
+};
+/** SPEC §2: the short form on the next-round card's Game field. */
+export const GAME_SHORT = {
+  ryder: 'Ryder Cup', alone: 'Points', stroke: 'Stroke', partners: '2v2', oneMatch: '2v2', cart: 'Rider Cup', legacy: 'Match',
+};
+/** SPEC §2: the tee sheet's one line on how the game works. */
+export const GAME_HOW = {
+  ryder: 'Team Ryder Cup. Carts play carts; every match won is a point for your side.',
+  cart: 'Partner “Rider” Cup. Low ball and low total win a point each hole.',
+  partners: '2v2. Partners switch during the round; the points you win are your own.',
+  oneMatch: '2v2. You and your partner against one cart: low ball and low total.',
+  alone: 'Everyone on their own: the low net score wins each hole’s point.',
+  stroke: 'Stroke play. Every shot counts; the low total wins.',
+  legacy: 'Match play between carts.',
+};
+/** Games where you have a partner (Cart · With on the card; "On the tee" until partners are drawn). */
+export const PARTNER_GAMES = new Set(['ryder', 'cart', 'partners', 'oneMatch', 'legacy']);
+
+/** A finished round's result as one sentence (PLAN §4 set A: a subject, a verb, and out of what). Never strokes. */
+export function resultSentence(r) {
+  if (!r) return '';
   switch (r.kind) {
-    case 'won': return { app: [F('Won', r.mates ? ` with ${r.mates}.` : ` of ${r.of}.`)], safari: [F('Won.')] };
-    case 'low': return { app: [F('Low round', ` of ${r.of}.`)], safari: [F('Low round.')] };
-    case 'place': return { app: [F(`${r.place} of ${r.of}.`)], safari: [F(`${r.place} of ${r.of}.`)] };
-    case 'cup': return r.shared ? { app: [F('Cup shared', ` ${r.score}.`)], safari: [F('Cup shared.')] }
-      : { app: [F(`${r.side} won`, ` ${r.score}.`)], safari: [F(`${r.side} won.`)] };
-    default: return { app: [F(`${r.line}.`)], safari: [F(`${r.line}.`)] };
+    case 'won': return r.mates ? `You and ${r.mates} won.` : `You finished 1st of ${r.of} ${r.unit}.`;
+    case 'low': return 'You had the low round of the group.';
+    case 'place': {
+      const tied = String(r.place).startsWith('T');
+      const pl = tied ? ordinal(Number(String(r.place).slice(1))) : r.place;
+      const who = r.mates ? `You and ${r.mates}` : 'You';
+      return `${who} ${tied ? 'tied for' : 'finished'} ${pl} of ${r.of} ${r.unit}.`;
+    }
+    case 'cup': return r.shared ? `The cup was shared, ${r.score}.` : r.mine === false ? `Your side lost the cup, ${r.score}.` : `Your side won the cup, ${r.score}.`;
+    default: return `${r.line}.`;
   }
 }
+const up = (s) => String(s || '').toUpperCase();
+const kick = (...parts) => parts.filter(Boolean).map(up).join(' · ');
 export const COPY = {
-  live: { kicker: () => 'On the course', app: (f) => [f.course ? F(f.game, ` at ${f.course}.`) : F(`${f.game}.`)], safari: (f) => [F(`${f.game}.`)] },
-  removed: { kicker: (f) => `Needs you · ${f.dow}`, app: (f) => [F(f.sub ? `${f.sub} has your spot.` : 'Your spot is gone.')], safari: (f) => [F(f.sub ? `${f.sub} has your spot.` : 'Your spot is gone.')] },
-  off: { kicker: (f) => f.weekday || 'Called off', app: (f) => [F(`${f.host || 'The host'} called it off.`)], safari: (f) => [F(`${f.host || 'Host'} cancelled.`)] },
-  soon: {
-    kicker: () => 'Next round',
-    // §0 fix 4: a long first name in Safari falls to the roster form ("8 players in."), never two lines.
-    app: (f) => [...(f.mate ? [F(`Riding with ${f.mate}.`)] : []), F(f.players ? `${f.players} players in.` : 'You’re in.')],
-    safari: (f) => [...(f.mate ? [F(`Riding with ${f.mate}.`)] : []), F(f.players ? `${f.players} players in.` : 'You’re in.')],
-  },
-  pack: { kicker: () => 'New pack', app: (f) => resultForms(f.result).app, safari: (f) => resultForms(f.result).safari },
-  coming: {
-    kicker: () => 'Next round',
-    app: (f) => [F(f.onRoster || !f.players ? (f.days <= 1 ? (f.days ? 'Tomorrow.' : 'Today.') : `${f.days} days out.`) : `${f.players} players in.`)],
-    safari: (f) => COPY.coming.app(f),
-  },
-  recent: { kicker: () => 'Last out', app: (f) => resultForms(f.result).app, safari: (f) => resultForms(f.result).safari },
-  crew: { kicker: (f) => f.crew, app: (f) => [F(f.iLead ? `${f.next} is next.` : `${f.leader} leads.`)], safari: (f) => COPY.crew.app(f) },
-  older: { kicker: (f) => `Last out · ${f.ago}`, app: (f) => resultForms(f.result).app, safari: (f) => resultForms(f.result).safari },
-  unfinished: { kicker: () => 'Golf Board', app: () => [F('No rounds finished.')], safari: () => [F('No rounds finished.')] },
-  empty: { kicker: () => 'Golf Board', app: () => [F('Live scores', ' for your group.')], safari: () => [F('Live scores.')] },
+  live: { kicker: (f) => kick('Live', f.course), text: (f) => (f.phrase ? `You’re playing ${f.phrase}.` : 'You’re on the course.') },
+  removed: { kicker: (f) => kick(f.weekday, f.course), text: (f) => (f.sub ? `${f.host || 'The host'} gave your spot to ${f.sub}.` : 'Your spot in the next round is gone.') },
+  off: { kicker: (f) => kick(f.weekday, f.course), text: (f) => `${f.host || 'The host'} called off ${f.weekday ? `${f.weekday}’s` : 'the'} round.` },
+  soon: { kicker: (f) => kick('Next round', f.course), text: (f) => (f.mate ? `You’re riding with ${f.mate}.` : f.players ? `${f.players} players are in.` : 'You’re in.') },
+  pack: { kicker: (f) => kick('New card', f.course), text: (f) => `Your card from ${f.weekday || 'your last round'} is ready to open.` },
+  coming: { kicker: (f) => kick('Next round', f.course), text: (f) => (f.days === 0 ? 'You play today.' : f.days === 1 ? 'You play tomorrow.' : `You play in ${f.days} days.`) },
+  recent: { kicker: (f) => kick('Last round', f.course, f.date), text: (f) => resultSentence(f.result) },
+  crew: { kicker: (f) => up(f.crew), text: (f) => `You’re ${f.place} in the standings.` },
+  older: { kicker: (f) => kick('Last round', f.ago), text: (f) => resultSentence(f.result) },
+  unfinished: { kicker: () => 'GOLF BOARD', text: () => 'No finished rounds yet.' },
+  empty: { kicker: () => 'GOLF BOARD', text: () => 'Live scores for your group’s round.' },
 };
-/** Home's other words (nudges, plain card, boxes, rows). */
+/** Home's other words (nudges, the plain card, the next-round card, the count line). */
 export const WORDS = {
   addNudge: 'Add Golf Board to your Home Screen',
-  newsNudge: (title) => `New · ${title}`,
   blank: 'Your card prints after your first round.',
   offline: 'Your cards load with signal.',
   member: 'Member',
   memberSince: (day) => { const [y, m] = String(day).split('-').map(Number); return `First round ${MON[m - 1]} ${y}`; },
   noRoundsYet: 'No rounds yet',
-  standings: 'Standings',
-  startCrew: 'Start a crew',
-  noCrew: 'No crew yet',
-  unranked: (n, min) => `${n} of ${min} rounds`,
+  nextRound: 'Next round',
+  liveNow: 'Live now',
+  onTheTee: 'On the tee',
+  count: (i, n) => (n > 1 ? `${i} of ${n}` : ''),
 };
 const ago = (days) => (days < 14 ? '1 week ago' : days < 60 ? `${Math.round(days / 7)} weeks ago` : `${Math.round(days / 30)} months ago`);
+const dateKick = (iso) => { const wd = weekday(iso).slice(0, 3); return wd ? `${wd} ${shortDay(iso)}` : ''; };
 
-// ───────────────────────────────────────────── finished rounds (the first build's engine path, kept)
+// ───────────────────────────────────────────── finished rounds (037's engine path, kept)
 
 /**
  * One finished round's order as units (carts / sides / pairs = one row), with what the game counts.
@@ -131,24 +144,26 @@ export function finishUnits(event, scores, personId) {
   };
 }
 
-/** §5 rungs 6/8/10: the game result of a finished round, from your seat. Never a stroke total. */
+/** PLAN §4: the game result of a finished round, from your seat. Never a stroke total. */
 export function resultOf(fu, meName = '') {
   if (!fu || fu.units.length < 2) return null;
   const me = fu.units.find((u) => u.me);
   if (fu.kind === 'ryder') {
     const [a, b] = fu.units;
-    const score = `${a.value}–${b.value}`;
-    return a.rank === b.rank ? { kind: 'cup', shared: true, score } : { kind: 'cup', side: a.name, score };
+    if (a.rank === b.rank) return { kind: 'cup', shared: true, score: `${a.value}–${b.value}` };
+    const mine = me ? me === a : null; // your side's score first
+    return { kind: 'cup', side: a.name, mine, score: mine === false ? `${b.value}–${a.value}` : `${a.value}–${b.value}` };
   }
   if (!me) return null;
   const tied = fu.units.filter((u) => u.rank === me.rank).length > 1;
   const of = fu.units.length;
+  const unit = fu.kind === 'team' ? 'carts' : 'players';
+  const mates = me.names.length > 1 ? andList(me.names.filter((n) => first(n) !== first(meName)).map(first)) : '';
   if (me.rank === 1 && !tied) {
-    if (fu.kind === 'stroke') return { kind: 'low', of };
-    const mates = me.names.filter((n) => first(n) !== first(meName)).map(first);
-    return { kind: 'won', mates: me.names.length > 1 ? andList(mates.length ? mates : me.names.slice(1).map(first)) : '', of };
+    if (fu.kind === 'stroke') return { kind: 'low', of, unit };
+    return { kind: 'won', mates: me.names.length > 1 ? (mates || andList(me.names.slice(1).map(first))) : '', of, unit };
   }
-  return { kind: 'place', place: tied ? `T${me.rank}` : ordinal(me.rank), of };
+  return { kind: 'place', place: tied ? `T${me.rank}` : ordinal(me.rank), of, unit, mates };
 }
 
 /** Old rounds without a locker row: the stored result line, any score stripped ("You 1st · 87" → "You 1st"). */
@@ -157,7 +172,7 @@ export function lineResult(line) {
   return s ? { kind: 'line', line: s } : null;
 }
 
-// ───────────────────────────────────────────── rounds, passes, crew
+// ───────────────────────────────────────────── rounds, the next-round card
 
 /** Which recent rounds are coming up (lobby, not past yesterday) and which one is live now. */
 export function roundGroups(rounds, now) {
@@ -167,13 +182,13 @@ export function roundGroups(rounds, now) {
   return { coming, live };
 }
 
-/** #/rounds (All rounds): everything but the coming passes. */
+/** Rounds' list (039; 037's All rounds): everything but the coming rounds (those are the "Now" rows). */
 export function allRounds(rounds, now) {
   const { coming } = roundGroups(rounds, now);
   return rounds.filter((r) => !coming.includes(r));
 }
 
-/** §6.2 · one coming round as a pass. Old recent.lobby entries miss the new fields: recent.course / played_on. */
+/** One coming round (lobby.homeCard, kept in glb.recent). Old entries miss the newer fields: recent.course / played_on. */
 export function passOf(r, { now, today }) {
   const c = r.lobby || {};
   const date = c.date || r.played_on || '';
@@ -186,24 +201,72 @@ export function passOf(r, { now, today }) {
   return {
     code: r.code, name: r.name || '', kind: c.kind || 'coming', date, days, due, startsAt,
     day: time ? `${wd} ${time}`.trim() : `${wd} ${shortDay(date).toUpperCase()}`.trim(),
-    weekday: weekday(date), dow: wd,
+    weekday: weekday(date), dow: wd, mon: shortDay(date).toUpperCase(),
     badge: c.kind === 'off' ? 'Called off' : c.kind === 'removed' ? 'Spot given' : due && days === 0 ? 'Today' : due && days === 1 ? 'Tomorrow' : null,
     course: c.course || r.course || '', game: c.game || r.game || '', time, host: first(c.host),
     players: Number.isFinite(c.players) ? c.players : null, onRoster: c.onRoster ?? true, mate: c.mate || null, sub: c.sub || null,
+    pk: c.pk || null, cart: c.cart || null, sheet: c.sheet || null, with: c.with || null,
   };
 }
 
-/** §7 · the crew row. `crews` = homeCrewData: { list, currentId, name, rounds, standing }. */
-export function crewSlot(crews, min = 3) {
-  const list = crews?.list || [];
-  if (!list.length) return { kind: 'start' };
-  if (crews.rounds === 0) return null; // a crew with no rounds yet: nothing to stand in
-  const s = crews.standing;
+/**
+ * SPEC §2 · what the next-round card (A3) prints. `n` = { live: recent row with .live } or { pass: passOf(...) }.
+ * → { code, live, off, kicker, stamp, big, dd: [b, small], course, fields: [[label, value]] ×3, btn: { label, act, v },
+ *     share, sheet: { date, groups, how, host, players, code }, aria }
+ */
+export function nextFields(n) {
+  if (n.live) {
+    const r = n.live, L = r.live || {}, c = L.card || {};
+    const pk = c.pk || null;
+    const partner = !!(c.mate && (!pk || PARTNER_GAMES.has(pk)));
+    const hole = L.hole || null;
+    return {
+      code: r.code, live: true, off: false, kicker: WORDS.liveNow, stamp: hole ? `Hole ${hole}` : 'Live',
+      big: hole ? String(hole) : '—', dd: ['Hole', 'of 18'], course: r.course || r.name || '',
+      fields: partner ? [['Thru', c.thru != null ? String(c.thru) : '—'], ['Match', c.match || '—'], ['With', c.mate]]
+        : [['Thru', c.thru != null ? String(c.thru) : '—'], ['Place', c.place || '—'], ['Players', c.players ? String(c.players) : '—']],
+      btn: { label: hole ? `Hole ${hole} ›` : 'Back in ›', act: 'go', v: `#/e/${r.code}` }, share: false,
+      sheet: c.sheet ? { ...c.sheet, how: GAME_HOW[pk] || '', code: r.code } : null,
+      aria: `Live now: ${r.course || r.name || 'your round'}${hole ? `, hole ${hole}` : ''}`,
+    };
+  }
+  const p = n.pass;
+  const off = p.kind === 'off' || p.kind === 'removed';
+  const pk = p.pk || null;
+  const game = (pk && GAME_SHORT[pk]) || p.game || 'Round';
+  const players = p.players != null ? String(p.players) : '—';
+  let fields;
+  if (pk && !PARTNER_GAMES.has(pk)) fields = [['Game', game], ['Players', players], ['With', p.with || p.host || '—']];
+  else if (p.mate && p.onRoster) fields = [['Game', game], ['Cart', p.cart || '—'], ['With', p.mate]];
+  else fields = [['Game', game], ['Players', players], ['Partner', WORDS.onTheTee]];
+  const [h] = String(p.time || '').split(' ');
   return {
-    kind: 'crew', id: crews.currentId || list[0].id, name: crews.name || 'Your crew',
-    place: s?.place || null,
-    sub: s && !s.place && s.myRounds != null ? WORDS.unranked(s.myRounds, min) : null,
+    code: p.code, live: false, off, kicker: WORDS.nextRound, stamp: p.badge || null,
+    big: h || (p.date ? String(Number(p.date.slice(8, 10))) : '—'),
+    dd: h ? [p.dow ? p.dow.charAt(0) + p.dow.slice(1).toLowerCase() : '', p.mon] : [p.dow ? p.dow.charAt(0) + p.dow.slice(1).toLowerCase() : '', p.mon.split(' ')[0] || ''],
+    course: p.course || p.name || '', fields,
+    btn: off ? { label: `Text ${p.host || 'the host'}`, act: 'home-text', v: p.host || 'the host' } : { label: 'Open', act: 'go', v: `#/e/${p.code}` },
+    share: !off,
+    sheet: { date: [p.dow, p.mon].filter(Boolean).join(' '), groups: p.sheet?.groups || [], how: GAME_HOW[pk] || '', host: p.host || '', players: p.players, code: p.code },
+    aria: [p.name, p.day, p.course].filter(Boolean).join(', '),
   };
+}
+
+/**
+ * SPEC §1 · the wallet, front to back: the next round (live, else the soonest coming) → the newest sealed pack → your
+ * opened cards newest first. Zero cards and a person: the paper member card. While the locker loads / fails: a plain
+ * box ("loading" / "offline") behind the next round.
+ */
+export function walletItems({ next = null, packs = [], opened = [], member = null, state = 'ready', hadCards = false, crewLine = () => '' } = {}) {
+  const out = [];
+  if (next) out.push({ kind: 'next', key: `next:${next.code}`, n: next });
+  if (state === 'loading') { out.push({ kind: 'loading', key: 'loading' }); return out; }
+  if (state === 'failed' && hadCards) { out.push({ kind: 'offline', key: 'offline' }); return out; }
+  const newestPack = packs.length ? packs[packs.length - 1] : null;
+  if (newestPack) out.push({ kind: 'pack', key: `pack:${newestPack.code}`, card: newestPack, count: packs.length });
+  for (const card of opened) out.push({ kind: 'card', key: `card:${card.code}`, card, crewLine: crewLine(card) });
+  if (!newestPack && !opened.length && member) out.push({ kind: 'member', key: 'member', ...member });
+  return out;
 }
 
 // ───────────────────────────────────────────── the model
@@ -225,68 +288,39 @@ export function homeModel({
   const cards = state === 'ready' && Array.isArray(locker?.cards) ? locker.cards : null;
   const brandNew = !rounds.length && !(cards && cards.length);
   const { coming, live } = roundGroups(rounds, now);
-  const app = !!standalone;
 
-  // §4.2 the nudge: never while a round is live; Add to Home Screen first.
+  // 037 v2 §4.2 the nudge: never while a round is live; Add to Home Screen first.
   let nudge = null;
   if (!live) {
     if (ios && !standalone && !seen.add) nudge = { kind: 'add' };
     else if (news) nudge = { kind: 'news', id: news.id, title: news.title, lines: news.lines };
   }
 
-  // §6 passes (soonest first), packs and cards.
   const passes = coming.map((r) => passOf(r, { now, today })).sort((a, b) => (a.startsAt ?? Infinity) - (b.startsAt ?? Infinity));
   const packs = cards ? cards.filter((c) => !c.opened) : [];
   const opened = cards ? cards.filter((c) => c.opened).sort((a, b) => String(b.day).localeCompare(String(a.day))) : [];
-  const newestPack = packs.length ? packs[packs.length - 1] : null;
-  const noCards = cards ? !cards.length : state === 'none' || (state === 'failed' && !hadCards);
   const rowOf = (card) => (locker?.rows || []).find((x) => x.event?.id === card.eventId) || null;
   const crewLine = (card) => {
     const row = rowOf(card);
     const crewName = row?.event?.crew_id ? crewNames[row.event.crew_id] || '' : '';
     return [crewName, card.name || meName].filter(Boolean).join(' · ');
   };
+  const nextSrc = live ? { live } : passes.length ? { pass: passes[0] } : null;
+  const next = nextSrc ? nextFields(nextSrc) : null;
 
-  // Front, first match: a pass due within 48 h → a pack → a later pass → your latest scorecard → the plain card.
-  const soon = passes.find((p) => p.due) || null;
-  let front;
-  if (soon) front = { kind: 'pass', pass: soon };
-  else if (state === 'loading' && personId) front = { kind: 'loading' };
-  else if (newestPack) front = { kind: 'pack', card: newestPack, count: packs.length };
-  else if (passes.length) front = { kind: 'pass', pass: passes[0] };
-  else if (opened.length) front = { kind: 'card', card: opened[0], crewLine: crewLine(opened[0]) };
-  else if (state === 'failed' && hadCards) front = { kind: 'offline' };
-  else if (personId && (meFull || meName)) {
+  let member = null;
+  if (personId && (meFull || meName)) {
     const days = (locker?.rows || []).filter((x) => (x.event?.roster?.players || []).some((p) => p.personId === personId))
       .map((x) => dayOf(x.event)).filter(Boolean).sort();
-    const crewName = crews?.list?.length ? crews.name || '' : '';
-    front = { kind: 'member', name: meFull || meName, crew: crewName, line: days.length ? WORDS.memberSince(days[0]) : WORDS.noRoundsYet };
-  } else front = { kind: 'blank' };
+    member = { name: meFull || meName, crew: crews?.list?.length ? crews.name || '' : '', line: days.length ? WORDS.memberSince(days[0]) : WORDS.noRoundsYet };
+  }
+  const items = personId
+    ? walletItems({ next, packs, opened, member, state: state === 'none' ? 'ready' : state, hadCards, crewLine })
+    : (next ? [{ kind: 'next', key: `next:${next.code}`, n: next }] : []);
 
-  // §6.1 edges, nearest first: another pass → the pack → opened scorecards, newest first. Never the plain card.
-  const edges = [
-    ...passes.filter((p) => front.pass !== p).map((pass) => ({ kind: 'pass', pass })),
-    ...(newestPack && front.kind !== 'pack' ? [{ kind: 'pack', card: newestPack, count: packs.length }] : []),
-    ...opened.filter((c) => front.card !== c).map((card) => ({ kind: 'card', card })),
-  ];
-  const edgeMax = app ? EDGES.app : (front.kind === 'pack' || nudge || live ? 0 : EDGES.safari);
-
-  // §7 / §6.4 the crew slot.
-  const crewRounds = crews?.list?.length && crews.rounds > 0;
-  let slot;
-  if (live) slot = null;
-  else if (noCards && !crewRounds) slot = { kind: 'join' };
-  else slot = crewSlot(crews);
-
-  // §8 doors (hidden while the nudge shows) and foot.
-  const list = allRounds(rounds, now);
-  const doors = nudge ? { allRounds: false, addHome: false } : { allRounds: list.length > 0, addHome: !!ios && !standalone && !!seen.add };
-  const foot = live ? { kind: 'live', code: live.code, hole: live.live?.hole || null, line: live.live?.line || '' }
-    : slot?.kind === 'join' ? { kind: 'new' } : { kind: 'buttons' };
-
-  const headline = ladder({ live, front, passes, newestPack, opened, rounds, crews, today, locker, rowOf, personId, meName });
-
-  return { brandNew, nudge, headline, front, edges, edgeMax, slot, doors, foot, live };
+  const headline = ladder({ live, passes, newestPack: packs.length ? packs[packs.length - 1] : null, opened, rounds, crews, today, locker, rowOf, personId, meName });
+  const liveStrip = live ? { code: live.code, hole: live.live?.hole || null, line: live.live?.line || [live.course, live.game].filter(Boolean).join(' · ') } : null;
+  return { brandNew, nudge, headline, items, join: !items.length, live: liveStrip };
 }
 
 /** The result of the round behind a card (locker row through the engine), else its stored result line. */
@@ -305,49 +339,76 @@ function cardResult(card, { rowOf, personId, meName, rounds }) {
   return resultOf(fu, meName) || lineResult(rounds.find((r) => r.code === card.code)?.result?.line);
 }
 
-/** §5 · the headline ladder: first match wins. → { rung, kicker, app, safari, tap } */
-export function ladder({ live, front, passes, newestPack, opened, rounds, crews, today, locker, rowOf, personId, meName }) {
-  const out = (rung, f, tap = null) => ({ rung, kicker: COPY[rung].kicker(f), app: COPY[rung].app(f), safari: COPY[rung].safari(f), tap });
-  if (live) return out('live', { game: live.game || 'Your round', course: live.course || '' });
-  const fp = front.kind === 'pass' ? front.pass : null;
+/** PLAN §4 · the headline ladder (set A): first match wins. → { rung, kicker, text, tap } */
+export function ladder({ live, passes = [], newestPack = null, opened = [], rounds = [], crews = null, today, locker = null, rowOf = () => null, personId = null, meName = '' }) {
+  const out = (rung, f, tap = null) => ({ rung, kicker: COPY[rung].kicker(f), text: COPY[rung].text(f), tap });
+  if (live) return out('live', { phrase: GAME_PHRASE[live.live?.card?.pk] || '', course: live.course || '' });
+  const fp = passes[0] || null;
   if (fp?.kind === 'removed') return out('removed', fp, `#/e/${fp.code}`);
   if (fp?.kind === 'off') return out('off', fp);
-  if (fp?.due) return out('soon', fp);
+  if (fp?.due) return out('soon', { ...fp, mate: fp.onRoster ? fp.mate : null });
+  if (newestPack) return out('pack', { course: newestPack.course, weekday: weekday(newestPack.day) });
+  const nextUp = passes.find((p) => p.kind === 'coming' && p.days != null && p.days >= 0 && p.days <= 14);
+  if (nextUp) return out('coming', nextUp);
   const ctx = { rowOf, personId, meName, rounds };
-  if (newestPack) {
-    const result = cardResult(newestPack, ctx);
-    if (result) return out('pack', { result });
-  }
-  const next = passes.find((p) => p.kind === 'coming' && p.days != null && p.days <= 14);
-  if (next) return out('coming', next);
   // Your last finished round: the latest opened card, else (no locker) the newest round this phone saw finish.
   let last = null;
-  if (opened.length) last = { day: opened[0].day, result: cardResult(opened[0], ctx) };
+  if (opened.length) last = { day: opened[0].day, course: opened[0].course, result: cardResult(opened[0], ctx) };
   else if (!locker) {
     const done = rounds.filter((r) => r.done && r.result?.line && !r.lobby).sort((a, b) => dayOf(b).localeCompare(dayOf(a)))[0];
-    if (done) last = { day: dayOf(done), result: lineResult(done.result.line) };
+    if (done) last = { day: dayOf(done), course: done.course || '', result: lineResult(done.result.line) };
   }
   const since = last ? (dayNum(today) ?? 0) - (dayNum(last.day) ?? 0) : null;
-  if (last?.result && since <= 7) return out('recent', { result: last.result });
+  if (last?.result && since <= 7) return out('recent', { result: last.result, course: last.course, date: dateKick(last.day) });
   const s = crews?.standing;
-  if (crews?.list?.length && s?.place && s.leader && (!s.iLead || s.next)) {
-    return out('crew', { crew: crews.name || 'Your crew', leader: s.leader, next: s.next, iLead: !!s.iLead }, `#/season/${crews.currentId}`);
-  }
+  if (crews?.list?.length && s?.place) return out('crew', { crew: crews.name || 'Your crew', place: s.place }, '#/season');
   if (last?.result) return out('older', { result: last.result, ago: ago(since) });
   if (rounds.length) return out('unfinished', {});
   return out('empty', {});
 }
 
-/** The key Home remembers in glb.seen.homeTop, so a new front deals in (§11): card / pack / pass / member / blank. */
-export function topKey(front) {
-  if (!front) return null;
-  if (front.kind === 'card' || front.kind === 'pack') return `${front.kind}:${front.card.code}`;
-  if (front.kind === 'pass') return `pass:${front.pass.code}`;
-  if (front.kind === 'member' || front.kind === 'blank') return front.kind;
-  return null;
+/** The key Home remembers in glb.seen.homeTop (the wallet's front item), so a new front deals in again. */
+export function topKey(item) {
+  return item?.key || null;
 }
 
-/** §4.1 · the measured fit (pure part): the front's width for `leftover` px of height, never under `min`. */
-export function fitWidth(contentW, leftover, { min = 300, ratio = 7 / 5 } = {}) {
-  return Math.max(min, Math.min(contentW, Math.floor(leftover * ratio)));
+// ───────────────────────────────────────────── the wallet's geometry (pure part of the physics, SPEC §1)
+
+export const EDGE = 48; // px of each card behind the front that peeks above it
+export const EDGES = { app: 2, safari: 1 };
+export const STEP = 170; // px of drag = one card back in time
+
+/**
+ * The wallet's fit for a box `Wc` wide with `Hc` px to spare: the front card's size and how many edges show.
+ * Front = full width at 7:5, shrinking to fit; edges drop (app 2 → 0, Safari 1 → 0) before it goes under 200 tall.
+ * → { K, CW, CH, need } (need = the wallet's own height: it's only as tall as it needs).
+ */
+export function walletFit(Wc, Hc, n, { app = false } = {}) {
+  let K = Math.max(0, Math.min(n - 1, app ? EDGES.app : EDGES.safari));
+  const full = Math.round(Wc / 1.4);
+  let CH;
+  for (;;) { CH = Math.min(full, Hc - 24 - K * EDGE); if (CH >= 200 || K === 0) break; K--; }
+  CH = Math.max(120, CH);
+  const CW = Math.min(Wc, Math.round(CH * 1.4));
+  return { K, CW, CH: Math.round(CW / 1.4), need: 24 + Math.round(CW / 1.4) + K * EDGE };
 }
+
+/** One card's pose at depth d (0 = front, >0 behind, <0 pulled into the pocket below). Ported from prototype-v7. */
+export function poseOne(d, { K, CH, yF }) {
+  const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+  let y = yF, s = 1, o = 1, z = 50, lab = 0;
+  if (d >= 0) {
+    const dd = Math.min(d, K);
+    y = yF - dd * EDGE - Math.max(0, d - K) * 10;
+    o = d <= K ? 1 : clamp(1 - (d - K) * 2.5, 0, 1);
+    z = 50 - Math.round(d * 10); lab = clamp((d - 0.2) * 3, 0, 1);
+  } else {
+    const t = -d; z = 60;
+    y = yF + t * (CH + 16); s = 1 - t * 0.04;
+  }
+  return { y, s, o, z, lab };
+}
+
+/** Rubber band past either end; the settle target after a fling (≈ 200 ms projection). */
+export const rubber = (p, n) => (p < 0 ? p * 0.3 : p > n - 1 ? n - 1 + (p - (n - 1)) * 0.3 : p);
+export const settleTo = (p, vy, n) => Math.max(0, Math.min(n - 1, Math.round(p + (vy * 200) / STEP)));

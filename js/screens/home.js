@@ -1,19 +1,21 @@
-// home.js — Home, 037 second pass "the wallet" (docs/design/features/037-home/PLAN-v2.md; its §0 wins): a nudge strip,
-// the headline (kicker + one two-tone sentence), the stack (one front object — a pass, a pack, your latest card or the
-// plain card — with edge strips behind it), the crew row (or Start a crew / the join field), the doors row, and the
-// pinned foot (Join with code + New round, or the live bar). What to draw comes from the pure js/homeview.js (every
-// word in its COPY / WORDS); this file turns it into markup, measures the fit in mount (headline form, edges, front
-// width, doors) and plays the one deal (data-t0 + ui.syncMotion). #/rounds = All rounds.
+// home.js — 039 Home is the wallet (docs/design/features/039-home-deck/SPEC.md; PLAN.md §4 set A for the headline):
+// the top bar, the nudge strip, one plain headline, then the wallet (the next round as the front card A3, then the
+// newest sealed pack, then your cards newest first; zero cards = the paper member card) and its "N of M" line. No crew
+// row, doors row or pinned buttons: the dock (Home · Rounds · Crew + the +) has them (app.js renderTabbar).
+// What to draw comes from the pure js/homeview.js (every word in its COPY / WORDS); this file turns it into markup and
+// runs the wallet's physics in mount (ported from prototype-v7: setupWallet, pose, bindWallet, animateTo, tapCard,
+// dealIn). The wallet's position, flip and motion live in this module, so the render loop's redraws keep them.
 
-import { gameName } from '../playfor.js';
-import { esc, icon, prettyDate, initials, empty, syncMotion, reducedMotion, copyText } from '../ui.js';
+import { gameName, playFor } from '../playfor.js';
+import { esc, icon, prettyDate, initials, reducedMotion, copyText } from '../ui.js';
 import { recent, normCode, STANDALONE, moveLink, syncMyRounds, pruneGoneRounds, local, refreshLobbies, owner, clock } from '../db.js';
-import { lobbyState, homeCard } from '../lobby.js';
+import { lobbyState, homeCard, teeSheet } from '../lobby.js';
+import { matchState } from '../riderview.js';
 import { homeCrewData, crewNames } from './crew.js';
-import { homeLockerData, homeLockerState, startHomeLocker, lockerName, frontHtml, lockerPerson, MARK } from './locker.js';
+import { homeLockerData, homeLockerState, startHomeLocker, lockerName, frontHtml, backHtml, lockerPerson, MARK, EDGE as CARD_EDGE } from './locker.js';
 import { chromePack } from './pack.js';
-import { homeModel, allRounds, topKey, fitWidth, WORDS } from '../homeview.js';
-import { finName } from '../locker.js';
+import { homeModel, topKey, walletFit, poseOne, rubber, settleTo, STEP, WORDS } from '../homeview.js';
+import { shortDay } from '../locker.js';
 import { whatsNew } from '../whatsnew.js';
 import { fmtPts, fmtToPar, playerLeaderboard } from '../scoring.js';
 
@@ -55,7 +57,7 @@ export function roundSummary(app) {
   if (!snap.anyPosted && !out.done) {
     // Nobody has a score yet: no places, no zeros.
     const t = g && !snap.settings.solo && !snap.settings.pairs ? snap.teamById.get(app.myTeam())?.name : '';
-    out.live = { hole: app.nextHole(), line: t || '', points: '' };
+    out.live = { hole: app.nextHole(), line: t || '', points: '', card: liveCard(app, snap, me) };
     return out;
   }
   let rank = null, line = '', value = '', points = '';
@@ -104,8 +106,33 @@ export function roundSummary(app) {
     if (!g && rank && me.thru) res += snap.hasStrokes ? ` · net ${me.netTotal}` : ` · ${me.grossTotal}`;
     out.result = { line: res, value };
   } else {
-    out.live = { hole: app.nextHole(), line, points };
+    out.live = { hole: app.nextHole(), line, points, card: liveCard(app, snap, me, rank) };
   }
+  return out;
+}
+
+
+/** 039 §2 · the live next-round card's facts, from this phone's seat: { pk, thru, match, place, players, mate, sheet }. */
+function liveCard(app, snap, me, rank = null) {
+  const out = { pk: null, thru: me?.thru ?? null, match: null, place: rank ? ordinal(rank) : null, players: snap.players.length, mate: null, sheet: null };
+  try { out.pk = playFor(snap); } catch { /* an old shape */ }
+  const team = app.myTeam?.();
+  const t = team ? snap.teamById.get(team) : null;
+  const mateId = t?.playerIds?.find((id) => id !== me?.id);
+  if (mateId) out.mate = snap.playerById.get(mateId)?.firstName || snap.playerById.get(mateId)?.name?.split(' ')[0] || null;
+  const g = snap.game;
+  try {
+    if (g?.sides) {
+      const s = g.sides.find((x) => x.teamIds.includes(team)) || g.sides[0];
+      const o = g.sides.find((x) => x !== s);
+      out.match = `${fmtPts(s.points)}–${fmtPts(o.points)}`;
+    } else {
+      const ms = matchState(snap, me?.id);
+      const m = ms?.matches.find((x) => x.status === 'live' && ms.mine.has(x.us.id)) || ms?.matches.find((x) => ms.mine.has(x.us.id) && x.status !== 'done');
+      if (m) out.match = m.status === 'notStarted' ? 'Not yet' : m.leader === 'us' ? `Up ${m.margin}` : m.leader === 'them' ? `Down ${m.margin}` : 'All square';
+    }
+  } catch { /* the match line is a nice-to-have */ }
+  try { out.sheet = teeSheet(app.event, me?.id || null); } catch { out.sheet = null; }
   return out;
 }
 
@@ -120,11 +147,7 @@ function header(rounds) {
     <button class="hm-name" data-act="home-me" aria-label="You’re ${esc(name)}. Not you?">${esc(name)}</button></div>`;
 }
 
-const chev = (n = 20) => `<span class="hr-chev">${icon('fwd', n)}</span>`;
-
-// ───────────────────────────────────────────── 037 v2 blocks (PLAN-v2 §4–§8; every word comes from homeview's COPY / WORDS)
-
-/** §4.2 · the nudge strip: text (the whole strip taps) + ✕. */
+/** 037 v2 §4.2 · the nudge strip: text (the whole strip taps) + ✕. */
 function nudgeHtml(n) {
   if (!n) return '';
   const body = n.kind === 'add'
@@ -134,125 +157,91 @@ function nudgeHtml(n) {
       <button class="icon-btn hm-ngx" data-act="home-nudge-x" data-v="${n.kind === 'add' ? 'add' : `news:${esc(n.id)}`}" aria-label="Dismiss">${icon('close', 20)}</button></div>`;
 }
 
-/** One headline form: the bright half (the fact) + the grey half (only qualifies it). */
-const formHtml = (f) => `${esc(f.b)}${f.g ? `<span class="hm-g">${esc(f.g)}</span>` : ''}`;
-/** §5 · kicker + sentence. mount() picks the first form that fits (two lines in the app, one in Safari). */
+/** PLAN §4 set A · kicker + one plain sentence (all --text). */
 function headlineHtml(h) {
-  const forms = [...h.app, ...h.safari];
   const tap = h.tap ? ` data-act="go" data-v="${esc(h.tap)}" role="button" tabindex="0"` : '';
   return `<div class="hm-hl${h.tap ? ' tap' : ''}"${tap}><span class="ts-label hm-k ellipsis">${esc(h.kicker)}</span>
-      <h2 class="ts-title hm-h" data-forms="${esc(JSON.stringify(forms))}">${formHtml(forms[0])}</h2></div>`;
+      <h2 class="ts-title hm-h">${esc(h.text)}</h2></div>`;
 }
 
-/** The plain card face (036 grid, lkf-rookie paper): member / blank / loading box / offline box. */
-function plainHtml(f) {
-  const face = (inner) => `<div class="lk-mini lkf-rookie hm-front hm-plain" aria-hidden="${f.kind === 'loading'}"><span class="lk-face lk-front"><div class="lk-mat">${inner}</div></span></div>`;
-  if (f.kind === 'loading') return face('');
-  if (f.kind === 'offline') return face(`<div class="hm-pmsg ts-small">${esc(WORDS.offline)}</div>`);
-  if (f.kind === 'member') {
-    return face(`<div class="x-l1"><div class="x-top"><span class="lk-brand">${MARK}${esc(WORDS.member)}</span></div>
-      <b class="ts-title hm-pname ellipsis">${esc(f.name)}</b>
-      <div class="x-bot"><span class="ellipsis">${esc(f.crew || '')}</span><span>${esc(f.line)}</span></div></div>`);
+// ───────────────────────────────────────────── the wallet's faces (SPEC §1–§2)
+
+/** SPEC §2 · card A3 (prototype `tixHybrid`): mark + NEXT ROUND · stamp, the tee time huge, course, Game · Cart · With + Open / share. */
+function nextFront(n) {
+  const stamp = n.stamp ? `<span class="lk-st${n.live ? ' t-live' : ''}">${n.live ? '<i></i>' : ''}${esc(n.stamp)}</span>` : '';
+  const btn = `<button class="t-b pri" data-act="${n.btn.act}" data-v="${esc(n.btn.v)}"${n.btn.act === 'home-text' ? ` data-r="${esc(n.aria)}"` : ''}>${esc(n.btn.label)}</button>`;
+  const share = n.share ? `<button class="t-b ic" data-act="home-share" data-v="${esc(n.code)}" data-r="${esc(n.aria)}" aria-label="Share the round link">${icon('share', 16)}</button>` : '';
+  return `<div class="lk-mat tk7 thy"><i class="lk-sheen"></i><div class="tc-in">
+      <div class="x-top"><span class="lk-brand">${MARK}${esc(n.kicker)}</span>${stamp}</div>
+      <div class="t-hero"><span class="t-big">${esc(n.big)}</span><span class="t-dd"><b>${esc(n.dd[0] || '')}</b><span>${esc(n.dd[1] || '')}</span></span></div>
+      <div class="t-course">${esc(n.course)}</div>
+      <div class="thy-bot"><div class="thy-f">${n.fields.map(([k, v]) => `<div><span class="tp-k">${esc(k)}</span><b>${esc(v)}</b></div>`).join('')}</div>
+        <div class="tc-b">${btn}${share}</div></div></div></div>`;
+}
+
+/** SPEC §2 · the back: the tee sheet (every tee time, its carts or names; your row bold), how the game works, Host · Players · Code. */
+function nextBack(n) {
+  const sh = n.sheet || { groups: [] };
+  const groups = (sh.groups || []).map((g) => `<div class="t-g"><div class="cb-k">${esc([g.time, g.label].filter(Boolean).join(' · '))}</div>${g.rows
+    .map((r) => `<div class="cb-pl${r.me ? ' me' : ''}">${r.id ? `<i>${esc(r.id)}</i>` : ''}<span>${esc(r.names)}${r.me && !r.id ? ' (you)' : ''}</span></div>`).join('')}</div>`).join('');
+  const kv = [['Host', sh.host], ['Players', sh.players != null ? String(sh.players) : ''], ['Code', sh.code || n.code]].filter(([, v]) => v);
+  return `<div class="lk-mat tk7 back"><i class="lk-sheen"></i><div class="cb">
+      <div class="cb-col${sh.small ? ' cb-sm' : ''}"><div class="cb-k">Tee sheet${sh.date ? ` · ${esc(sh.date)}` : ''}</div>${groups || '<div class="cb-line">Tee times come from the host.</div>'}${sh.more ? `<div class="cb-k cb-after">+ ${sh.more} more</div>` : ''}</div>
+      <div class="cb-col sb"><div><div class="cb-k">The game</div><div class="cb-line">${esc(sh.how || 'Your host sets the game.')}</div></div>
+        <div class="t-kv">${kv.map(([k, v]) => `<div><span class="cb-k">${k}</span><b>${esc(v)}</b></div>`).join('')}</div></div>
+    </div></div>`;
+}
+
+/** The plain card face (036 grid, lkf-rookie paper): member / loading box / offline box. */
+function plainHtml(it) {
+  const face = (inner) => `<div class="lk-mini lkf-rookie wf hm-plain"${it.kind === 'loading' ? ' aria-hidden="true"' : ''}><span class="lk-face lk-front"><div class="lk-mat">${inner}</div></span></div>`;
+  if (it.kind === 'loading') return face('');
+  if (it.kind === 'offline') return face(`<div class="hm-pmsg ts-small">${esc(WORDS.offline)}</div>`);
+  return face(`<div class="x-l1"><div class="x-top"><span class="lk-brand">${MARK}${esc(WORDS.member)}</span></div>
+      <b class="ts-title hm-pname ellipsis">${esc(it.name)}</b>
+      <div class="x-bot"><span class="ellipsis">${esc(it.crew || '')}</span><span>${esc(it.line)}</span></div></div>`);
+}
+
+const flipCls = (it) => (W.flipped && W.flipped === it.key ? ' on' : '');
+
+/** The front face of one wallet item. */
+function faceHtml(it) {
+  if (it.kind === 'next') {
+    return `<div class="lk-slot x-land wf tix tv-hybrid${it.n.live ? ' tix-live' : ''}${it.n.off ? ' tix-off' : ''}"><div class="lk-tilt" aria-label="${esc(it.n.aria)}. Tap to flip it for the tee sheet."><div class="lk-flip${flipCls(it)}">
+        <div class="lk-face lk-front">${nextFront(it.n)}</div><div class="lk-face lk-back">${nextBack(it.n)}</div></div></div></div>`;
   }
-  return face(`<div class="x-l1"><div class="x-top"><span class="lk-brand">${MARK}Golf Board</span></div>
-      <b class="ts-row hm-pblank">${esc(WORDS.blank)}</b><div class="x-bot"></div></div>`);
-}
-
-/** §6.2 · the pass: day + badge, Game on its own row, then Course · Tee time · Host, the tear, the buttons. */
-function passHtml(p) {
-  const off = p.kind === 'off' || p.kind === 'removed';
-  const cell = (k, v, cls = '') => (v ? `<div class="hp-c${cls}"><span class="ts-small">${k}</span><b class="ellipsis">${esc(v)}</b></div>` : '');
-  const badge = p.badge ? `<span class="ts-label hp-bdg${p.kind === 'coming' ? ' inv' : ''}">${esc(p.badge)}</span>` : '';
-  const btns = off
-    ? `<div class="hp-btns one"><button class="btn" data-act="home-text" data-v="${esc(p.host || 'the host')}" data-r="${esc(p.name)}">Text ${esc(p.host || 'the host')}</button></div>`
-    : `<div class="hp-btns"><button class="btn primary" data-act="go" data-v="#/e/${esc(p.code)}">Open</button>
-        <button class="btn" data-act="home-share" data-v="${esc(p.code)}" data-r="${esc(p.name)}">Share link</button></div>`;
-  return `<div class="hm-pass hm-front${p.kind === 'off' ? ' off' : ''}" data-act="go" data-v="#/e/${esc(p.code)}" role="button" tabindex="0"
-      aria-label="${esc([p.name, p.day, p.course].filter(Boolean).join(', '))}">
-      <div class="hp-top"><b class="hp-day">${esc(p.day)}</b>${badge}</div>
-      <div class="hp-info">${cell('Game', p.game, ' hp-game')}<div class="hp-row">${cell('Course', p.course)}${cell('Tee time', p.time || 'Times soon')}${cell('Host', p.host)}</div></div>
-      <i class="hp-tear" aria-hidden="true"></i>${btns}</div>`;
-}
-
-/** §6 · the front object. */
-function frontHtml2(f) {
-  if (f.kind === 'card') {
-    const c = f.card;
-    return `<button class="lk-mini lkf-${esc(c.fin)} hm-front hm-card" data-act="home-card" data-v="${esc(c.key)}" aria-label="Your latest card: ${esc(c.course)}, ${esc(prettyDate(c.day))}, ${c.gross}. Open it in your locker.">
-        <span class="lk-face lk-front">${frontHtml(c, { crewLine: f.crewLine })}</span></button>`;
+  if (it.kind === 'card') {
+    const c = it.card;
+    return `<div class="lk-slot x-land lkf-${esc(c.fin)} wf"><div class="lk-tilt" aria-label="${esc(`${c.course}, ${shortDay(c.day)}, ${c.gross}`)}. Tap to flip it."><div class="lk-flip${flipCls(it)}">${CARD_EDGE}
+        <div class="lk-face lk-front">${frontHtml(c, { crewLine: it.crewLine })}</div><div class="lk-face lk-back">${backHtml(c, { board: true })}</div></div></div></div>`;
   }
-  if (f.kind === 'pack') {
-    const c = f.card;
-    return `<button class="hm-front hm-pack" data-act="lk-home-packs" aria-label="Open your scorecard pack: ${esc(c.course)}, ${esc(prettyDate(c.day))}">
-        <span class="hm-packart" aria-hidden="true">${chromePack()}${f.count > 1 ? `<b class="lk-pip">${f.count}</b>` : ''}</span></button>`;
+  if (it.kind === 'pack') {
+    return `<div class="wpk" aria-label="Open your scorecard pack: ${esc(it.card.course)}, ${esc(prettyDate(it.card.day))}"><div class="lk-ptile">${chromePack()}${it.count > 1 ? `<b class="lk-pip">${it.count}</b>` : ''}</div></div>`;
   }
-  if (f.kind === 'pass') return passHtml(f.pass);
-  return plainHtml(f);
+  return plainHtml(it);
 }
 
-/** §6.1 · an edge: a 32 px strip of the object behind (its own art + label row), tap area 48. Never a score. */
-function edgeHtml(e) {
-  if (e.kind === 'card') {
-    const c = e.card;
-    return `<button class="hm-edge lkf-${esc(c.fin)}" data-act="home-card" data-v="${esc(c.key)}" aria-label="${esc(c.course)}, ${esc(prettyDate(c.day))}">
-        <span class="lk-mat" aria-hidden="true"><i class="lk-sheen"></i></span><span class="hm-el"><span class="ts-label ellipsis">${esc(c.course)}</span><span class="ts-label hm-ef">${esc(finName(c))}</span></span></button>`;
+const MS = ['prismatic', 'gold', 'silver', 'bronze'];
+/** SPEC §1 · the flat finish plate a card behind the front shows: its finish over the whole card, course · date · score. */
+function plateHtml(it) {
+  const el = (a, b) => `<span class="el"><span class="ts-label">${esc(a)}</span><span class="ts-label fn">${esc(b)}</span></span>`;
+  if (it.kind === 'card') {
+    const c = it.card;
+    return `<span class="wel lkf-${esc(c.fin)}" aria-hidden="true"><span class="lk-mat"><i class="lk-sheen"></i>${c.fin === 'prismatic' ? '<i class="x-slick"></i>' : MS.includes(c.fin) ? '<i class="x-mslick"></i>' : ''}</span>${el(c.course, `${shortDay(c.day)} · ${c.gross}`)}</span>`;
   }
-  if (e.kind === 'pack') {
-    return `<button class="hm-edge hm-epack chrome" data-act="lk-home-packs" aria-label="${e.count} ${e.count === 1 ? 'pack' : 'packs'} to open">
-        <span class="hm-epk" aria-hidden="true">${chromePack()}</span><span class="hm-el"><span class="ts-label">${e.count} ${e.count === 1 ? 'pack' : 'packs'} to open</span><span class="ts-label hm-ef">Series 1</span></span></button>`;
+  if (it.kind === 'pack') return `<span class="wel pk" aria-hidden="true">${el(`${it.count} ${it.count === 1 ? 'card' : 'cards'} to open`, 'Series 1')}</span>`;
+  if (it.kind === 'next') {
+    const n = it.n;
+    return `<span class="wel tv-hybrid" aria-hidden="true"><span class="lk-mat"></span>${el(n.live ? `Live · ${n.stamp}` : `${n.dd[0]} ${n.big} · ${n.course}`.trim(), n.stamp || WORDS.nextRound)}</span>`;
   }
-  const p = e.pass;
-  return `<button class="hm-edge hm-epass${p.kind === 'off' ? ' off' : ''}" data-act="go" data-v="#/e/${esc(p.code)}" aria-label="${esc([p.name, p.day].filter(Boolean).join(', '))}">
-      <span class="hm-el"><b class="hp-eday">${esc(p.day)}</b><span class="ts-label ellipsis">${esc(p.course)}</span></span></button>`;
+  return `<span class="wel lkf-rookie" aria-hidden="true"><span class="lk-mat"></span>${el(it.kind === 'member' ? WORDS.member : '', '')}</span>`;
 }
 
-/** §7 · the crew row, Start a crew, or §6.4's join field. */
-function slotHtml2(s) {
-  if (!s) return '';
-  if (s.kind === 'join') return `<div class="hm-join">${codeField()}</div>`;
-  if (s.kind === 'start') {
-    return `<button class="hm-crew" data-act="go" data-v="#/crew/start"><span class="hc-m"><span class="ts-label ellipsis">${esc(WORDS.noCrew)}</span><b class="ts-row">${esc(WORDS.startCrew)}</b></span>${chev()}</button>`;
-  }
-  const place = s.place ? `<b class="hc-pl">${esc(s.place)}</b>` : s.sub ? `<span class="ts-small hc-sub">${esc(s.sub)}</span>` : '';
-  return `<button class="hm-crew" data-act="go" data-v="#/season/${esc(s.id)}" aria-label="${esc(s.name)} standings${s.place ? `, you’re ${esc(s.place)}` : ''}">
-      <span class="hc-m"><span class="ts-label ellipsis">${esc(s.name)}</span><b class="ts-row">${esc(WORDS.standings)}</b></span>${place}${chev()}</button>`;
-}
-
-/** §8 · the doors row: All rounds, Add to Home Screen (after its nudge was dismissed). */
-function doorsHtml(d) {
-  const b = [d.allRounds ? `<button class="hm-door" data-act="go" data-v="#/rounds">All rounds${icon('fwd', 18)}</button>` : '',
-    d.addHome ? `<button class="hm-door" data-act="home-add">Add to Home Screen${icon('fwd', 18)}</button>` : ''].filter(Boolean);
-  return b.length ? `<div class="hm-doors">${b.join('')}</div>` : '';
-}
-
-/** §8 · the pinned foot: Join with code + New round; New round only; or the live bar (the only glow on Home). */
-function footHtml(f, rounds) {
-  const plus = icon('plus', 20);
-  if (f.kind === 'new') return `<button class="btn primary big block" data-act="go" data-v="#/setup">${plus} New round</button>`;
-  if (f.kind === 'live') {
-    const r = rounds.find((x) => x.code === f.code);
-    const line = f.line || [r?.course, r?.game].filter(Boolean).join(' · ') || r?.name || '';
-    return `<div class="hm-live">
-        <span class="hm-lm"><span class="ts-label hm-lk"><span class="lc-dot" aria-hidden="true"></span>Live${f.hole ? ` · hole ${f.hole}` : ''}</span><b class="hm-ll ellipsis">${esc(line)}</b></span>
-        <button class="btn primary small hm-lbtn" data-act="go" data-v="#/e/${esc(f.code)}">Back to ${f.hole ? `hole ${f.hole}` : 'the round'}</button>
-      </div>
-      <div class="home-two hm-two">
-        <button class="btn" data-act="home-joinsheet">Join with code</button>
-        <button class="btn primary" data-act="go" data-v="#/setup">${plus} New round</button>
-      </div>`;
-  }
-  return `<div class="home-two">
-        <button class="btn big" data-act="home-joinsheet">Join with code</button>
-        <button class="btn primary big" data-act="go" data-v="#/setup">${plus} New round</button>
-      </div>`;
-}
-
-function roundRow(r) {
-  const sub = [prettyDate(r.played_on), r.game, r.result?.line].filter(Boolean).join(' · ');
-  return `<button class="home-row" data-act="go" data-v="#/e/${esc(r.code)}" aria-label="Open ${esc(r.name)}">
-      <span class="hr-main"><span class="hr-name">${esc(r.course || r.name)}</span><span class="hr-sub">${esc(sub || r.code)}</span></span>
-      ${r.result?.value ? `<span class="hr-v">${esc(r.result.value)}</span>` : ''}
-      <span class="hr-chev">${icon('fwd', 20)}</span></button>`;
+function walletHtml(items) {
+  if (!items.length) return '';
+  return `<div class="hm-wallet wl" data-n="${items.length}" aria-label="Your wallet: the next round in front, your cards behind. Drag down to go back; tap a card to flip it.">${items
+    .map((it, i) => `<div class="wc" data-i="${i}" data-key="${esc(it.key)}"><div class="wci">${faceHtml(it)}${plateHtml(it)}</div></div>`).join('')}</div>
+    <div class="wct"><span class="ts-label n"></span></div>`;
 }
 
 function codeField() {
@@ -264,91 +253,175 @@ function codeField() {
     </div>`;
 }
 
+// ───────────────────────────────────────────── the wallet's physics (prototype-v7, ported)
+
+// One wallet on screen at a time. Its state outlives the DOM (the render loop redraws Home): the position `p`
+// (0 = the front item), which item is in front (by key, so a new item at the front moves you with it), the flipped
+// item, and the motion in flight. keepContent() holds redraws while a finger is down or the wallet is moving.
+const W = { p: 0, frontKey: null, flipped: null, raf: 0, until: 0, held: false, keys: [], dealtKey: undefined, justDragged: 0, el: null };
+let wapp = null;
+const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
+
+function geo(wl) {
+  const n = wl.querySelectorAll('.wc').length;
+  const home = wl.closest('.home');
+  wl.style.height = '';
+  wl.classList.remove('sized');
+  const Wc = wl.clientWidth, spare = wl.clientHeight;
+  const f = walletFit(Wc, spare, n, { app: STANDALONE });
+  // SPEC §1: the wallet is only as tall as it needs; spare height goes to the bottom, never above the cards.
+  wl.classList.add('sized');
+  wl.style.height = `${f.need}px`;
+  home?.style.setProperty('--wl-h', `${f.need}px`);
+  return { n, Wc, Hc: f.need, K: f.K, CW: f.CW, CH: f.CH, x0: (Wc - f.CW) / 2, yF: f.need - 16 - f.CH };
+}
+
+function pose() {
+  const wl = W.el;
+  if (!wl?.isConnected) return;
+  const g = W.g;
+  wl.querySelectorAll('.wc').forEach((el) => {
+    const d = Number(el.dataset.i) - W.p;
+    const q = poseOne(d, g);
+    el.style.width = `${g.CW}px`; el.style.height = `${g.CH}px`;
+    el.style.transform = `translate(${g.x0.toFixed(1)}px,${q.y.toFixed(1)}px) scale(${q.s.toFixed(3)})`;
+    el.style.opacity = q.o; el.style.zIndex = q.z; el.style.visibility = q.o < 0.01 ? 'hidden' : '';
+    el.classList.toggle('front', Math.abs(d) < 0.5);
+    const lb = el.querySelector('.wel'); if (lb) lb.style.opacity = q.lab;
+  });
+  const fi = Math.max(0, Math.min(g.n - 1, Math.round(W.p)));
+  W.frontKey = W.keys[fi] || null;
+  const ct = wl.nextElementSibling?.querySelector('.n');
+  if (ct) ct.textContent = WORDS.count(fi + 1, g.n);
+}
+
+/** A redraw arrived while the wallet was held or moving: run it once that's over. */
+let missTimer = 0;
+function missed() {
+  if (missTimer) return;
+  const tryAgain = () => {
+    missTimer = 0;
+    if (!W.el?.isConnected) return;
+    if (W.held || Date.now() < W.until) { missTimer = setTimeout(tryAgain, 120); return; }
+    wapp?.render?.();
+  };
+  missTimer = setTimeout(tryAgain, Math.max(60, W.until - Date.now() + 20));
+}
+
+function unflip() {
+  W.flipped = null;
+  W.el?.querySelectorAll('.lk-flip.on').forEach((x) => x.classList.remove('on'));
+}
+
+function animateTo(target, dur = 380) {
+  cancelAnimationFrame(W.raf);
+  if (reducedMotion()) { W.p = target; pose(); W.until = 0; return; }
+  const p0 = W.p, t0 = now();
+  W.until = Date.now() + dur + 60;
+  const step = (t) => {
+    const k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+    W.p = p0 + (target - p0) * e; pose();
+    if (k < 1) W.raf = requestAnimationFrame(step);
+    else { W.raf = 0; W.until = 0; }
+  };
+  W.raf = requestAnimationFrame(step);
+}
+
+function tapCard(el, ev) {
+  if (!el) return;
+  const i = Number(el.dataset.i), d = i - W.p, key = el.dataset.key;
+  const kind = String(key || '').split(':')[0];
+  if (Math.abs(d) < 0.5) {
+    if (kind === 'card' || kind === 'next') {
+      const fl = el.querySelector('.lk-flip');
+      const on = !fl.classList.contains('on');
+      fl.classList.toggle('on', on);
+      W.flipped = on ? key : null;
+    } else if (kind === 'pack') wapp?.actions?.['lk-home-packs']?.(el, ev, wapp);
+    return;
+  }
+  unflip();
+  animateTo(i, 300 + 60 * Math.abs(d));
+}
+
+function bindWallet(wl) {
+  let g = null;
+  wl.addEventListener('pointerdown', (e) => {
+    if (e.button > 0) return;
+    cancelAnimationFrame(W.raf); W.raf = 0; W.until = 0;
+    W.held = true;
+    g = { x: e.clientX, y: e.clientY, p0: W.p, moved: false, hist: [[now(), e.clientY]], id: e.pointerId };
+  });
+  wl.addEventListener('pointermove', (e) => {
+    if (!g) return;
+    const dy = e.clientY - g.y, dx = e.clientX - g.x;
+    if (!g.moved) { if (Math.hypot(dx, dy) < 6) return; g.moved = true; try { wl.setPointerCapture(g.id); } catch { /* fine */ } unflip(); }
+    g.hist.push([now(), e.clientY]); if (g.hist.length > 6) g.hist.shift();
+    W.p = rubber(g.p0 + dy / STEP, W.g.n);
+    pose();
+  });
+  const end = (e) => {
+    if (!g) return;
+    const G = g; g = null; W.held = false;
+    if (!G.moved) { if (e.type === 'pointerup' && !e.target.closest('[data-act]')) tapCard(e.target.closest('.wc'), e); return; }
+    W.justDragged = Date.now();
+    const h = G.hist, a = h[0], b = h[h.length - 1], dt = Math.max(16, b[0] - a[0]);
+    const vy = reducedMotion() ? 0 : (b[1] - a[1]) / dt;
+    animateTo(settleTo(W.p, vy, W.g.n), 420);
+  };
+  wl.addEventListener('pointerup', end);
+  wl.addEventListener('pointercancel', end);
+  // A drag that ends on a button must not press it.
+  wl.addEventListener('click', (e) => { if (Date.now() - W.justDragged < 400) { e.stopPropagation(); e.preventDefault(); } }, true);
+}
+
+/** First open (and a new front item): the cards drop in, back to front (prototype dealIn). */
+function dealIn(wl) {
+  if (reducedMotion() || typeof Element === 'undefined' || !Element.prototype.animate) return;
+  const wcs = [...wl.querySelectorAll('.wc')].filter((el) => el.style.visibility !== 'hidden').sort((a, b) => Number(a.style.zIndex) - Number(b.style.zIndex));
+  W.until = Date.now() + 460 + wcs.length * 90 + 60;
+  wcs.forEach((el, k) => el.querySelector('.wci').animate([{ transform: 'translate(-40px,-340px) rotate(-14deg)', opacity: 0 }, { transform: 'none', opacity: 1 }],
+    { duration: 460, delay: k * 90, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'backwards' }));
+}
+
+function mountWallet(content, app) {
+  wapp = app;
+  const wl = content.querySelector('.hm-wallet');
+  if (!wl) { W.el = null; return; }
+  W.keys = [...wl.querySelectorAll('.wc')].map((el) => el.dataset.key);
+  // Keep the same item in front across redraws (a new next round slides in ahead of it, and you stay where you were).
+  const at = W.frontKey ? W.keys.indexOf(W.frontKey) : -1;
+  if (!W.raf) W.p = at >= 0 ? at : 0;
+  else if (at < 0) W.p = Math.min(W.p, W.keys.length - 1);
+  if (W.flipped && !W.keys.includes(W.flipped)) W.flipped = null;
+  W.el = wl;
+  W.g = geo(wl);
+  pose();
+  bindWallet(wl);
+  const front = W.keys[0] || null;
+  if (W.dealtKey !== front) {
+    const first = W.dealtKey === undefined;
+    W.dealtKey = front;
+    local.set('glb.seen.homeTop', topKey({ key: front }));
+    if (first || W.p === 0) dealIn(wl);
+  }
+}
+
 // Nov 24: Home looks for your rounds every time it shows up again (not once per page load): a home screen app resumed
 // from the background now finds the round its owner was just added to. At most once a minute; a return resets it.
 let syncedAt = 0;
-
-// §11 · the opening, kept steady under the render loop with data-t0 + ui.syncMotion (mount). One deal per page load
-// (0.7 s), which waits for the locker or 1.5 s, whichever is first; a late locker cross-fades into the same box; a
-// return to Home fades. Reduced motion: none of it.
-const DEAL_MS = 1100, FADE_MS = 400, WAIT_MS = 1500;
-let visits = 0, opening = null, dealAt = 0, topShown, xfadeAt = 0, waitTimer = 0;
-export function homeReturn() {
-  syncedAt = 0;
-  if (visits) opening = { kind: 'fade', t0: Date.now() };
-}
-function arrive() {
-  visits += 1;
-  opening = { kind: visits === 1 ? 'deal' : 'fade', t0: Date.now() };
-}
-/** This render's motion: { page, stack, front } attribute snippets, '' once over or under reduced motion. */
-function motion(key, loading) {
-  const now = Date.now();
-  if (!dealAt && opening?.kind === 'deal' && (!loading || now - opening.t0 > WAIT_MS)) dealAt = now;
-  if (key !== topShown) {
-    if (topShown !== undefined && dealAt && now !== dealAt) xfadeAt = now; // the locker arrived late, or the front changed
-    topShown = key;
-    if (key) local.set('glb.seen.homeTop', key);
-  }
-  if (reducedMotion()) return { page: '', stack: '', front: '' };
-  const fade = opening?.kind === 'fade' && now - opening.t0 < FADE_MS;
-  return {
-    page: fade ? ` hm-fade" data-t0="${opening.t0}` : '',
-    stack: dealAt && now - dealAt < DEAL_MS ? ` hm-deal" data-t0="${dealAt}` : loading && !dealAt ? ' hm-wait' : '',
-    front: xfadeAt && now - xfadeAt < FADE_MS ? ` hm-xfade" data-t0="${xfadeAt}` : '',
-  };
-}
-
-/** #/rounds · All rounds (037 §5): what Home's Recent rounds list used to show, on its own screen. */
-export const roundsScreen = {
-  render() {
-    const list = allRounds(recent.all(), Date.now());
-    return `<div class="plain home-rounds">
-        <h1 class="ts-title hm-rh">Rounds</h1>
-        ${list.length ? `<div class="home-list">${list.map(roundRow).join('')}</div>`
-          : empty({ icon: 'flag', headline: 'No rounds yet', help: 'Start one and text the code to your group, or join a round a friend started.' })}
-      </div>`;
-  },
-};
-
-// §4.1 · the measured fit, done in mount the way enter.mount measures the pads: the headline's form, then edges
-// yield, then the front shrinks (never under 300 wide, a pass 336), then the doors row hides.
-function fitHome(content) {
-  const home = content.querySelector('.home');
-  if (!home) return;
-  const app = STANDALONE;
-  const h = home.querySelector('.hm-h');
-  if (h?.dataset.forms) {
-    let forms = [];
-    try { forms = JSON.parse(h.dataset.forms); } catch { /* keep what's drawn */ }
-    const max = app ? 2 : 1;
-    for (let i = 0; i < forms.length; i++) {
-      h.innerHTML = formHtml(forms[i]);
-      if (i === forms.length - 1 || Math.round(h.offsetHeight / 36) <= max) break;
-    }
-  }
-  const avail = content.clientHeight;
-  if (!avail) return;
-  const need = () => { home.style.minHeight = '0px'; const n = home.offsetHeight; home.style.minHeight = ''; return n; };
-  let over = need() - avail;
-  const edges = [...home.querySelectorAll('.hm-edge')]; // farthest first
-  while (over > 0 && edges.length) { edges.shift().style.display = 'none'; over = need() - avail; }
-  const stack = home.querySelector('.hm-stack');
-  const fr = home.querySelector('.hm-front');
-  if (over > 0 && stack && fr) {
-    const w = fr.offsetWidth, ht = fr.offsetHeight;
-    if (w && ht) {
-      const nw = fitWidth(stack.parentElement.clientWidth, ht - over, { min: fr.classList.contains('hm-pass') ? 336 : 300, ratio: w / ht });
-      stack.style.setProperty('--hm-w', `${nw}px`);
-      over = need() - avail;
-    }
-  }
-  if (over > 0) { const d = home.querySelector('.hm-doors'); if (d) d.style.display = 'none'; }
-}
+export function homeReturn() { syncedAt = 0; }
 
 export default {
   topLeft: () => header(recent.all()),
-  enter() { arrive(); },
+  noscroll: true,
+  // Coming back to Home: the wallet opens on its front item, face up.
+  enter() { cancelAnimationFrame(W.raf); Object.assign(W, { p: 0, frontKey: null, flipped: null, raf: 0, until: 0, held: false }); },
+  keepContent() {
+    const held = !!W.el?.isConnected && (W.held || Date.now() < W.until);
+    if (held) missed(); // a redraw waits for the finger / the motion, then runs once (never lost)
+    return held;
+  },
 
   render(app) {
     // Once per open: pull in your rounds this phone has never seen (new phone / home screen app).
@@ -359,41 +432,16 @@ export default {
       pruneGoneRounds().then((n) => { if (n) app.render(); }).catch(() => { /* offline: next open */ }); // deleted rounds leave Recent
       refreshLobbies(clock.now()).then((n) => { if (n) app.render(); }).catch(() => { /* offline: next open */ }); // 025
     }
-    if (!visits) arrive();
     startHomeLocker(app); // 035: this phone's locker, once per page load. Any failure = Home still complete.
-    const rounds = recent.all();
-    const lk = homeLockerData(app);
-    const state = homeLockerState(app);
-    if (lk?.cards?.length) local.set('glb.seen.homeCards', true); // §11: "had cards" (moves with the move link)
-    const firstRound = rounds.map((r) => r.played_on).filter(Boolean).sort()[0] || null;
-    const w = whatsNew({ seen: local.get('glb.seen.whatsnew'), hasRounds: rounds.length > 0, firstRound });
-    if (w.markSeen) local.set('glb.seen.whatsnew', w.markSeen);
-    const o = owner.get();
-    const m = homeModel({
-      rounds, now: Date.now(), personId: lk?.personId || lockerPerson() || null, locker: lk, lockerState: state,
-      hadCards: !!local.get('glb.seen.homeCards'),
-      crews: homeCrewData(app), crewNames: crewNames(app), meName: (o?.name || '').split(' ')[0], meFull: o?.name || lockerName(),
-      ios: isIOS(), standalone: STANDALONE,
-      seen: { add: !!local.get('glb.seen.homeNudge.add') || !!local.get('glb.hasApp') }, news: w.show,
-    });
-    const mo = motion(topKey(m.front), m.front.kind === 'loading');
-    // The deal waits for the locker at most 1.5 s: make sure a render comes then, even with nothing else happening.
-    if (mo.stack === ' hm-wait' && !waitTimer) waitTimer = setTimeout(() => { waitTimer = 0; app.render(); }, WAIT_MS + 50);
-    const edges = m.edges.slice(0, m.edgeMax).reverse(); // farthest first: the nearest edge sits right behind the front
-    return `<div class="plain home hm2${STANDALONE ? ' hm-app' : ''}${mo.page}">
+    const m = model(app);
+    return `<div class="plain home hm39${STANDALONE ? ' hm-app' : ''}">
       ${nudgeHtml(m.nudge)}
       ${headlineHtml(m.headline)}
-      <div class="hm-stack${mo.stack}">${edges.map((e, i) => `<div class="hm-ei" style="--i:${i}">${edgeHtml(e)}</div>`).join('')}
-        <div class="hm-fi${mo.front}" style="--i:${edges.length}">${frontHtml2(m.front)}</div></div>
-      <div class="hm-fill"></div>
-      ${slotHtml2(m.slot)}
-      ${doorsHtml(m.doors)}
-      <div class="nr-foot home-foot${m.foot.kind === 'live' ? ' hm-livefoot' : ''}">${footHtml(m.foot, rounds)}</div>
+      ${m.join ? `<div class="hm-join">${codeField()}</div>` : walletHtml(m.items)}
     </div>`;
   },
-  mount(content) {
-    try { fitHome(content); } catch { /* Home as drawn */ }
-    syncMotion(content);
+  mount(content, app) {
+    try { mountWallet(content, app); } catch (e) { console.warn('wallet', e); }
   },
   actions: {
     'home-code': (el) => {
@@ -406,23 +454,16 @@ export default {
       local.set('glb.hasApp', true); // 024 §6: 025 says "open Golf Board from your home screen"
       app.openSheet('homescreen', {});
     },
-    'home-joinsheet': (el, ev, app) => app.openSheet('join', {}),
     // §4.2: What's new opens a small sheet on tap (never by itself); Got it / ✕ marks the release seen.
     'home-news-open': (el, ev, app) => app.openSheet('home-news', { id: el.dataset.v }),
     'home-news': (el, ev, app) => { local.set('glb.seen.whatsnew', el.dataset.v); app.closeSheet?.(); app.render(); },
     'home-nudge-x': (el, ev, app) => {
       const v = el.dataset.v || '';
       if (v.startsWith('news:')) local.set('glb.seen.whatsnew', v.slice(5));
-      else local.set(`glb.seen.homeNudge.${v}`, true); // after its ✕, Add to Home Screen is a door (§8)
+      else local.set(`glb.seen.homeNudge.${v}`, true); // after its ✕, Add to Home Screen is a row at the top of Rounds
       app.render();
     },
-    // §6.1: a scorecard (front or edge) opens that card in the Locker.
-    'home-card': (el, ev, app) => {
-      app.ui.lk ||= { view: 'one', key: null, flip: null, land: null, landAt: 0, person: null, tab: 'cards' };
-      Object.assign(app.ui.lk, { view: 'one', key: el.dataset.v, flip: null, tab: 'cards', person: lockerPerson() });
-      app.go('#/locker');
-    },
-    // §6.2: Share link on every coming pass: the round's link, the one the host already texts (nothing else).
+    // SPEC §2: share on the next-round card: the round's link, the one the host already texts (nothing else).
     'home-share': async (el, ev, app) => {
       ev?.stopPropagation?.();
       const url = `${location.origin}${location.pathname}#/e/${el.dataset.v}`;
@@ -448,10 +489,29 @@ export default {
       }
       draftCode = '';
       document.activeElement?.blur?.();
-      if (app.sheet?.type === 'join') app.closeSheet();
+      if (app.sheet) app.closeSheet();
       app.go(`#/e/${code}`);
     },
   },
 };
+
+/** Home's model for this render (also read by app.js for the live strip on every hub tab). */
+export function model(app) {
+  const rounds = recent.all();
+  const lk = homeLockerData(app);
+  const state = homeLockerState(app);
+  if (lk?.cards?.length) local.set('glb.seen.homeCards', true); // "had cards" (moves with the move link)
+  const firstRound = rounds.map((r) => r.played_on).filter(Boolean).sort()[0] || null;
+  const w = whatsNew({ seen: local.get('glb.seen.whatsnew'), hasRounds: rounds.length > 0, firstRound });
+  if (w.markSeen) local.set('glb.seen.whatsnew', w.markSeen);
+  const o = owner.get();
+  return homeModel({
+    rounds, now: Date.now(), personId: lk?.personId || lockerPerson() || null, locker: lk, lockerState: state,
+    hadCards: !!local.get('glb.seen.homeCards'),
+    crews: homeCrewData(app), crewNames: crewNames(app), meName: (o?.name || '').split(' ')[0], meFull: o?.name || lockerName(),
+    ios: isIOS(), standalone: STANDALONE,
+    seen: { add: !!local.get('glb.seen.homeNudge.add') || !!local.get('glb.hasApp') }, news: w.show,
+  });
+}
 
 export { codeField };

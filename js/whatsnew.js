@@ -4,6 +4,15 @@
 
 export const RELEASES = [
   {
+    id: '2026-11-28',
+    title: 'A new Home: your rounds as a wallet',
+    lines: [
+      'Your next round is the card in front: tee time, course, who you ride with. Tap it for the tee sheet.',
+      'Drag down to flip back through your cards, newest first. Tap one to bring it forward.',
+      'Home, Rounds and Crew are along the bottom now, and the + starts or joins a round.',
+    ],
+  },
+  {
     id: '2026-11-26',
     title: 'Cards, packs and a Passport',
     lines: [

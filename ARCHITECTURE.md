@@ -1198,6 +1198,47 @@ Still open: nothing blocking. Design direction (section 9) is final.
   skip), `smoke037` (24 checks: passes in the stack, the nudge + sheet, Add to Home Screen nudge → door). `RELEASES`
   entry `2026-11-26` "Cards, packs and a Passport" (replaces the first pass's unreleased `2026-11-25`). Styles: the
   `/* 037 Home */` block at the end of styles.css; card / pack / edge / plain-card bits in locker.css.
+- **039 · Home is the wallet (Nov 28, brief `docs/design/features/039-home-deck/SPEC.md`, approved on `prototype-v7.html`
+  card A3; branch `claude/039-build`).** Replaces 037 v2's Home. No DB, sync, join, queue or engine change. **Home** =
+  top bar · nudge strip (unchanged) · headline (PLAN §4 **set A**: kicker + one plain `ts-title` sentence, all `--text`;
+  "You're playing the Team Ryder Cup." · "Justin gave your spot to Sean." · "You're riding with Sean." / "8 players are
+  in." · "Your card from Friday is ready to open." · "You play in 9 days." · "You finished 2nd of 5 players." / "You and
+  Sean won." / "Your side won the cup, 6½–5½." · "You're 2nd in the standings." · …; `homeview.COPY` / `GAME_PHRASE`) ·
+  **the wallet** · "N of M". No crew row, doors row, pinned buttons or All rounds link (the dock has them); the join
+  field replaces the wallet on a phone with no person. **Wallet items** (`homeview.walletItems`): the next round (live,
+  else the soonest coming) → the newest sealed pack → opened cards newest first; zero cards + a person = the paper member
+  card; a `loading` / `offline` box while the locker loads / failed. **Physics** ported from the prototype in
+  `home.js` (`geo` = `homeview.walletFit`: full width at 7:5, 2 edges of 48 px in the app / 1 in Safari, edges drop
+  before the card goes under 200 tall, the wallet only as tall as it needs; `pose` = `homeview.poseOne`; drag 170 px = one
+  card back, rubber band, ≈ 200 ms fling projection `settleTo`, settle 420 ms ease-out; tap an edge → it animates to the
+  front; tap the front → flip; pack in front → `lk-home-packs`; `dealIn` on the first open / a new front). Cards behind
+  the front are flat finish plates (`.wel` over the whole card, no 3D edge layers or perspective) with course · date ·
+  score, crossfading to the face as they come forward. Wallet state (position by item key, flip, motion) lives in the
+  module; `keepContent` holds redraws while a finger is down or it moves and replays a missed one after (`missed`);
+  entering Home resets it to the front, face up. **Card A3** (`.tk7.thy`, `.tv-hybrid` glass): mark + NEXT ROUND · TODAY /
+  TOMORROW stamp, the tee time in mono 19cqw + day / date, course, **Game · Cart · With** + Open + share (`home-share`);
+  no partners drawn: Game · Players · Partner "On the tee"; a game without partners: Game · Players · With ("Sean +2");
+  live: the hole huge, Thru · Match · With (no partner: Thru · Place · Players), **Hole 7 ›**; called off / spot given:
+  greyed, its stamp, **Text <host>**. Back = the tee sheet (`lobby.teeSheet`: every tee time → its carts or names, your
+  row bold, cut at 14 rows) + `GAME_HOW` + Host · Players · Code. Fields from `homeview.nextFields`; data from
+  `lobby.homeCard` (now also `pk` = playFor, `cart`, `with`, `sheet`) and, live, `roundSummary`'s `live.card` (thru,
+  match from `matchState`, place, mate, tee sheet). **The dock** (`renderTabbar(el, set)`, `js/hub.js`: `HUB_TABS`,
+  `hubTab`, `isHub`, `dockSet`, `needsRebuild`): on Home · Rounds (`#/locker`, both tabs) · Crew (`#/season` root),
+  three labelled tabs (action `hub-tab`) + the 56 px **+** (`hub-plus` → sheet `plus`: New round on top, the code field +
+  Join, focused synchronously in the tap). A round keeps its icons-only bar; `#tabbar[data-set]` rebuilds crossing hub ↔
+  round. While a round is live, the green strip (`.hm-live`, 64) docks 8 above the dock on every hub tab. Tab roots have
+  no back button; `.has-hub` content padding = dock + 16 (+ 72 live); `checkVersion` / `onReturn` treat every hub tab as
+  Home. **Rounds** = the Locker renamed: title Rounds, seg **Rounds | Passport**, gallery (036 carousel, `cardone`) ↔
+  **list** (`board` icon; `locker.listView`: Now = live / coming rows, then cards and sealed packs by month with a finish
+  swatch + gross, tap → that card in the gallery (`lk-pick`), then Other rounds = watched / practice); the Packs pill
+  leads; Add to Home Screen is a row at its top in iPhone Safari after the nudge's ✕; `#/rounds` redirects to the list.
+  View-as / admin unchanged. **Crew** = Standings as a tab root (no crew: Start a crew). **‹ Home** before the name pill
+  on every round tab (`.rd-home`), and in the hole header (`.ce-home`) when the GPS card hides the top bar. Retired:
+  037's stack / pass / edges / crew row / doors / foot markup + CSS, `fitWidth`, `crewSlot`, `home-card`, `home-joinsheet`
+  on Home, `roundsScreen`; `glb.seen.homeTop` now holds the wallet's front item key. Tests: `tests/home039.test.mjs`
+  (wallet order, A3 fields, tee sheet, isHub + dock rebuild, fit + physics, set A ladder, results), `smoke037` (33 checks
+  incl. the wallet, dock, + sheet, Rounds tab, ‹ Home). `RELEASES` `2026-11-28` "A new Home: your rounds as a wallet".
+  Styles: `/* 039 */` blocks at the end of styles.css (dock, Home, list) and locker.css (wallet, card A3).
 
 ## 13. V2 backlog (running list)
 

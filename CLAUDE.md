@@ -76,7 +76,11 @@ second pass".
 Approved by Andrew Nov 28 on `prototype-v7.html` (card A3). Replaces 037 v2's Home: Home = a scrollable wallet (next
 round as the front card A3, then packs, then your cards), a 3-tab dock Home · Rounds · Crew with the + beside it,
 Rounds = gallery ↔ list + Passport (the Locker renamed), ‹ Home in a round. `DECISIONS.md` has the nine picks;
-`PLAN.md` is history (the SPEC wins). Not built yet.
+`PLAN.md` is history (the SPEC wins). **Built and live on `main` Nov 28.** Pure: `js/homeview.js` (`walletItems`, `nextFields`,
+`walletFit` / `poseOne`, set A `COPY` + `GAME_PHRASE` / `GAME_SHORT` / `GAME_HOW`), `js/hub.js` (`isHub`, `dockSet`), `lobby.teeSheet`;
+screen `js/screens/home.js` (wallet physics in `mount`), dock + live strip + `hub-plus` in app.js `renderTabbar`, Rounds list
+in `locker.listView`. Tests `tests/home039.test.mjs`, `npm run test:smoke037` (33). Round top bar now has ‹ Home
+(the "No back button inside a round" line below is superseded). ARCHITECTURE.md 13a "039".
 
 ## Returning players (Nov 24, live on `main` since b047ea2 with 036)
 
@@ -337,7 +341,7 @@ Static site, no build step: plain HTML/CSS + ES modules. supabase-js 2.118.0 (UM
   `surface-3` highlight that slides (`.tab-hl`), built once in `renderTabbar` and updated in place; the
   screen title says where you are (Hole N · MATCHES · Board · Scorecard); Enter dot = your group's hole still
   missing scores. Host is no longer a button beside it: ⋯ → **Host settings · organizer**.
-- No back button inside a round. Name pill / avatar → short **You** sheet (Go to Home, Switch to
+- (039: ‹ Home now sits before the name pill in a round.) Name pill / avatar → short **You** sheet (Go to Home, Switch to
   watching); ⋯ → round actions (Recap when final, Rules, How today's game works, Share, Theme, Run it back). Your cart is always first (Card, Matches).
 - Headlines: colored by `hero`; one at a time, two for ~10 s when they land together.
 - Board → Teams: ranked on **all points won so far** (`g.liveStandings`); big number includes the

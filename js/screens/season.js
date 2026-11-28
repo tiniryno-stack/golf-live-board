@@ -137,8 +137,8 @@ export default {
   topBack(app) {
     const id = app.season?.crew;
     const sub = app.route.view;
-    const back = sub ? `#/season/${esc(id)}` : '#/';
-    return `<button class="back" data-act="go" data-v="${back}">${icon('back', 22)}<span>${sub === 'past' ? 'Standings' : sub ? 'Seasons' : 'Home'}</span></button>`;
+    if (!sub) return ''; // 039: Standings is the Crew tab's root (the dock gets you around)
+    return `<button class="back" data-act="go" data-v="#/season/${esc(id)}">${icon('back', 22)}<span>${sub === 'past' ? 'Standings' : 'Seasons'}</span></button>`;
   },
   topRight(app) {
     const id = app.season?.crew;
@@ -149,7 +149,10 @@ export default {
     const c = id ? app.crews?.[id] : null;
     const name = c?.info?.name || db.crews.get(id)?.name || 'Your crew';
     let body;
-    if (!id) body = '<p class="soft">Join or start a crew first. Standings follow the people in your crew’s rounds.</p>';
+    if (!id) {
+      body = `<p class="soft">Standings follow the people in your crew’s rounds. Start a crew, or open a friend’s invite link to join theirs.</p>
+        <button class="btn primary big block" data-act="go" data-v="#/crew/start">Start a crew</button>`;
+    }
     else if (c?.error && !c.rounds) body = `<p class="soft">${esc(c.error)}.</p><button class="btn block" data-act="season-retry">Try again</button>`;
     else {
       const data = crewSeasons(app, id);

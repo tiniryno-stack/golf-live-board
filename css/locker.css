@@ -479,38 +479,13 @@ html.rm .pk .pk-wash, html.rm .pk .pk-screen, html.rm .pk .pk-white, html.rm .pk
 html.rm .pk-lands > * { opacity: 1; }
 html.rm .lk-flip { transition-duration: 150ms; }
 
-/* ── 037 Home: the front is the real card, the real chrome pack, or the plain card (lkf-rookie paper), full width ── */
-.hm-card { box-shadow: none; }
-.hm-pack { display: block; width: 100%; }
-.hm-packart { position: relative; display: block; width: 100%; aspect-ratio: 8.4 / 6.2; container-type: inline-size; filter: drop-shadow(0 6px 12px var(--lk-shadow)); }
-.hm-packart > .bp { position: absolute; inset: 0; }
-.hm-pack:active .hm-packart, .hm-card:active { transform: scale(.97); }
+/* ── 037 Home (kept by 039): the plain card face (lkf-rookie paper) on the 036 grid ── */
 .x-crewline { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-/* 037 v2 §6.3: the plain card on the 036 grid. Name in ts-title (§0 fix 2). Light theme: float shadow + a 1 px line. */
 .hm-plain .hm-pname { color: var(--m-ink); }
 .hm-plain .hm-pblank { color: var(--m-ink); }
 .hm-plain .x-bot { min-height: 2.4cqw; }
 .hm-pmsg { position: absolute; inset: 0; display: grid; place-items: center; color: var(--m-soft); }
 [data-theme="light"] .hm-plain .lk-mat { box-shadow: var(--shadow-float), 0 0 0 1px var(--line); }
-[data-theme="light"] .hm-fi > .hm-card .lk-mat { box-shadow: var(--shadow-float); }
-/* 037 v2 §6.1 (§0): an edge = a 32 px strip of the object behind, drawn from its own art (the finish's .lk-mat, the
-   chrome foil, the pass's surface) + a label row: course + finish, "1 pack to open", or day + course. Never a score.
-   The element is 48 tall (the next object covers its lower 16); the top edge's tap area runs 16 px up into the gap. */
-.hm-edge { position: absolute; left: 0; right: 0; top: 0; height: var(--tap-min); display: block; padding: 0; text-align: left; container-type: inline-size; }
-.hm-ei:first-child .hm-edge::before { content: ""; position: absolute; left: 0; right: 0; top: -16px; height: 16px; }
-.hm-edge .lk-mat { border-radius: 4cqw 4cqw 0 0; box-shadow: none; }
-.hm-el { position: absolute; left: 0; right: 0; top: 0; height: 32px; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
-  padding: 0 var(--space-4); color: var(--m-ink); text-shadow: var(--m-emboss); }
-.hm-el > .ellipsis { min-width: 0; }
-.hm-ef { flex: none; color: var(--m-soft); }
-[data-theme="light"] .hm-edge:not(.hm-epass) .lk-mat, [data-theme="light"] .hm-epk { box-shadow: inset 0 0 0 1px var(--m-edge, var(--line)); }
-.hm-epk { position: absolute; inset: 0; overflow: hidden; border-radius: 4cqw 4cqw 0 0; }
-.hm-epk > .bp { position: absolute; left: 0; right: 0; top: -12cqw; height: 73.8cqw; }
-.hm-epack .hm-el { color: var(--ink); --m-soft: color-mix(in srgb, var(--ink) 62%, transparent); text-shadow: none; }
-.hm-epass { background: var(--surface-1); border: 1px solid var(--glass-line); border-bottom: 0; border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
-.hm-epass .hm-el { color: var(--text); text-shadow: none; }
-.hm-epass .hm-el .ts-label { color: var(--text-muted); }
-.hm-epass.off .hp-eday { color: var(--text-muted); text-decoration: line-through; }
 
 /* ───────────────────────────────────────────── 038 · Full board on the card back (docs/design/features/038-card-full-board)
    A chip bottom-left in the card's own ink, ts-label type, drawn 36 px with a 48 px tap area (::after). */
@@ -519,4 +494,68 @@ html.rm .lk-flip { transition-duration: 150ms; }
 .cb-board::after { content: ""; position: absolute; inset: -6px 0; }
 .cb-board:active { transform: scale(.97); }
 .cb:has(> .cb-board) > .cb-col:first-child { padding-bottom: 44px; }
-.hm-epk .bp-face, .hm-epk .topw { display: none; }
+
+/* ───────────────────────────────────────────── 039 · Home is the wallet (docs/design/features/039-home-deck/SPEC.md)
+   Ported from prototype-v7.html (.wl / .wc / .wel and the A3 card .tk7.thy). The wallet's box is measured in
+   home.js (walletFit); each .wc is posed there (translate / scale / opacity / z). Cards behind the front are flat
+   finish plates (.wel over the whole card: no 3D edge layers, no perspective, so no seam line), crossfading to the
+   full face as they come forward. Sizes inside the cards are the 036 card's own cqw scale. */
+.wl { position: relative; flex: 1 1 0; min-height: 0; width: 100%; touch-action: none; -webkit-user-select: none; user-select: none; clip-path: inset(-400px -40px 0 -40px); }
+.wl.sized { flex: none; }
+.wc { position: absolute; left: 0; top: 0; transform-origin: 50% 100%; will-change: transform; }
+.wci { position: relative; width: 100%; height: 100%; }
+.wci > .wf, .wci > .wpk { position: absolute; inset: 0; width: 100%; height: 100%; }
+.wf.lk-slot, .wf.lk-mini { aspect-ratio: auto; }
+.wf.lk-mini { container-type: inline-size; display: block; }
+.wpk { display: grid; place-items: center; }
+.wpk .lk-ptile { width: 96.8%; height: auto; }
+.wc.front .wci { cursor: pointer; }
+.wc:not(.front) .wci > :not(.wel) { pointer-events: none; }
+.wc:not(.front) .lk-slot { perspective: none; }
+.wc:not(.front) .lk-edge { display: none; }
+.wc:not(.front) .lk-face.lk-front { transform: none; }
+.wel { position: absolute; inset: 0; border-radius: 4cqw; overflow: hidden; pointer-events: none; container-type: inline-size; z-index: 4; }
+.wel .lk-mat { border-radius: 4cqw; box-shadow: none; }
+.wel .el { position: absolute; left: 0; right: 0; top: 0; height: 48px; display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
+  padding: 0 var(--space-4); z-index: 2; color: var(--m-ink); text-shadow: var(--m-emboss); }
+.wel .el .ts-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.wel .el .fn { color: var(--m-soft); flex: none; }
+.wel.pk { background: linear-gradient(180deg, #f6f8fa 0%, #c9cfd6 40%, #e9ecf0 66%, #aab1bb 100%); --m-ink: #0e1014; --m-soft: rgba(14,16,20,.62); --m-emboss: 0 1px 0 rgba(255,255,255,.55); }
+[data-theme="light"] .wel:not(.pk) .lk-mat { box-shadow: inset 0 0 0 1px var(--m-edge, var(--line)); }
+.wct { height: 24px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); white-space: nowrap; }
+
+/* SPEC §2 · the next-round card A3: the app's glass (surface-2 → surface-1, a 1 px glass-line ring) */
+.tv-hybrid { --m-base: linear-gradient(160deg, var(--surface-2) 0%, var(--surface-1) 72%); --m-ink: var(--text); --m-soft: var(--text-muted); --m-inv: var(--bg);
+  --m-edge: var(--glass-line); --m-emboss: none; --m-grain: 0; --m-sheen: .08; }
+.tix { filter: drop-shadow(0 12px 16px var(--lk-shadow)); }
+[data-theme="light"] .tix { filter: drop-shadow(0 0 .6px var(--text-muted)) drop-shadow(0 10px 16px var(--lk-shadow)); }
+.tk7 { display: flex; color: var(--m-ink); box-shadow: inset 0 0 0 1px var(--glass-line) !important; }
+.tk7.back { display: block; }
+.tk7 .x-top .lk-st { height: 4.8cqw; padding: 0 1.8cqw; border-radius: 2.4cqw; font-size: 2.3cqw; border-width: .3cqw; color: var(--m-ink); letter-spacing: .2cqw; }
+.t-live i { width: 1.8cqw; height: 1.8cqw; border-radius: 50%; background: var(--cart-you); margin-right: 1.2cqw; display: inline-block; }
+.tc-in { position: relative; width: 100%; height: 100%; padding: 4.4cqw 4.8cqw; display: flex; flex-direction: column; }
+.t-hero { display: flex; align-items: flex-end; gap: 3cqw; margin-top: 3.4cqw; }
+.t-big { font: 700 19cqw/.8 var(--font-mono); letter-spacing: -1.4cqw; margin-left: -.8cqw; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.t-dd { display: flex; flex-direction: column; gap: 1.3cqw; padding-bottom: .4cqw; min-width: 0; }
+.t-dd b { font: 700 5.4cqw/1 var(--font-sans); }
+.t-dd span { font: 600 2.6cqw/1 var(--font-mono); letter-spacing: .16cqw; color: var(--m-soft); text-transform: uppercase; white-space: nowrap; }
+.t-course { font: 700 5.6cqw/1.1 var(--font-sans); margin-top: 3cqw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tp-k { font: 600 2.3cqw/1 var(--font-mono); letter-spacing: .24cqw; text-transform: uppercase; color: var(--m-soft); display: inline-flex; align-items: center; gap: 1.2cqw; white-space: nowrap; }
+.thy-bot { margin-top: auto; display: flex; align-items: flex-end; justify-content: space-between; gap: 3cqw; }
+.thy-f { display: flex; gap: 3.6cqw; min-width: 0; }
+.thy-f div { display: flex; flex-direction: column; gap: 1.4cqw; min-width: 0; }
+.thy-f b { font: 700 3.8cqw/1.1 var(--font-sans); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tc-b { display: flex; gap: 2cqw; flex: none; }
+.t-b { position: relative; height: 10cqw; padding: 0 5cqw; border-radius: 99px; border: .35cqw solid var(--m-ink); font: 600 3.4cqw/1 var(--font-sans); color: var(--m-ink); display: grid; place-items: center; white-space: nowrap; background: none; }
+.t-b.pri { background: var(--m-ink); color: var(--m-inv); }
+.t-b.ic { width: 10cqw; padding: 0; }
+.t-b::after { content: ""; position: absolute; inset: -1.5cqw -1.5cqw; } /* 48 px tap area at 361 wide */
+.t-b:active { transform: scale(.96); }
+.tk7.back .cb { text-shadow: none; }
+.t-g { display: flex; flex-direction: column; padding-top: 1.4cqw; }
+.t-kv { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2cqw; }
+.t-kv div { display: flex; flex-direction: column; gap: 1.4cqw; min-width: 0; }
+.t-kv b { font: 700 3.6cqw/1 var(--font-mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Called off / spot given: the same card greyed, its badge, Text host (PLAN §8b). */
+.tix-off .t-big, .tix-off .t-course { color: var(--m-soft); text-decoration: line-through; text-decoration-thickness: .5cqw; }
+@media (prefers-reduced-motion: reduce) { .wc { will-change: auto; } }

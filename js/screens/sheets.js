@@ -282,6 +282,13 @@ const BODIES = {
       <button class="btn primary big block" data-act="home-news" data-v="${esc(r.id)}">Got it</button></div>`;
   },
 
+  /** 039 · the dock's +: New round on top (the keyboard covers what's under the field), then the code + Join. */
+  plus() {
+    return `${head('New round or join', 'The code is in the group text')}
+      <div class="sheet-plus"><button class="btn primary big block" data-act="go" data-v="#/setup">${icon('plus', 20)} New round</button>
+        <div class="sheet-join">${codeField()}</div></div>`;
+  },
+
   /** Home → Join with code. */
   join() {
     return `${head('Join a round', 'The code is in the group text')}
