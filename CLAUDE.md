@@ -71,6 +71,13 @@ card back (`locker.boardChip`, action `lk-board`). Tests `tests/home037.test.mjs
 `/* 037 Home */` block at the end of styles.css + card / pack / edge bits in locker.css. ARCHITECTURE.md 13a "037 · Home,
 second pass".
 
+## Building Home as the wallet (039)? Read `docs/design/features/039-home-deck/SPEC.md` first
+
+Approved by Andrew Nov 28 on `prototype-v7.html` (card A3). Replaces 037 v2's Home: Home = a scrollable wallet (next
+round as the front card A3, then packs, then your cards), a 3-tab dock Home · Rounds · Crew with the + beside it,
+Rounds = gallery ↔ list + Passport (the Locker renamed), ‹ Home in a round. `DECISIONS.md` has the nine picks;
+`PLAN.md` is history (the SPEC wins). Not built yet.
+
 ## Returning players (Nov 24, live on `main` since b047ea2 with 036)
 
 Round links open in Safari; on a phone that has the app, Safari now says **Open Golf Board** (sheet `open-app`) instead
