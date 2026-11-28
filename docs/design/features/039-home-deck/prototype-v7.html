@@ -794,19 +794,26 @@ body{margin:0}
 
 <div class="wrap">
   <details class="top" id="topd" open>
-    <summary><div><div class="lbl">039 · Glass and pass, the gallery, the Passport · prototype 7</div><h1>Golf Board Next Round</h1></div><span class="tog"><span class="o">Show intro</span><span class="c">Hide</span></span></summary>
+    <summary><div><div class="lbl">039 · Home is the wallet · prototype 7 (A3 chosen)</div><h1>Golf Board Next Round</h1></div><span class="tog"><span class="o">Show intro</span><span class="c">Hide</span></span></summary>
     <div class="intro">
       <div>
-        <p>You picked <b>the dock</b>, so it's locked in: Home · Rounds · Crew with the + beside it. You liked <b>A (glass)</b> and <b>C (boarding pass)</b>, so here are five cards in that family. <b>A</b> is last time's glass. <b>A2</b> centres everything. <b>A3</b> is glass with the pass's three fields in place of the line of text. <b>C</b> is last time's boarding pass. <b>C2</b> is an event ticket: a countdown (“starts in 19 h”), a tear line across the bottom, and one row with who you're with and Open.</p>
-        <p>You noticed this was <b>pushing out the card gallery and the Passport</b>, so they now live in <b>Rounds</b>. Rounds | Passport sit at the top, and the gallery ↔ list icons are next to the title, as in today's Locker. <b>Gallery</b> is one big card at a time; swipe it, and tap a card to flip it. <b>List</b> is every round by month, and tapping one jumps to it in the gallery. <b>Passport</b> has a stamp for each course and for each milestone, worked out from your real cards the way the app does.</p>
-        <p class="data"><span class="ex real">Real</span> Your five cards, scores, the Nov 20 group, and every passport stamp (3 courses; First birdie on hole 6 Oct 31, Broke 90, both Lowest rounds). <span class="ex">Example</span> Saturday's round, the live round, the pack, the year-on passport, standings.</p>
+        <p>Where we've landed. <b>Home is your wallet</b>: the next round in front, your cards behind it, newest first. You <b>scroll</b> down to go back in time and tap a card to flip it. The next round is card <b>A3</b>: the tee time big, the course, then Game · Cart · With as fields, with Open and share. Its back is the tee sheet. During a round the same card shows the hole you're on and your match.</p>
+        <p>The <b>dock</b> runs along the bottom: Home · Rounds · Crew, with the <b>+</b> beside it for one thumb. <b>Rounds</b> holds the card gallery and the list (gallery ↔ list icons) and your <b>Passport</b>. <b>Crew</b> is Standings.</p>
+        <p>The Partners / None switch shows A3 for a round where partners aren't set yet.</p>
+        <p class="data"><span class="ex real">Real</span> Your five cards, scores, the Nov 20 group and every passport stamp. <span class="ex">Example</span> Saturday's round and tee sheet, the live round, the pack, the year-on passport, standings.</p>
       </div>
       <div>
-        <div class="lbl" style="margin-bottom:8px">Decisions for you</div>
+        <div class="lbl" style="margin-bottom:8px">Decided</div>
         <ol class="dec">
-          <li><b>Which card</b>: A, A2, A3, C or C2?</li>
-          <li><b>Rounds</b> with Rounds | Passport on top and the gallery ↔ list icons: right?</li>
-          <li>Should the <b>gallery</b> also show the next round (it does as a row on top), or only rounds played?</li>
+          <li><b>Home = the wallet</b>, scroll to move through it.</li>
+          <li><b>Next-round card A3</b>, tee sheet on the back, a no-partners version.</li>
+          <li><b>The dock</b> with the + beside it.</li>
+          <li><b>Rounds</b> = gallery ↔ list + Passport.</li>
+        </ol>
+        <div class="lbl" style="margin:14px 0 8px">Still open</div>
+        <ol class="dec">
+          <li>Should the gallery also show the next round as a row on top?</li>
+          <li>The headline over the wallet: keep it, or let the card speak?</li>
         </ol>
       </div>
     </div>
@@ -817,7 +824,6 @@ body{margin:0}
       <button class="cbtn" id="listb">Frames</button>
       <button class="cbtn" id="next" aria-label="Next frame">›</button>
     </div>
-    <div class="seg" id="tkseg" role="group" aria-label="Card"><button data-tk="glass" aria-pressed="true">A</button><button data-tk="glassc" aria-pressed="false">A2</button><button data-tk="hybrid" aria-pressed="false">A3</button><button data-tk="pass" aria-pressed="false">C</button><button data-tk="pass2" aria-pressed="false">C2</button></div>
     <div class="seg" id="ptseg" role="group" aria-label="Partners"><button data-pt="set" aria-pressed="true">Partners</button><button data-pt="none" aria-pressed="false">None</button></div>
     <div class="seg" role="group" aria-label="Phone theme"><button data-th="dark" aria-pressed="true">Dark</button><button data-th="light" aria-pressed="false">Light</button></div>
     <button class="cbtn" id="tmap" aria-pressed="false">Tap map</button>
@@ -996,19 +1002,15 @@ const friend4 = { ...zero, hl: { k: 'Next round · Twin Creeks', s: 'You’re ri
 const tk6 = { ...normal, hlSet: false, hl: { k: 'Next round · Twin Creeks', s: 'You’re riding with Sean.' }, passItem: PASS.tomorrow };
 const tk6none = { ...tk6, hl: { k: 'Next round · Twin Creeks', s: '8 players are in.' } };
 const F = [
-  { id: 'c-glass', name: 'A · Glass', tk: 'glass', s: tk6, real: 'your cards behind', ex: 'Saturday’s round', note: 'Last time’s A. Tap to flip for the tee sheet.' },
-  { id: 'c-glassc', name: 'A2 · Glass, centred', tk: 'glassc', s: tk6, real: 'your cards behind', ex: 'Saturday’s round', note: 'Everything on one centre line; Open across the bottom.' },
-  { id: 'c-hybrid', name: 'A3 · Glass with pass fields', tk: 'hybrid', s: tk6, real: 'your cards behind', ex: 'Saturday’s round', note: 'A’s big time, with Game · Cart · With as fields instead of a line of text.' },
-  { id: 'c-pass', name: 'C · Boarding pass', tk: 'pass', s: tk6, real: 'your cards behind', ex: 'Saturday’s round', note: 'Last time’s C.' },
-  { id: 'c-pass2', name: 'C2 · Event ticket', tk: 'pass2', s: tk6, real: 'your cards behind', ex: 'Saturday’s round', note: 'A countdown next to the time; a tear line; who you’re with and Open in one row.' },
-  { id: 'nopart', name: 'No partners set', pt: 'none', s: tk6none, ex: 'Saturday’s round', note: 'Follows the Card switch.' },
-  { id: 'live', name: 'A round is live', s: liveS, ex: 'the live round', note: 'Follows the Card switch. The green strip rides on the dock.' },
+  { id: 'c-hybrid', name: 'The next-round card (A3)', s: tk6, real: 'your cards behind', ex: 'Saturday’s round', note: 'Big tee time, the course, Game · Cart · With, Open and share. Tap it to flip for the tee sheet.' },
+  { id: 'nopart', name: 'No partners set', pt: 'none', s: tk6none, ex: 'Saturday’s round', note: '' },
+  { id: 'live', name: 'A round is live', s: liveS, ex: 'the live round', note: 'The same card, live: the hole you’re on, your match, Hole 7 ›. The green strip rides on the dock.' },
   { id: 'r-gallery', name: 'Rounds · gallery', s: tk6, tab: 'rounds', rview: 'gallery', real: 'your five cards', ex: 'Saturday’s round', note: 'One card at a time: swipe; tap to flip (Full board on the back). The dots and the line under it follow.' },
   { id: 'r-list', name: 'Rounds · list', s: tk6, tab: 'rounds', rview: 'list', real: 'your five rounds', ex: 'Saturday, other rounds', note: 'Tap a round: it opens in the gallery.' },
   { id: 'r-passport', name: 'Rounds · Passport', s: tk6, tab: 'rounds', rt: 'passport', real: 'every stamp', note: 'Your three courses and your milestones; Broke 80 and Eagle waiting.' },
   { id: 'r-pack', name: 'Rounds · gallery with a sealed pack', s: packS, tab: 'rounds', real: 'Nov 20 sealed', note: 'The sealed card leads the gallery.' },
   { id: 'r-pp20', name: 'Passport a year on', s: d20, tab: 'rounds', rt: 'passport', ex: '15 more rounds', real: 'the first five', note: '' },
-  { id: 'saf', name: 'Safari', mode: 'saf', s: tk6, ex: 'Saturday’s round', note: 'Follows the Card switch.' },
+  { id: 'saf', name: 'Safari', mode: 'saf', s: tk6, ex: 'Saturday’s round', note: '' },
   { id: 'home', name: 'Normal day, nothing coming', s: normal, real: 'your five cards', note: '' },
 ];
 const TABS = [['home', 'Home', 'home'], ['rounds', 'Rounds', 'flag'], ['crew', 'Crew', 'people'], ['cards', 'Cards', 'cardone']];
@@ -1016,9 +1018,9 @@ const RTABS = [['enter', 'Enter', 'enter'], ['matches', 'Matches', 'matches'], [
 const TI = Object.fromEntries(TABS.map((t, i) => [t[0], i])), RI = Object.fromEntries(RTABS.map((t, i) => [t[0], i]));
 
 /* ───────── per-frame state ───────── */
-const state = { theme: 'dark', nav: 'tabs', hl: 'A', cv: 'scroll', rmode: 'wallet', tmap: false, cur: 'c-glass' };
+const state = { theme: 'dark', nav: 'tabs', hl: 'A', cv: 'scroll', rmode: 'wallet', tmap: false, cur: 'c-hybrid' };
 try { Object.assign(state, JSON.parse(localStorage.getItem('glb039g') || '{}')); } catch (e) {}
-if (!F.some((f) => f.id === state.cur)) state.cur = 'c-glass'; state.nav = 'tabs'; state.hl = 'A';
+if (!F.some((f) => f.id === state.cur)) state.cur = 'c-hybrid'; state.nav = 'tabs'; state.hl = 'A';
 const save = () => { try { localStorage.setItem('glb039g', JSON.stringify(state)); } catch (e) {} };
 const FS = {};
 const init = (f) => { FS[f.id] = { tab: f.tab || 'home', mode: f.round ? 'round' : 'hub', rtab: f.round || 'enter', sheet: !!f.sheet, code: '', front: 0, flipped: false, push: null, anims: [] }; };
@@ -1962,7 +1964,7 @@ function tapCard(w, el) {
 
 /* ═══════════════ 039 v6: ticket iterations, partners or none, the bottom action (overrides v5) ═══════════════ */
 state.cv = 'scroll';
-const tkOf = (f) => f.tk || state.tk || 'glass';
+const tkOf = () => 'hybrid'; /* A3, chosen Nov 28 */
 const ptOf = (f) => f.pt || state.pt || 'set';
 const actOf = () => 'dock';
 TABS.splice(0, TABS.length, ['home', 'Home', 'home'], ['rounds', 'Rounds', 'board'], ['crew', 'Crew', 'people']);
@@ -2073,8 +2075,7 @@ function layout() {
   });
   const f = F.find((x) => x.id === state.cur), idx = F.indexOf(f), g = geom(f);
   document.getElementById('curcap').innerHTML = `<b>${idx + 1} / ${F.length} · ${esc(f.name)}</b> · ${g.saf ? 'Safari' : 'Home screen app'} ${g.W} × ${g.H}<br>${tagsHtml(f)}${esc(f.note || '')}`;
-  document.getElementById('tkseg').hidden = phone && !!f.tk;
-  document.getElementById('ptseg').hidden = phone && !!f.pt;
+    document.getElementById('ptseg').hidden = phone && !!f.pt;
   document.getElementById('acseg').hidden = phone && !!f.act;
 }
 const ctl = (attr, key) => document.querySelectorAll(`[data-${attr}]`).forEach((b) => b.addEventListener('click', () => {
@@ -2246,7 +2247,6 @@ function layout() {
   });
   const f = F.find((x) => x.id === state.cur), idx = F.indexOf(f), g = geom(f);
   document.getElementById('curcap').innerHTML = `<b>${idx + 1} / ${F.length} · ${esc(f.name)}</b> · ${g.saf ? 'Safari' : 'Home screen app'} ${g.W} × ${g.H}<br>${tagsHtml(f)}${esc(f.note || '')}`;
-  document.getElementById('tkseg').hidden = phone && !!f.tk;
   document.getElementById('ptseg').hidden = phone && !!f.pt;
 }
 
