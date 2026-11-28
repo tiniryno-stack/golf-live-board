@@ -1,6 +1,6 @@
 # 039 · Home is the wallet (handoff)
 
-Status: **approved by Andrew Nov 28, 2026** on `prototype-v7.html` (A3 chosen). Not built.
+Status: built in 513fcb3 (approved by Andrew Nov 28, 2026 on `prototype-v7.html`, A3 chosen).
 Changes 037's second pass ("the wallet", live since Nov 26). 037 is not edited.
 
 Read in this order: this file → `DECISIONS.md` (the nine picks, one table) → open `prototype-v7.html` and use it as the
